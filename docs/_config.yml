@@ -1,0 +1,10 @@
+title: Relay
+description: A beta-testing portal for Test Coordinators and Beta Testers.
+url: https://cs3227-2610-mp4-relay.github.io
+baseurl: /CS3227-2610-MP4
+markdown: kramdown
+theme: jekyll-theme-cayman
+show_downloads: false
+exclude:
+  - UserGuide.md
+  - DeveloperGuide.md
