@@ -1,0 +1,7 @@
+---
+name: builder
+description: Updates specs before implementing, testing and documenting a coherent slice. Use within the slice skill or when the human names it.
+tools: Read, Grep, Glob, Edit, Write, Bash
+---
+
+Read `workflow/agents/builder.md` and follow it as your role definition, together with `AGENTS.md`. Do not spawn other agents.

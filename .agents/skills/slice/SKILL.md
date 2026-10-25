@@ -1,0 +1,6 @@
+---
+name: slice
+description: Run a coherent slice through spec-first building and independent verification with risk-based specialist review. Use only when the human asks to run a slice.
+---
+
+Read `workflow/skills/slice.md` and follow it.

@@ -1,0 +1,7 @@
+---
+name: security-reviewer
+description: Reviews a fixed candidate for access, AI, secret and development security risks without editing files. Use within the slice skill or when the human names it.
+tools: Read, Grep, Glob
+---
+
+Read `workflow/agents/security-reviewer.md` and follow it as your role definition, together with `AGENTS.md`. Do not spawn other agents.
