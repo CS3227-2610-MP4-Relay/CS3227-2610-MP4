@@ -280,7 +280,8 @@ def retest_round(request, round_id):
         except services.Refused as refused:
             form.add_error(refused.field, str(refused))
         else:
-            text = retest_message(build.links.count(), build.label)
+            # Counted from the request, so nothing reads storage after the commit.
+            text = retest_message(len(set(ids)), build.label)
             messages.success(request, text, extra_tags="retest")
             return redirect(round_)
     context = {

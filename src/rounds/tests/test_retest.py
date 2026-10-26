@@ -6,6 +6,7 @@ import pytest
 from django.contrib.messages import constants
 from django.contrib.messages.storage.base import Message
 from django.db import DatabaseError, IntegrityError, transaction
+from django.db.models import QuerySet
 from django.test import Client
 from django.utils.html import escape
 
@@ -742,3 +743,101 @@ def test_only_a_retest_tagged_message_is_split():
     for count, noun in ((1, "test case"), (2, "test cases")):
         expected = f"Retest requested for {count} {noun} on build x."
         assert rounds_text.retest_message(count, "x") == expected
+
+
+# Repair round 1.
+
+
+@pytest.mark.ac("RND-5.1")
+def test_a_storage_failure_after_the_commit_cannot_lose_a_saved_retest(
+    coord_client, opened
+):
+    real_count = QuerySet.count
+
+    def failing_count(queryset):
+        if queryset.model is BuildCase:
+            raise DatabaseError("synthetic")
+        return real_count(queryset)
+
+    with mock.patch.object(QuerySet, "count", failing_count):
+        response = coord_client.post(retest_url(opened.pk), data(cases_of(opened)))
+    saved = opened.builds.filter(label="Synthetic 1.1").exists()
+    # Either the retest is reported as done, or nothing of it was kept.
+    assert (response.status_code, saved) in ((302, True), (503, False))
+
+
+@pytest.mark.ac("RND-5.8")
+@pytest.mark.parametrize("count", [10, 30])
+def test_a_retest_message_with_a_larger_count_is_split(count):
+    text = rounds_text.retest_message(count, MARKUP)
+    tagged = Message(constants.SUCCESS, text, extra_tags="retest")
+    assert rounds_text.status_message(tagged) == message(count, MARKUP)
+
+
+@pytest.mark.ac("RND-5.8")
+@pytest.mark.parametrize("count", ["02", "010"])
+def test_a_retest_message_with_a_leading_zero_is_not_split(count):
+    text = f"Retest requested for {count} test cases on build x."
+    tagged = Message(constants.SUCCESS, text, extra_tags="retest")
+    assert rounds_text.status_message(tagged) == escape(text)
+
+
+@pytest.mark.ac("RND-5.2")
+def test_a_label_with_a_null_character_is_refused_next_to_build_label(
+    coord_client, opened
+):
+    before = everything()
+    label = "Synthetic" + chr(0) + "1.1"
+    response = coord_client.post(retest_url(opened.pk), data(cases_of(opened), label))
+    assert response.status_code == 200
+    html = page(response)
+    assert next_to_label(html, "Null characters are not allowed.")
+    assert everything() == before
+
+
+@pytest.mark.ac("RND-5.6")
+@pytest.mark.parametrize(
+    "case_id",
+    ["99999999999999999999", "9223372036854775808", str(10**30), "-1", "1.5"],
+)
+def test_an_out_of_range_case_id_gets_the_message_not_an_error(
+    coord_client, opened, case_id
+):
+    before = everything()
+    response = coord_client.post(retest_url(opened.pk), data([case_id]))
+    assert response.status_code == 200
+    html = page(response)
+    assert html.count(FOREIGN) == 1 and next_to_cases(html, FOREIGN)
+    assert everything() == before
+
+
+@pytest.mark.ac("RND-5.7")
+@pytest.mark.django_db(transaction=True)
+def test_of_two_retests_for_the_tenth_build_exactly_one_succeeds(coordinator):
+    opened = new_open_round(coordinator)
+    one, two, _ = cases_of(opened)
+    for n in range(1, 9):
+        with transaction.atomic():
+            services.request_retest(
+                Round.objects.select_for_update().get(pk=opened.pk), f"v{n}", [one.pk]
+            )
+    assert opened.builds.count() == 9
+    first, second = race(
+        coordinator,
+        post_retest(opened, [one], "Synthetic 9.1"),
+        post_retest(opened, [two], "Synthetic 9.2"),
+        ["request_retest"],
+    )
+    assert (first.status_code, second.status_code) == (302, 200)
+    assert CAP in page(second)
+    assert opened.builds.count() == 10
+    assert opened.builds.filter(label="Synthetic 9.1").exists()
+
+
+@pytest.mark.ac("RND-5.8")
+def test_the_case_group_has_its_own_empty_text(coord_client, make_round):
+    # Publishing needs a case, so an Open round without cases is put in directly.
+    empty = make_round("Synthetic empty", Round.State.OPEN)
+    html = page(coord_client.get(retest_url(empty.pk)))
+    assert "No test cases yet." in html
+    assert "No acceptance criteria yet." not in html
