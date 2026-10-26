@@ -4,11 +4,12 @@ from unittest import mock
 
 import pytest
 from django.conf import settings as django_settings
-from django.db import DatabaseError
+from django.db import DatabaseError, IntegrityError, connection
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.test import Client
 from django.urls import include, path
+from django.views.debug import ExceptionReporter
 
 from accounts import demo
 from accounts.models import User, Workspace
@@ -123,9 +124,38 @@ def test_each_listed_account_signs_in_to_its_role_home():
 
 
 @pytest.mark.django_db
+@pytest.mark.ac("ACC-2.2", "ACC-2.4")
+def test_each_home_shows_only_its_own_workspace():
+    first, second = created(), created()
+    workspaces = {}
+    for response in (first, second):
+        rows = credentials(response)
+        name = re.search(r"<p>Workspace: ([^<]*)</p>", response.content.decode())
+        workspaces[name.group(1)] = rows
+    assert len(workspaces) == 2
+    for name, rows in workspaces.items():
+        (other_name, other_rows) = next(
+            item for item in workspaces.items() if item[0] != name
+        )
+        for (_, username, password), role in zip(
+            rows, ["coordinator", "tester", "tester"], strict=True
+        ):
+            client = Client()
+            client.post("/sign-in/", {"username": username, "password": password})
+            home = client.get(HOMES[role]).content.decode()
+            assert f"Workspace: {name}" in home
+            assert other_name not in home
+            for _, other_username, other_password in other_rows:
+                assert other_username not in home
+                assert other_password not in home
+
+
+@pytest.mark.django_db
 @pytest.mark.ac("ACC-2.3")
 def test_passwords_are_not_cached_or_shown_again(caplog):
     caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.DEBUG, logger="django")
+    caplog.set_level(logging.DEBUG, logger="django.template")
     client = Client()
     response = created(client)
     assert response["Cache-Control"] == "no-store"
@@ -190,6 +220,41 @@ FAILURES = {
 }
 
 
+RAISED = {
+    "account write": DatabaseError,
+    "rendering": RuntimeError,
+    "taken suffix": IntegrityError,
+}
+
+
+def failure_record(caplog):
+    records = [
+        record
+        for record in caplog.records
+        if record.getMessage() == "Demo workspace creation failed."
+    ]
+    assert len(records) == 1
+    assert records[0].exc_info
+    return records[0].exc_info
+
+
+def error_report(exc_info):
+    """Django's error report, with frame variables, as mailed or shown to admins."""
+    return ExceptionReporter(None, *exc_info).get_traceback_html()
+
+
+def assert_503_with_nothing_left(response, before, passwords, caplog):
+    assert response.status_code == 503
+    html = response.content.decode()
+    assert f"<h1>{UNAVAILABLE}</h1>" in html
+    assert "<table" not in html
+    assert counts() == before
+    assert len(passwords) == 3
+    for password in passwords:
+        assert password not in html
+        assert password not in caplog.text
+
+
 @pytest.mark.django_db
 @pytest.mark.ac("ACC-2.5")
 @pytest.mark.parametrize("failure", FAILURES)
@@ -200,20 +265,41 @@ def test_failed_creation_leaves_nothing_and_shows_503(failure, caplog):
     seen, spy = capture_passwords()
     client = Client()
     client.raise_request_exception = False
-    with spy, FAILURES[failure]():
+    with spy, FAILURES[failure]() as patched:
         response = client.post("/demo/")
-    assert response.status_code == 503
-    html = response.content.decode()
-    assert f"<h1>{UNAVAILABLE}</h1>" in html
-    assert "<table" not in html
-    assert counts() == before
-    assert len(seen) == 3
+    assert_503_with_nothing_left(response, before, seen, caplog)
+    exc_info = failure_record(caplog)
+    assert type(exc_info[1]) is RAISED[failure]
+    report = error_report(exc_info)
+    assert "create_demo" in report
     for password in seen:
-        assert password not in html
-        assert password not in caplog.text
+        assert password not in report
+    if failure == "taken suffix":
+        assert patched.call_count == 3
 
 
-@pytest.mark.ac("ACC-2.6")
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.ac("ACC-2.5")
+def test_failed_commit_leaves_nothing_and_shows_503(caplog):
+    seen, spy = capture_passwords()
+    client = Client()
+    client.raise_request_exception = False
+    with (
+        spy,
+        mock.patch.object(
+            connection, "commit", side_effect=DatabaseError("synthetic commit failure")
+        ) as commit,
+    ):
+        response = client.post("/demo/")
+    assert commit.called
+    assert_503_with_nothing_left(response, (0, 0), seen, caplog)
+    exc_info = failure_record(caplog)
+    assert type(exc_info[1]) is DatabaseError
+    for password in seen:
+        assert password not in error_report(exc_info)
+
+
+@pytest.mark.ac("ACC-2.6", "PLT-1.1")
 @pytest.mark.parametrize("role", ["coordinator", "tester"])
 def test_signed_in_user_is_sent_home_and_creates_nothing(account, role):
     client, _ = csrf_client()
