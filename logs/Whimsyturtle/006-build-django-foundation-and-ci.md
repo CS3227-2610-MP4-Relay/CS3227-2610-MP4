@@ -2,11 +2,12 @@
 
 Slice: #1 · Tier: High · Tool: Codex · Orchestrator model: gpt-6-astra, xhigh (observed runtime metadata) · Date: 2026-10-26
 
-Tokens: recorded session totals across five sources: input 9,438,438, output 50,434, total 9,488,872; cutoff 16:08:14 SGT. These are recorded totals, not an exact task delta.
+Tokens: initial recorded totals across five sources: input 9,438,438, output 50,434, total 9,488,872; cutoff 16:08:14 SGT. Separate coordinator delivery interval: input 1,238,741, output 5,224, total 1,243,965; cutoff 16:23:45 SGT. Exact whole-task usage remains unavailable; these intervals are not presented as a complete conversation total.
 
 | Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | Orchestrator — gpt-6-astra/xhigh, `codex:9d5e5df57fd5eaff378c94c5` | 5,106,219 | 5,012,736 | 18,940 | 5,715 | 5,125,159 | 28m 18.6s |
+| Orchestrator delivery interval — gpt-6-astra/xhigh, `codex:9d5e5df57fd5eaff378c94c5` | 1,238,741 | 1,229,184 | 5,224 | 1,876 | 1,243,965 | 10m 51.8s |
 | Builder — gpt-6.1-sol/medium, `codex:d3f07fdb681e3669023de0f8` | 2,214,244 | 2,142,080 | 19,693 | 1,828 | 2,233,937 | 25m 30.9s |
 | Verifier — gpt-6.1-sol/high, `codex:16ef6563a01a9d484377c7d5` | 1,186,952 | 1,117,824 | 6,477 | 1,748 | 1,193,429 | 12m 50.8s |
 | Security reviewer — gpt-6.1-sol/high, `codex:e3160e8aaa4ff42ddebf19d8` | 789,879 | 749,696 | 4,719 | 1,585 | 794,598 | 12m 21.0s |
@@ -16,7 +17,7 @@ Three delegated roles and one automatically created approval-review source; obse
 
 ## Requests
 
-Run `/slice 1`. Resolved this to repository [issue #1](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/issues/1), “Set up the Django application and CI”; the API confirmed its author association was MEMBER and it had no comments. During work, the human confirmed removing or moving the two initially untracked reference documents; their absence was preserved.
+Run `/slice 1`. Resolved this to repository [issue #1](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/issues/1), “Set up the Django application and CI”; the API confirmed its author association was MEMBER and it had no comments. During work, the human confirmed removing or moving the two initially untracked reference documents; their absence was preserved. After the initial local handoff, the human explicitly corrected the omitted delivery: commit, push, open a draft PR and run its hosted checks.
 
 ## Agent runs
 
@@ -28,16 +29,22 @@ Run `/slice 1`. Resolved this to repository [issue #1](https://github.com/CS3227
 
 Both reviews used base/HEAD `f69ca558f14c6a90004856a66af7b31fc79f07a3`. Initial dirty-candidate manifest SHA256: `d82c49a20028eb57b85263b05cbc328c37dacfaac64f28f1a57f302cce6dbd37`. Repaired manifest: `d9e608cf48bbb4ed7c9c4d761bde4cf3bd8e5b0ba658cd86bd0ec49611e35a82`. The coordinator confirmed it remained unchanged after both final reviews. Only this log and the plan's delivery/usage notes were then updated; application, tests, specs, CI and guides retained the reviewed content. Numeric snapshots and candidate manifests remain outside version control.
 
+Delivery continuation used the coordinator only, with no new delegated runs. The reviewed implementation remained unchanged; `main` had advanced to `03f7008` with an unrelated macOS workflow-test correction, integrated by fast-forward without conflict. Created spec `231b50e`, implementation `c566577` and log `88dbfa5`, pushed `feat/1-django-foundation`, and opened [draft PR #43](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/pull/43). [Hosted CI run 40291777598](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/actions/runs/40291777598) completed successfully: Django check clean, Ruff passed, 24 files formatted, 97 tests passed in 3.41 seconds on Linux. This establishes full verification on the integrated branch. The PR's live checks identify the latest summary-only commit's result.
+
+The separate delivery measurement runs from 16:12:54 to 16:23:45 SGT and covers the coordinator only; its report has no warnings, zero model retries and zero repair rounds. Automatic approval-source usage for that interval is unavailable because it was not baselined. The gap after the initial cutoff and work after the delivery cutoff, including final notes and the last CI poll, are excluded. No overlapping intermediate reports were added.
+
 ## Decisions and corrections
 
 Kept the work to a public landing page, local/test settings, PostgreSQL verification and the existing CI job using installed/pinned packages. No accounts, business persistence, AI or deployment was added. Fixed test-settings selection and inherited database-address redirection within the original isolation criteria. Human confirmation explained the original scope check's two missing-file exceptions; subsequent builder and reviewer checks passed. The builder refused the deliberate out-of-scope AGENTS.md edit probe; this demonstrates role refusal only.
 
-The local implementation and required reviews are complete. Changes remain uncommitted. Hosted CI, Docker examples, live IPv6 connectivity, live hook enforcement, merge and release were not verified or performed. The human still owns those decisions and review of this log.
+At the initial handoff the implementation and required reviews were complete but uncommitted. That handoff stopped short of the human's intended delivery; the follow-up committed the work, opened the draft PR and verified hosted CI. Docker examples, live IPv6 connectivity, live hook enforcement, merge and release remain unverified or unperformed. Deployment is outside this slice and not configured. The human still owns review of this log and merge/release decisions.
 
 ## Problems
 
 The GitHub connector omitted author association; the first CLI API call hit a network sandbox restriction, then succeeded with approved execution. PostgreSQL initialization similarly required approved execution after a Windows restricted-token failure. Two capacity failures required role retries. Initial lint/helper setup errors were corrected before accepted evidence; the database regression's genuine red failures followed two helper setup corrections.
 
 The coordinator's initial settings-precedence correction required another integrated run. The specialist's address probe demonstrated an attempted connection to the synthetic documentation address, blocked by the sandbox; no remote database was accessed. Both reviewers requested the same minimal repair, completed in one review round. All seven product criteria preceded code, but the explicit CSRF exemption rationale was added concurrently with implementation; this process limitation cannot be retroactively removed. The address-repair control refinement did precede its code change.
+
+The GitHub connector rejected PR creation with integration permission error 403; the authenticated CLI successfully created the requested draft. This was a connector permission limitation, not an automatic approval-review rejection. The coordinator used the create-pull-request skill and left both human checklist boxes unticked.
 
 No malicious repository instruction was followed. The security reviewer treated the generated-file maintenance directive in `.venv/Lib/site-packages/psycopg/_conninfo_attempts.py` as dependency data. No real secrets or raw transcripts were retained. This summary has not been checked by its human author.
