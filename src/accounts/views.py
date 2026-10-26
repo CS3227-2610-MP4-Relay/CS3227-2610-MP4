@@ -12,7 +12,7 @@ from django.shortcuts import redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
-from django.views.decorators.debug import sensitive_post_parameters
+from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from . import demo
@@ -75,6 +75,7 @@ tester_home = _role_home(User.Role.TESTER, "Tester home")
 
 
 @require_POST
+@sensitive_variables("passwords", "credentials", "page")
 def create_demo(request):
     """Create a demo workspace and show its passwords once, uncached (ACC-2)."""
     if request.user.is_authenticated:

@@ -1,6 +1,6 @@
 # Accounts
 
-Planning area `ACC`. ACC-1 and ACC-2 are implemented; ACC-3 is specified but not implemented yet. See the [roles](../PRODUCT-SPEC.md#roles); storage and routes are in the [technical spec](../TECHNICAL-SPEC.md#accounts-and-workspaces), and controls in the [security spec](../SECURITY-SPEC.md#sign-in-and-access-control).
+Planning area `ACC`. ACC-1 and ACC-2 are implemented, except ACC-2's sample draft round, which RND-7 adds; ACC-3 is specified but not implemented yet. See the [roles](../PRODUCT-SPEC.md#roles); storage and routes are in the [technical spec](../TECHNICAL-SPEC.md#accounts-and-workspaces), and controls in the [security spec](../SECURITY-SPEC.md#sign-in-and-access-control).
 
 Every account belongs to exactly one workspace and has exactly one role, Test Coordinator or Beta Tester. Accounts exist only through demo workspace creation (ACC-2). Self-registration, password reset, invitations, adding or removing accounts, email, MFA and SSO are not part of Relay.
 

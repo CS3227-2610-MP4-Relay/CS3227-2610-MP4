@@ -4,7 +4,7 @@ from unittest import mock
 
 import pytest
 from django.contrib.auth.hashers import check_password
-from django.db import IntegrityError, transaction
+from django.db import DatabaseError, IntegrityError, transaction
 
 from accounts import demo
 from accounts.models import User, Workspace
@@ -30,6 +30,22 @@ def test_generated_passwords_are_16_letters_and_digits_with_hashes():
         assert set(password) <= ALPHABET
         assert password not in hashed
         assert check_password(password, hashed)
+
+
+def test_alphabets_are_exactly_as_specified():
+    assert set(demo.PASSWORD_ALPHABET) == ALPHABET
+    assert len(demo.PASSWORD_ALPHABET) == len(ALPHABET)
+    assert set(demo.SUFFIX_ALPHABET) == set(string.ascii_lowercase + string.digits)
+    assert len(demo.SUFFIX_ALPHABET) == 36
+
+
+@pytest.mark.ac("ACC-2.3")
+def test_credential_repr_hides_the_password():
+    credential = demo.Credential("Beta Tester", "tester1-repr0001", "Synthetic16Chars")
+    assert "Synthetic16Chars" not in repr(credential)
+    assert "Synthetic16Chars" not in str(credential)
+    assert "tester1-repr0001" in repr(credential)
+    assert credential.password == "Synthetic16Chars"
 
 
 def test_suffix_is_8_lowercase_letters_and_digits():
@@ -117,3 +133,23 @@ def test_third_taken_suffix_fails_and_writes_nothing(taken):
         create()
     assert drawn.call_count == 3
     assert (Workspace.objects.count(), User.objects.count()) == before
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.ac("ACC-2.5")
+def test_creation_outside_a_transaction_writes_all_or_nothing():
+    real_create = User.objects.create
+    calls = []
+
+    def create(**fields):
+        calls.append(fields["username"])
+        if len(calls) == 2:
+            raise DatabaseError("synthetic storage failure")
+        return real_create(**fields)
+
+    with (
+        mock.patch.object(User.objects, "create", create),
+        pytest.raises(DatabaseError),
+    ):
+        demo.create_demo_workspace(demo.generate_passwords())
+    assert (Workspace.objects.count(), User.objects.count()) == (0, 0)

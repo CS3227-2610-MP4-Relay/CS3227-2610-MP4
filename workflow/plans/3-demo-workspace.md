@@ -38,9 +38,25 @@ Non-test, non-migration `src/` lines: `demo.py` ~55, `workspaces.py` ~12, views 
 ## Open issues
 
 - Resolved (coordinator, 2026-10-27): the builder's spec details above, including the `404.html` change to the PLT-1.3 test expectation.
-- `README.md` still says demo workspaces are planned; it is outside the builder's scope, so the coordinator updates it.
+- Resolved (coordinator, `9e973da`): `README.md` status line, which is outside the builder's scope.
 - ACC-2 is not deployed to production before ACC-3 ([accounts-spec](accounts-spec.md)).
 - Human review and merge remain pending.
+
+## Review round 0 and repair round 1
+
+Candidate `46e8a86`. Verifier: 1 Medium, 7 Low, 2 Info. Security reviewer: 1 Medium, 2 Low, 4 Info. Decisions by the coordinator on 2026-10-27 under the human's delegation:
+
+- Deferred to ACC-3 (security Medium): an unlocked limit pre-check before hashing, now in the ACC-3 spec.
+- Adopted, tests: a two-workspace isolation test through the real sign-in (verifier Medium); the taken-suffix 503 proves 3 draws and an `IntegrityError`; exact alphabets; the "Demo workspace creation failed." record with `exc_info`; `ac("ACC-2.6", "PLT-1.1")` on the signed-in redirect test; a `transaction=True` test where the real outermost commit fails.
+- Adopted, code: `create_demo_workspace` runs in its own `transaction.atomic()` (a savepoint inside the view's block); `Credential.__repr__` hides the password; `sensitive_variables` on `create_demo`, `generate_passwords` and `create_demo_workspace`; the ACC-2.3 log test captures `django` and `django.template` DEBUG records (security Low 2).
+- Adopted, spec and docs: the delivery-order exception for `/demo/`'s creation block; the `accounts.md` status line names RND-7's sample round; the Creation bullet says what a logged constraint violation may name; the User Guide's resubmission and back-button sentence.
+- Not adopted: a `home_url(user)` refactor of the three role-home redirects (minor duplication; RND-1 is editing `accounts/views.py` in parallel). Framing protection (`X-Frame-Options`) stays with #5's production settings.
+
+Repair round 1 evidence (builder, Windows):
+
+- Red: `test_creation_outside_a_transaction_writes_all_or_nothing` (left `(1, 1)` rows) and `test_credential_repr_hides_the_password` failed before the fix. The other new tests passed against existing behaviour, so their detection was shown by temporary mutations, each restored with no diff left: a home view that also rendered another workspace's name failed the isolation test; removing `create_demo`'s `sensitive_variables` failed the three ACC-2.5 error-report checks; a repr showing the password failed the rendering-failure check and the repr test. The commit-failure test asserts the patched commit ran.
+- The error-report check uses Django's HTML report, because its text report omits frame variables.
+- Green: full verification passed: 195 passed, 1 skipped, 85 subtests. Budget: 184 of 400 lines since `1492c0b`.
 
 ## Checklist
 
@@ -49,4 +65,6 @@ Non-test, non-migration `src/` lines: `demo.py` ~55, `workspaces.py` ~12, views 
 - [x] Checkpoint 3: routes, start page, templates, 503 page and tests (red evidence first). Red: 17 failed, 8 passed (`/demo/` gave 404, `/` set no CSRF cookie, Django's default 404 page). Green: full verification 174 passed, 1 skipped; Ruff clean. 169 of 400 budget lines since `9dc41a7`. Expectation changes for the verifier: PLT-1.1 now requires one form posting to `/demo/` (was no form); PLT-1.3 requires "Page not found." (was "Not Found").
 - [x] Checkpoint 4: guides, and the opening status sentences of `accounts.md`, `TECHNICAL-SPEC.md` and `SECURITY-SPEC.md`. The shell recipe is removed.
 - [x] Full verification, size budget and builder scope check (checkpoint 4, Windows, on `fea7923` plus the checkpoint 4 edits): `manage.py check` and `makemigrations --check` clean; Ruff clean; 188 passed, 1 skipped, 85 subtests passed. `git diff --check` clean; `check_scope.py builder --base fea7923` clean. Budget: 169 of 400 lines since `9dc41a7` for ACC-2; the raw `src/` diff is 197, including 28 lines from the merged ACC-1 repair.
-- [ ] Independent verifier and security review; human review and merge.
+- [x] Review round 0 (verifier and security reviewer).
+- [x] Repair round 1.
+- [ ] Re-review of repair round 1; human review and merge.
