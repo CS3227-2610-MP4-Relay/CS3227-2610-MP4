@@ -15,9 +15,12 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from rounds.models import Round
+
 from . import demo
 from .forms import SignInForm
 from .models import User
+from .workspaces import workspace_records
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +58,8 @@ def sign_out(request):
     return redirect("accounts:sign-in")
 
 
-def _role_home(role, title):
-    """Build a GET-only home page for one role."""
+def _role_home(role, title, template="accounts/home.html", sections=None):
+    """Build a GET-only home page for one role, with optional page sections."""
 
     @never_cache
     @require_GET
@@ -65,12 +68,18 @@ def _role_home(role, title):
             return redirect("accounts:sign-in")
         if request.user.role != role:
             raise PermissionDenied
-        return render(request, "accounts/home.html", {"title": title})
+        context = {"title": title, **(sections(request.user) if sections else {})}
+        return render(request, template, context)
 
     return home
 
 
-coordinator_home = _role_home(User.Role.COORDINATOR, "Coordinator home")
+coordinator_home = _role_home(
+    User.Role.COORDINATOR,
+    "Coordinator home",
+    "rounds/coordinator_home.html",
+    lambda user: {"rounds": workspace_records(user, Round)},
+)
 tester_home = _role_home(User.Role.TESTER, "Tester home")
 
 

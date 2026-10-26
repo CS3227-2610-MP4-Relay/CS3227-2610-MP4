@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<form method="post">
+  {% csrf_token %}
+  <p><label for="{{ form.title.id_for_label }}">Title</label> {{ form.title }}</p>
+  {% for error in form.title.errors %}<p>{{ error }}</p>{% endfor %}
+  <button type="submit">{{ button }}</button>
+</form>
+<p><a href="{% url 'accounts:coordinator' %}">Coordinator home</a></p>
+{% endblock %}

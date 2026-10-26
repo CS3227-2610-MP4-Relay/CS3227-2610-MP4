@@ -1,6 +1,7 @@
 """Test rounds owned by a workspace (RND)."""
 
 from django.db import models
+from django.urls import reverse
 
 from accounts.models import Workspace
 
@@ -34,3 +35,7 @@ class Round(models.Model):
     def __str__(self):
         """Return the round title."""
         return self.title
+
+    def get_absolute_url(self):
+        """Return the coordinator's round page."""
+        return reverse("rounds:detail", args=[self.pk])
