@@ -1,6 +1,6 @@
 # Security spec
 
-Threats to Relay and to how it is built, and the intended controls against them. This is a planning scaffold. Application controls, acceptance criteria and their verification will be added with the slices that implement them; no deployed security is claimed here.
+Threats to Relay and to how it is built, and the intended controls against them. This is a planning scaffold. Controls link to their acceptance criteria where these are specified; verification is added by the slices that implement them, and no deployed security is claimed here.
 
 ## Secrets and settings
 
@@ -15,8 +15,21 @@ Threat: leaked keys, credentials or debug details expose data and production acc
 Threat: a visitor or user accesses another role's operations, another workspace's records or another tester's private draft.
 
 - Authorize every route and record lookup on the server before reading data or selecting AI context. Define role, workspace, ownership and state permissions for each operation.
-- Use Django's authentication, password hashing and CSRF protections. Specify session/cookie policy, demo-account creation, abuse limits and denied-request behaviour before implementing accounts.
+- Use Django's authentication, password hashing and CSRF protections, including its `Origin` check. Sessions are server-side, get a new identifier at every sign-in, end at sign-out and expire at an absolute time; sign-in ignores redirect targets ([ACC-1](product/accounts.md#acc-1-sign-in-and-out-by-role)). Session and cookie settings are in the [accounts routes](TECHNICAL-SPEC.md#accounts-routes), and production settings under [Configuration](TECHNICAL-SPEC.md#configuration).
+- Accounts come only from demo workspace creation, with generated passwords shown once on an uncached response and stored only as hashes ([ACC-2.1 to ACC-2.3](product/accounts.md#acc-2-create-an-isolated-demo-workspace)). Accounts have no staff or admin capability ([account model](TECHNICAL-SPEC.md#accounts-and-workspaces)).
+- Check the role before any record lookup, and filter every lookup by the signed-in user's workspace before reading; another workspace's record is indistinguishable from a missing one ([ACC-2.4](product/accounts.md#acc-2-create-an-isolated-demo-workspace)).
 - Share an authorization test matrix across manual and AI actions. Include forged identifiers, cross-workspace requests and denied state transitions.
+
+Threat: repeated sign-in attempts guess passwords, or repeated demo creation exhausts shared storage.
+
+- Count failed sign-ins and demo creations per client address, with an overall creation cap, atomically in the database; refuse when the count cannot be checked ([ACC-3](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation)). Store addresses only as keyed hashes, and never trust client-supplied forwarding headers. Production waits for the client-address [release gate](TECHNICAL-SPEC.md#release-verification).
+- Residual gaps, accepted for now:
+  - An attacker with many addresses can use up the overall cap and block demo creation for everyone.
+  - Behind a proxy that hides client addresses, or for requests without a parseable address, clients share one count.
+  - Fixed windows allow a burst across a window boundary.
+  - Sign-ins from one address queue on its counter lock, so a client sharing that address can delay or refuse others' sign-ins, and waiting requests hold database connections.
+  - Reloading the demo creation page resubmits it and creates another workspace, within the limits, and a browser's back/forward cache may show the credentials again despite `no-store`.
+  - Storage still grows without bound: unlimited successful sign-ins create session rows, and expired sessions are never deleted; rotating addresses or IPv6 prefixes creates limit-counter rows. Hashed addresses are kept indefinitely until the [retention decision](TECHNICAL-SPEC.md#data-model) is made.
 
 ## Rounds, observations and history
 

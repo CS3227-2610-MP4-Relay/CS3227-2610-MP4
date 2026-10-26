@@ -24,7 +24,7 @@ AI feature contracts live under [`ai/`](ai/): [test drafting](ai/test-drafting.m
 
 ## Requirements
 
-Each area's file will hold its requirements. A requirement's ID is its area's prefix and a number, such as `RND-1`; each acceptance criterion adds a second number, such as `RND-1.2`, and tests should identify the criteria they check. No acceptance criteria are defined by this scaffold.
+Each area's file will hold its requirements. A requirement's ID is its area's prefix and a number, such as `RND-1`; each acceptance criterion adds a second number, such as `RND-1.2`, and tests should identify the criteria they check. Whether a criterion is met is decided by its marked tests, under [one home per fact](../../AGENTS.md#one-home-per-fact).
 
 The core loop is prepare → publish → test → review → retest as needed → close. Retesting may repeat. Preserve earlier results and the build and criteria they concern; settle edit/version rules for published cases and submitted observations before implementing them.
 
