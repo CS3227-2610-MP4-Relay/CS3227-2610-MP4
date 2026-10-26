@@ -489,7 +489,9 @@ def test_deleting_a_linked_criterion_is_refused_on_the_round_page(coord_client, 
 
 @pytest.mark.ac("RND-2.7")
 @pytest.mark.parametrize("action", ["new", "edit"])
-@pytest.mark.parametrize("source", ["sibling", "other_workspace", "missing", "text"])
+@pytest.mark.parametrize(
+    "source", ["sibling", "other_workspace", "missing", "oversized", "text"]
+)
 def test_criteria_from_elsewhere_are_refused(
     coord_client, draft, make_round, other_workspace, action, source
 ):
@@ -501,6 +503,8 @@ def test_criteria_from_elsewhere_are_refused(
         wrong = criterion(make_round("Synthetic foreign", owner=other_workspace)).pk
     elif source == "missing":
         wrong = own.pk + 1000
+    elif source == "oversized":
+        wrong = "99999999999999999999"
     else:
         wrong = "abc"
     record_id = made.pk if action == "edit" else None

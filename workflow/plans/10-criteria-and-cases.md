@@ -73,6 +73,23 @@ Repair round 1 evidence (Windows, test-database lock):
 - The test-only additions passed on the repaired code. Mutations on temporary copies, each restored and checked with `cmp`: (a) case-form choices from `Criterion.objects.all()` failed the choices test; (b) the state check before the record lookup in `record_form` failed the Open and Closed 404 test; (c) no round lock in `record_form` failed the case race in 5 of 5 runs.
 - Final: `check` and `makemigrations --check` clean, Ruff clean, 482 passed, 1 skipped, 85 subtests passed; `git diff --check` clean; scope clean against `3557050`; 338 added and 9 removed budget lines since `6f4ab10`.
 
+## Review of repair round 1 and repair round 2
+
+Re-reviews of repair round 1 (`686be05` to `0643e52`):
+
+- Security-reviewer: all findings resolved. Info, accepted: the refused-delete round page is drawn after the rollback, so it may show concurrent changes. This affects display only, because any next action is locked and re-checked.
+- Verifier: all findings resolved, no new defect; 2 nits and 1 unevidenced check (below). Low process note, accepted: `686be05` bundles the fix with its tests.
+- Both reviewers corrected the round-1 record: a case ID 0 already gave 404 before the repair, so only criterion ID 0 was affected.
+
+Repair round 2 (coordinator decisions, 2026-10-27, under the human's delegation):
+
+1. The Developer Guide lists `save_criterion` among the services.
+2. The User Guide's storage sentence reads "Whenever creating a round, or saving or deleting anything in it, fails".
+3. `test_criteria_from_elsewhere_are_refused` also submits an oversized ID (`99999999999999999999`) on add and save. It passed at once (10 passed): the choice field finds no such row and gives the RND-2.7 message, with no error and nothing changed.
+4. Security check: with `transaction.atomic()` around the writes in `record_form` and `delete_record` temporarily replaced by `if True:`, both link-failure tests (add and edit) and the case-delete failure test failed (3 failed). The file was restored and checked with `cmp`.
+
+Final: `check` and `makemigrations --check` clean, Ruff clean, 484 passed, 1 skipped, 85 subtests passed; `git diff --check` clean; scope clean against `0643e52`. No `src/` code outside tests changed in this round.
+
 ## Checklist
 
 - [x] Checkpoint 1: specs and plan.
@@ -81,4 +98,5 @@ Repair round 1 evidence (Windows, test-database lock):
 - [x] Checkpoint 4: guides and status. User Guide: the criteria and cases sections, adding, editing and deleting, limits, caps and messages, only for Draft rounds, which are all a coordinator can reach. Developer Guide: the models, services, shared record views and `isolated_lines` reuse. Status sentences of `rounds.md`, `TECHNICAL-SPEC.md` and `SECURITY-SPEC.md`. The RND-2.5 race test now patches `add_criterion` to pause 0.1 s before counting, inside the view's locked transaction, like ACC-3's race tests; with the round lock removed it failed 5 of 5 runs, and it passes with the lock. README.md text proposed to the coordinator.
 - [x] Full verification, size budget and builder scope check (checkpoint 4, Windows, test-database lock): `check` and `makemigrations --check` clean, Ruff clean, 455 passed, 1 skipped, 85 subtests passed; `git diff --check` clean; scope clean against `3e2d6d6`; 322 added and 9 removed budget lines since `6f4ab10` (about 331 of 400).
 - [x] Review round 0 (verifier and security-reviewer) and repair round 1.
-- [ ] Review of repair round 1; human review and merge.
+- [x] Review of repair round 1 and repair round 2.
+- [ ] Human review and merge.
