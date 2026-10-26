@@ -22,6 +22,7 @@ class Round(models.Model):
     title = models.CharField(max_length=120)
     state = models.CharField(max_length=8, choices=State.choices, default=State.DRAFT)
     created_at = models.DateTimeField(auto_now_add=True)
+    published_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at", "-id"]
@@ -87,5 +88,44 @@ class CaseCriterion(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["case", "criterion"], name="rounds_casecriterion_unique"
+            )
+        ]
+
+
+class Build(models.Model):
+    """A named build of the software under test, covering some of a round's cases.
+
+    Publishing creates a round's first build (RND-3). Its default string shows
+    no user text, so a logged record never carries a label.
+    """
+
+    round = models.ForeignKey(Round, on_delete=models.PROTECT, related_name="builds")
+    label = models.CharField(max_length=100)
+    # The label without format characters, then NFC, which can triple length.
+    key = models.CharField(max_length=300)
+    created_at = models.DateTimeField(auto_now_add=True)
+    cases = models.ManyToManyField(Case, through="BuildCase", related_name="builds")
+
+    class Meta:
+        # Creation order, serialised by the round lock: a case's current build
+        # is the last build covering it.
+        ordering = ["id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["round", "key"], name="rounds_build_key_unique"
+            )
+        ]
+
+
+class BuildCase(models.Model):
+    """A build's coverage of one case of the same round; never cascades."""
+
+    build = models.ForeignKey(Build, on_delete=models.PROTECT, related_name="links")
+    case = models.ForeignKey(Case, on_delete=models.PROTECT, related_name="build_links")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["build", "case"], name="rounds_buildcase_unique"
             )
         ]
