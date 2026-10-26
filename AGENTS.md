@@ -43,7 +43,7 @@ Relay is a beta-testing portal being built with Django. Its planned behaviour is
 
 ## Commands
 
-- Verify: `ruff check . && ruff format --check . && pytest`, from the repository root with `.venv` active. The scaffold checks need no database; application checks will use the [test environment](workflow/specs/TECHNICAL-SPEC.md#environments) when implemented. Run it before saying a code task is done. If it fails, report the exact failure and don't claim success.
+- Full verification: `ruff check . && ruff format --check . && pytest`, from the repository root with `.venv` active. Run it for Standard and High changes before saying a code task is done. Cosmetic-only Fast lane changes use targeted checks and human diff review under the [slice tiers](workflow/skills/slice.md); reclassify if behaviour, acceptance criteria or security controls change. The scaffold checks need no database; application checks will use the [test environment](workflow/specs/TECHNICAL-SPEC.md#environments) when implemented. If a required check fails, report the exact failure and don't claim success.
 - On Windows, run it in Git Bash, because Windows PowerShell cannot run `&&`. From PowerShell, use `& 'C:\Program Files\Git\bin\bash.exe' -c 'source .venv/Scripts/activate && <verify command>'`.
 
 ## Git

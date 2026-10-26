@@ -182,8 +182,9 @@ def candidate_snapshot(root=ROOT):
     files = {}
     for name in sorted(set(filter(None, paths.split("\0")))):
         path = root / name
-        if path.name == ".env" or (
-            path.name.startswith(".env.") and path.name != ".env.example"
+        filename = path.name.casefold()
+        if filename == ".env" or (
+            filename.startswith(".env.") and filename != ".env.example"
         ):
             continue
         cursor = root
@@ -215,7 +216,8 @@ def candidate_snapshot(root=ROOT):
     head = (
         git(root, "rev-parse", "--verify", "HEAD").strip() if has_head(root) else None
     )
-    index = git(root, "ls-files", "--stage", "-z").encode("utf-8")
+    # -v includes the skip-worktree tag and lowercases assume-unchanged entries.
+    index = git(root, "ls-files", "--stage", "-v", "-z").encode("utf-8")
     return {
         "version": 1,
         "root": str(root.resolve()),

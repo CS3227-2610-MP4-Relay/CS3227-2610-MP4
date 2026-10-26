@@ -162,6 +162,28 @@ class ResourceUsageTests(unittest.TestCase):
         )
         self.assertEqual(self.tokens(usage.collect([path]))["total_tokens"], 24)
 
+    def test_codex_export_missing_turn_usage_invalidates_session_and_report(self):
+        header = {"type": "thread.started", "thread_id": "t"}
+        complete = {"type": "turn.completed", "usage": counts(10, 2)}
+        path = self.write("export.jsonl", [header])
+        baseline = usage.collect([path], now=START)
+        for missing in (None, {}, "invalid"):
+            for first in (True, False):
+                with self.subTest(usage=missing, missing_first=first):
+                    incomplete = {"type": "turn.completed"}
+                    if missing is not None:
+                        incomplete["usage"] = missing
+                    turns = [incomplete, complete] if first else [complete, incomplete]
+                    self.write("export.jsonl", [header, *turns])
+                    current = usage.collect([path], now=START + timedelta(seconds=1))
+                    self.assertTrue(
+                        all(value is None for value in self.tokens(current).values())
+                    )
+                    self.assertIn("codex_turn_usage_incomplete", current["warnings"])
+                    report = usage.report(current, baseline)
+                    self.assertIsNone(report["tokens"]["total_tokens"])
+                    self.assertIn("codex_turn_usage_incomplete", report["warnings"])
+
     def test_copied_parent_history_is_not_charged_to_child(self):
         path = self.write(
             "child.jsonl",
@@ -230,6 +252,53 @@ class ResourceUsageTests(unittest.TestCase):
         self.assertEqual(tokens["input_tokens"], 60)
         self.assertEqual(tokens["output_tokens"], 8)
         self.assertEqual(tokens["total_tokens"], 68)
+
+    def test_claude_missing_message_usage_invalidates_session_and_report(self):
+        path = self.write("claude.jsonl", [claude()])
+        baseline = usage.collect(claude_paths=[path], now=START)
+        for missing in (None, {}, "invalid"):
+            for first in (True, False):
+                with self.subTest(usage=missing, missing_first=first):
+                    incomplete = claude("m2")
+                    if missing is None:
+                        incomplete["message"].pop("usage")
+                    else:
+                        incomplete["message"]["usage"] = missing
+                    records = (
+                        [incomplete, claude()] if first else [claude(), incomplete]
+                    )
+                    self.write("claude.jsonl", records)
+                    current = usage.collect(
+                        claude_paths=[path], now=START + timedelta(seconds=1)
+                    )
+                    self.assertTrue(
+                        all(value is None for value in self.tokens(current).values())
+                    )
+                    self.assertIn(
+                        "claude_message_usage_incomplete", current["warnings"]
+                    )
+                    report = usage.report(current, baseline)
+                    self.assertIsNone(report["tokens"]["total_tokens"])
+                    self.assertIn("claude_message_usage_incomplete", report["warnings"])
+
+    def test_claude_missing_fragment_can_be_completed_by_same_message(self):
+        incomplete = claude()
+        incomplete["message"].pop("usage")
+        for records in ([incomplete, claude()], [claude(), incomplete]):
+            with self.subTest(records=records):
+                path = self.write("claude.jsonl", records)
+                current = usage.collect(claude_paths=[path])
+                self.assertEqual(self.tokens(current)["total_tokens"], 65)
+                self.assertNotIn("claude_message_usage_incomplete", current["warnings"])
+
+    def test_claude_unidentified_message_does_not_leave_a_numeric_subtotal(self):
+        unidentified = claude("m2")
+        unidentified["message"].pop("id")
+        path = self.write("claude.jsonl", [claude(), unidentified])
+        current = usage.collect(claude_paths=[path])
+        self.assertTrue(all(value is None for value in self.tokens(current).values()))
+        self.assertIn("claude_usage_without_message_id_skipped", current["warnings"])
+        self.assertIn("claude_message_usage_incomplete", current["warnings"])
 
     def test_partial_claude_cache_update_recomputes_input_and_message_total(self):
         partial = claude()

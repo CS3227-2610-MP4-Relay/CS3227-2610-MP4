@@ -23,6 +23,7 @@
       "Bash(gh issue close *)",
       "Bash(pip install *)",
       "Bash(python -m pip install *)",
+      "Bash(python3 -m pip install *)",
       "Bash(uv add *)",
       "Bash(npm install *)"
     ]

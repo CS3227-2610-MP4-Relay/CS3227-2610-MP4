@@ -4,13 +4,16 @@
 
 Relay currently contains the repository and development-workflow scaffold. The Django application, database schema and hosted environments will be implemented in later slices. Its planned architecture, configuration and environments are in [`TECHNICAL-SPEC.md`](../workflow/specs/TECHNICAL-SPEC.md).
 
-Use a Python virtual environment for local tooling. From the repository root in Git Bash on Windows:
+Install Python 3.14, as selected by [`.python-version`](../.python-version), before creating the local tooling environment. On Windows, use the Python launcher to select it explicitly; an unqualified `python` may select another installed version. From the repository root in Git Bash:
 
 ```bash
-python -m venv .venv
+py -3.14 -m venv .venv
 source .venv/Scripts/activate
-pip install -r requirements-dev.txt
+python --version
+python -m pip install -r requirements-dev.txt
 ```
+
+Confirm that `python --version` reports 3.14.x before installing. If `py -3.14` cannot find it, install Python 3.14 or use the explicit path to that interpreter. On macOS/Linux, create the environment with `python3.14 -m venv .venv` and activate it with `source .venv/bin/activate`.
 
 Run the checks in [`AGENTS.md`](../AGENTS.md#commands). The current workflow checks need no database. Application startup, migrations, database setup and demo-account instructions will be added when those features exist. Never use production credentials for development or tests.
 

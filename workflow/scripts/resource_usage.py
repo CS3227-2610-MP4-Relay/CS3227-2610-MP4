@@ -28,6 +28,8 @@ WARNING_CODES = frozenset(
         "non_object_jsonl_record",
         "codex_copied_history_excluded",
         "claude_usage_without_message_id_skipped",
+        "claude_message_usage_incomplete",
+        "codex_turn_usage_incomplete",
         "mixed_codex_telemetry_is_ambiguous",
         "multiple_codex_exports_are_ambiguous",
         "codex_counter_reset",
@@ -202,6 +204,7 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                     "events": [],
                     "export_sources": set(),
                     "awaiting_usage": awaiting_usage,
+                    "missing_message_id": False,
                 },
             )
             if _time(meta.get("timestamp")):
@@ -235,32 +238,30 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                             (stamp or "", index, "cumulative", info)
                         )
                         stream["awaiting_usage"] = False
-                    elif record.get("type") == "turn.completed" and isinstance(
-                        record.get("usage"), dict
-                    ):
+                    elif record.get("type") == "turn.completed":
                         stream["export_sources"].add(path)
                         stream["events"].append(
-                            (stamp or "", index, "turn", record["usage"])
+                            (stamp or "", index, "turn", _object(record.get("usage")))
                         )
                 else:
                     message = _object(record.get("message"))
                     if record.get("type") == "assistant":
                         stream["awaiting_usage"] = False
-                    if record.get("type") != "assistant" or not isinstance(
-                        message.get("usage"), dict
-                    ):
+                    if record.get("type") != "assistant":
                         continue
                     message_id = message.get("id")
                     if not isinstance(message_id, str) or not message_id:
                         warnings.add("claude_usage_without_message_id_skipped")
+                        stream["missing_message_id"] = True
                         continue
+                    counters = _object(message.get("usage"))
                     # Session transcripts may repeat one assistant message for
                     # multiple content blocks. Keep its largest reported counters.
                     stream["events"].append(
                         (
                             message_id,
                             {
-                                field: _count(message["usage"].get(field))
+                                field: _count(counters.get(field))
                                 for field in (
                                     "input_tokens",
                                     "output_tokens",
@@ -276,6 +277,7 @@ def collect(codex_paths=(), claude_paths=(), now=None):
         totals = {field: None for field in METRICS}
         events = stream.pop("events")
         export_sources = stream.pop("export_sources")
+        missing_message_id = stream.pop("missing_message_id")
         observations = 0
         if stream["platform"] == "claude":
             messages = {}
@@ -289,9 +291,19 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                 for message_id, counters in messages.items()
             }
             observations = len(messages)
+            if missing_message_id or any(
+                counters[field] is None
+                for counters in messages.values()
+                for field in ("input_tokens", "output_tokens", "total_tokens")
+            ):
+                warnings.add("claude_message_usage_incomplete")
             for field in METRICS:
                 values = [usage.get(field) for usage in messages.values()]
-                if values and all(value is not None for value in values):
+                if (
+                    not missing_message_id
+                    and values
+                    and all(value is not None for value in values)
+                ):
                     totals[field] = sum(values)
         else:
             cumulative = [event for event in events if event[2] == "cumulative"]
@@ -315,6 +327,11 @@ def collect(codex_paths=(), claude_paths=(), now=None):
             ):
                 raw = info.get("total_token_usage", info)
                 current = _codex_usage(raw)
+                if kind == "turn" and any(
+                    current[field] is None
+                    for field in ("input_tokens", "output_tokens", "total_tokens")
+                ):
+                    warnings.add("codex_turn_usage_incomplete")
                 signature = (
                     stamp,
                     index if kind == "turn" else None,

@@ -113,6 +113,14 @@ class AdapterTest(unittest.TestCase):
             )
         )
 
+    def test_pip_install_checkpoint_covers_both_python_invocations(self):
+        config = json.loads(
+            (ROOT / ".claude" / "settings.json").read_text(encoding="utf-8")
+        )
+        commands = ("pip install", "python -m pip install", "python3 -m pip install")
+        for command in commands:
+            self.assertIn(f"Bash({command} *)", config["permissions"]["ask"])
+
     def test_slice_is_user_invoked_only_in_both_tools(self):
         self.assertEqual(
             front_matter(ROOT / ".claude" / "skills" / "slice" / "SKILL.md")[

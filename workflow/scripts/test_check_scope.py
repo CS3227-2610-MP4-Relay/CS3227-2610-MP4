@@ -217,6 +217,40 @@ class WorkingTreeTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             check_scope.load_snapshot(baseline, self.root.parent)
 
+    def test_snapshot_excludes_env_case_variants_before_reading(self):
+        excluded = [".env", ".ENV", ".ENV.production", ".EnV.Local"]
+        secret_paths = set()
+        for index, name in enumerate(excluded):
+            relative = f"nested/{index}/{name}"
+            self.write(relative, "synthetic fixture only\n")
+            secret_paths.add(self.root / relative)
+        self.write(".env.example", "EMPTY=\n")
+        self.write("nested/.ENV.EXAMPLE", "EMPTY=\n")
+        real_read = Path.read_bytes
+
+        def guarded_read(path):
+            self.assertNotIn(path, secret_paths, "excluded file reached content read")
+            return real_read(path)
+
+        with patch.object(Path, "read_bytes", guarded_read):
+            snapshot = check_scope.candidate_snapshot(self.root)
+        for path in secret_paths:
+            self.assertNotIn(path.relative_to(self.root).as_posix(), snapshot["files"])
+        self.assertIn(".env.example", snapshot["files"])
+        self.assertIn("nested/.ENV.EXAMPLE", snapshot["files"])
+
+    def test_snapshot_detects_index_flags_without_content_changes(self):
+        for flag in ("assume-unchanged", "skip-worktree"):
+            with self.subTest(flag=flag):
+                baseline = self.snapshot_file()
+                self.git("update-index", f"--{flag}", "src/rounds/views.py")
+                try:
+                    self.assertEqual(self.snapshot_check(baseline), 1)
+                    self.assertEqual(self.snapshot_check(baseline, "builder"), 1)
+                finally:
+                    self.git("update-index", f"--no-{flag}", "src/rounds/views.py")
+                self.assertEqual(self.snapshot_check(baseline), 0)
+
     def test_snapshot_detects_deletion_and_moved_head(self):
         baseline = self.snapshot_file()
         (self.root / "src/rounds/views.py").unlink()

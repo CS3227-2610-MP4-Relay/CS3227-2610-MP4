@@ -9,7 +9,7 @@
 |  |  |  |
 
 **Tier and reviewed candidate:**
-<!-- Tier, base/head range or dirty-tree manifest, verifier evidence, and security specialist range or why unnecessary. -->
+<!-- Tier, base/head range or dirty-tree manifest; Standard/High verifier evidence and required security specialist range; Fast lane human diff review or pending review. -->
 
 **Checks and usage:**
 <!-- Final candidate checks, unavailable checks, coordinator/delegated usage coverage and repair rounds. Link passing CI when available. -->
