@@ -81,6 +81,25 @@ Repair round 1 evidence (Windows, test-database lock):
 - Mutations on temporary copies, each restored and checked with `cmp`: (i) unscoped lookup with the state check first in `edit_round`: the 404-not-409 test failed for Open and Closed (Draft and missing passed, as expected); (ii) visible-character check removed: 8 RND-1.3 invisible-title cases failed; (iii) locked re-check removed: the "opened after the state check" test failed; (iv) `-id` dropped from ordering: the tie test failed 5 of 5 runs.
 - Final: check and `makemigrations --check` clean, Ruff clean, 310 passed, 1 skipped; `git diff --check` clean; scope clean against `3831e9f`; 338 of 400 budget lines (`git diff 11d7649` of `src/` outside tests and migrations).
 
+## Re-review of repair round 1 and repair round 2
+
+Re-reviews of repair round 1: the verifier found F1 to F7 resolved, 3 new Low (N1 to N3) and one Info; the security-reviewer found both Lows resolved and gave 2 Info. The coordinator confirmed `title_isolate` joining lines with a space.
+
+- Info (verifier), for the human: the checking-order bullet in the [rounds spec plan's Defaults](rounds-spec.md#defaults) is superseded by rule 1 in [`rounds.md`](../specs/product/rounds.md#rules-for-every-round-action) (CSRF before 405). `rounds-spec.md` stays unchanged as the historical spec plan.
+
+Coordinator decisions (2026-10-27, under the human's delegation), implemented in repair round 2 on `97eb417`, the last repair round:
+
+1. Security Info 1: `coordinator_view(methods)` applies `never_cache` outermost, then the method check, then the sign-in, role and 503 wrapper, so a rounds view cannot skip a layer. A new test walks every `rounds.urls` pattern and checks a signed-in coordinator's response is `private, no-store`, so a new route without it fails.
+2. Verifier N1 and security Info 2: the technical spec's separator list now matches `str.splitlines()` exactly (U+000B and U+000C added; checked against every code point); the per-line isolation test covers both.
+3. Verifier N3: `Cache-Control` is asserted on a 409 and on a POST 503.
+4. Verifier N2: separate units per concern (spec, fix with its test, test-only, plan).
+
+Repair round 2 evidence (Windows, test-database lock):
+
+- Red: with `never_cache` removed from the round page view (temporary copy, restored and checked with `cmp`), the URL-walk test failed with `AssertionError: /coordinator/rounds/1/` (no `no-store`); it passes with the new decorator.
+- The VT/FF cases and the 409 and POST 503 cache assertions passed before any code change: the filter already split at every `str.splitlines()` separator and the views were already uncached. They pin the spec text and the decorator order.
+- Final: check and `makemigrations --check` clean, Ruff clean, 314 passed, 1 skipped; `git diff --check` clean; scope clean against `97eb417`; 336 of 400 budget lines (`git diff b1d0397` of `src/` outside tests and migrations).
+
 ## Checklist
 
 - [x] Checkpoint 1: specs and plan.
@@ -89,4 +108,5 @@ Repair round 1 evidence (Windows, test-database lock):
 - [x] Checkpoint 4: guides and the status sentences of `rounds.md`, `TECHNICAL-SPEC.md` and `SECURITY-SPEC.md`.
 - [x] Full verification, size budget and builder scope check (checkpoint 4, Windows): check and `makemigrations --check` clean, Ruff clean, 264 passed, 1 skipped; 312 of 400 budget lines since `46e8a86`; scope clean against `4cace95`.
 - [x] Review round 0 (verifier and security-reviewer) and repair round 1.
-- [ ] Review of repair round 1; human review and merge.
+- [x] Re-review of repair round 1 and repair round 2.
+- [ ] Review of repair round 2; human review and merge.
