@@ -45,11 +45,11 @@ You are also signed out 8 hours after signing in, whatever you do in between; op
 
 ## Test rounds
 
-Only a Test Coordinator can prepare test rounds. A new round is in the **Draft** state. Beta Testers do not see rounds yet.
+Only a Test Coordinator can prepare and publish test rounds. A new round is in the **Draft** state; [publishing](#publish-a-round) it makes it **Open**. Beta Testers do not see rounds yet.
 
 **Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". With no rounds, it says "No rounds yet."
 
-Whenever creating a round, or saving or deleting anything in it, fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
+Whenever creating a round, or saving, deleting or publishing anything in it, fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
 
 ### Create a round
 
@@ -75,6 +75,8 @@ A workspace can have up to 20 rounds. Creating a 21st gets "This workspace has r
 
 The round page has an **Acceptance criteria** heading, listing each criterion's text, and a **Test cases** heading, where each case shows its title, then **Steps**, **Expected result** and **Linked acceptance criteria** with that text. Both are listed in the order they were added. With none, they say "No acceptance criteria yet." and "No test cases yet."
 
+You can add, edit and delete them only while the round is Draft.
+
 To add or edit a criterion:
 
 1. On the round page, choose **Add acceptance criterion**, or **Edit criterion** next to a criterion.
@@ -96,3 +98,20 @@ Criterion text has 1 to 500 characters; a case's title has 1 to 120, its steps 1
 A case with no linked criterion gets "Link at least one acceptance criterion." If a criterion you ticked was deleted meanwhile, the form says "Choose criteria from this round."
 
 A round can have up to 20 acceptance criteria and 30 test cases. Adding a 21st criterion gets "This round has reached its limit of 20 acceptance criteria." and a 31st case "This round has reached its limit of 30 test cases."
+
+### Publish a round
+
+While a round is Draft, its round page ends with a **Build label** field and a **Publish round** button. The build label names the version of the software under test, such as "1.4.0-beta".
+
+1. On the round page, enter a **Build label**.
+2. Choose **Publish round**.
+
+The round page shows "Round published." and "State: Open". An Open round cannot return to Draft.
+
+A build label has 1 to 100 characters; spaces at either end are removed. An empty label, a label of only spaces or invisible characters, or a longer one gets "Enter 1 to 100 characters." next to the field, and a label containing a null character gets "Null characters are not allowed." A round with no test cases gets "Add at least one test case before publishing." After any of these messages the round stays Draft, with your label still in the field.
+
+### An Open round
+
+An Open round's page shows "State: Open" and the criteria and cases exactly as they were when it was published. Its title, criteria and cases can no longer be changed, so the page has no **Edit round** link, no add, edit or delete links and buttons, and no **Publish round** button.
+
+Under each case's linked criteria, **Current build** shows the label of the build the case is tested on. After the test cases, a **Builds** heading lists the round's builds, oldest first: each build's label, then **Covered test cases** with the titles of the cases it covers. A newly published round has one build, covering every case.
