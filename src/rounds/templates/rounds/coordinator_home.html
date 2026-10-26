@@ -1,10 +1,11 @@
 {% extends "accounts/home.html" %}
+{% load rounds_text %}
 {% block sections %}
 <h2>Rounds</h2>
 <p><a href="{% url 'rounds:new' %}">New round</a></p>
 {% if rounds %}
 <ul>
-  {% for round in rounds %}<li><a href="{{ round.get_absolute_url }}" dir="auto">{{ round.title|linebreaksbr }}</a> ({{ round.get_state_display }})</li>
+  {% for round in rounds %}<li><a href="{{ round.get_absolute_url }}">{{ round.title|isolated_lines }}</a> ({{ round.get_state_display }})</li>
   {% endfor %}
 </ul>
 {% else %}

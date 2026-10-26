@@ -24,10 +24,10 @@ def assert_no_raw_markup(html):
 def test_markup_is_escaped_on_round_page_home_and_edit_form(coord_client, make_round):
     made = make_round(MARKUP)
     round_page = page(coord_client.get(detail(made.pk)))
-    assert f'<h1 dir="auto">{escape(MARKUP)}</h1>' in round_page
+    assert f'<h1><span dir="auto">{escape(MARKUP)}</span></h1>' in round_page
     assert title_tag(round_page) == FSI + escape(MARKUP) + PDI
     home = page(coord_client.get("/coordinator/"))
-    assert f'dir="auto">{escape(MARKUP)}</a> (Draft)</li>' in home
+    assert f'<span dir="auto">{escape(MARKUP)}</span></a> (Draft)</li>' in home
     form = page(coord_client.get(edit(made.pk)))
     assert f'value="{escape(MARKUP)}"' in form
     for html in (round_page, home, form):
@@ -67,9 +67,10 @@ def test_stray_pop_isolate_cannot_escape_the_page_title(coord_client, make_round
 def test_line_breaks_are_kept_inside_the_isolated_element(coord_client, make_round):
     made = make_round("Line one\nLine two")
     round_page = page(coord_client.get(detail(made.pk)))
-    assert '<h1 dir="auto">Line one<br>Line two</h1>' in round_page
+    lines = '<span dir="auto">Line one</span><br><span dir="auto">Line two</span>'
+    assert f"<h1>{lines}</h1>" in round_page
     home = page(coord_client.get("/coordinator/"))
-    assert 'dir="auto">Line one<br>Line two</a> (Draft)</li>' in home
+    assert f"{lines}</a> (Draft)</li>" in home
 
 
 def test_bidi_and_zero_width_characters_stay_inside_the_title_element(
@@ -77,11 +78,13 @@ def test_bidi_and_zero_width_characters_stay_inside_the_title_element(
 ):
     made = make_round(BIDI_AND_INVISIBLE)
     round_page = page(coord_client.get(detail(made.pk)))
-    heading = f'<h1 dir="auto">{BIDI_AND_INVISIBLE}</h1>\n<p>State: Draft</p>'
+    heading = (
+        f'<h1><span dir="auto">{BIDI_AND_INVISIBLE}</span></h1>\n<p>State: Draft</p>'
+    )
     assert heading in round_page
     assert round_page.count("\u202e") == 1
     home = page(coord_client.get("/coordinator/"))
-    assert f'dir="auto">{BIDI_AND_INVISIBLE}</a> (Draft)</li>' in home
+    assert f'<span dir="auto">{BIDI_AND_INVISIBLE}</span></a> (Draft)</li>' in home
     assert home.count("\u202e") == 1
     form = page(coord_client.get(edit(made.pk)))
     assert f'value="{BIDI_AND_INVISIBLE}" dir="auto"' in form
@@ -92,3 +95,24 @@ def test_pages_do_not_reset_unicode_bidi(coord_client, make_round):
     made = make_round()
     for url in (NEW, detail(made.pk), edit(made.pk), "/coordinator/"):
         assert "unicode-bidi" not in page(coord_client.get(url))
+
+
+PARAGRAPH_SEPARATORS = [chr(code) for code in (0x85, 0x1C, 0x1D, 0x1E, 0x2028, 0x2029)]
+LINE_BREAKS = [chr(10), chr(13), chr(13) + chr(10), *PARAGRAPH_SEPARATORS]
+
+
+@pytest.mark.parametrize(
+    "separator", LINE_BREAKS, ids=lambda sep: "+".join(f"U{ord(c):04X}" for c in sep)
+)
+def test_each_line_is_isolated_in_its_own_element(coord_client, make_round, separator):
+    rlo = chr(0x202E)
+    made = make_round("x" + separator + rlo + "abc")
+    lines = f'<span dir="auto">x</span><br><span dir="auto">{rlo}abc</span>'
+    round_page = page(coord_client.get(detail(made.pk)))
+    assert f"<h1>{lines}</h1>" + chr(10) + "<p>State: Draft</p>" in round_page
+    assert title_tag(round_page) == FSI + "x abc" + PDI
+    home = page(coord_client.get("/coordinator/"))
+    assert f'<li><a href="{detail(made.pk)}">{lines}</a> (Draft)</li>' in home
+    for html in (round_page, home):
+        for raw in PARAGRAPH_SEPARATORS:
+            assert raw not in html

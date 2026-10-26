@@ -71,12 +71,17 @@ def test_creating_a_round_opens_its_draft_round_page(coord_client, coordinator):
     assert made.workspace == coordinator.workspace
     assert made.state == Round.State.DRAFT
     html = page(coord_client.get(response["Location"]))
-    assert '<h1 dir="auto">Synthetic checkout round</h1>' in html
+    assert '<h1><span dir="auto">Synthetic checkout round</span></h1>' in html
     assert "<p>State: Draft</p>" in html
     assert f'<a href="{edit(made.pk)}">Edit round</a>' in html
     assert '<a href="/coordinator/">Coordinator home</a>' in html
     for absent in ("criteri", "Criteri", "test case", "Test case", "alert"):
         assert absent not in html
+    home = page(coord_client.get("/coordinator/"))
+    assert (
+        f'<li><a href="{detail(made.pk)}"><span dir="auto">'
+        "Synthetic checkout round</span></a> (Draft)</li>"
+    ) in home
 
 
 @pytest.mark.ac("RND-1.1")
@@ -90,7 +95,7 @@ def test_coordinator_home_lists_own_rounds_newest_first_with_state(
     html = page(coord_client.get("/coordinator/"))
     assert "<h2>Rounds</h2>" in html
     assert '<a href="/coordinator/rounds/new/">New round</a>' in html
-    item = r'<li><a href="([^"]+)" dir="auto">([^<]+)</a> \((\w+)\)</li>'
+    item = r'<li><a href="([^"]+)"><span dir="auto">([^<]+)</span></a> \((\w+)\)</li>'
     items = re.findall(item, html)
     assert items == [
         (detail(newest.pk), "Synthetic newest", "Draft"),
@@ -420,7 +425,7 @@ def test_round_workspace_comes_from_the_signed_in_user(
 @pytest.mark.ac("RND-1.7")
 @pytest.mark.parametrize("action", ["create", "retitle"])
 def test_storage_failure_gives_503_and_changes_nothing(
-    coord_client, make_round, action
+    coord_client, make_round, action, caplog
 ):
     made = make_round("Synthetic stored")
     url = NEW if action == "create" else edit(made.pk)
@@ -430,11 +435,119 @@ def test_storage_failure_gives_503_and_changes_nothing(
     assert UNAVAILABLE in page(response)
     assert list(Round.objects.values_list("title", flat=True)) == ["Synthetic stored"]
     assert Workspace.objects.count() == 1
+    assert_storage_failure_logged(caplog)
 
 
-@pytest.mark.ac("RND-1.7")
 def test_round_pages_are_never_cached(coord_client, make_round):
     made = make_round()
     for url in (NEW, detail(made.pk), edit(made.pk)):
         cache_control = coord_client.get(url)["Cache-Control"]
         assert "no-store" in cache_control and "private" in cache_control
+
+
+def assert_storage_failure_logged(caplog):
+    records = [record for record in caplog.records if record.name == "rounds.views"]
+    assert len(records) == 1
+    assert records[0].exc_info is not None
+    assert records[0].exc_info[0] is DatabaseError
+
+
+@pytest.mark.ac("RND-1.7")
+@pytest.mark.parametrize("route", ["detail", "edit"])
+def test_storage_failure_reading_a_round_gives_503(
+    coord_client, make_round, route, caplog
+):
+    made = make_round("Synthetic stored")
+    url = detail(made.pk) if route == "detail" else edit(made.pk)
+    with mock.patch(
+        "rounds.views.get_object_or_404", side_effect=DatabaseError("synthetic")
+    ):
+        response = coord_client.get(url)
+    assert response.status_code == 503
+    assert UNAVAILABLE in page(response)
+    assert "Synthetic stored" not in page(response)
+    assert "no-store" in response["Cache-Control"]
+    assert_storage_failure_logged(caplog)
+
+
+@pytest.mark.ac("RND-1.7")
+@pytest.mark.parametrize("route", ["new", "detail", "edit"])
+def test_storage_failure_loading_the_user_gives_503_before_any_lookup(
+    coord_client, make_round, route, caplog
+):
+    made = make_round("Synthetic stored")
+    url = {"new": NEW, "detail": detail(made.pk), "edit": edit(made.pk)}[route]
+    with (
+        mock.patch(
+            "django.contrib.auth.get_user", side_effect=DatabaseError("synthetic")
+        ),
+        mock.patch("rounds.views.get_object_or_404") as lookup,
+    ):
+        response = coord_client.get(url)
+    assert response.status_code == 503
+    assert UNAVAILABLE in page(response)
+    lookup.assert_not_called()
+    assert_storage_failure_logged(caplog)
+
+
+def test_coordinator_home_keeps_the_accounts_storage_rule(coord_client):
+    coord_client.raise_request_exception = False
+    with mock.patch(
+        "django.contrib.auth.get_user", side_effect=DatabaseError("synthetic")
+    ):
+        response = coord_client.get("/coordinator/")
+    assert response.status_code == 500
+    assert UNAVAILABLE not in page(response)
+
+
+# RND-1.7: CSRF and Origin come before 405 and the sign-in redirect
+
+
+def csrf_client_for(user):
+    return (
+        signed_in(user, enforce_csrf_checks=True)
+        if user
+        else Client(enforce_csrf_checks=True)
+    )
+
+
+@pytest.mark.ac("RND-1.7")
+@pytest.mark.parametrize("signed", [True, False])
+@pytest.mark.parametrize("method", ["post", "put", "patch", "delete"])
+@pytest.mark.parametrize("route", ["new", "detail", "edit"])
+def test_unsafe_request_without_a_token_gets_403_first(
+    coordinator, make_round, signed, method, route
+):
+    made = make_round("Synthetic draft")
+    url = {"new": NEW, "detail": detail(made.pk), "edit": edit(made.pk)}[route]
+    client = csrf_client_for(coordinator if signed else None)
+    if method == "post":
+        response = client.post(url, {"title": "Synthetic forged"})
+    else:
+        response = getattr(client, method)(url)
+    assert response.status_code == 403
+    assert DENIED in page(response)
+    assert list(Round.objects.values_list("title", flat=True)) == ["Synthetic draft"]
+
+
+@pytest.mark.ac("RND-1.7")
+@pytest.mark.parametrize("signed", [True, False])
+def test_unaccepted_method_with_a_valid_token_gets_405_uncached(
+    coordinator, make_round, signed
+):
+    made = make_round("Synthetic draft")
+    client = csrf_client_for(coordinator if signed else None)
+    token = csrf_token(client)
+    for method, url in [
+        ("put", NEW),
+        ("patch", NEW),
+        ("post", detail(made.pk)),
+        ("put", detail(made.pk)),
+        ("put", edit(made.pk)),
+        ("delete", edit(made.pk)),
+    ]:
+        response = getattr(client, method)(url, HTTP_X_CSRFTOKEN=token)
+        assert response.status_code == 405, (method, url)
+        cache_control = response["Cache-Control"]
+        assert "no-store" in cache_control and "private" in cache_control
+    assert list(Round.objects.values_list("title", flat=True)) == ["Synthetic draft"]

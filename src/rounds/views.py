@@ -20,21 +20,25 @@ logger = logging.getLogger(__name__)
 
 
 def coordinator_view(view):
-    """Check sign-in and role before any lookup; turn storage failures into 503."""
+    """Check sign-in and role before any lookup; turn storage failures into 503.
+
+    Wrap it in `never_cache` outside the method check, so 405s are uncached too.
+    """
 
     @wraps(view)
     def checked(request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect("accounts:sign-in")
-        if request.user.role != User.Role.COORDINATOR:
-            raise PermissionDenied
         try:
+            # Loading the session and user reads storage too.
+            if not request.user.is_authenticated:
+                return redirect("accounts:sign-in")
+            if request.user.role != User.Role.COORDINATOR:
+                raise PermissionDenied
             return view(request, *args, **kwargs)
         except DatabaseError:
             logger.exception("A round request failed in storage.")
             return render(request, "503.html", status=503)
 
-    return never_cache(checked)
+    return checked
 
 
 def own_round(request, round_id, *, lock=False):
@@ -57,6 +61,7 @@ def form_page(request, form, title, button):
     return render(request, "rounds/round_form.html", context)
 
 
+@never_cache
 @require_http_methods(["GET", "POST"])
 @coordinator_view
 def new_round(request):
@@ -74,6 +79,7 @@ def new_round(request):
     return form_page(request, form, "New round", "Create round")
 
 
+@never_cache
 @require_GET
 @coordinator_view
 def round_page(request, round_id):
@@ -81,6 +87,7 @@ def round_page(request, round_id):
     return render(request, "rounds/round.html", {"round": own_round(request, round_id)})
 
 
+@never_cache
 @require_http_methods(["GET", "POST"])
 @coordinator_view
 def edit_round(request, round_id):

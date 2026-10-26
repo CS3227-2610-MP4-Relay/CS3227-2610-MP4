@@ -48,6 +48,7 @@ def test_title_holds_at_most_120_characters(workspace):
         Round.objects.create(workspace=workspace, title="a" * 121)
 
 
+@pytest.mark.ac("RND-1.1")
 def test_rounds_are_listed_newest_first(workspace):
     first = services.create_round(workspace, "Synthetic first")
     second = services.create_round(workspace, "Synthetic second")

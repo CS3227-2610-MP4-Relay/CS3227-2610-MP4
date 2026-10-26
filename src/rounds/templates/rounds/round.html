@@ -2,7 +2,7 @@
 {% load rounds_text %}
 {% block title %}{{ round.title|title_isolate }}{% endblock %}
 {% block content %}
-<h1 dir="auto">{{ round.title|linebreaksbr }}</h1>
+<h1>{{ round.title|isolated_lines }}</h1>
 <p>State: {{ round.get_state_display }}</p>
 {% if round.state == "draft" %}<p><a href="{% url 'rounds:edit' round.pk %}">Edit round</a></p>{% endif %}
 <p><a href="{% url 'accounts:coordinator' %}">Coordinator home</a></p>
