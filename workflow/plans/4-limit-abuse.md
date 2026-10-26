@@ -31,7 +31,7 @@ Builder's spec details within that scope (checkpoint 1), confirmed by the coordi
    - ACC-3.3: blank fields count; a success neither counts nor resets; 429, 403 (CSRF) and 503 requests count nothing; a refused sign-in leaves the window start unchanged (so the window ends on time); a failed creation (forced storage or render failure) counts nothing; GET `/sign-in/` is never limited.
    - ACC-3.4: 10th creation from one address succeeds, 11th gets 429 and creates nothing; overall 200th succeeds and 201st gets 429 from a new address; both the pre-check and the in-transaction re-check (pre-check patched to pass) return 429, not 503, and hash no password on the pre-check path.
    - ACC-3.5: varied usernames and forged `X-Forwarded-For` do not escape; a limited address does not limit another; requests without `REMOTE_ADDR` share the `unknown` count.
-   - ACC-3.6 (threaded, `transaction=True`, `serialized_rollback=True`): with 2 creations left, 5 simultaneous requests create at most 2 workspaces, the rest get 429.
+   - ACC-3.6 (threaded, `transaction=True`): with 2 creations left, 5 simultaneous requests create at most 2 workspaces, the rest get 429.
    - ACC-3.7: `peek`, `lock` and `record` raising `OperationalError`, and a real lock timeout (another connection holds the row; the timeout constant patched short), each give the 503 for sign-in and creation, sign no one in, create nothing and record nothing.
    - ACC-3.8 (threaded): with 1 failure left, 5 simultaneous wrong-password sign-ins give at most 1 normal failure and the rest 429.
    Red first: run them before the views change. Checks: focused `pytest src/accounts -q`, then full verification (serialised with other builders on the shared test PostgreSQL).
@@ -54,7 +54,7 @@ Non-test, non-migration `src/` lines: model ~20, `limits.py` ~85, views ~45, `42
 
 - Resolved (coordinator, 2026-10-27): the builder's spec details above.
 - ACC-2's repair round 1 changes `views.py`, `demo.py`, the Creation bullet and the delivery-order sentence; the coordinator merges it into this branch before checkpoint 3.
-- Transactional tests flush the database, which deletes the migration's `demo-total` row; the threaded tests use `serialized_rollback=True`, and `lock` would recreate the row anyway.
+- Transactional tests flush the database, which deletes the migration's `demo-total` row; `lock` recreates it with count 0, and no test relies on it surviving a flush. `serialized_rollback=True` is not used anywhere (coordinator, 2026-10-27): mixed with other suites' non-serialised transactional tests, its reload collided on `django_content_type`.
 - Idle-in-transaction timeouts set with `SET LOCAL` persist to the end of a `TestCase` test's outer transaction; a test idle for over 10 s between queries would lose its connection.
 - After an idle timeout kills the connection, the 503 page must still render; checkpoint 3 tests this.
 - Human review and merge remain pending.
@@ -63,7 +63,7 @@ Non-test, non-migration `src/` lines: model ~20, `limits.py` ~85, views ~45, `42
 
 - [x] Checkpoint 1: specs and plan.
 - [x] Checkpoint 2: model, migration, keying, limit service and tests (red evidence first). Red: `test_limits.py` failed to import (`accounts.limits` missing). Green: 27 passed; full verification 217 passed, 1 skipped, 85 subtests passed; Ruff clean; `makemigrations --check` clean. 138 of 400 budget lines (`models.py` +23, `limits.py` 115); migration 42 lines. The guards in `start` and `lock` refuse to run outside a transaction, where a lock would be released at once.
-- [ ] Checkpoint 3: views, 429 pages, timeouts, 503 and criterion tests incl. threaded ones (red evidence first).
+- [x] Checkpoint 3: views, 429 pages, timeouts, 503 and criterion tests incl. threaded ones (red evidence first). Red: `test_limit_views.py` 28 failed, 5 passed (no 429s, no 503 on limit failures, threaded runs all 200; the 5 passing tests check that refusals and other addresses are not limited, which already held). Green: 159 passed in `src/accounts`; threaded and lock-timeout tests passed 5 runs in a row; full verification twice, 255 passed, 1 skipped, 85 subtests passed. `create_demo` uses `@sensitive_variables()` as in ACC-2 round 2; password hashing sits inside the 503 handler with the pre-check and creation block (spec sentence updated). 228 of 400 budget lines since `11d7649`.
 - [ ] Checkpoint 4: guides and status sentences.
 - [ ] Full verification, size budget and builder scope check.
 - [ ] Independent verifier and security review; human review and merge.
