@@ -1,8 +1,10 @@
+import importlib
 import re
 from datetime import UTC, datetime, timedelta
 from unittest import mock
 
 import pytest
+from django.apps import apps
 from django.db import connection, transaction
 from django.db.transaction import TransactionManagementError
 from django.test import RequestFactory
@@ -71,7 +73,11 @@ def test_stored_key_is_a_keyed_hash_not_the_address():
 
 @pytest.mark.django_db
 def test_migration_creates_the_overall_creation_row():
-    assert LimitCounter.objects.filter(scope="demo-total", key="all").count() == 1
+    migration = importlib.import_module("accounts.migrations.0002_limit_counter")
+    LimitCounter.objects.filter(scope="demo-total").delete()
+    migration.create_overall_row(apps, None)
+    row = LimitCounter.objects.get(scope="demo-total", key="all")
+    assert row.count == 0
 
 
 @pytest.mark.django_db
