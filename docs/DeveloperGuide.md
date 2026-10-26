@@ -45,6 +45,8 @@ The landing page source is [`index.md`](index.md), with [`_config.yml`](_config.
 
 ## Acknowledgements
 
+Relay's development workflow, tooling and repository conventions were adapted from the [MP3 Deskmate baseline](https://github.com/CS3227-2610-MP3-Deskmate/CS3227-2610-MP3/tree/97ad99155307825a4b53925906e42f663647a70b), then streamlined for MP4.
+
 The product-site scaffold uses GitHub's [Cayman theme](https://github.com/pages-themes/cayman). Relay plans to use [Django](https://www.djangoproject.com/), [PostgreSQL](https://www.postgresql.org/) and [SoC LLM](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). Record any further reused external ideas, code or documentation here as they are adopted.
 
 The tool adapters follow the official [Codex agent documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents). Usage collection draws on [Codex JSONL output](https://learn.chatgpt.com/docs/non-interactive-mode), [Claude Code output](https://code.claude.com/docs/en/headless) and [Claude cache accounting](https://platform.claude.com/docs/en/build-with-claude/prompt-caching). Local session-file parsing also depends on observed runtime formats and must be rechecked when clients change.

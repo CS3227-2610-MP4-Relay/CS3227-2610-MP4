@@ -13,20 +13,20 @@ def write(path, text):
     path.write_text(text, encoding="utf-8")
 
 
-GOOD = """# A session
+GOOD = (
+    "# A session\n\n"
+    "Slice: #1 · Tier: Fast lane · Tool: none · "
+    "Orchestrator model: unavailable (no metadata) · Date: 2026-10-21\n\n"
+    "Tokens: unavailable; no usage collected.\n\n"
+    "| Agent/source | Input | Cached input | Output | Reasoning output | Total | "
+    "Recorded elapsed span |\n"
+    "| --- | ---: | ---: | ---: | ---: | ---: | --- |\n"
+    "| Orchestrator — unavailable | unavailable | unavailable | unavailable | "
+    "unavailable | unavailable | unavailable |\n\n"
+    "## Requests\n\n## Agent runs\n\n## Decisions and corrections\n\n## Problems\n"
+)
 
-Slice: #1 · Tier: Fast lane · Tool: none · Date: 2026-10-21
-
-Tokens: unavailable; no usage collected.
-
-## Requests
-
-## Agent runs
-
-## Decisions and corrections
-
-## Problems
-"""
+TABLE = GOOD[GOOD.index("| Agent/source") : GOOD.index("## Requests")].rstrip()
 
 
 class LogChecks(unittest.TestCase):
@@ -62,6 +62,41 @@ class LogChecks(unittest.TestCase):
             write(log, GOOD)
             messages = [message for _, message in check_logs.findings(log)]
             self.assertIn("file name is not NNN-kebab.md", messages)
+
+    def test_missing_or_empty_orchestrator_model_is_reported(self):
+        for replacement in ("", "Orchestrator model: "):
+            with (
+                self.subTest(replacement=replacement),
+                tempfile.TemporaryDirectory() as folder,
+            ):
+                log = Path(folder) / "001-a-session.md"
+                write(
+                    log,
+                    GOOD.replace(
+                        "Orchestrator model: unavailable (no metadata)", replacement
+                    ),
+                )
+                messages = [message for _, message in check_logs.findings(log)]
+                self.assertIn("header has no orchestrator model value", messages)
+
+    def test_missing_misplaced_or_malformed_token_table_is_reported(self):
+        table_lines = TABLE.splitlines()
+        invalid = (
+            GOOD.replace(TABLE, ""),
+            GOOD.replace(TABLE, "").replace("## Requests", "## Requests\n" + TABLE),
+            GOOD.replace(TABLE, "Some prose before the table.\n\n" + TABLE),
+            GOOD.replace("| Input | Cached input |", "| Cached input | Input |"),
+            GOOD.replace(table_lines[1], "| invalid |"),
+            GOOD.replace(table_lines[2], ""),
+            GOOD.replace(table_lines[2], "| Orchestrator | 0 |"),
+            GOOD.replace("| Orchestrator — unavailable |", "| |"),
+        )
+        for number, text in enumerate(invalid):
+            with self.subTest(case=number), tempfile.TemporaryDirectory() as folder:
+                log = Path(folder) / "001-a-session.md"
+                write(log, text)
+                messages = [message for _, message in check_logs.findings(log)]
+                self.assertTrue(any("token table" in message for message in messages))
 
 
 if __name__ == "__main__":

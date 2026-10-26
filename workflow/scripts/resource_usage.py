@@ -30,6 +30,7 @@ WARNING_CODES = frozenset(
         "claude_usage_without_message_id_skipped",
         "claude_message_usage_incomplete",
         "codex_turn_usage_incomplete",
+        "codex_cumulative_usage_incomplete",
         "mixed_codex_telemetry_is_ambiguous",
         "multiple_codex_exports_are_ambiguous",
         "codex_counter_reset",
@@ -234,7 +235,9 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                     if (
                         record.get("type") == "event_msg"
                         and payload.get("type") == "token_count"
-                        and isinstance(info.get("total_token_usage"), dict)
+                        # A null/absent info is a rate-limit-only notification.
+                        # Non-null info signals usage even if its counters broke.
+                        and payload.get("info") is not None
                     ):
                         stream["events"].append(
                             (stamp or "", index, "cumulative", info)
@@ -327,13 +330,17 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                     item[1],
                 ),
             ):
-                raw = info.get("total_token_usage", info)
+                raw = (
+                    _object(info.get("total_token_usage"))
+                    if kind == "cumulative"
+                    else info
+                )
                 current = _codex_usage(raw)
-                if kind == "turn" and any(
+                if any(
                     current[field] is None
                     for field in ("input_tokens", "output_tokens", "total_tokens")
                 ):
-                    warnings.add("codex_turn_usage_incomplete")
+                    warnings.add(f"codex_{kind}_usage_incomplete")
                 signature = (
                     stamp,
                     index if kind == "turn" else None,
@@ -386,7 +393,10 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                     for field in METRICS
                 ):
                     warnings.add("codex_inherited_or_missing_initial_history")
-                    increment = last
+                    increment = {
+                        field: value if current[field] is not None else None
+                        for field, value in last.items()
+                    }
                 for field, value in increment.items():
                     if value is not None:
                         totals[field] = (totals[field] or 0) + value

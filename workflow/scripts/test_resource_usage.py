@@ -253,6 +253,77 @@ class ResourceUsageTests(unittest.TestCase):
         self.assertEqual(self.tokens(result)["total_tokens"], 22)
         self.assertIn("codex_copied_history_excluded", result["warnings"])
 
+    def test_incomplete_cumulative_usage_cannot_become_zero_task_usage(self):
+        for missing in (None, {}, "invalid", [], "absent"):
+            for later_complete in (False, True):
+                with self.subTest(missing=missing, later_complete=later_complete):
+                    initial = [meta(), codex(counts(100, 10))]
+                    path = self.write("incomplete.jsonl", initial)
+                    baseline = usage.collect([path], now=START)
+                    incomplete = codex(missing, last=counts(50, 5), second=1)
+                    if missing == "absent":
+                        incomplete["payload"]["info"].pop("total_token_usage")
+                    records = [*initial, incomplete]
+                    if later_complete:
+                        records.append(codex(counts(200, 20), second=2))
+                    self.write("incomplete.jsonl", records)
+                    current = usage.collect([path], now=START + timedelta(seconds=2))
+                    self.assertTrue(
+                        all(v is None for v in self.tokens(current).values())
+                    )
+                    self.assertIn(
+                        "codex_cumulative_usage_incomplete", current["warnings"]
+                    )
+                    result = usage.report(current, baseline)
+                    self.assertTrue(all(v is None for v in result["tokens"].values()))
+                    self.assertIn(
+                        "codex_cumulative_usage_incomplete", result["warnings"]
+                    )
+
+    def test_partial_cumulative_counters_preserve_only_measurable_fields(self):
+        initial = [meta(), codex(counts(100, 10))]
+        path = self.write("partial.jsonl", initial)
+        baseline = usage.collect([path], now=START)
+        partial = {**counts(150, 15), "input_tokens": None, "total_tokens": None}
+        self.write("partial.jsonl", [*initial, codex(partial, second=1)])
+        current = usage.collect([path], now=START + timedelta(seconds=1))
+        result = usage.report(current, baseline)
+        self.assertIsNone(result["tokens"]["input_tokens"])
+        self.assertIsNone(result["tokens"]["total_tokens"])
+        self.assertEqual(result["tokens"]["output_tokens"], 5)
+        self.assertIn("codex_cumulative_usage_incomplete", result["warnings"])
+
+    def test_rate_limit_only_notification_does_not_invalidate_usage(self):
+        initial = [meta(), codex(counts(100, 10))]
+        path = self.write("rate-limit.jsonl", initial)
+        baseline = usage.collect([path], now=START)
+        notification = {
+            "type": "event_msg",
+            "payload": {"type": "token_count", "info": None, "rate_limits": {}},
+        }
+        self.write("rate-limit.jsonl", [*initial, notification])
+        current = usage.collect([path], now=START + timedelta(seconds=1))
+        self.assertEqual(usage.report(current, baseline)["tokens"]["total_tokens"], 0)
+        self.assertEqual(current["warnings"], [])
+
+    def test_first_partial_cumulative_event_cannot_restore_missing_counters(self):
+        path = self.write("first-partial.jsonl", [meta()])
+        baseline = usage.collect([path], now=START)
+        partial = {**counts(100, 20), "input_tokens": None, "total_tokens": None}
+        self.write(
+            "first-partial.jsonl",
+            [meta(), codex(partial, last=counts(10, 5), second=1)],
+        )
+        current = usage.collect([path], now=START + timedelta(seconds=1))
+        self.assertIsNone(self.tokens(current)["input_tokens"])
+        self.assertIsNone(self.tokens(current)["total_tokens"])
+        result = usage.report(current, baseline)
+        self.assertIsNone(result["tokens"]["input_tokens"])
+        self.assertIsNone(result["tokens"]["total_tokens"])
+        self.assertEqual(result["tokens"]["output_tokens"], 5)
+        self.assertIn("codex_cumulative_usage_incomplete", result["warnings"])
+        self.assertIn("codex_inherited_or_missing_initial_history", result["warnings"])
+
     def test_empty_start_baseline_differs_from_missing_runtime_telemetry(self):
         path = self.write("new.jsonl", [meta()])
         baseline = usage.collect([path], now=START)
