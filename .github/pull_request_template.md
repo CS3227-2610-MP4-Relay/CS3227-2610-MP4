@@ -1,4 +1,4 @@
-<!-- Agents fill this in; only humans tick boxes. Keep prose short; one row per criterion. -->
+<!-- Agents fill this in; only humans tick boxes. Describe the final change and review evidence, following workflow/skills/create-pull-request.md. -->
 <!-- Add Closes #<issue> only when this slice has an issue. -->
 
 **What changes for users:**
@@ -8,13 +8,14 @@
 | --- | --- | --- |
 |  |  |  |
 
-**Tier and reviewed candidate:**
-<!-- Tier, base/head range or dirty-tree manifest; Standard/High verifier evidence and required security specialist range; Fast lane human diff review or pending review. -->
+**Review coverage:**
+<!-- Tier, review outcome and material limitations; link exact candidate/range evidence in the plan or log. Fast lane human review stays pending until given. -->
 
-**Checks and usage:**
-<!-- Final candidate checks, unavailable checks, coordinator/delegated usage coverage and repair rounds. Link passing CI when available. -->
+**Validation:**
+<!-- Actual final-candidate checks and unavailable checks; link passing CI and supporting plan/log records. -->
 
-**Decisions, deviations and open findings:** none
+**Risks or open findings:** none
+<!-- Include only unresolved issues and tradeoffs relevant to the final change. -->
 
 **Manual test steps:**
 1.
