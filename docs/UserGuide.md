@@ -49,7 +49,7 @@ Only a Test Coordinator can prepare test rounds. A new round is in the **Draft**
 
 **Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". With no rounds, it says "No rounds yet."
 
-Whenever creating, saving or deleting anything in a round fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
+Whenever creating a round, or saving or deleting anything in it, fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
 
 ### Create a round
 
