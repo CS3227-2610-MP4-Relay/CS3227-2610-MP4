@@ -35,20 +35,22 @@ Slice notes:
 - RND-7: the slice first updates the spec with the sample round's exact text, then writes code. It extends ACC-2.5's tests so a failed creation also leaves no sample round, criteria, cases or links.
 - Every slice: its rules criterion runs the escaping and direction-isolation tests from the [rules for every round action](../specs/product/rounds.md#rules-for-every-round-action) for the user text its pages render, starting with RND-1.
 
-## Proposed defaults (confirm in PR review)
+## Defaults
+
+The coordinator accepted these defaults on 2026-10-26 under the human's delegation, after three verifier and security-review rounds.
 
 - Fields: round title 1–120 characters; criterion text 1–500; case title 1–120, steps 1–2000, expected result 1–1000; build label 1–100. Text is trimmed; text with no visible character (only whitespace, control or format characters) counts as empty; Django's null-character validator stays.
 - Caps, since storage is shared and nothing is cleaned up: 20 rounds per workspace (the sample round included), 20 criteria and 30 cases per round, 10 builds per round (the publish build included).
 - Cases link to one or more criteria of the same round (many-to-many). A case always has at least one link, so a linked criterion cannot be deleted; deleting a case deletes its links explicitly. Unlinked criteria are allowed, including at publishing. Every foreign key uses `PROTECT`.
 - Publishing needs at least one case (and so at least one criterion) and a build label.
-- A retest selects cases by checkbox and names a new build. Labels are unique within a round, compared case-sensitively after NFC normalisation, stored normalised, with a database unique constraint on round and label. A retest request is stored as a build covering the selected cases; a case's current build is the newest build covering it. The success message counts distinct cases and uses "1 test case" for one.
+- A retest selects cases by checkbox and names a new build. Labels are unique within a round, compared case-sensitively after NFC normalisation and removal of format characters (Cf), with a database unique constraint on round and that normalised key. A retest request is stored as a build covering the selected cases; a case's current build is the newest build covering it. The success message counts distinct cases and uses "1 test case" for one.
 - Closing has no precondition; the close button warns that the round cannot be reopened.
 - No round deletion, reopening, published-case edits or versioning.
 - Checking order: method (405); sign-in, role and CSRF/`Origin` before any record is read (redirect or 403); URL records by workspace, then round membership (404); state (409); validation, including form-submitted IDs. Django's CSRF middleware runs before the view, so a signed-out POST without a token may get 403 rather than a redirect; tests of the redirect send a valid token.
 - Page titles and routes under `/coordinator/rounds/` are in the [rounds routes](../specs/TECHNICAL-SPEC.md#rounds-routes); messages, including success messages, are in the [criteria](../specs/product/rounds.md). Coordinator home lists rounds newest first, with no pagination given the cap. The round page shows each case's fields and links and, from publishing, each case's current build and the builds list. "Earlier builds" sits under each case on the results page, after its current-build results.
 - Concurrency: every round write locks the round row and re-checks state, caps and label uniqueness; round creation locks the workspace row. Racing requests: exactly one succeeds, and the losers get the cap message, the duplicate-label message or 409. Concurrent Draft edits to one record: last saved wins.
 - Storage failure: ACC's 503 page; the whole change rolls back. The sample round shares ACC-2's transaction, so ACC-2.5 covers its failure.
-- All user-written text is escaped, keeps its line breaks and sits in an element with `dir="auto"`, which isolates its direction.
+- All user-written text is escaped, keeps its line breaks and sits in an element with `dir="auto"` around only the user text, which isolates its direction; site CSS does not reset `unicode-bidi`. In page titles, the user part sits between U+2068 and U+2069.
 
 ## Out of scope
 
@@ -64,7 +66,7 @@ These are assumptions RND makes; RES confirms or changes them, and any change to
 - Result reference (provisional): a result references one case and one build of the same round that covers it; its criteria are the case's frozen links.
 - Round-level permissions: no results in Draft and none new or changed once Closed (confirmed); while Open, new results only against a case's current build (provisional).
 - Required: result creation and changes lock the round row, then re-check the state, that the build is in the round and covers the case, and that it is the case's current build. Tests include a submit racing a close and a submit racing a retest.
-- Required: for testers, a Draft round is the same 404 as a missing round.
+- Required: on tester pages, a Draft round is the same 404 as a missing round.
 - Required: coordinator-written text shown to testers follows the same rendering rule and tests as the [rules for every round action](../specs/product/rounds.md#rules-for-every-round-action).
 - Required: caps on results per case, tester or round, for shared storage.
 - Whether a tester may edit a submitted result while Open, and whether one tester may submit several results for one case and build. RND-4 lists every submitted result, newest first.
@@ -86,6 +88,7 @@ These are assumptions RND makes; RES confirms or changes them, and any change to
 - [x] Run full verification and `git diff --check`.
 - [x] Repair round 2: restore the Draft-invisibility control, move the rendering rule into the shared rules, fix the capacity link and the RES wording.
 - [ ] Verifier and security-reviewer review the fixed candidate.
-- [ ] Human and Whimsyturtle review of the proposed defaults and cross-area items; merge decision.
+- [x] Defaults accepted by the coordinator under the human's delegation (2026-10-26).
+- [ ] Whimsyturtle review of the cross-area items; human merge decision.
 
-Check evidence (builder, macOS, `.venv`, repair round 2): Ruff lint and format passed; pytest reported 70 passed, 85 subtests passed. `git diff --check` is clean, and `check_scope.py builder --base b928c86` reported all changes within scope. Criterion counts: RND-1 7, RND-2 8, RND-3 6, RND-4 6, RND-5 8, RND-6 5, RND-7 4; no duplicate IDs.
+Check evidence (builder, macOS, `.venv`, follow-up after repair round 2): Ruff lint and format passed; pytest reported 70 passed, 85 subtests passed. `git diff --check` is clean, and `check_scope.py builder --base db00880` reported all changes within scope. Criterion counts: RND-1 7, RND-2 8, RND-3 6, RND-4 6, RND-5 8, RND-6 5, RND-7 4; no duplicate IDs.
