@@ -29,6 +29,19 @@ For [ACC](product/accounts.md). The demo slice deletes nothing: workspace lifeti
 - **Client address:** `REMOTE_ADDR`, never a client-supplied forwarding header. IPv4 addresses count individually and IPv6 addresses by their `/64` prefix. Using a hosting provider's client-address header requires a verified setting naming it; until then, a proxy address shared by all clients makes the per-address limits shared too.
 - **Sessions:** Django's database-backed sessions, ending 8 hours after sign-in regardless of activity; sign-out deletes the session row.
 
+### Rounds
+
+For [RND](product/rounds.md). Nothing here deletes a round, build or result; retention stays with the open decisions above. A round belongs to one workspace and every other record below to one round; every lookup goes through the workspace helper and then checks that the record is in the round named by the URL.
+
+- **Round:** a non-null workspace, a title (1 to 120 characters), a state of `draft`, `open` or `closed`, and its creation, publication and closing times. At most 20 per workspace, the sample round included.
+- **Acceptance criterion:** a round and its text (1 to 500 characters). At most 20 per round.
+- **Test case:** a round, a title (1 to 120), steps (1 to 2000) and an expected result (1 to 1000). At most 30 per round.
+- **Case–criterion link:** a many-to-many link between a case and criteria of the same round, checked by the form and again inside the write transaction. A case always has at least one link; a linked criterion cannot be deleted.
+- **Build:** a round, a label (1 to 100 characters, unique within the round), its creation time and the cases it covers. Publishing creates the first build covering every case; each retest request is a build covering the selected cases. A case's current build is the newest build covering it. At most 10 per round.
+- **Results (RES):** a result will reference one case and one build covering that case, so its criteria are the case's frozen links. Foreign keys from results, builds and links use `PROTECT`; criteria and cases are deleted only while Draft, when no build or result can reference them. The result itself is specified in [RES](product/results.md).
+- **Writes:** every round change runs in one transaction that locks the round row (`select_for_update`), then re-checks the state, limits, label uniqueness and that linked records are in the round. Creating a round locks the workspace row to check the round limit. Concurrent Draft edits to the same record are not merged; the last saved edit wins.
+- **Sample round:** "Sample round" with 3 criteria and 4 cases of fixed synthetic text, written by the shared round code inside the [demo creation](#accounts-and-workspaces) transaction.
+
 ## Routes
 
 Only the subsections below are specified. Each route contract must name its method, role/workspace/ownership checks, input validation, state preconditions, success result and denied/failure behaviour before implementation.
@@ -47,6 +60,26 @@ For [ACC](product/accounts.md). Every POST uses Django's CSRF protection, which 
 | `/tester/` | GET | Beta Tester | Page "Tester home" with username and workspace name | Signed out: redirect to `/sign-in/`; Test Coordinator: 403 |
 
 The session cookie is `HttpOnly`; session and CSRF cookies are `SameSite=Lax`, and `Secure` outside local development. Later workspace routes require a signed-in user of the route's role, look records up through the workspace helper and return 404 "Page not found." for another workspace's record.
+
+### Rounds routes
+
+For [RND](product/rounds.md). Every route requires a signed-in Test Coordinator and follows the [rules for every round action](product/rounds.md#rules-for-every-round-action): signed out redirects to `/sign-in/`, a Beta Tester gets 403, a missing, other-workspace or other-round record gets 404, a POST without a valid CSRF token or with a cross-site `Origin` gets 403, a request in a state not listed gets 409, and a storage failure gets 503. Invalid input re-renders the form, and a refused delete the round page, with status 200 and the message. A successful POST redirects to the round page, which shows the success message once. The Coordinator home (`/coordinator/`) also lists the workspace's rounds. `<round>`, `<criterion>` and `<case>` are integer IDs.
+
+| Route | Method | States | Page title or result |
+| --- | --- | --- | --- |
+| `/coordinator/rounds/new/` | GET, POST | — | "New round"; creates a Draft round |
+| `/coordinator/rounds/<round>/` | GET | Any | The round's title, its state and, once Open, each case's current build |
+| `/coordinator/rounds/<round>/edit/` | GET, POST | Draft | "Edit round"; changes the title |
+| `/coordinator/rounds/<round>/criteria/new/` | GET, POST | Draft | "New acceptance criterion" |
+| `/coordinator/rounds/<round>/criteria/<criterion>/edit/` | GET, POST | Draft | "Edit acceptance criterion" |
+| `/coordinator/rounds/<round>/criteria/<criterion>/delete/` | POST | Draft | Deletes an unlinked criterion |
+| `/coordinator/rounds/<round>/cases/new/` | GET, POST | Draft | "New test case" |
+| `/coordinator/rounds/<round>/cases/<case>/edit/` | GET, POST | Draft | "Edit test case" |
+| `/coordinator/rounds/<round>/cases/<case>/delete/` | POST | Draft | Deletes the case and its links |
+| `/coordinator/rounds/<round>/publish/` | POST | Draft | Build label form on the round page; creates the first build and opens the round |
+| `/coordinator/rounds/<round>/results/` | GET | Open, Closed | "Results: <title>" |
+| `/coordinator/rounds/<round>/retest/` | GET, POST | Open | "Request a retest"; creates a build covering the selected cases |
+| `/coordinator/rounds/<round>/close/` | POST | Open | Button on the round page; closes the round |
 
 ## Configuration
 

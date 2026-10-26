@@ -29,8 +29,11 @@ Threat: repeated sign-in attempts guess passwords, or repeated demo creation exh
 
 Threat: edits or concurrent submissions change the meaning of an earlier result, overwrite history or apply an action in the wrong round state.
 
-- Define build and criteria associations, published-case version rules and observation edit/submission rules before writing the schema.
-- Check permissions and state when applying writes, including explicit adoption of AI suggestions. Test important overlapping submissions and failure outcomes once those contracts are settled.
+- Rounds move only Draft → Open → Closed. Criteria, cases and their links are frozen at publication, with no versioning, and a result references its case and build, so later actions cannot change what an earlier result was recorded against ([round states](product/rounds.md#round-states), [RND-3.4](product/rounds.md#rnd-3-publish-a-round-to-beta-testers), [RND-5.5](product/rounds.md#rnd-5-request-a-retest)). Build labels are unique within a round, and results are not deleted ([rounds data](TECHNICAL-SPEC.md#rounds)).
+- Only the workspace's Test Coordinator performs round actions; Beta Testers never see a Draft round. Every round action checks role, workspace, round membership of linked records and state on the server, and refuses a wrong-state request with 409 ([rules for every round action](product/rounds.md#rules-for-every-round-action), [RND-1.6](product/rounds.md#rnd-1-prepare-a-test-round), [RND-2.7](product/rounds.md#rnd-2-manage-acceptance-criteria-and-test-cases), [RND-5.6](product/rounds.md#rnd-5-request-a-retest)).
+- Each round write locks the round row and re-checks state and limits inside its transaction, so an edit racing a publish, a retest racing a close, or duplicate requests cannot apply in the wrong state ([RND-1.5](product/rounds.md#rnd-1-prepare-a-test-round), [RND-3.5](product/rounds.md#rnd-3-publish-a-round-to-beta-testers), [RND-5.7](product/rounds.md#rnd-5-request-a-retest), [RND-6.4](product/rounds.md#rnd-6-close-a-round)).
+- Tester-written text shown to the coordinator is escaped ([RND-4.5](product/rounds.md#rnd-4-review-submitted-results)). Caps on rounds, criteria, cases and builds bound each workspace's storage ([RND-1.4](product/rounds.md#rnd-1-prepare-a-test-round), [RND-2.5](product/rounds.md#rnd-2-manage-acceptance-criteria-and-test-cases), [RND-5.4](product/rounds.md#rnd-5-request-a-retest)).
+- Still to define in [RES](product/results.md): observation edit/submission rules and result-level checks. Check permissions and state when applying writes, including explicit adoption of AI suggestions, and test overlapping submissions and failure outcomes once those contracts are settled.
 
 ## AI features and prompt injection
 
