@@ -2,7 +2,7 @@
 
 ## Setup
 
-Relay currently contains the repository and development-workflow scaffold. The Django application, database schema and hosted environments will be implemented in later slices. Its planned architecture, configuration and environments are in [`TECHNICAL-SPEC.md`](../workflow/specs/TECHNICAL-SPEC.md).
+Relay contains a local Django application foundation and CI checks. Its architecture, configuration and environments are in [`TECHNICAL-SPEC.md`](../workflow/specs/TECHNICAL-SPEC.md).
 
 Install Python 3.14, as selected by [`.python-version`](../.python-version), before creating the local tooling environment. On Windows, use the Python launcher to select it explicitly; an unqualified `python` may select another installed version. From the repository root in Git Bash:
 
@@ -15,7 +15,47 @@ python -m pip install -r requirements-dev.txt
 
 Confirm that `python --version` reports 3.14.x before installing. If `py -3.14` cannot find it, install Python 3.14 or use the explicit path to that interpreter. On macOS/Linux, create the environment with `python3.14 -m venv .venv` and activate it with `source .venv/bin/activate`.
 
-Run the checks in [`AGENTS.md`](../AGENTS.md#commands). The current workflow checks need no database. Application startup, migrations, database setup and demo-account instructions will be added when those features exist. Never use production credentials for development or tests.
+### Run locally
+
+Use a local PostgreSQL database and role matching the configuration contract in the [technical spec](../workflow/specs/TECHNICAL-SPEC.md#configuration). For example, if Docker is already installed, start a throwaway local database:
+
+```bash
+docker run --rm -d --name relay-local-db \
+  -e POSTGRES_DB=relay -e POSTGRES_USER=relay -e POSTGRES_PASSWORD=relay \
+  -p 127.0.0.1:5432:5432 postgres:17.6
+```
+
+Wait for PostgreSQL to accept connections, then run from the repository root with `.venv` active:
+
+```bash
+export DJANGO_SECRET_KEY='throwaway-local-development-only'
+python src/manage.py check
+python src/manage.py runserver 127.0.0.1:8000
+```
+
+Open <http://127.0.0.1:8000/>. Stop Django with Ctrl+C. If you started the optional database container above, stop it with `docker stop relay-local-db`; its contents are discarded. No business models, migrations or demo accounts exist yet. The landing page needs no database query.
+
+Settings read exported environment variables, not `.env` files; [`.env.example`](../.env.example) lists local variable names. Debug defaults off; set `DJANGO_DEBUG=true` only for local debugging. Never use production credentials for development or tests. There is no production settings module or deployment workflow.
+
+### Verify
+
+The pytest suite uses the fixed isolated [test environment](../workflow/specs/TECHNICAL-SPEC.md#configuration). Start a separate throwaway PostgreSQL server with its own database-creation-capable test role; for example, with Docker already installed:
+
+```bash
+docker run --rm -d --name relay-test-db \
+  -e POSTGRES_DB=relay_test -e POSTGRES_USER=relay_test \
+  -e POSTGRES_PASSWORD=relay_test \
+  -p 127.0.0.1:55432:5432 postgres:17.6
+```
+
+Wait for PostgreSQL to accept connections. From the repository root with `.venv` active, run in Git Bash (or another POSIX shell):
+
+```bash
+python src/manage.py check --settings=relay.settings.test
+ruff check . && ruff format --check . && pytest
+```
+
+Pytest creates and destroys `test_relay_test`; it never selects the normal local database. Stop the optional test container with `docker stop relay-test-db`. CI provisions its own PostgreSQL service and runs the same checks. The workflow's own tests under `workflow/scripts/` still need no database. A local pass does not establish that hosted CI has run.
 
 ## Development workflow
 
@@ -33,7 +73,7 @@ Role write scopes live in `workflow/agents/`. The scope checker and tool hooks a
 
 ## Design
 
-The planned Django/PostgreSQL architecture, environment separation and delivery work are in [`TECHNICAL-SPEC.md`](../workflow/specs/TECHNICAL-SPEC.md). Threats and intended controls are in [`SECURITY-SPEC.md`](../workflow/specs/SECURITY-SPEC.md). Neither describes an implemented application yet.
+The Django/PostgreSQL architecture, environment separation and planned delivery work are in [`TECHNICAL-SPEC.md`](../workflow/specs/TECHNICAL-SPEC.md). Threats and controls are in [`SECURITY-SPEC.md`](../workflow/specs/SECURITY-SPEC.md).
 
 ## SoC LLM
 
@@ -47,6 +87,6 @@ The landing page source is [`index.md`](index.md), with [`_config.yml`](_config.
 
 Relay's development workflow, tooling and repository conventions were adapted from the [MP3 Deskmate baseline](https://github.com/CS3227-2610-MP3-Deskmate/CS3227-2610-MP3/tree/97ad99155307825a4b53925906e42f663647a70b), then streamlined for MP4.
 
-The product-site scaffold uses GitHub's [Cayman theme](https://github.com/pages-themes/cayman). Relay plans to use [Django](https://www.djangoproject.com/), [PostgreSQL](https://www.postgresql.org/) and [SoC LLM](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). Record any further reused external ideas, code or documentation here as they are adopted.
+The product-site scaffold uses GitHub's [Cayman theme](https://github.com/pages-themes/cayman). Relay uses [Django](https://www.djangoproject.com/) and [PostgreSQL](https://www.postgresql.org/) and plans to use [SoC LLM](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). Local/CI container examples use the [official PostgreSQL image](https://hub.docker.com/_/postgres), whose [17.6 tag](https://hub.docker.com/layers/library/postgres/17.6/) was verified for this slice. Record any further reused external ideas, code or documentation here as they are adopted.
 
 The tool adapters follow the official [Codex agent documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents). Usage collection draws on [Codex JSONL output](https://learn.chatgpt.com/docs/non-interactive-mode), [Claude Code output](https://code.claude.com/docs/en/headless) and [Claude cache accounting](https://platform.claude.com/docs/en/build-with-claude/prompt-caching). Local session-file parsing also depends on observed runtime formats and must be rechecked when clients change.
