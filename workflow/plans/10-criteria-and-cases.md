@@ -49,6 +49,30 @@ Non-test, non-migration `src/` lines: models ~50 (criterion ~12, case ~15, link 
 - `maxlength` in browsers counts UTF-16 units while the server counts code points (accepted in RND-1); after CR LF normalisation, line breaks agree.
 - RND-1 is still in review; human review and merge of both slices pending.
 
+## Review round 0 and repair round 1
+
+Review round 0 on candidate `3557050`: verifier 2 Medium, 5 Low, 1 nit; security-reviewer 0 High or Medium, 1 Low (the same as verifier Medium 1), 4 Info.
+
+Coordinator decisions (2026-10-27, under the human's delegation), all implemented in repair round 1:
+
+1. Verifier Medium 1 and security Low: `criterion_id or case_id` treated ID 0 as no record, so `/criteria/0/edit/` opened a new form on Draft and gave 409 on Open or Closed. The views now choose the URL's record ID by kind (`url_record_id`), so 0 is looked up like any ID and gets the 404. Tests in `test_record_ids.py`: IDs `0`, `00` and an oversized one, for criteria and cases, on Draft, Open and Closed rounds, on edit (GET and POST) and delete.
+2. Verifier Medium 2: the new-case and edit-case pages, and both forms re-shown after a refusal, list exactly the URL round's criteria when sibling-round and other-workspace criteria exist.
+3. Verifier Low 3: an Open or Closed round's URL with a missing record or another round's record gets 404, never 409.
+4. Verifier Low 4 and security Info 4: a storage failure while linking (case add and edit) or deleting a case gives 503 and leaves the case, its fields and its links unchanged.
+5. Security Info 2: `except services.Refused` now sits outside the committing `transaction.atomic()` in both record views, so a refusal leaves the transaction by its exception and can never commit a partial write. Behaviour is otherwise unchanged.
+6. Security Info 4: a case-cap race test (29 cases, 5 requests, 0.1 s pause in `add_case` under the lock) and a test that injected `round`, `round_id`, `id`, `case` and `criterion` POST fields are ignored.
+7. Verifier Low 6: the criterion edit is the `save_criterion` service, so every write lives in `rounds.services`; the views call services directly, with no lookup by name and no mixed return value.
+8. Verifier Low 5: the User Guide's storage-failure sentence now sits in the introduction of "Test rounds", covering every round action.
+9. Verifier nit: missing comma in the technical spec's opening sentence.
+
+Accepted as Info, not changed: security Info 3, model `__str__` and repr carry record text, a hardening note for RND-3 and RES to keep records out of exception messages and logs; verifier Low 7, the CR LF change was bundled into `096d86d`, and history is not rewritten.
+
+Repair round 1 evidence (Windows, test-database lock):
+
+- Red: `pytest test_record_ids.py test_record_services.py` gave 7 failed, 31 passed: the criterion ID `0` and `00` cases on Draft (200 new form), Open and Closed (409), and `save_criterion` missing. Cases with ID 0 and every oversized ID already gave 404 (`None or 0` is 0, and Django finds no row for an out-of-range ID); they stay as regression tests.
+- The test-only additions passed on the repaired code. Mutations on temporary copies, each restored and checked with `cmp`: (a) case-form choices from `Criterion.objects.all()` failed the choices test; (b) the state check before the record lookup in `record_form` failed the Open and Closed 404 test; (c) no round lock in `record_form` failed the case race in 5 of 5 runs.
+- Final: `check` and `makemigrations --check` clean, Ruff clean, 482 passed, 1 skipped, 85 subtests passed; `git diff --check` clean; scope clean against `3557050`; 338 added and 9 removed budget lines since `6f4ab10`.
+
 ## Checklist
 
 - [x] Checkpoint 1: specs and plan.
@@ -56,3 +80,5 @@ Non-test, non-migration `src/` lines: models ~50 (criterion ~12, case ~15, link 
 - [x] Checkpoint 3: routes, forms, templates and RND-2 tests. Built on RND-1's `coordinator_view(methods)`; two views, `record_form` and `delete_record`, serve the six routes with the record kind from `urls.py`, and one generic form template serves every round form. Red: `pytest src/rounds` stopped at collection with `ImportError: cannot import name 'CaseForm' from 'rounds.forms'`; `test_record_rendering.py`, `test_views.py` and `test_routes.py` gave 7 failed (6 rendering tests, the RND-1.1 empty-sections assertion), 92 passed; `test_pages_do_not_reset_unicode_bidi` passed beforehand as a guard, and `test_routes.py` passed until the new routes existed. Mutations on a temporary copy of `views.py`, restored and checked with `cmp`: no row lock in the add path failed the RND-2.5 race in only 2 of 3 runs, being timing-dependent (widened at checkpoint 4); a record lookup not scoped to the URL round failed the same-workspace 404 test for Draft, Open and Closed; no locked state re-check failed both 409 re-check tests. Green: `check`, `makemigrations --check`, Ruff clean; 455 passed, 1 skipped, 85 subtests passed; 322 added and 9 removed budget lines since `6f4ab10`.
 - [x] Checkpoint 4: guides and status. User Guide: the criteria and cases sections, adding, editing and deleting, limits, caps and messages, only for Draft rounds, which are all a coordinator can reach. Developer Guide: the models, services, shared record views and `isolated_lines` reuse. Status sentences of `rounds.md`, `TECHNICAL-SPEC.md` and `SECURITY-SPEC.md`. The RND-2.5 race test now patches `add_criterion` to pause 0.1 s before counting, inside the view's locked transaction, like ACC-3's race tests; with the round lock removed it failed 5 of 5 runs, and it passes with the lock. README.md text proposed to the coordinator.
 - [x] Full verification, size budget and builder scope check (checkpoint 4, Windows, test-database lock): `check` and `makemigrations --check` clean, Ruff clean, 455 passed, 1 skipped, 85 subtests passed; `git diff --check` clean; scope clean against `3e2d6d6`; 322 added and 9 removed budget lines since `6f4ab10` (about 331 of 400).
+- [x] Review round 0 (verifier and security-reviewer) and repair round 1.
+- [ ] Review of repair round 1; human review and merge.
