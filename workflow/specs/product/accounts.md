@@ -23,6 +23,8 @@ A user signs in with a username and password and works on their own role's home 
 
 A signed-out visitor can choose "Create a demo workspace" on the Relay start page to get a fresh workspace for trying both roles. The workspace also contains a sample draft round, which is RND-7 in [rounds](rounds.md).
 
+The "Your demo workspace" page, titled and headed "Your demo workspace", shows "Workspace: <workspace name>", then a table with the columns "Role", "Username" and "Password" and one row per account: the Test Coordinator first, then the two Beta Testers. Below it are "Save these passwords now. They will not be shown again." and a "Sign in" link to the sign-in page. The 503 page and the 404 page show only their message as their heading.
+
 - **ACC-2.1** (happy) Creating a demo workspace shows a "Your demo workspace" page listing the workspace name and, for each account, its role, username and password, with "Save these passwords now. They will not be shown again." The visitor stays signed out.
 - **ACC-2.2** (boundary) The workspace has exactly 1 Test Coordinator and 2 Beta Testers. Each listed username and password signs in to that account's role home page, which shows the new workspace's name.
 - **ACC-2.3** (adversarial) Passwords are stored only as password hashes. No GET page, later response, log entry or database field shows a generated password again, and the creation response tells the browser not to cache it.
