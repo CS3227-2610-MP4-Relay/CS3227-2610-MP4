@@ -1,6 +1,6 @@
 # Test rounds
 
-Planning area `RND`. RND-1 and RND-2 are implemented; RND-3 to RND-7 are specified but not implemented yet. See the [roles](../PRODUCT-SPEC.md#roles) and [accounts](accounts.md); data, routes and page titles are in the [technical spec](../TECHNICAL-SPEC.md#rounds), and controls in the [security spec](../SECURITY-SPEC.md#rounds-observations-and-history).
+Planning area `RND`. RND-1 to RND-3 are implemented; RND-4 to RND-7 are specified but not implemented yet. See the [roles](../PRODUCT-SPEC.md#roles) and [accounts](accounts.md); data, routes and page titles are in the [technical spec](../TECHNICAL-SPEC.md#rounds), and controls in the [security spec](../SECURITY-SPEC.md#rounds-observations-and-history).
 
 A test round is a workspace's set of acceptance criteria and test cases, tested against named builds of the software under test. Only the workspace's Test Coordinator performs the actions below. What Beta Testers see and record, including the result format, belongs to [test results](results.md). The [test-drafting AI feature](../ai/test-drafting.md) is not part of these requirements.
 
