@@ -363,6 +363,69 @@ def test_of_two_publishes_exactly_one_succeeds(coordinator):
     assert Round.objects.get(pk=draft.pk).state == Round.State.OPEN
 
 
+def retitle(round_):
+    return lambda client: client.post(
+        f"/coordinator/rounds/{round_.pk}/edit/", {"title": "Synthetic retitled"}
+    )
+
+
+def delete_case(round_, case):
+    return lambda client: client.post(
+        f"/coordinator/rounds/{round_.pk}/cases/{case.pk}/delete/"
+    )
+
+
+@pytest.mark.ac("RND-3.5")
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("edit_first", [True, False])
+def test_a_retitle_racing_a_publish_is_saved_first_or_refused(coordinator, edit_first):
+    draft = Round.objects.create(workspace=coordinator.workspace, title="Synthetic")
+    fill(draft, 1)
+    requests = [retitle(draft), publish(draft, "Synthetic 1.0")]
+    if not edit_first:
+        requests.reverse()
+    first, second = race(coordinator, *requests, [(Round, "save")])
+    edit, published = (first, second) if edit_first else (second, first)
+    assert published.status_code == 302
+    final = Round.objects.get(pk=draft.pk)
+    assert final.state == Round.State.OPEN
+    assert Build.objects.filter(round=draft).count() == 1
+    if edit_first:
+        assert edit.status_code == 302
+        assert final.title == "Synthetic retitled"
+    else:
+        assert edit.status_code == 409
+        assert CONFLICT.format("Open") in page(edit)
+        assert final.title == "Synthetic"
+
+
+@pytest.mark.ac("RND-3.5")
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("edit_first", [True, False])
+def test_a_case_deletion_racing_a_publish_is_applied_first_or_refused(
+    coordinator, edit_first
+):
+    draft = Round.objects.create(workspace=coordinator.workspace, title="Synthetic")
+    kept, doomed = fill(draft, 2)
+    requests = [delete_case(draft, doomed), publish(draft, "Synthetic 1.0")]
+    if not edit_first:
+        requests.reverse()
+    first, second = race(coordinator, *requests, ["delete_case", "publish"])
+    edit, published = (first, second) if edit_first else (second, first)
+    assert published.status_code == 302
+    (made,) = Build.objects.filter(round=draft)
+    if edit_first:
+        assert edit.status_code == 302
+        assert not Case.objects.filter(pk=doomed.pk).exists()
+        assert list(made.cases.all()) == [kept]
+    else:
+        # Never a 500 or 503 from the build's protected link to the case.
+        assert edit.status_code == 409
+        assert CONFLICT.format("Open") in page(edit)
+        assert list(made.cases.all()) == [kept, doomed]
+        assert CaseCriterion.objects.filter(case=doomed).exists()
+
+
 # RND-3.6
 
 
@@ -564,6 +627,38 @@ def test_bidi_and_zero_width_characters_stay_inside_their_element(coord_client, 
     outside = html.replace(f'<span dir="auto">{BIDI_AND_INVISIBLE}</span>', "")
     for char in (chr(0x202E), ZWSP, chr(0x2066)):
         assert char not in outside
+
+
+@pytest.mark.ac("RND-3.6")
+def test_case_titles_in_the_builds_list_are_escaped_and_isolated(coord_client, draft):
+    title = MARKUP + LF + BIDI_AND_INVISIBLE
+    fill(draft, 1)
+    Case.objects.filter(round=draft).update(title=title)
+    coord_client.post(publish_url(draft.pk), {"label": "Synthetic 1.0"})
+    html = page(coord_client.get(detail(draft.pk)))
+    lines = (
+        f'<span dir="auto">{escape(MARKUP)}</span><br>'
+        f'<span dir="auto">{BIDI_AND_INVISIBLE}</span>'
+    )
+    # The case heading under "Test cases" and the entry under "Builds".
+    assert html.count(lines) == 2
+    assert html.index("<h2>Builds</h2>") < html.rindex(lines)
+    outside = html.replace(lines, "")
+    assert "<script>" not in outside and "<img" not in outside
+    for char in (chr(0x202E), ZWSP, chr(0x2066)):
+        assert char not in outside
+
+
+@pytest.mark.ac("RND-3.2")
+@pytest.mark.parametrize("char", [0x1D1C0, 0x1D160], ids=["U1D1C0", "U1D160"])
+def test_a_100_character_label_tripled_by_nfc_publishes(coord_client, draft, char):
+    # Each character decomposes into 3 under NFC, the largest expansion.
+    fill(draft, 1)
+    response = coord_client.post(publish_url(draft.pk), {"label": chr(char) * 100})
+    assert response.status_code == 302
+    made = Build.objects.get(round=draft)
+    assert len(made.label) == 100
+    assert len(made.key) == 300
 
 
 @pytest.mark.ac("RND-3.6")

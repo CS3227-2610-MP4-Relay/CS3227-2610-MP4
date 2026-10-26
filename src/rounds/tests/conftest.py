@@ -51,16 +51,18 @@ def csrf_token(client):
 def race(coordinator, first, second, slow):
     """Run `first` until it holds the round lock inside `slow`, then `second`.
 
-    `slow` names services whose call pauses after its work, still inside the
-    view's locked transaction, so `second` arrives while `first` holds it.
+    `slow` names services, or (object, attribute) pairs such as Round.save,
+    whose call pauses after its work, still inside the view's locked
+    transaction, so `second` arrives while `first` holds it.
     """
     inside = threading.Event()
     responses = {}
-    reals = {name: getattr(services, name) for name in slow}
+    targets = [(services, name) if isinstance(name, str) else name for name in slow]
+    reals = {target: getattr(*target) for target in targets}
 
-    def pausing(name):
-        def run(*args):
-            result = reals[name](*args)
+    def pausing(target):
+        def run(*args, **kwargs):
+            result = reals[target](*args, **kwargs)
             inside.set()
             time.sleep(0.3)
             return result
@@ -75,7 +77,7 @@ def race(coordinator, first, second, slow):
         finally:
             connection.close()
 
-    patches = [mock.patch.object(services, name, pausing(name)) for name in slow]
+    patches = [mock.patch.object(*target, pausing(target)) for target in targets]
     for patch in patches:
         patch.start()
     try:
