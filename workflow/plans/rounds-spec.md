@@ -34,10 +34,12 @@ Slice notes:
 - RND-1 and RND-7: the shared round-creation code takes an explicit workspace argument, only ever `request.user.workspace` or the workspace ACC-2 has just created, never a value from request data.
 - RND-7: the slice first updates the spec with the sample round's exact text, then writes code. It extends ACC-2.5's tests so a failed creation also leaves no sample round, criteria, cases or links.
 - Every slice: its rules criterion runs the escaping and direction-isolation tests from the [rules for every round action](../specs/product/rounds.md#rules-for-every-round-action) for the user text its pages render, starting with RND-1.
+- RND-1 slice (deferred from the final security check): remove bidi control characters (U+202A–U+202E, U+2066–U+2069) from user text placed in a page `<title>`, so a stray U+2069 can't end the isolate early. Test a stray U+2069 followed by U+202E in both the title and page content.
+- RND-5 slice (deferred from the final security check): build the label key by removing format characters first, then applying NFC.
 
 ## Defaults
 
-The coordinator accepted these defaults on 2026-10-26 under the human's delegation, after three verifier and security-review rounds.
+The coordinator accepted these defaults on 2026-10-26 after three verifier and security-review rounds. It did so under the human's delegation, given in their message that day: "just make my decisions for me, and do whats right". Decisions made after that message are the coordinator's, not the human's.
 
 - Fields: round title 1–120 characters; criterion text 1–500; case title 1–120, steps 1–2000, expected result 1–1000; build label 1–100. Text is trimmed; text with no visible character (only whitespace, control or format characters) counts as empty; Django's null-character validator stays.
 - Caps, since storage is shared and nothing is cleaned up: 20 rounds per workspace (the sample round included), 20 criteria and 30 cases per round, 10 builds per round (the publish build included).
@@ -87,7 +89,7 @@ These are assumptions RND makes; RES confirms or changes them, and any change to
 - [x] Read changed sections back; check criterion counts and IDs.
 - [x] Run full verification and `git diff --check`.
 - [x] Repair round 2: restore the Draft-invisibility control, move the rendering rule into the shared rules, fix the capacity link and the RES wording.
-- [ ] Verifier and security-reviewer review the fixed candidate.
+- [x] Verifier and security-reviewer review the fixed candidate (rounds 0–2, then a security check of the delegated follow-up).
 - [x] Defaults accepted by the coordinator under the human's delegation (2026-10-26).
 - [ ] Whimsyturtle review of the cross-area items; human merge decision.
 
