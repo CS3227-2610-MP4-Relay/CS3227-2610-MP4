@@ -8,7 +8,7 @@ Tier: High (sign-in, passwords, sessions, role permissions). Base: `9fe329a`, br
 
 Made by the coordinator on 2026-10-26 under the human's (zheng-jj) explicit delegation, "make my decisions for me"; the human confirmed the request and tier.
 
-- **Persistence and retention** (the precondition in [accounts-spec](accounts-spec.md#open-questions)): recorded under [Data model](../specs/TECHNICAL-SPEC.md#data-model). Records are kept for the life of the course deployment with no automatic deletion or cleanup subsystem; expired sessions are refused by expiry, not deleted; a write that fails on full storage rolls back and gets the route's existing 500/503 page, never deleting or overwriting records; an operator checks storage use before peer testing. The matching [security residual risks](../specs/SECURITY-SPEC.md#sign-in-and-access-control) now read as accepted.
+- **Persistence and retention** (the precondition in [accounts-spec](accounts-spec.md#open-questions)): recorded under [Data model](../specs/TECHNICAL-SPEC.md#data-model). The matching [security residual risks](../specs/SECURITY-SPEC.md#sign-in-and-access-control) now read as accepted.
 - **Start page:** PLT-1.1 keeps its ID; `/` gains a "Sign in" link to `/sign-in/`. ACC-2 later adds "Create a demo workspace" and the signed-in redirect.
 - **Scope:** ACC-1 only. Custom user model and workspace model (no admin, staff, superuser or permission fields), sign-in, POST-only sign-out, two role homes, the 403 page, database sessions with an absolute 8-hour expiry and a new identifier at every sign-in, CSRF/`Origin` checks, cookie settings and the start-page link. Not included: demo creation and the 503 page (ACC-2), the shared workspace-lookup helper (ACC-2.4), abuse limits (ACC-3), production settings and deploy (#5). Tests create workspaces and users directly. Anything else returns `needs-decision`.
 
@@ -34,6 +34,7 @@ Non-test, non-migration `src/` lines: models/apps ~60, settings ~25, forms/views
 - Checkpoint 3 finding: Django's `login()` keeps the session identifier when the same user signs in again, so sign-in calls `cycle_key()` first (ACC-1.7, caught by its test).
 - PLT-1.1 test expectation changed (checkpoint 3): "no `<a `" became "exactly one link, `<a href="/sign-in/">Sign in</a>`"; the no-form assertion stays. For the verifier.
 - From [accounts-spec](accounts-spec.md#notes-for-the-code-slices) for Whimsyturtle: production settings and their release check stay with #5.
+- For #5 (Whimsyturtle), from the repair-round-1 review; no ACC-1 code: HTTPS detection through the verified forwarded-protocol header (`SECURE_PROXY_SSL_HEADER`); frame blocking; `Cache-Control: private, no-store` on `/coordinator/` and `/tester/`; `LOGIN_URL` is set but unused, because the role homes redirect explicitly.
 - Human review and merge remain pending.
 
 ## Checklist
@@ -43,4 +44,6 @@ Non-test, non-migration `src/` lines: models/apps ~60, settings ~25, forms/views
 - [x] Checkpoint 3: views and ACC-1/PLT-1.1 tests (red evidence first).
 - [x] Checkpoint 4: guides.
 - [x] Full verification, size budget and builder scope check (checkpoint 4, Windows): 147 passed, 1 skipped; 232 of 400 budget lines since `9fe329a`; scope clean against the coordinator's snapshot `0b6ecf9`.
-- [ ] Independent verifier and security review; human review and merge.
+- [x] Independent verifier and security review of `9dc41a7`: no High, two Medium, several Low.
+- [x] Repair round 1 (separate units): spec wording; sign-in form validation (NUL gave 500), no `required` attributes, sensitive password and `never_cache`, stronger ACC-1.2 test; hasher guard and real-response tests (cookie flags, HTTPS `Origin`/`Referer`); these #5 notes.
+- [ ] Re-review of repair round 1; human review and merge.
