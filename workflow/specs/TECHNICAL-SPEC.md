@@ -19,15 +19,15 @@ Before implementing persistence, decide retention for accumulated business recor
 
 ### Accounts and workspaces
 
-For [ACC](product/accounts.md). The demo slice deletes nothing: workspace lifetime, retention of workspaces and limit rows, and expired-session handling remain the open decisions above.
+For [ACC](product/accounts.md). The retention, workspace-lifetime and expired-session decisions above are a precondition of the first ACC code slice (ACC-1). Until they are made, nothing is deleted, and hashed addresses are kept indefinitely.
 
-- **Workspace:** a unique name, `Demo workspace <suffix>`, and its creation time. Every workspace-owned record has a non-null workspace reference. Record lookups go through one shared helper that filters by the signed-in user's workspace before reading, so another workspace's record is indistinguishable from a missing one.
-- **Account:** a custom Django user model from the first migration, with a globally unique username, a Django password hash, a non-null workspace and a role of `coordinator` or `tester`, all fixed at creation. Accounts are never staff or superusers, and every account can sign in.
-- **Generated credentials:** usernames are `coord-<suffix>`, `tester1-<suffix>` and `tester2-<suffix>`, sharing the workspace's suffix of 8 random lowercase letters and digits; a suffix collision is retried. Each password is 16 random characters from `a-z`, `A-Z` and `0-9`, generated with `secrets`. Plain passwords exist only in memory while rendering the creation response.
-- **Creation:** the workspace, its accounts and its sample round are written in one transaction, together with the limit counts.
-- **Limit counter:** one row per scope and key, holding a window start and a count, unique on scope and key. Scopes are failed sign-in per address (15 minutes, 10), demo creation per address (1 hour, 3) and demo creation overall (24 hours, 50, one fixed key). A request reads and updates its row under a row lock; once the window has elapsed, the row restarts its window and count. The key is an HMAC of the client address keyed by Django's `SECRET_KEY`, never the address itself. Rows are not deleted.
-- **Client address:** `REMOTE_ADDR`, never a client-supplied forwarding header. IPv4 addresses count individually and IPv6 addresses by their `/64` prefix. Using a hosting provider's client-address header requires a verified setting naming it; until then, a proxy address shared by all clients makes the per-address limits shared too.
-- **Sessions:** Django's database-backed sessions, ending 8 hours after sign-in regardless of activity; sign-out deletes the session row.
+- **Workspace:** a unique name, `Demo workspace <suffix>`, and its creation time. Every workspace-owned record has a non-null workspace reference. Routes check the role first, then look records up through one shared helper that filters by the signed-in user's workspace before reading and gives the 404 of [ACC-2.4](product/accounts.md#acc-2-create-an-isolated-demo-workspace) for any other workspace's record.
+- **Account:** a custom Django user model, present from #1's first migration, with a globally unique username, a Django password hash, a non-null workspace and a role of `coordinator` or `tester`, all fixed at creation. The model has no staff, superuser or permission fields, and `django.contrib.admin` is not installed, so there is no admin route.
+- **Generated credentials:** usernames are `coord-<suffix>`, `tester1-<suffix>` and `tester2-<suffix>`, sharing the workspace's suffix of 8 random lowercase letters and digits; a suffix collision is retried. Each password is 16 random characters from `a-z`, `A-Z` and `0-9`, generated with `secrets` and hashed before any lock is taken. Plain passwords exist only in memory while rendering the creation response.
+- **Creation:** one transaction holds the limit counts, the workspace, its accounts, its sample round and the rendering of the creation response, so any failure rolls everything back ([ACC-2.5](product/accounts.md#acc-2-create-an-isolated-demo-workspace)).
+- **Limit counter:** one row per scope and key, holding a window start and a count, unique on scope and key; scopes, numbers and windows are in [ACC-3](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation). A migration creates the overall creation row; per-address rows are inserted or updated in one statement. A creation locks its per-address row, then the overall row. A sign-in reserves a failure with a conditional increment before checking the password and releases it on success, so concurrent attempts cannot overshoot. These transactions set lock and statement timeouts, which give the 503 of ACC-3.7. Once a window has elapsed, the row restarts its window and count.
+- **Client address:** `REMOTE_ADDR`, never a client-supplied forwarding header. IPv4 addresses count individually and IPv6 addresses by their `/64` prefix; a missing or unparseable address uses the fixed key `unknown`. The stored key is Django's `salted_hmac` of the address with its own salt, never the address itself. Production depends on the client-address gate under [Release verification](#release-verification); a trusted-proxy header setting is a separate decision, needed only if that verification shows it.
+- **Sessions:** Django's database-backed sessions. Sign-in sets an absolute expiry time, so later session writes cannot extend it ([ACC-1.6](product/accounts.md#acc-1-sign-in-and-out-by-role)); sign-out deletes the session row.
 
 ## Routes
 
@@ -35,22 +35,28 @@ Only the subsections below are specified. Each route contract must name its meth
 
 ### Accounts routes
 
-For [ACC](product/accounts.md). Every POST uses Django's CSRF protection, which also rejects an `Origin` header naming another site; a refused request gets 403 and changes nothing. A route that cannot reach storage, including its limit counts, returns 503 "Relay is temporarily unavailable. Try again later." and changes nothing. There is no Django admin route.
+For [ACC](product/accounts.md). Every POST uses Django's CSRF protection, which also rejects an `Origin` header naming another origin, with 403 ([ACC-1.8](product/accounts.md#acc-1-sign-in-and-out-by-role), [ACC-2.7](product/accounts.md#acc-2-create-an-isolated-demo-workspace)). A route that cannot reach storage, including its limit counts, gives the 503 page of [ACC-2.5](product/accounts.md#acc-2-create-an-isolated-demo-workspace) and changes nothing.
 
 | Route | Method | Access | Validation and success | Denied or failed |
 | --- | --- | --- | --- | --- |
-| `/` | GET | Signed out | Page "Relay" with a sign-in link and the "Create a demo workspace" button | Signed in: redirect to own role home |
-| `/sign-in/` | GET, POST | Anyone | If the failed sign-in limit allows it, Django's authentication checks the username and password. Success rotates the session and redirects to own role home; `next` is ignored | Invalid: form again, "Username or password is incorrect."; limited: 429 |
-| `/sign-out/` | POST | Anyone | Flushes the session; redirects to `/sign-in/` with "You have signed out." | Other methods: 405 |
-| `/demo/` | POST | Signed out | Checks both demo limits, creates the workspace in one transaction, then renders "Your demo workspace" with `Cache-Control: no-store`; no redirect | Signed in: redirect to own role home; other methods: 405; limited: 429 |
-| `/coordinator/` | GET | Test Coordinator | Page "Coordinator home" with username and workspace name | Signed out: redirect to `/sign-in/`; Beta Tester: 403 |
-| `/tester/` | GET | Beta Tester | Page "Tester home" with username and workspace name | Signed out: redirect to `/sign-in/`; Test Coordinator: 403 |
+| `/` | GET | Signed out | Relay start page, titled "Relay", with a sign-in link and the "Create a demo workspace" button | Signed in: redirect to own role home |
+| `/sign-in/` | GET, POST | Anyone | GET shows the form, unlimited. POST reserves a failure, then Django's authentication checks the username and password; success starts a new session and redirects to own role home, ignoring `next` ([ACC-1.1, 1.2, 1.7](product/accounts.md#acc-1-sign-in-and-out-by-role)) | Invalid: [ACC-1.2](product/accounts.md#acc-1-sign-in-and-out-by-role); limited: [ACC-3.1](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation) |
+| `/sign-out/` | POST | Anyone | Flushes the session and redirects to `/sign-in/` ([ACC-1.5](product/accounts.md#acc-1-sign-in-and-out-by-role)) | Other methods: 405 |
+| `/demo/` | POST | Signed out | Checks both creation limits, then creates and renders "Your demo workspace" in one transaction, with `Cache-Control: no-store` and no redirect ([ACC-2.1 to 2.3](product/accounts.md#acc-2-create-an-isolated-demo-workspace)) | Signed in: [ACC-2.6](product/accounts.md#acc-2-create-an-isolated-demo-workspace); other methods: 405; limited: [ACC-3.4](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation) |
+| `/coordinator/` | GET | Test Coordinator | "Coordinator home" | Signed out: redirect to `/sign-in/`; Beta Tester: 403 of [ACC-1.4](product/accounts.md#acc-1-sign-in-and-out-by-role) |
+| `/tester/` | GET | Beta Tester | "Tester home" | Signed out: redirect to `/sign-in/`; Test Coordinator: 403 of ACC-1.4 |
 
-The session cookie is `HttpOnly`; session and CSRF cookies are `SameSite=Lax`, and `Secure` outside local development. Later workspace routes require a signed-in user of the route's role, look records up through the workspace helper and return 404 "Page not found." for another workspace's record.
+The session cookie is `HttpOnly`; session and CSRF cookies are `SameSite=Lax`, and `Secure` outside local development.
 
 ## Configuration
 
 The `.env.example` file may contain only empty placeholders and throwaway local database values. Runtime settings and validation will be specified with the application scaffold. Tests must use isolated configuration and fake provider responses, without inheriting production credentials or contacting SoC LLM.
+
+Production settings, checked before release:
+
+- `DEBUG` off; `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` list only the production host and origin, with no wildcard.
+- HTTPS is detected through `SECURE_PROXY_SSL_HEADER` only once Vercel's forwarded-protocol header is verified under the [release gate](#release-verification).
+- Every page is refused framing (`X-Frame-Options: DENY`), and HSTS is on.
 
 ## Environments
 
@@ -69,6 +75,8 @@ The static GitHub Pages site uses `docs/index.md`, `docs/Reflections.md` and `do
 ## Release verification
 
 Delivery will verify the final candidate before a controlled production deployment, then run smoke checks. Deployment workflows, migration handling, checked-source provenance, failure recovery and smoke-check contracts remain to be designed and tested. The scaffold does not claim any release controls are configured.
+
+Release gate: production is not released until Vercel's actual client-address source and forwarded-protocol header are verified and recorded, and the production settings under [Configuration](#configuration) are checked.
 
 ### Review decisions and operator prerequisites
 
