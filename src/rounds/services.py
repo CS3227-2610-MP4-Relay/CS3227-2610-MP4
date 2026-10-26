@@ -34,6 +34,8 @@ def create_round(workspace, title):
 
 CRITERION_LIMIT = 20
 CASE_LIMIT = 30
+NO_LINK = "Link at least one acceptance criterion."
+FOREIGN = "Choose criteria from this round."
 
 
 class Refused(Exception):
@@ -67,10 +69,10 @@ def _round_criteria(round_, criterion_ids):
     """Return the chosen criteria, refusing none or any not in `round_`."""
     ids = set(criterion_ids)
     if not ids:
-        raise Refused("Link at least one acceptance criterion.", "criteria")
+        raise Refused(NO_LINK, "criteria")
     chosen = list(round_.criteria.filter(pk__in=ids))
     if len(chosen) != len(ids):
-        raise Refused("Choose criteria from this round.", "criteria")
+        raise Refused(FOREIGN, "criteria")
     return chosen
 
 

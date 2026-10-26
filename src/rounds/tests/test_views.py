@@ -75,8 +75,11 @@ def test_creating_a_round_opens_its_draft_round_page(coord_client, coordinator):
     assert "<p>State: Draft</p>" in html
     assert f'<a href="{edit(made.pk)}">Edit round</a>' in html
     assert '<a href="/coordinator/">Coordinator home</a>' in html
-    for absent in ("criteri", "Criteri", "test case", "Test case", "alert"):
-        assert absent not in html
+    # From RND-2, "no criteria or cases" shows as the two empty sections.
+    assert "<p>No acceptance criteria yet.</p>" in html
+    assert "<p>No test cases yet.</p>" in html
+    assert "<li>" not in html and "<h3>" not in html
+    assert "alert" not in html
     home = page(coord_client.get("/coordinator/"))
     assert (
         f'<li><a href="{detail(made.pk)}"><span dir="auto">'

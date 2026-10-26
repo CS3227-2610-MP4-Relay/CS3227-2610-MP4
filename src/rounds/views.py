@@ -1,10 +1,11 @@
-"""The coordinator's round pages (RND-1), under the rules for every round action."""
+"""The coordinator's round pages (RND-1, RND-2), under the round action rules."""
 
 import logging
 from functools import wraps
 
 from django.core.exceptions import PermissionDenied
 from django.db import DatabaseError, transaction
+from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
@@ -12,7 +13,8 @@ from django.views.decorators.http import require_http_methods
 from accounts.models import User
 from accounts.workspaces import workspace_records
 
-from .forms import RoundForm
+from . import services
+from .forms import CaseForm, CriterionForm, RoundForm
 from .models import Round
 from .services import RoundLimitReached, create_round
 
@@ -81,10 +83,21 @@ def new_round(request):
     return form_page(request, form, "New round", "Create round")
 
 
+def show_round(request, round_, refused=None):
+    """Render the round page; `refused` is a (criterion ID, message) pair."""
+    context = {
+        "round": round_,
+        "draft": round_.state == Round.State.DRAFT,
+        "cases": round_.cases.prefetch_related("criteria"),
+        "refused": refused,
+    }
+    return render(request, "rounds/round.html", context)
+
+
 @coordinator_view(["GET"])
 def round_page(request, round_id):
-    """Show a round's title and state."""
-    return render(request, "rounds/round.html", {"round": own_round(request, round_id)})
+    """Show a round's title, state, criteria and cases."""
+    return show_round(request, own_round(request, round_id))
 
 
 @coordinator_view(["GET", "POST"])
@@ -105,4 +118,80 @@ def edit_round(request, round_id):
             return state_conflict(request, round_)
         round_.title = form.cleaned_data["title"]
         round_.save(update_fields=["title"])
+    return redirect(round_)
+
+
+# RND-2: each kind of record, by the round's related name; services by name,
+# so tests can replace them.
+RECORDS = {
+    "criteria": (CriterionForm, "acceptance criterion", "delete_criterion"),
+    "cases": (CaseForm, "test case", "delete_case"),
+}
+
+
+def round_record(request, round_id, kind, record_id, *, lock=False):
+    """Return the user's round and its record named in the URL, or 404."""
+    round_ = own_round(request, round_id, lock=lock)
+    if record_id is None:
+        return round_, None
+    return round_, get_object_or_404(getattr(round_, kind), pk=record_id)
+
+
+def save_record(kind, round_, record, data):
+    """Add a criterion or case to the locked round, or change `record`."""
+    if kind == "criteria" and record is None:
+        return services.add_criterion(round_, data["text"])
+    if kind == "criteria":
+        record.text = data["text"]
+        return record.save(update_fields=["text"])
+    ids = [item.pk for item in data.pop("criteria")]
+    if record is None:
+        return services.add_case(round_, data, ids)
+    return services.save_case(record, data, ids)
+
+
+@coordinator_view(["GET", "POST"])
+def record_form(request, round_id, kind, criterion_id=None, case_id=None):
+    """Add or edit a Draft round's criterion or case."""
+    form_class, noun, _ = RECORDS[kind]
+    record_id = criterion_id or case_id
+    round_, record = round_record(request, round_id, kind, record_id)
+    if round_.state != Round.State.DRAFT:
+        return state_conflict(request, round_)
+    initial = model_to_dict(record) if record else None
+    data = request.POST if request.method == "POST" else None
+    form = form_class(round_, data, initial=initial)
+    if data is not None and form.is_valid():
+        with transaction.atomic():
+            round_, record = round_record(request, round_id, kind, record_id, lock=True)
+            if round_.state != Round.State.DRAFT:
+                return state_conflict(request, round_)
+            try:
+                save_record(kind, round_, record, dict(form.cleaned_data))
+            except services.Refused as refused:
+                form.add_error(refused.field, str(refused))
+            else:
+                return redirect(round_)
+    context = {
+        "form": form,
+        "title": f"{'Edit' if record else 'New'} {noun}",
+        "button": "Save" if record else f"Add {noun}",
+        "round": round_,
+    }
+    return render(request, "rounds/round_form.html", context)
+
+
+@coordinator_view(["POST"])
+def delete_record(request, round_id, kind, criterion_id=None, case_id=None):
+    """Delete a Draft round's case, or its criterion if no case links to it."""
+    with transaction.atomic():
+        round_, record = round_record(
+            request, round_id, kind, criterion_id or case_id, lock=True
+        )
+        if round_.state != Round.State.DRAFT:
+            return state_conflict(request, round_)
+        try:
+            getattr(services, RECORDS[kind][2])(record)
+        except services.Refused as refused:
+            return show_round(request, round_, (record.pk, str(refused)))
     return redirect(round_)
