@@ -37,7 +37,7 @@ A Test Coordinator lands on **Coordinator home** and a Beta Tester on **Tester h
 
 If the username or password is wrong, or a field is blank, the page shows "Username or password is incorrect." and does not say which field was wrong. You are not signed in; if you were already signed in, you stay signed in as before.
 
-After 30 failed sign-ins from one network address within 15 minutes, the sign-in page says "Too many sign-in attempts. Try again later." and does not sign anyone in from that address, even with the right password, until 15 minutes after the first of those failures. Successful sign-ins are never limited by this count, but they do not reset it.
+After 30 failed sign-ins from one network address within 15 minutes, the sign-in page says "Too many sign-in attempts. Try again later." and does not sign anyone in from that address, even with the right password, until 15 minutes after the first of those failures. Successful sign-ins do not add to this count and do not reset it.
 
 Opening a home page while signed out takes you to the sign-in page. Opening the other role's home page shows "You do not have access to this page."; you stay signed in.
 
