@@ -28,13 +28,13 @@ Decisions (human, zheng-jj):
 - The messages, the 403, 404, 429 and 503 pages, and the 8-hour session lifetime are as written in the criteria.
 - One failure message for a wrong password, an unknown username and blank fields; a signed-in user who submits wrong credentials gets it, and their session is unchanged. Sign-in ignores `next`.
 - Usernames `coord-`, `tester1-` and `tester2-` plus a shared random 8-character lowercase-and-digit suffix; workspace name `Demo workspace <suffix>`. Passwords: 16 random characters from `a-z`, `A-Z`, `0-9`.
-- Creation does not sign the visitor in, and a signed-in user cannot create a workspace. The creation response is rendered inside the creation transaction with `Cache-Control: no-store`. Accepted: reloading the creation page resubmits it, and a browser's back/forward cache may still show it.
+- Creation does not sign the visitor in, and a signed-in user cannot create a workspace. The creation response is rendered inside the creation transaction with `Cache-Control: no-store`. Reload resubmission and the back/forward cache are accepted [residual gaps](../specs/SECURITY-SPEC.md#sign-in-and-access-control).
 - Sessions: Django database sessions with an absolute expiry set at sign-in, a new identifier at every sign-in, and deletion at sign-out. Session cookie `HttpOnly`; session and CSRF cookies `SameSite=Lax` and `Secure` outside local development. Django CSRF with its `Origin` check; refused requests get 403.
 - Production settings: exact `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS`, HTTPS detection only through a verified forwarded-protocol header, frame blocking and HSTS.
 - Cross-role pages get 403, and another workspace's record gets a 404 identical to a missing record. Routes check the role before looking records up.
 - Limits use fixed windows starting at the first counted request. Bursts across a window boundary are accepted. Refused or failed requests count toward nothing.
 - Client address: `REMOTE_ADDR`, with IPv6 grouped by `/64`, and never a client-supplied forwarding header. Addresses are stored only as `salted_hmac` keys with their own salt.
-- Counters: a migration creates the overall row, and per-address rows use insert-or-update. Creation hashes passwords first, then locks the per-address row and then the overall row. Sign-in reserves a failure with a conditional increment before checking the password and releases it on success. A lock or statement timeout gives the 503 page.
+- Counters: a migration creates the overall row, and per-address rows use insert-or-update. Creation hashes passwords first, then locks the per-address row and then the overall row. Sign-in locks its per-address row and checks the count and password in one transaction (repair round 2), so a rollback or timeout leaves no counted failure. Cost: sign-ins from one address are serialised, each holding the lock for about one password hash, so a lab signing in together queues; the lock timeout must allow for that queue. Because nothing is reserved, a concurrent attempt is never refused one attempt early. A lock or statement timeout gives the 503 page.
 - The custom user model has no staff, superuser or permission fields, and `django.contrib.admin` is not installed.
 
 ## Notes for the code slices
@@ -43,6 +43,7 @@ Decisions (human, zheng-jj):
 - ACC-2.4 is tested through the shared lookup helper in unit tests. Later record routes test isolation under their own criteria. Ownership filtering of testers' private records is RES's job (for Whimsyturtle).
 - Time control uses `unittest.mock`, with no new dependency. ACC-3.6 and ACC-3.8 need PostgreSQL `TransactionTestCase` tests with threads.
 - If ACC-2 is implemented before RND-7, the RND slice adds the sample round to the creation transaction.
+- The production settings under [Configuration](../specs/TECHNICAL-SPEC.md#configuration) come with #1's settings module, and their check runs under the release gate for #5's deploy; both are Whimsyturtle's, so flag this for Whimsyturtle.
 
 ## Out of scope
 
@@ -62,7 +63,11 @@ Everything the human excluded above; the sample round's contents (RND); deleting
 - [x] Run full verification and `git diff --check`.
 - [x] Round 0: verifier and security-reviewer review the candidate.
 - [x] Repair round 1: apply the human's decisions and the review findings.
-- [ ] Verifier and security-reviewer re-review the repaired range.
+- [x] Verifier and security-reviewer re-review the repaired range.
+- [x] Repair round 2: transactional sign-in counting, residual gaps moved to the security spec, production-settings owners.
+- [ ] Verifier and security-reviewer re-review the round-2 range.
 - [ ] Human review of the proposed defaults and merge decision.
 
 Check evidence, repair round 1 (builder, macOS, `.venv`): Ruff lint and format passed; pytest reported 70 passed, 85 subtests passed. `git diff --check` is clean, and `check_scope.py builder --base 83a821f` reported all changes within scope.
+
+Check evidence, repair round 2 (builder, macOS, `.venv`): Ruff lint and format passed; pytest reported 70 passed, 85 subtests passed. `git diff --check` is clean, and `check_scope.py builder --base 8e7d180` reported all changes within scope.
