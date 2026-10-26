@@ -18,6 +18,7 @@ Builder's spec details within that scope (checkpoint 1), all confirmed by the co
 - Page text in the [RND-6 introduction](../specs/product/rounds.md#rnd-6-close-a-round): while Open, the round page ends, after "Builds" and before "Coordinator home", with the paragraph "Closing makes this round read-only. It cannot be reopened." directly followed by a "Close round" button; no further confirmation (as RND-2's deletes); "Round closed." once, directly under the heading, as RND-3's message; the Closed page shows what the Open page shows (title, "State: Closed", criteria, cases with linked criteria and current build, "Builds") with no "Edit round" link, RND-2 controls, publish form, warning or close button; the closing time is stored, not shown.
 - [Technical details](../specs/TECHNICAL-SPEC.md#rounds): `Round.closed_at` (empty until closing); the closing flow (no form fields; one transaction locking the round row and re-checking Open, 409 otherwise; `rounds.services.close(round_)` sets the state and `closed_at`; message after commit; redirect). One delivery-order sentence under [Rounds routes](../specs/TECHNICAL-SPEC.md#rounds-routes). As RND-3, no check constraint ties `closed_at` to the state. The security spec needs no change: its rounds section already names the one-way states and the RND-6.4 lock.
 - The view locks before its only state check (as RND-2's deletes), because the route has no form to show first.
+- `close()` has no state guard of its own: the view's locked re-check is the single check, matching `publish` (coordinator, 2026-10-27, at checkpoint 2).
 
 ## Checkpoints
 
@@ -33,6 +34,8 @@ Builder's spec details within that scope (checkpoint 1), all confirmed by the co
 4. **Guides and status** (`docs:`): `docs/UserGuide.md` (closing, its warning, message and the Closed page, in the product's exact words), `docs/DeveloperGuide.md` (close service), the status sentences of `rounds.md`, `TECHNICAL-SPEC.md` and, if it names built requirements, `SECURITY-SPEC.md`. Check: read back; `git diff --check`; builder scope check.
 
 Repairs after review are separate `fix:` commits.
+
+Test expectation changes (for the verifier), at checkpoint 3: RND-6's "Close round" form appears on every Open round page, so two earlier assertions that an Open page has no `<form` at all are narrowed to the forms they own. `test_records.py::test_open_or_closed_round_page_lists_records_without_controls` (RND-2.8) now asserts no delete-form action (`/delete/"`); `test_publish.py::test_round_page_after_publishing_shows_the_message_once_and_the_open_view` (RND-3.1) now asserts no delete or publish action (`/delete/"`, `/publish/"`). Their text-control assertions stay. RND-6.1's own test asserts that a Closed page has no `<form` at all. `test_routes.py`'s walk sets its round Open before reaching the close route and expects its 302.
 
 ## Size estimate
 
