@@ -35,22 +35,22 @@ Builder's spec details within that scope (checkpoint 1), all confirmed by the co
 
 Repairs after review are separate `fix:` commits.
 
-Test expectation changes (for the verifier), at checkpoint 3: RND-6's "Close round" form appears on every Open round page, so two earlier assertions that an Open page has no `<form` at all are narrowed to the forms they own. `test_records.py::test_open_or_closed_round_page_lists_records_without_controls` (RND-2.8) now asserts no delete-form action (`/delete/"`); `test_publish.py::test_round_page_after_publishing_shows_the_message_once_and_the_open_view` (RND-3.1) now asserts no delete or publish action (`/delete/"`, `/publish/"`). Their text-control assertions stay. RND-6.1's own test asserts that a Closed page has no `<form` at all. `test_routes.py`'s walk sets its round Open before reaching the close route and expects its 302.
+Test expectation changes (for the verifier), at checkpoint 3: RND-6's "Close round" form appears on every Open round page, so two earlier assertions that an Open page has no `<form` at all are narrowed to the forms they own. `test_records.py::test_open_or_closed_round_page_lists_records_without_controls` (RND-2.8) now asserts no delete-form action (`/delete/"`); `test_publish.py::test_round_page_after_publishing_shows_the_message_once_and_the_open_view` (RND-3.1) now asserts no delete or publish action (`/delete/"`, `/publish/"`). Their text-control assertions stay. RND-6.1's own test asserts that a Closed page has no `<form` at all. `test_routes.py`'s walk posts to the close route with a separate Open round, whatever the route order, and expects its 302; its Draft round stays Draft. At checkpoint 4, RND-3's `race` helper moved from `test_publish.py` to `conftest.py`, unchanged, so test files no longer import each other.
 
 ## Size estimate
 
-Non-test, non-migration `src/` lines: models ~1, services ~8, views ~15 (close view ~12, round-page context ~3), urls ~1, template ~6; about 31 of 400. Reported with real numbers at checkpoints 2 and 3.
+Non-test, non-migration `src/` lines: models ~1, services ~8, views ~15 (close view ~12, round-page context ~3), urls ~1, template ~6; about 31 of 400. Actual, since `98977ef`: models 1, services 10, views 13, urls 1, template 2; 27 added and 0 removed.
 
 ## Open issues
 
-- RND-3's checkpoint 3 is not built yet; if its Open-page tests assert that the page has no form or button at all, RND-6's close button breaks them, and checkpoint 3 will narrow that assertion to the RND-3 controls and list the change for the verifier.
-- RND-3's route walk may change shape at its checkpoint 3; the close-route adjustment above follows whatever it becomes.
+- Resolved at checkpoint 3: the RND-2 and RND-3 no-form assertions were narrowed (listed above) and the route walk covers the close route.
+- `README.md` still says closing rounds remain planned; the coordinator updates it (outside the builder's scope).
 - RND-5 (retest link while Open) and RND-4 (results link) will add to the Open and Closed pages later; this slice adds no placeholders.
 
 ## Checklist
 
 - [x] Checkpoint 1: specs and plan (`9952db3` spec, `7018b74` plan).
-- [ ] Checkpoint 2: closing time, migration, close service and tests.
-- [ ] Checkpoint 3: route, round page and RND-6 tests.
-- [ ] Checkpoint 4: guides and status.
-- [ ] Full verification, size budget and builder scope check.
+- [x] Checkpoint 2: closing time, migration, close service and tests (`9b09d53`). Red: 3 failed on the missing `closed_at` and `close`. Green: 285 rounds tests; full suite 481 passed, 1 skipped.
+- [x] Checkpoint 3: route, round page and RND-6 tests (`55b103f`). Red: 20 failed on the missing route (404s). Mutations: without the lock both RND-6.4 race tests fail; without the Open re-check 5 tests fail. Green: full suite 579 passed, 1 skipped, 85 subtests.
+- [x] Checkpoint 4: guides and status, the `race` helper moved to `conftest.py` and an order-independent route walk.
+- [x] Full verification (579 passed, 1 skipped, 85 subtests passed; Ruff clean), size budget (27 of 400) and builder scope check.
