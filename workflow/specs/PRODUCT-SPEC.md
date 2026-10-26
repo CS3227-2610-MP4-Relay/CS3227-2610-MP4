@@ -2,7 +2,7 @@
 
 Relay is a planned beta-testing portal for small software teams. It coordinates manual testing and records results; the software being tested runs outside Relay. How it will be built is in [`TECHNICAL-SPEC.md`](TECHNICAL-SPEC.md), and its threats and intended controls are in [`SECURITY-SPEC.md`](SECURITY-SPEC.md).
 
-The repository currently contains a scaffold, with no application features implemented. The areas below record the agreed direction. Exact screens, fields, state rules and acceptance criteria must be settled before each implementation slice.
+The first application foundation is defined in [PLT-1](product/platform.md#plt-1-django-foundation-and-continuous-verification). The areas below record the agreed direction. Exact screens, fields, state rules and acceptance criteria must be settled before each implementation slice.
 
 ## Roles
 
@@ -24,7 +24,7 @@ AI feature contracts live under [`ai/`](ai/): [test drafting](ai/test-drafting.m
 
 ## Requirements
 
-Each area's file will hold its requirements. A requirement's ID is its area's prefix and a number, such as `RND-1`; each acceptance criterion adds a second number, such as `RND-1.2`, and tests should identify the criteria they check. No acceptance criteria are defined by this scaffold.
+Each area's file holds its requirements. A requirement's ID is its area's prefix and a number, such as `RND-1`; each acceptance criterion adds a second number, such as `RND-1.2`, and tests identify the criteria they check.
 
 The core loop is prepare → publish → test → review → retest as needed → close. Retesting may repeat. Preserve earlier results and the build and criteria they concern; settle edit/version rules for published cases and submitted observations before implementing them.
 

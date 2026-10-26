@@ -1,6 +1,6 @@
 # Technical spec
 
-How Relay will be built and run. What it will do is in [`PRODUCT-SPEC.md`](PRODUCT-SPEC.md). This is a planning scaffold: no application, schema or hosted environment is implemented yet.
+How Relay will be built and run. What it will do is in [`PRODUCT-SPEC.md`](PRODUCT-SPEC.md). The application foundation is local/CI only; business schema and hosted environments remain planned.
 
 ## Architecture
 
@@ -9,7 +9,7 @@ How Relay will be built and run. What it will do is in [`PRODUCT-SPEC.md`](PRODU
 - Configuration from environment variables, with no committed credentials.
 - SoC LLM through one shared gateway; feature code selects authorized context before invoking it. The planned boundary is in [`ai/llm-gateway.md`](ai/llm-gateway.md).
 
-Keep shared storage, authorization, AI transport and presentation responsibilities separate, and reuse shared components. Package boundaries and entry points will be specified with the first implementation slices. Runtime and dependency pins belong in the root configuration files.
+`src/manage.py` starts the `relay` Django project; `relay.wsgi` is its WSGI entry point and `relay.pages` owns public presentation. Shared templates live in `src/relay/templates/`. No auth/session/admin apps or business models are installed. Runtime and dependency pins belong in the root configuration files.
 
 ## Data model
 
@@ -19,18 +19,22 @@ Before implementing persistence, decide retention for accumulated business recor
 
 ## Routes
 
-Not specified yet. Each route contract must name its method, role/workspace/ownership checks, input validation, state preconditions, success result and denied/failure behaviour before implementation.
+`/` is a public, stateless GET/HEAD route rendering `home.html`, with no input or role/workspace/state preconditions. Other methods return 405; unresolved paths and uncaught exceptions use Django's generic nondebug 404/500 responses. Its observable contract is [PLT-1](product/platform.md#plt-1-django-foundation-and-continuous-verification). Future routes must define authorization, validation and state contracts before implementation.
 
 ## Configuration
 
-The `.env.example` file may contain only empty placeholders and throwaway local database values. Runtime settings and validation will be specified with the application scaffold. Tests must use isolated configuration and fake provider responses, without inheriting production credentials or contacting SoC LLM.
+The `.env.example` file may contain only empty placeholders and throwaway local database values. Settings never load dotenv files. `relay.settings.local` reads `DJANGO_SECRET_KEY` (required/nonblank), `DJANGO_DEBUG` (strict true/false; defaults false), `DJANGO_ALLOWED_HOSTS` (comma-separated localhost/127.0.0.1/[::1] only), and `POSTGRES_HOST/PORT/DB/USER/PASSWORD` (defaults localhost/5432/relay/relay/relay). Database host must be localhost, 127.0.0.1 or ::1. These local settings cannot configure a hosted runtime. `manage.py` and WSGI default to local settings; explicit `DJANGO_SETTINGS_MODULE` remains supported.
+
+`relay.settings.test` imports only shared settings and uses fixed non-secret values: PostgreSQL database/user/password `relay_test`, host 127.0.0.1, port 55432, test database `test_relay_test`, debug false and hosts testserver/localhost/127.0.0.1. `pytest.ini` selects these settings; tests use no provider. The test role needs database creation permission on its throwaway server. No business migrations exist.
+
+Both database configurations explicitly set libpq `hostaddr` through Django's database `OPTIONS`, preventing inherited `PGHOSTADDR` from redirecting connections. Local localhost/127.0.0.1 map to 127.0.0.1; local ::1 maps to ::1. Tests fix the address to 127.0.0.1.
 
 ## Environments
 
 | Environment | Planned runtime | Database | Configuration |
 | --- | --- | --- | --- |
 | Local development | Python virtual environment running Django; Docker optional for the database | Local PostgreSQL, separate from production | Developer configuration; local debug only |
-| CI validation | GitHub Actions running lint, formatting and tests | Throwaway PostgreSQL when app tests exist | Fixed non-secret test values; fake LLM provider |
+| CI validation | GitHub Actions running lint, formatting, Django checks and tests | Throwaway PostgreSQL 17 on loopback port 55432 | Fixed test settings; no provider calls |
 | Production | Vercel's native Django/Python runtime | Separate managed PostgreSQL | Production-only credentials; debug off |
 
 No dedicated staging environment or Docker app image is planned. Development and production use separate databases and credentials. The team manages deployment through GitHub Actions; a build-and-host environment supplied by an AI tool is not part of the delivery plan.
