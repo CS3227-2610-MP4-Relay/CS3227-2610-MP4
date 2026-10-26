@@ -45,7 +45,7 @@ Non-test, non-migration `src/` lines: `demo.py` ~55, `workspaces.py` ~12, views 
 
 - [x] Checkpoint 1: specs and plan.
 - [x] Checkpoint 2: creation service, lookup helper and tests (red evidence first). Red: both test modules failed to import (`accounts.demo`, `accounts.workspaces` missing). Green: `pytest src/accounts -q` 63 passed; Ruff clean. 92 of 400 budget lines.
-- [ ] Checkpoint 3: routes, start page, templates, 503 page and tests (red evidence first).
+- [x] Checkpoint 3: routes, start page, templates, 503 page and tests (red evidence first). Red: 17 failed, 8 passed (`/demo/` gave 404, `/` set no CSRF cookie, Django's default 404 page). Green: full verification 174 passed, 1 skipped; Ruff clean. 169 of 400 budget lines since `9dc41a7`. Expectation changes for the verifier: PLT-1.1 now requires one form posting to `/demo/` (was no form); PLT-1.3 requires "Page not found." (was "Not Found").
 - [ ] Checkpoint 4: guides.
 - [ ] Full verification, size budget and builder scope check.
 - [ ] Independent verifier and security review; human review and merge.

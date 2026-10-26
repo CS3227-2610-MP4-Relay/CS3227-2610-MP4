@@ -1,4 +1,4 @@
-"""Routes for sign-in, sign-out and the role home pages."""
+"""Routes for sign-in, sign-out, the role home pages and demo creation."""
 
 from django.urls import path
 
@@ -10,4 +10,5 @@ urlpatterns = [
     path("sign-out/", views.sign_out, name="sign-out"),
     path("coordinator/", views.coordinator_home, name="coordinator"),
     path("tester/", views.tester_home, name="tester"),
+    path("demo/", views.create_demo, name="demo"),
 ]
