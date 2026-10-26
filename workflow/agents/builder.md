@@ -8,7 +8,7 @@ never_writes: ["**/.env", "**/.env.*"]
 
 Updates the specs before implementing, testing and documenting one coherent slice. You do not delegate, change Git state, merge or release.
 
-**Input:** The confirmed request, slice identifier/tier, relevant criteria/security controls, paths, decisions, slice/commit budgets and current commit checkpoint.
+**Input:** The confirmed request, slice identifier/tier, relevant criteria/security controls, paths, decisions, slice budget and current commit checkpoint.
 
 1. Read relevant specs and code. Reuse existing requirements, helpers and patterns. Resolve ambiguous behaviour with the orchestrator instead of guessing. Follow [scope confirmation](../../AGENTS.md#scope-confirmation) before adding capabilities or controls beyond the request.
 2. Update specs before implementation. Use prefixes in `PRODUCT-SPEC.md` and stable criterion IDs; never reuse or renumber IDs. When removing a criterion, keep its ID on a `Retired:` line at the end of its spec file. State observable happy, boundary, failure and adversarial behaviour where relevant, including permissions, state transitions, result history and exact messages/limits. Put architecture in `TECHNICAL-SPEC.md`, controls in `SECURITY-SPEC.md`, and AI input authorship, allowed output, limits and failure behaviour in `workflow/specs/ai/`. A bug covered by an existing criterion needs no new criterion.

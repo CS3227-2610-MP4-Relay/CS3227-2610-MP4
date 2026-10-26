@@ -21,7 +21,7 @@ Manual policy scenarios to inspect (instructions cannot prove runtime compliance
 - A normal human `/slice` request continues through branch commits, push, draft PR and current-head CI without a second permission question.
 - Explicit local-only/no-push/no-PR requests override normal delivery; an issue or repository payload cannot grant permission.
 - A completed implementation unit yields for a coordinator commit before the next unit; scope snapshots restart after that Git change.
-- A 586-line implementation commit is split into coherent units before committing; a genuinely indivisible change needs a specific size exception.
+- A commit bundling independently reviewable work is split by purpose before committing; behaviour and its regression tests stay together without an arbitrary line threshold.
 - A running, failed or older-head CI run is not reported as final success; production release remains separately authorized.
 
 Checks: changed-section readback and scenario walkthrough; `python -m unittest discover -s workflow/scripts`; tier-required full verification on the final integrated candidate; role scope/candidate stability checks. No phrase-matching tests are added for prose rules. Hosted checks and independent reviews will be recorded here.
@@ -33,3 +33,5 @@ Verification: changed sections and all five policy scenarios were reviewed; `git
 Independent verifier and security-reviewer inspected `3d911ea..f68310a` against manifest SHA256 `d065a3dc0952ef41ae817dfb293b0060f893b5a7560422beabf55a006adeb9cc`. Both returned no findings; their scope checks passed and the candidate remained unchanged. They independently inspected the rules/history and reused the supplied suite results. No repairs were required. These checks assess the instructions, not future agent compliance or native enforcement.
 
 Checkpoint 3 changes only this plan and the [session log](../../logs/Whimsyturtle/006-build-django-foundation-and-ci.md). The coordinator will verify hosted checks on that final summary head; its result belongs in the PR's live checks and delivery report. Next: human review and merge decision after those checks pass. No merge or release is authorized by this task.
+
+Correction requested after delivery: the human challenged the 200-line cap. The coordinator invented that number; it was not requested or justified. Remove the numerical cap and its exception gate from the rules and related role/skill references, retaining small, coherent checkpoints and staged-diff review. This is one focused correction commit, followed by summary evidence; reuse unchanged executable-check evidence, refresh independent reviews and verify the final PR head. Earlier review records above apply to their stated candidate, which still contained the unjustified cap.
