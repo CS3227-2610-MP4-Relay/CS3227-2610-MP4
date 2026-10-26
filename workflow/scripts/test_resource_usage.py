@@ -518,7 +518,7 @@ class ResourceUsageTests(unittest.TestCase):
         )
         self.assertEqual(
             set(usage.discover_children([parent], self.root, self.root)),
-            {parent, child, grandchild},
+            {path.resolve() for path in (parent, child, grandchild)},
         )
 
     def test_cli_is_read_only_and_emits_no_prompt_body_or_path(self):
