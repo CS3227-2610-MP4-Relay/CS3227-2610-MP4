@@ -5,6 +5,8 @@ import string
 from typing import NamedTuple
 
 from django.contrib.auth.hashers import make_password
+from django.db import transaction
+from django.views.decorators.debug import sensitive_variables
 
 from .models import User, Workspace
 
@@ -25,6 +27,13 @@ class Credential(NamedTuple):
     username: str
     password: str
 
+    def __repr__(self):
+        """Hide the password, so logs and error reports never show it."""
+        return (
+            f"Credential(role={self.role!r}, username={self.username!r}, "
+            "password='***')"
+        )
+
 
 def _random(alphabet, length):
     return "".join(secrets.choice(alphabet) for _ in range(length))
@@ -35,6 +44,7 @@ def draw_suffix():
     return _random(SUFFIX_ALPHABET, 8)
 
 
+@sensitive_variables("password", "passwords")
 def generate_passwords():
     """Return a (password, hash) pair per demo account, hashed before any write."""
     passwords = [_random(PASSWORD_ALPHABET, 16) for _ in ACCOUNTS]
@@ -61,21 +71,23 @@ def _free_suffix():
     return suffix
 
 
+@sensitive_variables("passwords", "password", "hashed", "credentials")
 def create_demo_workspace(passwords):
-    """Write a workspace and its accounts inside the caller's creation transaction.
+    """Write a workspace and its accounts, all or nothing.
 
     `passwords` comes from `generate_passwords`. Returns the workspace and its
-    credentials in display order; a storage failure raises and the caller's
-    transaction rolls everything back.
+    credentials in display order. It runs as a savepoint inside the `/demo/`
+    view's creation transaction, and is atomic on its own as well.
     """
-    suffix = _free_suffix()
-    workspace = Workspace.objects.create(name=f"Demo workspace {suffix}")
-    credentials = []
-    for username, (_, role), (password, hashed) in zip(
-        _usernames(suffix), ACCOUNTS, passwords, strict=True
-    ):
-        User.objects.create(
-            username=username, workspace=workspace, role=role, password=hashed
-        )
-        credentials.append(Credential(role.label, username, password))
+    with transaction.atomic():
+        suffix = _free_suffix()
+        workspace = Workspace.objects.create(name=f"Demo workspace {suffix}")
+        credentials = []
+        for username, (_, role), (password, hashed) in zip(
+            _usernames(suffix), ACCOUNTS, passwords, strict=True
+        ):
+            User.objects.create(
+                username=username, workspace=workspace, role=role, password=hashed
+            )
+            credentials.append(Credential(role.label, username, password))
     return workspace, credentials
