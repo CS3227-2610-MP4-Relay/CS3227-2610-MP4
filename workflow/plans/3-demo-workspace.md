@@ -46,7 +46,7 @@ Non-test, non-migration `src/` lines: `demo.py` ~55, `workspaces.py` ~12, views 
 
 Candidate `46e8a86`. Verifier: 1 Medium, 7 Low, 2 Info. Security reviewer: 1 Medium, 2 Low, 4 Info. Decisions by the coordinator on 2026-10-27 under the human's delegation:
 
-- Deferred to ACC-3 (security Medium): an unlocked limit pre-check before hashing, now in the ACC-3 spec.
+- Deferred to ACC-3 (security Medium): an unlocked limit pre-check before hashing. It is specified in ACC-3's spec on branch `4-limit-abuse` (#4, commit `480530a`), not in this candidate.
 - Adopted, tests: a two-workspace isolation test through the real sign-in (verifier Medium); the taken-suffix 503 proves 3 draws and an `IntegrityError`; exact alphabets; the "Demo workspace creation failed." record with `exc_info`; `ac("ACC-2.6", "PLT-1.1")` on the signed-in redirect test; a `transaction=True` test where the real outermost commit fails.
 - Adopted, code: `create_demo_workspace` runs in its own `transaction.atomic()` (a savepoint inside the view's block); `Credential.__repr__` hides the password; `sensitive_variables` on `create_demo`, `generate_passwords` and `create_demo_workspace`; the ACC-2.3 log test captures `django` and `django.template` DEBUG records (security Low 2).
 - Adopted, spec and docs: the delivery-order exception for `/demo/`'s creation block; the `accounts.md` status line names RND-7's sample round; the Creation bullet says what a logged constraint violation may name; the User Guide's resubmission and back-button sentence.
@@ -56,7 +56,22 @@ Repair round 1 evidence (builder, Windows):
 
 - Red: `test_creation_outside_a_transaction_writes_all_or_nothing` (left `(1, 1)` rows) and `test_credential_repr_hides_the_password` failed before the fix. The other new tests passed against existing behaviour, so their detection was shown by temporary mutations, each restored with no diff left: a home view that also rendered another workspace's name failed the isolation test; removing `create_demo`'s `sensitive_variables` failed the three ACC-2.5 error-report checks; a repr showing the password failed the rendering-failure check and the repr test. The commit-failure test asserts the patched commit ran.
 - The error-report check uses Django's HTML report, because its text report omits frame variables.
-- Green: full verification passed: 195 passed, 1 skipped, 85 subtests. Budget: 184 of 400 lines since `1492c0b`.
+- Green: full verification passed: 195 passed, 1 skipped, 85 subtests. Budget: corrected in repair round 2 below.
+
+## Re-review of repair round 1 and repair round 2
+
+Candidate `11d7649`. Verifier: all round-0 findings fixed; one new Low (N1) and two Info (N2, N3). Security reviewer: all resolved; 4 Info. Decisions by the coordinator on 2026-10-27 under the human's delegation:
+
+- N1 (Low): template-engine frames below `create_demo`, such as `ForNode.render`'s `nodelist`, kept rendered passwords that the named sensitive variables did not cover. Fixed by `@sensitive_variables()` with no names on `create_demo`, which hides every variable in every frame below it. This also closes the security reviewer's template-frame Info.
+- N2 (Info): the ACC-3 deferral above now names where the pre-check is specified.
+- N3 (Info): the budget is measured with the official command, below.
+- Security Info, accepted: `generate_passwords`' own decorator is not separately tested; local `DEBUG` pages are unredacted (Django's design, local only); the ACC-3 comment in `create_demo` is updated by ACC-3.
+
+Repair round 2 evidence (builder, Windows):
+
+- Red: `test_failure_mid_table_keeps_rendered_passwords_out_of_error_reports` makes real rendering fail at the third table row's password. It failed before the decorator change: a rendered password appeared in a template frame's locals in Django's HTML error report.
+- Green: the same test, and the rest of `test_demo_views.py`, passed after the change (18 passed); full verification at the end of this round is in the handoff.
+- Budget (official command): `git diff --shortstat 1492c0b -- src ':(exclude)*/tests/*' ':(exclude)*/migrations/*' ':(exclude)src/e2e/*' ':(exclude)*/conftest.py'` gives 190+/7−, so 197 of 400 (189+/7− at `11d7649`). It counts `src/relay_tests/test_pages.py` (10+/2−), test code that the exclusion patterns do not catch; without it the figure is 185.
 
 ## Checklist
 
@@ -67,4 +82,6 @@ Repair round 1 evidence (builder, Windows):
 - [x] Full verification, size budget and builder scope check (checkpoint 4, Windows, on `fea7923` plus the checkpoint 4 edits): `manage.py check` and `makemigrations --check` clean; Ruff clean; 188 passed, 1 skipped, 85 subtests passed. `git diff --check` clean; `check_scope.py builder --base fea7923` clean. Budget: 169 of 400 lines since `9dc41a7` for ACC-2; the raw `src/` diff is 197, including 28 lines from the merged ACC-1 repair.
 - [x] Review round 0 (verifier and security reviewer).
 - [x] Repair round 1.
-- [ ] Re-review of repair round 1; human review and merge.
+- [x] Re-review of repair round 1.
+- [x] Repair round 2 (the last).
+- [ ] Re-review of repair round 2; human review and merge.
