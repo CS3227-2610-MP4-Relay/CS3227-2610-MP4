@@ -27,6 +27,7 @@ Threat: repeated sign-in attempts guess passwords, or repeated demo creation exh
   - An attacker with many addresses can use up the overall cap and block demo creation for everyone.
   - Behind a proxy that hides client addresses, or for requests without a parseable address, clients share one count.
   - Fixed windows allow a burst across a window boundary.
+  - Reloading the demo creation page resubmits it and creates another workspace, within the limits, and a browser's back/forward cache may show the credentials again despite `no-store`.
   - Storage still grows without bound: unlimited successful sign-ins create session rows, and expired sessions are never deleted; rotating addresses or IPv6 prefixes creates limit-counter rows. Hashed addresses are kept indefinitely until the [retention decision](TECHNICAL-SPEC.md#data-model) is made.
 
 ## Rounds, observations and history
