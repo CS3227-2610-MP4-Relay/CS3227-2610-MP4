@@ -1,6 +1,7 @@
 """RND-2: managing a round's acceptance criteria and test cases through its pages."""
 
 import threading
+import time
 from unittest import mock
 
 import pytest
@@ -418,6 +419,13 @@ def test_one_of_five_simultaneous_criteria_takes_the_last_place(coordinator):
     clients = [signed_in(coordinator) for _ in range(5)]
     barrier = threading.Barrier(5)
     responses = [None] * 5
+    real_add = services.add_criterion
+
+    def slow_add(round_, text):
+        # A pause before counting, inside the view's transaction, widens the
+        # race window, so a missing round lock lets every request through.
+        time.sleep(0.1)
+        return real_add(round_, text)
 
     def add(index):
         try:
@@ -429,10 +437,11 @@ def test_one_of_five_simultaneous_criteria_takes_the_last_place(coordinator):
             connection.close()
 
     threads = [threading.Thread(target=add, args=(i,)) for i in range(5)]
-    for thread in threads:
-        thread.start()
-    for thread in threads:
-        thread.join()
+    with mock.patch.object(services, "add_criterion", slow_add):
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
     statuses = sorted(response.status_code for response in responses)
     assert statuses == [200, 200, 200, 200, 302]
     for response in responses:
