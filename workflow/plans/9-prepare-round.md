@@ -24,6 +24,12 @@ Builder's spec details within that scope (checkpoint 1), confirmed by the coordi
 
 Decision (b), coordinator, 2026-10-27: RND-1 is stacked on ACC-2 instead of copying its files, to avoid duplicate files and merge conflicts. The coordinator removed the duplicate "Workspace lookup helper" bullet from checkpoint 1 and merged `origin/3-demo-workspace` (`fea7923`) as `4a11fc9`. RND-1 therefore reuses ACC-2's `accounts.workspaces.workspace_records`, `404.html`, `503.html` and PLT-1.3 test as they are.
 
+Builder's implementation details (checkpoint 3), for the coordinator to confirm:
+
+- Rounds pages are never cached, like the role homes; one line added under [Rounds routes](../specs/TECHNICAL-SPEC.md#rounds-routes).
+- The Coordinator home keeps ACC-1's view and decorators; `_role_home` takes an optional template and a sections function, and the coordinator's template `rounds/coordinator_home.html` extends `accounts/home.html` through a new empty `sections` block.
+- The title input carries `dir="auto"`, since it holds only user text.
+
 ## Checkpoints
 
 1. **Specs and plan** (this checkpoint, `spec:`/`plan:`): `workflow/specs/product/rounds.md`, `workflow/specs/TECHNICAL-SPEC.md`, `workflow/specs/SECURITY-SPEC.md`, this plan. Check: `git diff --check`; read changed sections back.
@@ -54,7 +60,7 @@ Non-test, non-migration `src/` lines: models and apps ~40, services ~30, forms ~
 
 - [x] Checkpoint 1: specs and plan.
 - [x] Checkpoint 2: model, creation service and tests. Red: `pytest src/rounds -q` failed at collection with `ImportError: cannot import name 'services' from 'rounds'`; green: 7 passed; full verification 195 passed, 1 skipped; 79 budget lines.
-- [ ] Checkpoint 3: pages, routes, rules and rendering tests (red evidence first).
+- [x] Checkpoint 3: pages, routes, rules and rendering tests. Red: `pytest src/rounds -q` stopped at collection with `ModuleNotFoundError: No module named 'rounds.forms'`; `pytest src/rounds/tests/test_rendering.py` gave 7 failed (404s, no routes), 1 passed (`unicode-bidi` absent: nothing sets it yet; it guards future CSS). Mutation check: with the workspace lock removed from `create_round`, the RND-1.5 test failed 3 of 3 runs.
 - [ ] Checkpoint 4: guides.
 - [ ] Full verification, size budget and builder scope check.
 - [ ] Independent verifier and security review; human review and merge.
