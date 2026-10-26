@@ -13,7 +13,7 @@ Made by the coordinator on 2026-10-27 under the human's (zheng-jj) delegation, "
 - **Not included:** retests (RND-5), tester views and results (RES), the sample round (RND-7).
 - **Merge order:** RND-3's publish route and Open round page come at its checkpoint 3. This slice's checkpoint 2 stays out of `views.py`, `urls.py`, templates and view tests; checkpoint 3 starts only after the coordinator merges RND-3's checkpoint 3 into this branch.
 
-Builder's spec details within that scope (checkpoint 1), for the coordinator to confirm:
+Builder's spec details within that scope (checkpoint 1), all confirmed by the coordinator on 2026-10-27 under the same delegation, with Tier Standard and the security reviewer run, and the checkpoint 3 notes on the route walk and RND-3's no-form assertion:
 
 - Page text in the [RND-6 introduction](../specs/product/rounds.md#rnd-6-close-a-round): while Open, the round page ends, after "Builds" and before "Coordinator home", with the paragraph "Closing makes this round read-only. It cannot be reopened." directly followed by a "Close round" button; no further confirmation (as RND-2's deletes); "Round closed." once, directly under the heading, as RND-3's message; the Closed page shows what the Open page shows (title, "State: Closed", criteria, cases with linked criteria and current build, "Builds") with no "Edit round" link, RND-2 controls, publish form, warning or close button; the closing time is stored, not shown.
 - [Technical details](../specs/TECHNICAL-SPEC.md#rounds): `Round.closed_at` (empty until closing); the closing flow (no form fields; one transaction locking the round row and re-checking Open, 409 otherwise; `rounds.services.close(round_)` sets the state and `closed_at`; message after commit; redirect). One delivery-order sentence under [Rounds routes](../specs/TECHNICAL-SPEC.md#rounds-routes). As RND-3, no check constraint ties `closed_at` to the state. The security spec needs no change: its rounds section already names the one-way states and the RND-6.4 lock.
@@ -46,7 +46,7 @@ Non-test, non-migration `src/` lines: models ~1, services ~8, views ~15 (close v
 
 ## Checklist
 
-- [ ] Checkpoint 1: specs and plan.
+- [x] Checkpoint 1: specs and plan (`9952db3` spec, `7018b74` plan).
 - [ ] Checkpoint 2: closing time, migration, close service and tests.
 - [ ] Checkpoint 3: route, round page and RND-6 tests.
 - [ ] Checkpoint 4: guides and status.
