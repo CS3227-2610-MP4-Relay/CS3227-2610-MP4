@@ -142,3 +142,13 @@ def publish(round_, label):
     round_.published_at = timezone.now()
     round_.save(update_fields=["state", "published_at"])
     return build
+
+
+def close(round_):
+    """Close the locked `round_`, whose Open state the caller has re-checked.
+
+    Only the state and closing time change; nothing reopens a round (RND-6).
+    """
+    round_.state = Round.State.CLOSED
+    round_.closed_at = timezone.now()
+    round_.save(update_fields=["state", "closed_at"])
