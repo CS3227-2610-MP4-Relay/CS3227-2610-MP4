@@ -22,7 +22,7 @@ Each account has one role, **Test Coordinator** or **Beta Tester**, in one works
 2. The **Your demo workspace** page shows `Workspace:` with the new workspace's name, and a table with the **Role**, **Username** and **Password** of one Test Coordinator and two Beta Testers. It says "Save these passwords now. They will not be shown again."
 3. Save the usernames and passwords, then choose **Sign in** to sign in with any of them.
 
-Creating a workspace does not sign you in. Each workspace is separate: its accounts never see another workspace's records. Reloading the page creates another new workspace instead of showing the same passwords again. While you are signed in, choosing **Create a demo workspace** takes you to your own home page and creates nothing.
+Creating a workspace does not sign you in. Each workspace is separate: its accounts never see another workspace's records. Resubmitting the page, which your browser asks about first, creates another new workspace rather than showing the same passwords again, and the browser's back button may still show the earlier page. While you are signed in, choosing **Create a demo workspace** takes you to your own home page and creates nothing.
 
 If creation fails, the page says "Relay is temporarily unavailable. Try again later." and nothing is created.
 
