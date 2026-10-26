@@ -1,0 +1,43 @@
+# Build Django foundation and CI
+
+Slice: #1 · Tier: High · Tool: Codex · Orchestrator model: gpt-6-astra, xhigh (observed runtime metadata) · Date: 2026-10-26
+
+Tokens: recorded session totals across five sources: input 9,438,438, output 50,434, total 9,488,872; cutoff 16:08:14 SGT. These are recorded totals, not an exact task delta.
+
+| Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Orchestrator — gpt-6-astra/xhigh, `codex:9d5e5df57fd5eaff378c94c5` | 5,106,219 | 5,012,736 | 18,940 | 5,715 | 5,125,159 | 28m 18.6s |
+| Builder — gpt-6.1-sol/medium, `codex:d3f07fdb681e3669023de0f8` | 2,214,244 | 2,142,080 | 19,693 | 1,828 | 2,233,937 | 25m 30.9s |
+| Verifier — gpt-6.1-sol/high, `codex:16ef6563a01a9d484377c7d5` | 1,186,952 | 1,117,824 | 6,477 | 1,748 | 1,193,429 | 12m 50.8s |
+| Security reviewer — gpt-6.1-sol/high, `codex:e3160e8aaa4ff42ddebf19d8` | 789,879 | 749,696 | 4,719 | 1,585 | 794,598 | 12m 21.0s |
+| Platform approval reviewer — codex-auto-review/low, `codex:b0b33a19c0abd6deccb06ac8` | 141,144 | 104,960 | 605 | 274 | 141,749 | 28m 18.1s |
+
+Three delegated roles and one automatically created approval-review source; observed model/effort metadata matches the configured role settings. Spans run from source creation to the common cutoff, include idle time and are not additive. All sources recorded zero cache-write tokens. Two model-capacity retries occurred (builder and verifier), with one independent-review repair round and one earlier configuration correction. The baseline at 15:40:45 SGT covered the coordinator before delegation but omitted the already-started approval source. The final `resource_usage.py report` therefore marks the aggregate task delta unavailable (`added_session_has_no_task_start_baseline`); the separate session-total snapshot above has no warnings. Fresh, non-forked role sources were counted once; overlapping intermediate reports were not added. Initial coordinator inspection precedes the baseline. Log writing and delivery after the cutoff are excluded. See [token reporting](../../workflow/README.md#token-reporting).
+
+## Requests
+
+Run `/slice 1`. Resolved this to repository [issue #1](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/issues/1), “Set up the Django application and CI”; the API confirmed its author association was MEMBER and it had no comments. During work, the human confirmed removing or moving the two initially untracked reference documents; their absence was preserved.
+
+## Agent runs
+
+- **Coordinator:** selected High tier for CI/configuration boundaries and supplied each role only the confirmed scope, relevant specs/paths, budget, candidate identity and check evidence. Prepared an isolated PostgreSQL 17.6 cluster with the installed binaries, without changing existing databases. Found pytest settings-precedence weakness during integration, updated the root README after the builder, froze both review candidates and checked role scopes. Executed the initial integrated full check and an actual HTTP smoke check: GET `/` returned 200 and the specified page text. Ran the specialist's bounded synthetic address probe. Stopped and removed the temporary database and web-test resources after review. No Git mutations or remote writes.
+- **Builder:** role hash `6d4b470d3ece63b90988f1491709b1a0b1e89f724230b2100a42c9fa6ecb974e`. Initial run, capacity retry, read-only chronology clarification and one review repair used the same role session. Updated specs/plan, then implemented/tests/documented [PLT-1](../../workflow/specs/product/platform.md#plt-1-django-foundation-and-continuous-verification). Initial red tests failed for absent application/CI; a later real pytest-startup test exposed inherited settings selection. The review repair's driver regression reproduced the address bypass before its fix. Final full Git Bash command, `ruff check . && ruff format --check . && pytest`, passed: 96 passed, one existing Windows directory-symlink skip; Django system check was clean and all 24 Python files formatted. Repair scope passed. No assertions were weakened. Spec/check details and criterion mapping are in the [slice plan](../../workflow/plans/1-django-foundation.md).
+- **Verifier:** role hash `4bc2941a5d0d38c3c0fefb75c5d21d585d23d854ab9132d4db7c14f834e3b722`. Initial attempt hit capacity; retry inspected source, assertions, specs and guides independently, then re-reviewed the repaired candidate. Confirmed all seven criteria's mappings, spec snapshots and the 199-line conservative source budget. Reused supplied full-check results, ran its own candidate/scope checks, and found no remaining concrete issue after repair. Recorded the concurrent CSRF documentation caveat rather than claiming strict ordering for that detail.
+- **Security reviewer:** role hash `3e7ee3da2a29fb009fce10fda3381e0032528c83aba53e5bc7513aa1f1697598`. Reviewed both fixed candidates and independently ran 23 focused tests initially, then 15 configuration tests after repair, including three real driver connections. Identified the inherited `PGHOSTADDR` bypass; closed it after inspecting explicit loopback options and actual destination assertions. No remaining finding within the reviewed application/CI range. Its scope and unchanged checks passed.
+- **Platform approval reviewer:** automatically created by the runtime; no delegated task or product review was assigned. Only identity/model metadata and numeric usage were collected.
+
+Both reviews used base/HEAD `f69ca558f14c6a90004856a66af7b31fc79f07a3`. Initial dirty-candidate manifest SHA256: `d82c49a20028eb57b85263b05cbc328c37dacfaac64f28f1a57f302cce6dbd37`. Repaired manifest: `d9e608cf48bbb4ed7c9c4d761bde4cf3bd8e5b0ba658cd86bd0ec49611e35a82`. The coordinator confirmed it remained unchanged after both final reviews. Only this log and the plan's delivery/usage notes were then updated; application, tests, specs, CI and guides retained the reviewed content. Numeric snapshots and candidate manifests remain outside version control.
+
+## Decisions and corrections
+
+Kept the work to a public landing page, local/test settings, PostgreSQL verification and the existing CI job using installed/pinned packages. No accounts, business persistence, AI or deployment was added. Fixed test-settings selection and inherited database-address redirection within the original isolation criteria. Human confirmation explained the original scope check's two missing-file exceptions; subsequent builder and reviewer checks passed. The builder refused the deliberate out-of-scope AGENTS.md edit probe; this demonstrates role refusal only.
+
+The local implementation and required reviews are complete. Changes remain uncommitted. Hosted CI, Docker examples, live IPv6 connectivity, live hook enforcement, merge and release were not verified or performed. The human still owns those decisions and review of this log.
+
+## Problems
+
+The GitHub connector omitted author association; the first CLI API call hit a network sandbox restriction, then succeeded with approved execution. PostgreSQL initialization similarly required approved execution after a Windows restricted-token failure. Two capacity failures required role retries. Initial lint/helper setup errors were corrected before accepted evidence; the database regression's genuine red failures followed two helper setup corrections.
+
+The coordinator's initial settings-precedence correction required another integrated run. The specialist's address probe demonstrated an attempted connection to the synthetic documentation address, blocked by the sandbox; no remote database was accessed. Both reviewers requested the same minimal repair, completed in one review round. All seven product criteria preceded code, but the explicit CSRF exemption rationale was added concurrently with implementation; this process limitation cannot be retroactively removed. The address-repair control refinement did precede its code change.
+
+No malicious repository instruction was followed. The security reviewer treated the generated-file maintenance directive in `.venv/Lib/site-packages/psycopg/_conninfo_attempts.py` as dependency data. No real secrets or raw transcripts were retained. This summary has not been checked by its human author.
