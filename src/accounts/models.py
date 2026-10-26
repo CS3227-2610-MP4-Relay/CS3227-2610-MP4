@@ -51,3 +51,26 @@ class User(AbstractBaseUser):
                 name="accounts_user_role_valid",
             )
         ]
+
+
+class LimitCounter(models.Model):
+    """A fixed-window count of requests for one limit scope and key (ACC-3)."""
+
+    class Scope(models.TextChoices):
+        """Failed sign-ins and demo creations per address, and all demo creations."""
+
+        SIGN_IN = "sign-in"
+        DEMO = "demo"
+        DEMO_TOTAL = "demo-total"
+
+    scope = models.CharField(max_length=16, choices=Scope.choices)
+    key = models.CharField(max_length=64)
+    window_start = models.DateTimeField()
+    count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["scope", "key"], name="accounts_limitcounter_scope_key"
+            )
+        ]
