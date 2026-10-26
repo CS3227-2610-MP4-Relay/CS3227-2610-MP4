@@ -104,6 +104,8 @@ While the round is Open, the coordinator can ask for selected cases to be tested
 
 Closing ends testing and makes the round read-only. A closed round cannot be reopened.
 
+While the round is Open, the round page ends, after the "Builds" section and before the "Coordinator home" link, with the paragraph "Closing makes this round read-only. It cannot be reopened." directly followed by a "Close round" button. Closing asks for no further confirmation and opens the round page, which shows "Round closed." once, directly under its heading. A Closed round's page shows the same title, "State: Closed", criteria, cases with their linked criteria and current build, and "Builds" section as an Open round's page, and has no "Edit round" link, no RND-2 controls, no publish form, no warning and no "Close round" button. The closing time is recorded but not shown.
+
 - **RND-6.1** (happy) Closing an Open round shows "Round closed." Its round page shows the state "Closed", and its criteria, cases and builds stay visible there.
 - **RND-6.2** (ambiguous) Closing needs no precondition: a round with untested cases can be closed. The close button is shown with "Closing makes this round read-only. It cannot be reopened."
 - **RND-6.3** (boundary) Closing a Closed round gets 409, and no page or route returns a round to Open or Draft.
