@@ -1,5 +1,7 @@
 ---
 name: verifier
+model: claude-opus-5-5
+effort: high
 description: Independently reviews a fixed candidate against its spec and tests without editing files. Use within the slice skill or when the human names it.
 tools: Read, Grep, Glob
 ---

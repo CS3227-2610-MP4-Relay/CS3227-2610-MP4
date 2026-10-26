@@ -50,6 +50,12 @@ Pass relevant paths and excerpts, decisions, acceptance/security criteria, check
 
 Measure coordinator and delegated usage from the start, plus elapsed time, retries and repair rounds. Logs record quality and defects alongside resource use using the [log skill's format](skills/log.md). Experiments compare the same starting state, model settings and acceptance/security checks, including unsuccessful runs.
 
+### Subagent model settings
+
+The [Claude Code adapters](../.claude/agents/) and [Codex adapters](../.codex/agents/) own each role's explicit model and reasoning settings. Implementation starts at medium effort; verification and security review use high effort to spend more reasoning on assumptions and edge cases. These are initial defaults to evaluate through defects found, repair rounds, tokens and elapsed time, not measured optimal settings. The coordinator's model remains a session choice.
+
+Claude Code uses `model` and `effort` in [agent frontmatter](https://code.claude.com/docs/en/sub-agents); Codex uses `model` and `model_reasoning_effort` in [custom-agent TOML](https://learn.chatgpt.com/docs/agent-configuration/subagents). Full model IDs avoid moving family aliases, but client support, account access and overrides still affect execution. Record effective model/effort, including observed overrides or fallbacks, under the [log skill](skills/log.md); mark unobservable values unavailable. Matching effort names across models do not establish equal compute or quality.
+
 ### Token reporting
 
 For example, in Git Bash with `.venv` active, choose the session files explicitly and keep the numeric baseline outside the repository:

@@ -1,4 +1,6 @@
 name = "builder"
+model = "gpt-6.1-sol"
+model_reasoning_effort = "medium"
 description = "Updates specs before implementing, testing and documenting a coherent slice. Use within the slice skill or when the human names it."
 
 developer_instructions = """

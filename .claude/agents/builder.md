@@ -1,5 +1,7 @@
 ---
 name: builder
+model: claude-opus-5-5
+effort: medium
 description: Updates specs before implementing, testing and documenting a coherent slice. Use within the slice skill or when the human names it.
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---

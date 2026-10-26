@@ -1,5 +1,7 @@
 ---
 name: security-reviewer
+model: claude-opus-5-5
+effort: high
 description: Reviews a fixed candidate for access, AI, secret and development security risks without editing files. Use within the slice skill or when the human names it.
 tools: Read, Grep, Glob
 ---

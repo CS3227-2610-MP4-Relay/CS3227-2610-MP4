@@ -11,7 +11,13 @@ from check_scope import ROOT, load_scope
 
 ROLES = sorted(path.stem for path in (ROOT / "workflow" / "agents").glob("*.md"))
 SKILLS = sorted(path.stem for path in (ROOT / "workflow" / "skills").glob("*.md"))
-CODEX_AGENT_KEYS = {"name", "description", "developer_instructions"}
+CODEX_AGENT_KEYS = {
+    "name",
+    "description",
+    "developer_instructions",
+    "model",
+    "model_reasoning_effort",
+}
 WRITE_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit", "Bash"}
 
 
