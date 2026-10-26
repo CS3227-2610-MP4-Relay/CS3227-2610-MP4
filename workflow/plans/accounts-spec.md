@@ -22,7 +22,9 @@ Decisions (human, zheng-jj):
 | ACC-2 | #3 | After ACC-1; not deployed to production before ACC-3 |
 | ACC-3 | #4 | After ACC-2 |
 
-## Proposed defaults (confirm in PR review)
+## Defaults
+
+The coordinator accepted these defaults on 2026-10-26 under the human's delegation, after three verifier and security-review rounds.
 
 - Routes `/` (the Relay start page), `/sign-in/`, `/sign-out/` (POST only), `/demo/` (POST only), `/coordinator/` and `/tester/`; page titles "Relay", "Coordinator home", "Tester home" and "Your demo workspace".
 - The messages, the 403, 404, 429 and 503 pages, and the 8-hour session lifetime are as written in the criteria.
@@ -34,12 +36,12 @@ Decisions (human, zheng-jj):
 - Cross-role pages get 403, and another workspace's record gets a 404 identical to a missing record. Routes check the role before looking records up.
 - Limits use fixed windows starting at the first counted request. Bursts across a window boundary are accepted. Refused or failed requests count toward nothing.
 - Client address: `REMOTE_ADDR`, with IPv6 grouped by `/64`, and never a client-supplied forwarding header. Addresses are stored only as `salted_hmac` keys with their own salt.
-- Counters: a migration creates the overall row, and per-address rows use insert-or-update. Creation hashes passwords first, then locks the per-address row and then the overall row. Sign-in locks its per-address row and checks the count and password in one transaction (repair round 2), so a rollback or timeout leaves no counted failure. Cost: sign-ins from one address are serialised, each holding the lock for about one password hash, so a lab signing in together queues; the lock timeout must allow for that queue. Because nothing is reserved, a concurrent attempt is never refused one attempt early. A lock or statement timeout gives the 503 page.
+- Counters: a migration creates the overall row, and per-address rows use insert-or-update. Creation hashes passwords first, then locks the per-address row and then the overall row. Sign-in locks its per-address row and checks the count and password in one transaction (repair round 2), so a rollback or timeout leaves no counted failure. Cost: sign-ins from one address are serialised, each holding the lock for about one password hash, so a lab signing in together queues, and a request waiting past the 5-second lock timeout gets the 503 page (a [residual gap](../specs/SECURITY-SPEC.md#sign-in-and-access-control)). Because nothing is reserved, a concurrent attempt is never refused one attempt early. A lock or statement timeout gives the 503 page.
 - The custom user model has no staff, superuser or permission fields, and `django.contrib.admin` is not installed.
 
 ## Notes for the code slices
 
-- The custom user model must exist from #1's first migration; flag this for Whimsyturtle's #1.
+- The custom user model must be in place before any persistent database is migrated, in particular production under #5. PR #43 (#1) currently has none; if #1 ships without it, the ACC-1 slice adds it while no persistent database exists. Flag this for Whimsyturtle's #1.
 - ACC-2.4 is tested through the shared lookup helper in unit tests. Later record routes test isolation under their own criteria. Ownership filtering of testers' private records is RES's job (for Whimsyturtle).
 - Time control uses `unittest.mock`, with no new dependency. ACC-3.6 and ACC-3.8 need PostgreSQL `TransactionTestCase` tests with threads.
 - If ACC-2 is implemented before RND-7, the RND slice adds the sample round to the creation transaction.
@@ -71,3 +73,5 @@ Everything the human excluded above; the sample round's contents (RND); deleting
 Check evidence, repair round 1 (builder, macOS, `.venv`): Ruff lint and format passed; pytest reported 70 passed, 85 subtests passed. `git diff --check` is clean, and `check_scope.py builder --base 83a821f` reported all changes within scope.
 
 Check evidence, repair round 2 (builder, macOS, `.venv`): Ruff lint and format passed; pytest reported 70 passed, 85 subtests passed. `git diff --check` is clean, and `check_scope.py builder --base 8e7d180` reported all changes within scope.
+
+Check evidence, follow-up after round 2 (builder, macOS, `.venv`): Ruff lint and format passed; pytest reported 70 passed, 85 subtests passed. `git diff --check` is clean, and `check_scope.py builder --base 43626bc` reported all changes within scope.
