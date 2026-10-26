@@ -33,6 +33,8 @@ WARNING_CODES = frozenset(
         "mixed_codex_telemetry_is_ambiguous",
         "multiple_codex_exports_are_ambiguous",
         "codex_counter_reset",
+        "codex_counter_reset_ambiguous",
+        "codex_subset_counter_decrease",
         "codex_inherited_or_missing_initial_history",
         "session_has_no_supported_usage",
         "added_session_has_no_task_start_baseline",
@@ -345,20 +347,34 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                 increment = current.copy()
                 last = _codex_usage(_object(info.get("last_token_usage")))
                 if kind == "cumulative" and previous is not None:
-                    reset = any(
-                        current[field] is not None
+                    decreased = {
+                        field
+                        for field in METRICS
+                        if current[field] is not None
                         and previous[field] is not None
                         and current[field] < previous[field]
-                        for field in METRICS
-                    )
-                    if reset:
-                        warnings.add("codex_counter_reset")
+                    }
+                    primary = ("input_tokens", "output_tokens", "total_tokens")
+                    if decreased.intersection(primary):
+                        if all(
+                            current[field] is not None
+                            and previous[field] is not None
+                            and current[field] <= previous[field]
+                            for field in primary
+                        ):
+                            warnings.add("codex_counter_reset")
+                        else:
+                            warnings.add("codex_counter_reset_ambiguous")
+                            increment = {field: None for field in METRICS}
                     else:
+                        if decreased:
+                            warnings.add("codex_subset_counter_decrease")
                         increment = {
                             field: (
                                 current[field] - previous[field]
                                 if current[field] is not None
                                 and previous[field] is not None
+                                and field not in decreased
                                 else None
                             )
                             for field in METRICS

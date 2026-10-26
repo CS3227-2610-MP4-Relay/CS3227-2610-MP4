@@ -102,6 +102,62 @@ class ResourceUsageTests(unittest.TestCase):
         self.assertEqual(self.tokens(result)["output_tokens"], 19)
         self.assertIn("codex_counter_reset", result["warnings"])
 
+    def test_subset_decrease_preserves_primary_counters_and_report(self):
+        for field, initial in (
+            ("cached_input_tokens", 80),
+            ("cache_write_input_tokens", 80),
+            ("reasoning_output_tokens", 8),
+        ):
+            with self.subTest(field=field):
+                before = counts(100, 10)
+                before[field] = initial
+                after = counts(150, 15)
+                after[field] = initial // 4
+                path = self.write("subset.jsonl", [meta(), codex(before)])
+                baseline = usage.collect([path], now=START)
+                self.write(
+                    "subset.jsonl", [meta(), codex(before), codex(after, second=1)]
+                )
+                current = usage.collect([path], now=START + timedelta(seconds=1))
+                tokens = self.tokens(current)
+                self.assertEqual(tokens["total_tokens"], 165)
+                self.assertEqual(tokens["input_tokens"], 150)
+                self.assertEqual(tokens["output_tokens"], 15)
+                self.assertIsNone(tokens[field])
+                self.assertIn("codex_subset_counter_decrease", current["warnings"])
+                self.assertNotIn("codex_counter_reset", current["warnings"])
+                report = usage.report(current, baseline)
+                self.assertEqual(report["tokens"]["total_tokens"], 55)
+                self.assertIsNone(report["tokens"][field])
+
+    def test_ambiguous_primary_decrease_remains_unavailable(self):
+        for changed in (
+            {"input_tokens": 90},
+            {"output_tokens": 5},
+            {"total_tokens": 100},
+            {"input_tokens": 20, "output_tokens": None, "total_tokens": None},
+        ):
+            with self.subTest(changed=changed):
+                before = counts(100, 10, cached=80)
+                after = {**counts(150, 15, cached=100), **changed}
+                path = self.write("ambiguous.jsonl", [meta(), codex(before)])
+                baseline = usage.collect([path], now=START)
+                self.write(
+                    "ambiguous.jsonl",
+                    [
+                        meta(),
+                        codex(before),
+                        codex(after, second=1),
+                        codex(counts(200, 20, cached=120), second=2),
+                    ],
+                )
+                current = usage.collect([path], now=START + timedelta(seconds=2))
+                self.assertTrue(all(v is None for v in self.tokens(current).values()))
+                self.assertIn("codex_counter_reset_ambiguous", current["warnings"])
+                self.assertNotIn("codex_counter_reset", current["warnings"])
+                report = usage.report(current, baseline)
+                self.assertTrue(all(v is None for v in report["tokens"].values()))
+
     def test_fork_does_not_recount_inherited_cumulative_history(self):
         path = self.write(
             "fork.jsonl",

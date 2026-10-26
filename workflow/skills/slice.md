@@ -30,4 +30,4 @@ For every role agent run:
 - Record why the agent ran, context supplied, actual checks and usage source IDs. Compact handoffs contain decisions, checks, open findings and next steps. Do not persist hidden reasoning.
 - If the tool cannot run independent roles, report the limitation and use human independent review. Playing the verifier yourself does not create independence.
 
-**Done when:** The fixed candidate has its tier's required checks and review (human diff review for Fast lane), with each criterion mapped to a passing test or actual manual check, or work stops with the specific remaining decision or limitation.
+**Done when:** The fixed candidate has its tier's required checks and review (human diff review for Fast lane), with each criterion mapped to a passing automated test or a justified, executed manual-only check under the [builder's testing rules](../agents/builder.md), or work stops with the specific remaining decision or limitation.
