@@ -84,7 +84,8 @@ tester_home = _role_home(User.Role.TESTER, "Tester home")
 
 
 @require_POST
-@sensitive_variables("passwords", "credentials", "page")
+# No names: hide every variable in every frame below, template frames included.
+@sensitive_variables()
 def create_demo(request):
     """Create a demo workspace and show its passwords once, uncached (ACC-2)."""
     if request.user.is_authenticated:

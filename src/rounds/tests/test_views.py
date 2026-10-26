@@ -385,6 +385,8 @@ def test_retitling_an_open_or_closed_round_gets_409(
         html = page(response)
         assert "<title>Action not available</title>" in html
         assert f"<h1>{CONFLICT.format(name)}</h1>" in html
+        cache_control = response["Cache-Control"]
+        assert "no-store" in cache_control and "private" in cache_control
     made.refresh_from_db()
     assert made.title == "Synthetic frozen"
     html = page(coord_client.get(detail(made.pk)))
@@ -432,6 +434,8 @@ def test_storage_failure_gives_503_and_changes_nothing(
     with mock.patch.object(Round, "save", side_effect=DatabaseError("synthetic")):
         response = coord_client.post(url, {"title": "Synthetic failed"})
     assert response.status_code == 503
+    cache_control = response["Cache-Control"]
+    assert "no-store" in cache_control and "private" in cache_control
     assert UNAVAILABLE in page(response)
     assert list(Round.objects.values_list("title", flat=True)) == ["Synthetic stored"]
     assert Workspace.objects.count() == 1

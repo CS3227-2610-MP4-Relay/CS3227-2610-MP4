@@ -7,7 +7,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import DatabaseError, transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_GET, require_http_methods
+from django.views.decorators.http import require_http_methods
 
 from accounts.models import User
 from accounts.workspaces import workspace_records
@@ -19,26 +19,30 @@ from .services import RoundLimitReached, create_round
 logger = logging.getLogger(__name__)
 
 
-def coordinator_view(view):
-    """Check sign-in and role before any lookup; turn storage failures into 503.
+def coordinator_view(methods):
+    """Make a rounds view accepting `methods`, with every shared layer in order.
 
-    Wrap it in `never_cache` outside the method check, so 405s are uncached too.
+    Outermost, `never_cache` marks every response it returns, 405s included;
+    then the method check (405); then sign-in and role before any lookup, with
+    any storage failure, including loading the session or user, as the 503.
     """
 
-    @wraps(view)
-    def checked(request, *args, **kwargs):
-        try:
-            # Loading the session and user reads storage too.
-            if not request.user.is_authenticated:
-                return redirect("accounts:sign-in")
-            if request.user.role != User.Role.COORDINATOR:
-                raise PermissionDenied
-            return view(request, *args, **kwargs)
-        except DatabaseError:
-            logger.exception("A round request failed in storage.")
-            return render(request, "503.html", status=503)
+    def decorate(view):
+        @wraps(view)
+        def checked(request, *args, **kwargs):
+            try:
+                if not request.user.is_authenticated:
+                    return redirect("accounts:sign-in")
+                if request.user.role != User.Role.COORDINATOR:
+                    raise PermissionDenied
+                return view(request, *args, **kwargs)
+            except DatabaseError:
+                logger.exception("A round request failed in storage.")
+                return render(request, "503.html", status=503)
 
-    return checked
+        return never_cache(require_http_methods(methods)(checked))
+
+    return decorate
 
 
 def own_round(request, round_id, *, lock=False):
@@ -61,9 +65,7 @@ def form_page(request, form, title, button):
     return render(request, "rounds/round_form.html", context)
 
 
-@never_cache
-@require_http_methods(["GET", "POST"])
-@coordinator_view
+@coordinator_view(["GET", "POST"])
 def new_round(request):
     """Create a Draft round in the signed-in coordinator's workspace."""
     if request.method == "GET":
@@ -79,17 +81,13 @@ def new_round(request):
     return form_page(request, form, "New round", "Create round")
 
 
-@never_cache
-@require_GET
-@coordinator_view
+@coordinator_view(["GET"])
 def round_page(request, round_id):
     """Show a round's title and state."""
     return render(request, "rounds/round.html", {"round": own_round(request, round_id)})
 
 
-@never_cache
-@require_http_methods(["GET", "POST"])
-@coordinator_view
+@coordinator_view(["GET", "POST"])
 def edit_round(request, round_id):
     """Change a Draft round's title."""
     round_ = own_round(request, round_id)
