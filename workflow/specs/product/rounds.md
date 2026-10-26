@@ -12,11 +12,11 @@ A round moves Draft → Open → Closed and never back. Nothing deletes a round.
 
 | State | The coordinator can | Results ([RES](results.md)) |
 | --- | --- | --- |
-| Draft | Edit the title, criteria and cases; publish | None |
+| Draft | Edit the title, criteria and cases; publish | None. To Beta Testers, a Draft round is the same 404 as a missing round |
 | Open | Review results, request retests, close | Provisional: new results for a case are recorded against its current build |
 | Closed | View the round and review results | No new or changed results |
 
-A build is a label naming a version of the software under test. Publishing creates the round's first build, which covers every case; each retest creates a build covering the selected cases. A case's current build is the newest build covering it. Criteria, cases and their links are frozen from publication, and earlier results stay tied to their build. Rules marked provisional wait for RES; see the [open items for RES](../plans/rounds-spec.md#open-cross-area-items-for-whimsyturtle-res).
+A build is a label naming a version of the software under test. Publishing creates the round's first build, which covers every case; each retest creates a build covering the selected cases. A case's current build is the newest build covering it. Criteria, cases and their links are frozen from publication, and earlier results stay tied to their build. The Results column is enforced by [RES](results.md); rules marked provisional hold until `results.md` specifies them.
 
 ## Rules for every round action
 
@@ -28,7 +28,9 @@ These apply to every page and action in this file, checked in this order. A refu
 4. An action that the round's state does not allow, including opening its form, gets a 409 page saying "This action is not available while the round is <state>.", naming Draft, Open or Closed.
 5. Invalid input shows the form again with the message next to the field; an ID submitted in a form is checked here, as in ACC-2.4. Text is trimmed before its length is checked; text with no visible character (only whitespace, control or format characters such as zero-width spaces) counts as empty, and null characters are refused.
 
-If storage fails, the request gets the 503 page of [ACC-2.5](accounts.md#acc-2-create-an-isolated-demo-workspace) and no part of the change remains. All user-written text is shown as escaped plain text.
+If storage fails, the request gets the 503 page of [ACC-2.5](accounts.md#acc-2-create-an-isolated-demo-workspace) and no part of the change remains.
+
+All user-written text is shown as escaped plain text. In page content it keeps its line breaks and sits inside an element with `dir="auto"`, so its text direction is isolated from the page. Each requirement's rules criterion tests this for the user text its pages render: markup in element content and in attribute values, text used in the page title or in a success message, line breaks, and bidi-control or zero-width characters, which cannot reorder or hide surrounding page text.
 
 ## RND-1 Prepare a test round
 
@@ -40,7 +42,7 @@ The Coordinator home lists the workspace's rounds, newest first, each with its t
 - **RND-1.4** (boundary) A workspace's 20th round is created; creating a 21st gets "This workspace has reached its limit of 20 rounds."
 - **RND-1.5** (adversarial) With one round left before the limit, exactly one of 5 simultaneous creation requests creates a round; the others get the RND-1.4 message.
 - **RND-1.6** (adversarial) A Beta Tester gets the same 403 for an existing round's ID as for a missing one, and the Tester home shows no Draft round.
-- **RND-1.7** (adversarial) Creating, viewing and retitling a round follow the [rules for every round action](#rules-for-every-round-action). Tests include another workspace's round in a wrong state getting 404, not 409, and retitling an Open or Closed round getting 409.
+- **RND-1.7** (adversarial) Creating, viewing and retitling a round follow the [rules for every round action](#rules-for-every-round-action). Tests include another workspace's round in a wrong state getting 404, not 409, retitling an Open or Closed round getting 409, and the rendering tests for round titles on the round page, the Coordinator home and the page title.
 
 ## RND-2 Manage acceptance criteria and test cases
 
@@ -53,7 +55,7 @@ While the round is Draft, its page lists its acceptance criteria and test cases 
 - **RND-2.5** (boundary) A round's 20th criterion and 30th case are saved; a 21st criterion gets "This round has reached its limit of 20 acceptance criteria." and a 31st case gets "This round has reached its limit of 30 test cases."
 - **RND-2.6** (failure) Saving a case with no linked criterion gets "Link at least one acceptance criterion." Deleting a criterion that any case links to gets "This criterion is linked to a test case. Unlink it first."
 - **RND-2.7** (adversarial) A case form submitting a criterion of another round or workspace, or one that does not exist, gets "Choose criteria from this round."
-- **RND-2.8** (adversarial) Managing criteria and cases follows the [rules for every round action](#rules-for-every-round-action). Tests include a criterion or case ID of an Open round, used under a Draft round's URL in the same workspace, getting 404 and leaving that record unchanged, and any change to an Open or Closed round's criteria or cases getting 409.
+- **RND-2.8** (adversarial) Managing criteria and cases follows the [rules for every round action](#rules-for-every-round-action). Tests include a criterion or case ID of an Open round, used under a Draft round's URL in the same workspace, getting 404 and leaving that record unchanged, any change to an Open or Closed round's criteria or cases getting 409, and the rendering tests for criterion and case text.
 
 ## RND-3 Publish a round to Beta Testers
 
@@ -64,7 +66,7 @@ Publishing opens the round for testing on a named build. From then on, the round
 - **RND-3.3** (failure) Publishing a round with no test cases gets "Add at least one test case before publishing." and the round stays Draft.
 - **RND-3.4** (ambiguous) The published round's criteria, cases and links are exactly those saved before publishing.
 - **RND-3.5** (adversarial) An edit racing a publish is either saved before publishing and included in the published round, or refused with 409. Of two simultaneous publish requests, exactly one succeeds and creates one build; the other gets 409.
-- **RND-3.6** (adversarial) Publishing follows the [rules for every round action](#rules-for-every-round-action), including 405 for a GET and 409 for an Open or Closed round.
+- **RND-3.6** (adversarial) Publishing follows the [rules for every round action](#rules-for-every-round-action), including 405 for a GET, 409 for an Open or Closed round, and the rendering tests for build labels on the round page.
 
 ## RND-4 Review submitted results
 
@@ -74,12 +76,12 @@ For an Open or Closed round, the coordinator opens its results page. Which resul
 - **RND-4.2** (boundary) A case with no submitted result for its current build shows "No results for this build yet.", even if it has results for earlier builds.
 - **RND-4.3** (ambiguous) After a case's current-build results, an "Earlier builds" list shows its results for earlier builds, each with its build label, never as results for the current build. A retest leaves those results unchanged.
 - **RND-4.4** (ambiguous) Results that are not submitted never appear, and the page offers no way to change or delete a result.
-- **RND-4.5** (adversarial) User-written text on round and results pages is escaped plain text. Tests include markup in element content and in attribute values, a round title used as the page title, a build label in a success message, kept line breaks, and bidi or zero-width characters that cannot reorder or hide surrounding text.
+- **RND-4.5** (adversarial) The results page renders all its user-written text, including tester-written observations and the round title in its page title, under the [rendering rule](#rules-for-every-round-action), with the rule's tests.
 - **RND-4.6** (adversarial) The results page follows the [rules for every round action](#rules-for-every-round-action), including 409 for a Draft round.
 
 ## RND-5 Request a retest
 
-While the round is Open, the coordinator can ask for selected cases to be tested again on a new build. Testers then record new results against that build ([RES](results.md)).
+While the round is Open, the coordinator can ask for selected cases to be tested again on a new build. Provisionally, testers then record new results against that build ([RES](results.md)).
 
 - **RND-5.1** (happy) Selecting cases and entering a new build label shows "Retest requested for <count> test cases on build <label>.", or "1 test case" for one, counting distinct cases. The selected cases' current build becomes the new build; other cases keep theirs.
 - **RND-5.2** (boundary) Selecting no case gets "Select at least one test case." A build label of 100 characters is accepted; an empty, invisible-only or 101-character label gets "Enter 1 to 100 characters."
@@ -88,7 +90,7 @@ While the round is Open, the coordinator can ask for selected cases to be tested
 - **RND-5.5** (ambiguous) A case can be retested more than once. Earlier builds stay listed with the cases they cover, and the round's criteria and cases stay unchanged.
 - **RND-5.6** (adversarial) Submitting a case of another round or workspace, or one that does not exist, gets "Choose test cases from this round."
 - **RND-5.7** (adversarial) Of two simultaneous retest requests with the same label, exactly one succeeds; the other gets the RND-5.3 message. A retest racing a close either completes before the close, or gets 409 after it.
-- **RND-5.8** (adversarial) Requesting a retest follows the [rules for every round action](#rules-for-every-round-action), including 409 for a Draft or Closed round.
+- **RND-5.8** (adversarial) Requesting a retest follows the [rules for every round action](#rules-for-every-round-action), including 409 for a Draft or Closed round and the rendering tests for a build label in the success message.
 
 ## RND-6 Close a round
 

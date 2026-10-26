@@ -31,7 +31,7 @@ For [ACC](product/accounts.md). The retention, workspace-lifetime and expired-se
 
 ### Rounds
 
-For [RND](product/rounds.md). Field limits, caps and messages are in its criteria. Nothing here deletes a round, build or result, and the [persistence decisions](#accounts-and-workspaces) are a precondition of the first persisting code slice. A round belongs to one workspace and every other record below to one round. URL records are looked up through the workspace helper, then checked to be in the round the URL names; form-submitted IDs are checked against the round in the form's validation ([checking order](product/rounds.md#rules-for-every-round-action)).
+For [RND](product/rounds.md). Field limits, caps and messages are in its criteria. Nothing here deletes a round, build or result, and the [persistence decisions](#data-model), including shared-storage capacity, are a precondition of the first persisting code slice. A round belongs to one workspace and every other record below to one round. URL records are looked up through the workspace helper, then checked to be in the round the URL names; form-submitted IDs are checked against the round in the form's validation ([checking order](product/rounds.md#rules-for-every-round-action)).
 
 - **Round:** a non-null workspace, a title, a state of `draft`, `open` or `closed`, and its creation, publication and closing times.
 - **Acceptance criterion** and **test case:** a round and their text fields ([RND-2.4](product/rounds.md#rnd-2-manage-acceptance-criteria-and-test-cases)), validated with Django's null-character validator and a visible-character check.
