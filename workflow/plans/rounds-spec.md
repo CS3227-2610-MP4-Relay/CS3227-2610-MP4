@@ -32,7 +32,8 @@ IDs keep the confirmed numbering; only the build order changes. Results-dependen
 Slice notes:
 
 - RND-1 and RND-7: the shared round-creation code takes an explicit workspace argument, only ever `request.user.workspace` or the workspace ACC-2 has just created, never a value from request data.
-- RND-7: the slice first updates the spec with the sample round's exact text, then writes code.
+- RND-7: the slice first updates the spec with the sample round's exact text, then writes code. It extends ACC-2.5's tests so a failed creation also leaves no sample round, criteria, cases or links.
+- Every slice: its rules criterion runs the escaping and direction-isolation tests from the [rules for every round action](../specs/product/rounds.md#rules-for-every-round-action) for the user text its pages render, starting with RND-1.
 
 ## Proposed defaults (confirm in PR review)
 
@@ -47,7 +48,7 @@ Slice notes:
 - Page titles and routes under `/coordinator/rounds/` are in the [rounds routes](../specs/TECHNICAL-SPEC.md#rounds-routes); messages, including success messages, are in the [criteria](../specs/product/rounds.md). Coordinator home lists rounds newest first, with no pagination given the cap. The round page shows each case's fields and links and, from publishing, each case's current build and the builds list. "Earlier builds" sits under each case on the results page, after its current-build results.
 - Concurrency: every round write locks the round row and re-checks state, caps and label uniqueness; round creation locks the workspace row. Racing requests: exactly one succeeds, and the losers get the cap message, the duplicate-label message or 409. Concurrent Draft edits to one record: last saved wins.
 - Storage failure: ACC's 503 page; the whole change rolls back. The sample round shares ACC-2's transaction, so ACC-2.5 covers its failure.
-- All user-written text is escaped, with bidi and zero-width characters kept inert, for example in `<bdi>` elements.
+- All user-written text is escaped, keeps its line breaks and sits in an element with `dir="auto"`, which isolates its direction.
 
 ## Out of scope
 
@@ -64,7 +65,7 @@ These are assumptions RND makes; RES confirms or changes them, and any change to
 - Round-level permissions: no results in Draft and none new or changed once Closed (confirmed); while Open, new results only against a case's current build (provisional).
 - Required: result creation and changes lock the round row, then re-check the state, that the build is in the round and covers the case, and that it is the case's current build. Tests include a submit racing a close and a submit racing a retest.
 - Required: for testers, a Draft round is the same 404 as a missing round.
-- Required: coordinator-written text shown to testers is escaped plain text, with the RND-4.5 test cases.
+- Required: coordinator-written text shown to testers follows the same rendering rule and tests as the [rules for every round action](../specs/product/rounds.md#rules-for-every-round-action).
 - Required: caps on results per case, tester or round, for shared storage.
 - Whether a tester may edit a submitted result while Open, and whether one tester may submit several results for one case and build. RND-4 lists every submitted result, newest first.
 - What Beta Testers see of Open and Closed rounds, including a retest prompt and their earlier results.
@@ -83,7 +84,8 @@ These are assumptions RND makes; RES confirms or changes them, and any change to
 - [x] Repair round 1: apply the human decisions and review findings above.
 - [x] Read changed sections back; check criterion counts and IDs.
 - [x] Run full verification and `git diff --check`.
+- [x] Repair round 2: restore the Draft-invisibility control, move the rendering rule into the shared rules, fix the capacity link and the RES wording.
 - [ ] Verifier and security-reviewer review the fixed candidate.
 - [ ] Human and Whimsyturtle review of the proposed defaults and cross-area items; merge decision.
 
-Check evidence (builder, macOS, `.venv`, repair round 1): Ruff lint and format passed; pytest reported 70 passed, 85 subtests passed. `git diff --check` is clean, and `check_scope.py builder --base fba8311` reported all changes within scope. Criterion counts: RND-1 7, RND-2 8, RND-3 6, RND-4 6, RND-5 8, RND-6 5, RND-7 4; no duplicate IDs.
+Check evidence (builder, macOS, `.venv`, repair round 2): Ruff lint and format passed; pytest reported 70 passed, 85 subtests passed. `git diff --check` is clean, and `check_scope.py builder --base b928c86` reported all changes within scope. Criterion counts: RND-1 7, RND-2 8, RND-3 6, RND-4 6, RND-5 8, RND-6 5, RND-7 4; no duplicate IDs.
