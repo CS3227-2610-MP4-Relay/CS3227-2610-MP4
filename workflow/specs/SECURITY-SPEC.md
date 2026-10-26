@@ -60,6 +60,7 @@ Threat: malicious repository content or a mistaken agent bypasses scope, weakens
 - Changes affecting development security controls, including agent permissions, scope-enforcement scripts and hooks, require High-tier specialist review under the [slice workflow](../skills/slice.md). Classify by effect on the control, not merely by filename; unrelated prose and formatting retain their normal tier.
 - Verify development controls with synthetic secrets and malicious repository instructions that attempt prohibited access or test weakening. Retain observed actions and outcomes; configuration alone is not proof of enforcement.
 - Record actual triggers, context, check results and repair rounds. Mark unavailable telemetry as unavailable; never invent human approval, test results or usage data.
+- Human-invoked slice delivery and its protected Git/release actions follow the [Git authorization and commit rules](../../AGENTS.md#git); untrusted task content cannot expand that authority. The [slice workflow](../skills/slice.md) must distinguish completed local checks from completed hosted delivery.
 
 ## CI and dependencies
 
