@@ -29,6 +29,19 @@ For [ACC](product/accounts.md). The retention, workspace-lifetime and expired-se
 - **Client address:** `REMOTE_ADDR`, never a client-supplied forwarding header. IPv4 addresses count individually and IPv6 addresses by their `/64` prefix; a missing or unparseable address uses the fixed key `unknown`. The stored key is Django's `salted_hmac` of the address with its own salt, never the address itself. Production depends on the client-address gate under [Release verification](#release-verification); a trusted-proxy header setting is a separate decision, needed only if that verification shows it.
 - **Sessions:** Django's database-backed sessions. Sign-in sets an absolute expiry time, so later session writes cannot extend it ([ACC-1.6](product/accounts.md#acc-1-sign-in-and-out-by-role)); sign-out deletes the session row.
 
+### Rounds
+
+For [RND](product/rounds.md). Field limits, caps and messages are in its criteria. Nothing here deletes a round, build or result, and the [persistence decisions](#data-model), including shared-storage capacity, are a precondition of the first persisting code slice. A round belongs to one workspace and every other record below to one round. URL records are looked up through the workspace helper, then checked to be in the round the URL names; form-submitted IDs are checked against the round in the form's validation ([checking order](product/rounds.md#rules-for-every-round-action)).
+
+- **Round:** a non-null workspace, a title, a state of `draft`, `open` or `closed`, and its creation, publication and closing times.
+- **Acceptance criterion** and **test case:** a round and their text fields ([RND-2.4](product/rounds.md#rnd-2-manage-acceptance-criteria-and-test-cases)), validated with Django's null-character validator and a visible-character check.
+- **Case–criterion link:** a many-to-many link between a case and criteria of the same round, checked by the form and again inside the write transaction.
+- **Build:** a round, a label, a comparison key (the label with format characters, Unicode category Cf, removed and then NFC-normalised), its creation time and the cases it covers, with a database unique constraint on round and comparison key ([RND-5.3](product/rounds.md#rnd-5-request-a-retest)). Publishing creates the first build covering every case; a retest request is stored as a build covering the selected cases. A case's current build is the newest build covering it.
+- **Results (RES), provisional:** a result will reference one case and one build of the same round that covers the case, so its criteria are the case's frozen links. The result itself is specified in [RES](product/results.md).
+- **Deletion:** every foreign key here, including those from results, uses `PROTECT`. Deleting a case first deletes its links explicitly in the same transaction; a linked criterion is not deleted. Criteria and cases can be deleted only while Draft, before any build or result exists.
+- **Writes:** every round change runs in one transaction that locks the round row (`select_for_update`), then re-checks the state, caps, label uniqueness and that submitted records are in the round. Creating a round locks the workspace row to check the round cap. Provisionally, creating or changing a result (RES) also locks the round row, then re-checks the state, that the build is in the round and covers the case, and that it is the case's current build. Concurrent Draft edits to the same record are not merged; the last saved edit wins.
+- **Sample round:** fixed synthetic text, written by the shared round-creation code inside the [demo creation](#accounts-and-workspaces) transaction ([RND-7](product/rounds.md#rnd-7-sample-draft-round-in-a-new-demo-workspace)).
+
 ## Routes
 
 Only the subsections below are specified. Each route contract must name its method, role/workspace/ownership checks, input validation, state preconditions, success result and denied/failure behaviour before implementation.
@@ -47,6 +60,26 @@ For [ACC](product/accounts.md). Every POST uses Django's CSRF protection, which 
 | `/tester/` | GET | Beta Tester | "Tester home" | Signed out: redirect to `/sign-in/`; Test Coordinator: 403 of ACC-1.4 |
 
 The session cookie is `HttpOnly`; session and CSRF cookies are `SameSite=Lax`, and `Secure` outside local development.
+
+### Rounds routes
+
+For [RND](product/rounds.md). Every route requires a signed-in Test Coordinator and applies the [rules for every round action](product/rounds.md#rules-for-every-round-action) in their order; a state not listed below gets their 409. Invalid input re-renders the form, and a refused delete the round page, with status 200 and the message. A successful POST redirects to the round page, which shows the success message once. The Coordinator home (`/coordinator/`) also lists the workspace's rounds. `<round>`, `<criterion>` and `<case>` are integer IDs; no route takes a build ID.
+
+| Route | Method | States | Page title or result |
+| --- | --- | --- | --- |
+| `/coordinator/rounds/new/` | GET, POST | — | "New round"; creates a Draft round |
+| `/coordinator/rounds/<round>/` | GET | Any | The round's title as page title, its state, criteria and cases and, from publishing, builds ([RND-2](product/rounds.md#rnd-2-manage-acceptance-criteria-and-test-cases), [RND-3](product/rounds.md#rnd-3-publish-a-round-to-beta-testers)) |
+| `/coordinator/rounds/<round>/edit/` | GET, POST | Draft | "Edit round"; changes the title |
+| `/coordinator/rounds/<round>/criteria/new/` | GET, POST | Draft | "New acceptance criterion" |
+| `/coordinator/rounds/<round>/criteria/<criterion>/edit/` | GET, POST | Draft | "Edit acceptance criterion" |
+| `/coordinator/rounds/<round>/criteria/<criterion>/delete/` | POST | Draft | Deletes an unlinked criterion |
+| `/coordinator/rounds/<round>/cases/new/` | GET, POST | Draft | "New test case" |
+| `/coordinator/rounds/<round>/cases/<case>/edit/` | GET, POST | Draft | "Edit test case" |
+| `/coordinator/rounds/<round>/cases/<case>/delete/` | POST | Draft | Deletes the case and its links |
+| `/coordinator/rounds/<round>/publish/` | POST | Draft | Build label form on the round page; creates the first build and opens the round |
+| `/coordinator/rounds/<round>/results/` | GET | Open, Closed | "Results: <title>" |
+| `/coordinator/rounds/<round>/retest/` | GET, POST | Open | "Request a retest"; creates a build covering the selected cases |
+| `/coordinator/rounds/<round>/close/` | POST | Open | Button on the round page; closes the round |
 
 ## Configuration
 
