@@ -79,15 +79,21 @@ Threat: malicious repository content or a mistaken agent bypasses scope, weakens
 - Record actual triggers, context, check results and repair rounds. Mark unavailable telemetry as unavailable; never invent human approval, test results or usage data.
 - Human-invoked slice delivery and its protected Git/release actions follow the [Git authorization and commit rules](../../AGENTS.md#git); untrusted task content cannot expand that authority. The [slice workflow](../skills/slice.md) must distinguish completed local checks from completed hosted delivery.
 - Agent sessions use a team member's GitHub credentials, which may be an admin's. A mistaken or manipulated agent could therefore change GitHub settings, credentials, shared content or reviews. Agents change GitHub state only when the human asks for that specific action, under the [rule and its categories in `AGENTS.md`](../../AGENTS.md#approvals-and-claims).
-  - **Enforcement.** Claude Code's project settings ask before the GitHub-changing `gh` command groups and subcommands, in both the Bash and PowerShell tools. They also ask before every `gh api` call, because a command rule cannot tell API reads from writes. Ask rules take precedence over allow rules: in a headless session started at the worktree root with `gh *` allowed, `gh pr view` ran but `gh api` and `gh pr ready` were refused ([plan](../plans/40-ask-before-github-changes.md#verification)).
-  - **Exceptions.** `gh pr edit` stays ungated, so the authorized delivery can update its own pull request. Codex relies on the instruction alone.
+  - **Enforcement.** Claude Code's project settings ask before:
+    - `git push` and the GitHub-changing `gh` command groups and subcommands;
+    - a repository flag between a command group and its subcommand;
+    - reviewer, label, assignee, project, milestone and base changes through `gh pr edit`;
+    - every `gh api` call, because a command rule cannot tell API reads from writes.
+
+    Ask rules take precedence over allow rules, as observed for the Bash tool ([plan](../plans/40-ask-before-github-changes.md#verification)). The PowerShell mirrors are configured but not yet observed.
+  - **Exceptions.** Title and body edits through `gh pr edit` stay ungated, so the authorized delivery can update its own pull request. Codex relies on the instruction alone.
   - **Residuals.** These are client-side, best-effort checks on a credential GitHub trusts. Each of these still gets through:
-    - a session not started at the repository or worktree root, which loads neither the project settings nor `AGENTS.md`;
+    - a session not started at the repository or worktree root, which loads no project settings, hooks or ask rules, and doesn't load `AGENTS.md` at launch;
     - an auto-approve or bypass permission mode;
     - MCP, connector or other non-shell tools;
-    - `curl` with a token the agent printed or read;
-    - `gh` command forms the rules don't list, or a global flag placed before the command group;
-    - `gh pr edit` on another pull request;
+    - `curl` or `Invoke-RestMethod` with a token the agent printed or read;
+    - command forms the rules don't list, such as `& gh`, `gh.exe`, `Start-Process`, Git or `gh` aliases defined outside a gated command, or new `gh` commands;
+    - title and body edits through `gh pr edit` on another pull request;
     - a human approving a prompt without reading it.
 
     Branch protection remains the server-side control for `main`.
