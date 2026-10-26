@@ -54,5 +54,10 @@ Decisions (coordinator, under the human's delegation of 2026-10-26, "make my dec
 
 ## Open issues
 
+- Final review (round 2, `5fbac08..99a7df8`): no Medium or higher findings. Left open for the human after the two-round limit:
+  - a repository flag before the `gh` command group (`gh -R <repo> pr ready`), which is unobserved;
+  - short or attached `gh pr edit` flags (`-m`, `-Bmain`, `-B` first);
+  - the case-insensitive PowerShell `-B` rule possibly gating `-b` body edits, which the title/body test cannot detect.
+
 - PowerShell rules and interactive prompts were not observed. Codex and parent-folder sessions rely on the instruction alone (see the residuals).
 - The overnight coordinator session that produced this change was itself started from the parent folder, so these rules did not apply to it.
