@@ -97,7 +97,10 @@ def test_pages_do_not_reset_unicode_bidi(coord_client, make_round):
         assert "unicode-bidi" not in page(coord_client.get(url))
 
 
-PARAGRAPH_SEPARATORS = [chr(code) for code in (0x85, 0x1C, 0x1D, 0x1E, 0x2028, 0x2029)]
+# Every separator str.splitlines() recognises, other than line feed and carriage return.
+PARAGRAPH_SEPARATORS = [
+    chr(code) for code in (0x0B, 0x0C, 0x1C, 0x1D, 0x1E, 0x85, 0x2028, 0x2029)
+]
 LINE_BREAKS = [chr(10), chr(13), chr(13) + chr(10), *PARAGRAPH_SEPARATORS]
 
 
