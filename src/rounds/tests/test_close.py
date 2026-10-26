@@ -19,9 +19,9 @@ from .conftest import (
     csrf_token,
     detail,
     page,
+    race,
     signed_in,
 )
-from .test_publish import race
 
 pytestmark = pytest.mark.django_db
 

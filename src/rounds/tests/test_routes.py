@@ -17,16 +17,17 @@ def test_every_rounds_route_is_never_cached(coordinator, make_round):
         round=made, title="Synthetic", steps="Synthetic", expected_result="Synthetic"
     )
     CaseCriterion.objects.create(case=case, criterion=linked)
+    opened = make_round("Synthetic open", Round.State.OPEN)
     ids = {"round_id": made.pk, "criterion_id": linked.pk, "case_id": case.pk}
     client = signed_in(coordinator, enforce_csrf_checks=True)
     token = csrf_token(client)
     assert rounds_urls.urlpatterns
     for pattern in rounds_urls.urlpatterns:
         kwargs = {name: ids[name] for name in pattern.pattern.converters}
-        url = reverse(f"rounds:{pattern.name}", kwargs=kwargs)
         if pattern.name == "close":
-            # Only an Open round closes (RND-6), so the walk's round opens first.
-            Round.objects.filter(pk=made.pk).update(state=Round.State.OPEN)
+            # Only an Open round closes (RND-6); the Draft round stays Draft.
+            kwargs["round_id"] = opened.pk
+        url = reverse(f"rounds:{pattern.name}", kwargs=kwargs)
         response = client.get(url)
         if response.status_code == 405:
             response = client.post(url, HTTP_X_CSRFTOKEN=token)
