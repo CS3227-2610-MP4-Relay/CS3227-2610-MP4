@@ -48,7 +48,9 @@ The main session chooses the risk tier, scopes the request and coordinates work.
 
 Pass relevant paths and excerpts, decisions, acceptance/security criteria, checks and open findings. Retrieve other context when needed rather than forwarding the conversation. Run focused checks during edits, then full verification on the final integrated candidate. Reuse passing evidence only while code, inputs and environment remain unchanged. Give concurrent builders separate worktrees, file ownership and test resources; review their integrated candidate afterwards.
 
-Measure coordinator and delegated usage from the start, plus elapsed time, retries and repair rounds. Keep usage source IDs so parent/child totals are not counted twice. Report missing token, cache and reasoning fields as unavailable; do not infer zero or a price. Use `resource_usage.py --help` for supported collectors. Logs record quality and defects alongside resource use. Experiments compare the same starting state, model settings and acceptance/security checks, including unsuccessful runs.
+Measure coordinator and delegated usage from the start, plus elapsed time, retries and repair rounds. Logs record quality and defects alongside resource use using the [log skill's format](skills/log.md). Experiments compare the same starting state, model settings and acceptance/security checks, including unsuccessful runs.
+
+### Token reporting
 
 For example, in Git Bash with `.venv` active, choose the session files explicitly and keep the numeric baseline outside the repository:
 
@@ -57,7 +59,12 @@ python workflow/scripts/resource_usage.py snapshot --codex /path/to/current-sess
 python workflow/scripts/resource_usage.py report --codex /path/to/current-session.jsonl --baseline /tmp/relay-usage-before.json --retries 0 --repair-rounds 0
 ```
 
-Use `--claude` for Claude session files; repeat the selector for delegated sessions. The collector reads numeric/identity metadata from selected transcripts and emits no message text or raw paths; raw logs remain private. It does not claim coverage of unselected agents. See `report --help` for bounded Codex child discovery and explicit Claude subagent selection. Worktree/out-of-directory children need explicit paths. Local log schemas are best-effort: missing/ambiguous fields stay unavailable, input totals include cache reads/writes, and cache/reasoning subsets must not be added again. Retries and repair rounds are recorded explicitly; API calls are not inferred from token events.
+Use `--claude` for Claude session files; repeat the selector for delegated sessions. The collector reads numeric/identity metadata from selected transcripts and emits no message text or raw paths; raw logs remain private. It does not claim coverage of unselected agents. See `report --help` for bounded Codex child discovery and explicit Claude subagent selection. Worktree/out-of-directory children need explicit paths. Keep numeric snapshots outside version control.
+
+- **Totals:** input includes cache reads/writes; output includes reasoning tokens. Cached input and reasoning output are included subsets, not additions to the total. Missing or ambiguous counters are unavailable, never assumed zero. Logs report tokens without monetary cost fields.
+- **Coverage:** a before/after report measures a task interval. Without a session-start baseline, a snapshot reports only the selected sources' recorded totals; it cannot establish an exact task delta. Record the cutoff and any material omission briefly in the log; work after that cutoff is excluded.
+- **Overlapping sources:** count each session once. Forks can repeat inherited cumulative counters with rewritten timestamps, which the collector may not flag. Check parent/fork overlap before combining sources; exclude a duplicate parent when its usage is already included in the selected continuation. Do not add collector smoke-test totals or overlapping interval reports to conversation totals.
+- **Timing and operational metrics:** elapsed spans include idle/waiting time and are not active-work durations; concurrent spans are not additive. Token snapshots are not API-call counts. Record calls, retries and repair rounds only from attributable evidence, and omit routine prose about metrics that were not collected. Retain session-specific gaps that affect interpretation.
 
 ## Issues and delivery
 

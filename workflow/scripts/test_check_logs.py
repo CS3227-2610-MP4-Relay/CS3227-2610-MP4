@@ -17,7 +17,7 @@ GOOD = """# A session
 
 Slice: #1 · Tier: Fast lane · Tool: none · Date: 2026-10-21
 
-Cost: not measured.
+Tokens: unavailable; no usage collected.
 
 ## Requests
 
@@ -43,17 +43,17 @@ class LogChecks(unittest.TestCase):
             write(log, GOOD)
             self.assertEqual(check_logs.findings(log), [])
 
-    def test_a_missing_cost_line_and_section_are_reported(self):
+    def test_a_missing_tokens_line_and_section_are_reported(self):
         with tempfile.TemporaryDirectory() as folder:
             log = Path(folder) / "001-a-session.md"
             write(
                 log,
-                GOOD.replace("Cost: not measured.\n\n", "").replace(
-                    "## Problems\n", ""
-                ),
+                GOOD.replace(
+                    "Tokens: unavailable; no usage collected.\n\n", ""
+                ).replace("## Problems\n", ""),
             )
             messages = [message for _, message in check_logs.findings(log)]
-            self.assertIn("header has no Cost: line", messages)
+            self.assertIn("header has no Tokens: line", messages)
             self.assertIn("missing section ## Problems", messages)
 
     def test_a_name_outside_the_convention_is_reported(self):

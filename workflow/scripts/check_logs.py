@@ -1,6 +1,6 @@
 """Check every saved session summary against workflow/skills/log.md.
 
-Reports, for each log: a missing title, a missing `Slice:` or `Cost:` header
+Reports, for each log: a missing title, a missing `Slice:` or `Tokens:` header
 line, a missing required section, a file name that is not `NNN-kebab.md`, and a
 number that repeats within one author's folder. Exits non-zero on any finding.
 
@@ -32,7 +32,7 @@ def findings(path):
     lines = text.splitlines()
     if not lines or not lines[0].startswith("# "):
         problems.append((path, "first line is not a title"))
-    for field in ("Slice:", "Cost:"):
+    for field in ("Slice:", "Tokens:"):
         if not any(line.startswith(field) for line in lines[:6]):
             problems.append((path, f"header has no {field} line"))
     for section in SECTIONS:
