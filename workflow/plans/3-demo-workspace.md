@@ -44,7 +44,7 @@ Non-test, non-migration `src/` lines: `demo.py` ~55, `workspaces.py` ~12, views 
 ## Checklist
 
 - [x] Checkpoint 1: specs and plan.
-- [ ] Checkpoint 2: creation service, lookup helper and tests (red evidence first).
+- [x] Checkpoint 2: creation service, lookup helper and tests (red evidence first). Red: both test modules failed to import (`accounts.demo`, `accounts.workspaces` missing). Green: `pytest src/accounts -q` 63 passed; Ruff clean. 92 of 400 budget lines.
 - [ ] Checkpoint 3: routes, start page, templates, 503 page and tests (red evidence first).
 - [ ] Checkpoint 4: guides.
 - [ ] Full verification, size budget and builder scope check.
