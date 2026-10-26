@@ -19,6 +19,23 @@ CODEX_AGENT_KEYS = {
     "model_reasoning_effort",
 }
 WRITE_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit", "Bash"}
+# gh command groups and subcommands that change GitHub state, or can (gh api,
+# and global flags placed before a subcommand); see AGENTS.md "Approvals".
+GITHUB_CHANGING_COMMANDS = (
+    *("gh api", "gh auth", "gh alias", "gh extension"),
+    *(f"gh pr {sub}" for sub in ("create", "merge", "comment", "review", "ready")),
+    *(f"gh pr {sub}" for sub in ("close", "reopen", "lock", "unlock", "revert")),
+    *("gh pr update-branch", "gh pr -R", "gh pr --repo"),
+    *(f"gh issue {sub}" for sub in ("create", "edit", "close", "comment", "reopen")),
+    *(f"gh issue {sub}" for sub in ("delete", "transfer", "develop", "lock")),
+    *(f"gh issue {sub}" for sub in ("unlock", "pin", "unpin", "-R", "--repo")),
+    *("gh label", "gh release", "gh gist", "gh project", "gh codespace"),
+    *(f"gh repo {sub}" for sub in ("create", "fork", "sync", "edit", "delete")),
+    *(f"gh repo {sub}" for sub in ("rename", "archive", "unarchive", "autolink")),
+    *("gh repo deploy-key", "gh ssh-key", "gh gpg-key"),
+    *("gh secret", "gh variable", "gh ruleset", "gh workflow"),
+    *("gh run cancel", "gh run rerun", "gh run delete", "gh cache delete"),
+)
 
 
 def front_matter(path):
@@ -127,34 +144,14 @@ class AdapterTest(unittest.TestCase):
         for command in commands:
             self.assertIn(f"Bash({command} *)", config["permissions"]["ask"])
 
-    def test_github_changes_ask_first_in_claude_code(self):
-        """GitHub settings, content and review changes need the human (#40)."""
+    def test_github_changes_ask_first_in_both_shell_tools(self):
+        """GitHub state changes need the human in Bash and PowerShell (#40)."""
         ask = json.loads(
             (ROOT / ".claude" / "settings.json").read_text(encoding="utf-8")
         )["permissions"]["ask"]
-        commands = (
-            "gh api",
-            "gh pr create",
-            "gh pr merge",
-            "gh pr comment",
-            "gh pr review",
-            "gh pr ready",
-            "gh pr close",
-            "gh issue create",
-            "gh issue edit",
-            "gh issue close",
-            "gh issue comment",
-            "gh label",
-            "gh release",
-            "gh repo edit",
-            "gh repo delete",
-            "gh secret",
-            "gh variable",
-            "gh ruleset",
-            "gh workflow",
-        )
-        for command in commands:
-            self.assertIn(f"Bash({command} *)", ask)
+        for command in ("git push", *GITHUB_CHANGING_COMMANDS):
+            for tool in ("Bash", "PowerShell"):
+                self.assertIn(f"{tool}({command} *)", ask)
 
     def test_slice_is_user_invoked_only_in_both_tools(self):
         self.assertEqual(
