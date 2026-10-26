@@ -51,6 +51,7 @@ def sign_out(request):
 def _role_home(role, title):
     """Build a GET-only home page for one role."""
 
+    @never_cache
     @require_GET
     def home(request):
         if not request.user.is_authenticated:
