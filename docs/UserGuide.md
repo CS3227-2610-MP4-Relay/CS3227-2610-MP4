@@ -130,9 +130,9 @@ If something is wrong, the page shows again with your ticks and label kept:
 
 - With no case ticked: "Select at least one test case." next to **Test cases to retest**.
 - The build label follows the same rules as when publishing: "Enter 1 to 100 characters." or "Null characters are not allowed." next to **Build label**.
-- A label already used for a build of this round, including the one named at publishing: "This build label is already used in this round." Upper and lower case count as different, but invisible formatting characters such as zero-width spaces are ignored, and the same accented letter typed in different ways counts as the same.
-- A round can have up to 10 builds, counting the one named at publishing. Requesting an 11th gets "This round has reached its limit of 10 builds."
-- A ticked case that is not in this round gets "Choose test cases from this round."
+- A label already used for a build of this round, including the one named at publishing: "This build label is already used in this round." next to **Build label**. Upper and lower case count as different, but invisible formatting characters such as zero-width spaces are ignored, and the same accented letter typed in different ways counts as the same.
+- A round can have up to 10 builds, counting the one named at publishing. Requesting an 11th gets "This round has reached its limit of 10 builds." next to **Build label**.
+- A ticked case that is not in this round gets "Choose test cases from this round." next to **Test cases to retest**.
 
 If the round was closed in the meantime, the page says "This action is not available while the round is Closed." and no build is added.
 
