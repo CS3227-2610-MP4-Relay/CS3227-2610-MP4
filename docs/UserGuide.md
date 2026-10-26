@@ -49,14 +49,14 @@ Only a Test Coordinator can prepare and publish test rounds. A new round is in t
 
 **Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". With no rounds, it says "No rounds yet."
 
-Whenever creating a round, or saving, deleting or publishing anything in it, fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
+Whenever creating or publishing a round, or saving or deleting anything in it, fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
 
 ### Create a round
 
 1. On **Coordinator home**, choose **New round**.
 2. Enter a **Title**, then choose **Create round**.
 
-The round page opens. It shows the title as its heading, "State: Draft", an **Edit round** link, the round's [acceptance criteria and test cases](#acceptance-criteria-and-test-cases) and a **Coordinator home** link.
+The round page opens. It shows the title as its heading, "State: Draft", an **Edit round** link, the round's [acceptance criteria and test cases](#acceptance-criteria-and-test-cases), a **Build label** field with a **Publish round** button, and a **Coordinator home** link.
 
 ### Change a round's title
 
@@ -108,7 +108,7 @@ While a round is Draft, its round page ends with a **Build label** field and a *
 
 The round page shows "Round published." and "State: Open". An Open round cannot return to Draft.
 
-A build label has 1 to 100 characters; spaces at either end are removed. An empty label, a label of only spaces or invisible characters, or a longer one gets "Enter 1 to 100 characters." next to the field, and a label containing a null character gets "Null characters are not allowed." A round with no test cases gets "Add at least one test case before publishing." After any of these messages the round stays Draft, with your label still in the field.
+A build label has 1 to 100 characters; spaces or line breaks at either end are removed. An empty label, a label of only spaces or invisible characters, or a longer one gets "Enter 1 to 100 characters." next to the field, and a label containing a null character gets "Null characters are not allowed." A round with no test cases gets "Add at least one test case before publishing." After any of these messages the round stays Draft, with your label still in the field.
 
 ### An Open round
 
