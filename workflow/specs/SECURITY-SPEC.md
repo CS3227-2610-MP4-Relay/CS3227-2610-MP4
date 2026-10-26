@@ -1,6 +1,6 @@
 # Security spec
 
-Threats to Relay and to how it is built, and the controls against them. PLT-1 defines the local/CI foundation, ACC-1 implements sign-in, sessions and role access, and ACC-2 demo workspace creation and the shared workspace lookup; other application controls and their verification remain planned. Controls link to their acceptance criteria where specified, with verification added by the slices that implement them. No deployed security is claimed here.
+Threats to Relay and to how it is built, and the controls against them. PLT-1 defines the local/CI foundation, ACC-1 implements sign-in, sessions and role access, ACC-2 demo workspace creation and the shared workspace lookup, and ACC-3 the sign-in and creation abuse limits; other application controls and their verification remain planned. Controls link to their acceptance criteria where specified, with verification added by the slices that implement them. No deployed security is claimed here.
 
 ## Secrets and settings
 
