@@ -748,7 +748,7 @@ def test_only_a_retest_tagged_message_is_split():
 # Repair round 1.
 
 
-@pytest.mark.ac("RND-5.1")
+@pytest.mark.ac("RND-5.8")
 def test_a_storage_failure_after_the_commit_cannot_lose_a_saved_retest(
     coord_client, opened
 ):
