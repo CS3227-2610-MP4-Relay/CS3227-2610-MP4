@@ -1,6 +1,6 @@
 # Security spec
 
-Threats to Relay and to how it is built, and the controls against them. PLT-1 defines the local/CI foundation; other application controls and their verification remain planned. Controls link to their acceptance criteria where specified, with verification added by the slices that implement them. No deployed security is claimed here.
+Threats to Relay and to how it is built, and the controls against them. PLT-1 defines the local/CI foundation, and ACC-1 implements sign-in, sessions and role access; other application controls and their verification remain planned. Controls link to their acceptance criteria where specified, with verification added by the slices that implement them. No deployed security is claimed here.
 
 ## Secrets and settings
 
@@ -19,7 +19,7 @@ Explicit database network addresses enforce loopback destinations despite inheri
 Threat: a visitor or user accesses another role's operations, another workspace's records or another tester's private draft.
 
 - Authorize every route and record lookup on the server before reading data or selecting AI context. Define role, workspace, ownership and state permissions for each operation.
-- Use Django's authentication, password hashing and CSRF protections, including its `Origin` check. Sessions are server-side, get a new identifier at every sign-in, end at sign-out and expire at an absolute time; sign-in ignores redirect targets ([ACC-1](product/accounts.md#acc-1-sign-in-and-out-by-role)). Session and cookie settings are in the [accounts routes](TECHNICAL-SPEC.md#accounts-routes), and production settings under [Configuration](TECHNICAL-SPEC.md#configuration).
+- Use Django's authentication, password hashing and CSRF protections, including its `Origin` check. Sessions are server-side, get a new identifier at every sign-in, end at sign-out and expire at an absolute time; sign-in ignores redirect targets ([ACC-1](product/accounts.md#acc-1-sign-in-and-out-by-role)). Sign-in validates its fields before authenticating, marks the password as sensitive so error reports omit it, and is never cached. Session and cookie settings are in the [accounts routes](TECHNICAL-SPEC.md#accounts-routes), and production settings under [Configuration](TECHNICAL-SPEC.md#configuration).
 - Accounts come only from demo workspace creation, with generated passwords shown once on an uncached response and stored only as hashes ([ACC-2.1 to ACC-2.3](product/accounts.md#acc-2-create-an-isolated-demo-workspace)). Accounts have no staff or admin capability ([account model](TECHNICAL-SPEC.md#accounts-and-workspaces)).
 - Check the role before any record lookup, and filter every lookup by the signed-in user's workspace before reading; another workspace's record is indistinguishable from a missing one ([ACC-2.4](product/accounts.md#acc-2-create-an-isolated-demo-workspace)).
 - Share an authorization test matrix across manual and AI actions. Include forged identifiers, cross-workspace requests and denied state transitions.
@@ -33,7 +33,7 @@ Threat: repeated sign-in attempts guess passwords, or repeated demo creation exh
   - Fixed windows allow a burst across a window boundary.
   - Sign-ins from one address queue on its counter lock, so a client sharing that address can delay or refuse others' sign-ins, and waiting requests hold database connections.
   - Reloading the demo creation page resubmits it and creates another workspace, within the limits, and a browser's back/forward cache may show the credentials again despite `no-store`.
-  - Storage grows without bound, as the [persistence decision](TECHNICAL-SPEC.md#data-model) accepts for the course deployment: unlimited successful sign-ins create session rows, expired sessions are never deleted automatically, rotating addresses or IPv6 prefixes create limit-counter rows, and hashed addresses are kept for the life of the deployment. Exhausted storage makes writes fail without deleting existing records; an operator checks storage use before peer testing.
+  - Storage grows without bound, as the [persistence decision](TECHNICAL-SPEC.md#data-model) accepts for the course deployment: unlimited successful sign-ins create session rows, expired sessions are never deleted automatically, rotating addresses or IPv6 prefixes create limit-counter rows, and hashed addresses are kept for the life of the deployment.
 
 ## Rounds, observations and history
 
@@ -66,7 +66,7 @@ Threat: oversized inputs, repeated calls or incorrect cache reuse spend the shar
 - If result reuse is implemented, isolate it by access scope and source version; authorize before lookup and invalidate on relevant changes. Do not add a cache merely to fill out the scaffold.
 - Record only the necessary operational metadata; specify retention and failure behaviour before adding persistent telemetry. Do not log prompts, observations, credentials or provider error bodies by default.
 
-Threat: accumulated business records, abandoned workspaces and expired sessions exhaust shared storage and prevent other users from saving work. Under the [persistence decision](TECHNICAL-SPEC.md#data-model), a failed write rolls back and deletes or overwrites nothing, and an operator checks storage use before peer testing; exhaustion remains an accepted residual risk for the course deployment.
+Threat: accumulated business records, abandoned workspaces and expired sessions exhaust shared storage and prevent other users from saving work. The controls and the accepted residual risk are in the [persistence decision](TECHNICAL-SPEC.md#data-model).
 
 ## Development workflow
 
