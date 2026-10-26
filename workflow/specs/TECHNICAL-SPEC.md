@@ -1,6 +1,6 @@
 # Technical spec
 
-How Relay will be built and run. What it will do is in [`PRODUCT-SPEC.md`](PRODUCT-SPEC.md). The application foundation is local/CI only; business schema and hosted environments remain planned.
+How Relay will be built and run. What it will do is in [`PRODUCT-SPEC.md`](PRODUCT-SPEC.md). The application runs locally and in CI only. Workspaces, accounts and sessions exist (ACC-1); other business schema and hosted environments remain planned.
 
 ## Architecture
 
@@ -19,7 +19,7 @@ Persistence and retention, decided for ACC-1 (see its [plan](../plans/2-sign-in-
 
 - Workspaces, accounts, rounds, results, limit rows and their hashed address keys are kept for the life of the course deployment. Nothing expires or is deleted automatically, and there is no cleanup subsystem.
 - An expired session is refused by its absolute expiry; its row is not deleted automatically. Sign-out deletes its own session row.
-- When shared storage is exhausted, a failed write rolls back its transaction and the user gets that route's existing error page: the generic 500 of [PLT-1.3](product/platform.md#plt-1-django-foundation-and-continuous-verification), or the 503 page that [ACC-2.5](product/accounts.md#acc-2-create-an-isolated-demo-workspace) and [ACC-3.7](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation) define. Existing records, including result history, are never deleted or overwritten to make room.
+- When shared storage is exhausted, a failed write is not retried, and the user gets that route's existing error page: the generic 500 of [PLT-1.3](product/platform.md#plt-1-django-foundation-and-continuous-verification), or the 503 page that [ACC-2.5](product/accounts.md#acc-2-create-an-isolated-demo-workspace) and [ACC-3.7](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation) define. A route that writes in a transaction rolls the whole transaction back. Existing records, including result history, are never deleted or overwritten to make room.
 - Before peer testing, an operator checks the hosting database's storage use. Exhaustion and unbounded session and counter growth are [accepted residual risks](SECURITY-SPEC.md#sign-in-and-access-control) for the course deployment.
 
 ### Accounts and workspaces
@@ -63,7 +63,7 @@ For [ACC](product/accounts.md). Every POST uses Django's CSRF protection, which 
 | Route | Method | Access | Validation and success | Denied or failed |
 | --- | --- | --- | --- | --- |
 | `/` | GET, HEAD | Signed out | Relay start page, titled "Relay", with a sign-in link and the "Create a demo workspace" button | Signed in: redirect to own role home |
-| `/sign-in/` | GET, POST | Anyone | GET shows the form, unlimited. POST locks the per-address count, then Django's authentication checks the username and password in the same transaction; success starts a new session and redirects to own role home, ignoring `next` ([ACC-1.1, 1.2, 1.7](product/accounts.md#acc-1-sign-in-and-out-by-role)) | Invalid: [ACC-1.2](product/accounts.md#acc-1-sign-in-and-out-by-role); limited: [ACC-3.1](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation) |
+| `/sign-in/` | GET, POST | Anyone | GET shows the form, unlimited. POST first validates the fields with a form (username at most 150 characters; neither field may contain a NUL character), and any invalid field gives the ACC-1.2 failure. It then locks the per-address count, then Django's authentication checks the username and password in the same transaction; success starts a new session and redirects to own role home, ignoring `next` ([ACC-1.1, 1.2, 1.7](product/accounts.md#acc-1-sign-in-and-out-by-role)) | Invalid: [ACC-1.2](product/accounts.md#acc-1-sign-in-and-out-by-role); limited: [ACC-3.1](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation) |
 | `/sign-out/` | POST | Anyone | Flushes the session and redirects to `/sign-in/`, which shows "You have signed out." once through Django's messages ([ACC-1.5](product/accounts.md#acc-1-sign-in-and-out-by-role)) | Other methods: 405 |
 | `/demo/` | POST | Signed out | Checks both creation limits, then creates and renders "Your demo workspace" in one transaction, with `Cache-Control: no-store` and no redirect ([ACC-2.1 to 2.3](product/accounts.md#acc-2-create-an-isolated-demo-workspace)) | Signed in: [ACC-2.6](product/accounts.md#acc-2-create-an-isolated-demo-workspace); other methods: 405; limited: [ACC-3.4](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation) |
 | `/coordinator/` | GET | Test Coordinator | "Coordinator home" | Signed out: redirect to `/sign-in/`; Beta Tester: 403 of [ACC-1.4](product/accounts.md#acc-1-sign-in-and-out-by-role) |

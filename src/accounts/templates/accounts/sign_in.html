@@ -7,9 +7,9 @@
 <form method="post" action="{% url 'accounts:sign-in' %}">
   {% csrf_token %}
   <p><label for="username">Username</label>
-    <input id="username" name="username" autocomplete="username" required></p>
+    <input id="username" name="username" autocomplete="username"></p>
   <p><label for="password">Password</label>
-    <input id="password" name="password" type="password" autocomplete="current-password" required></p>
+    <input id="password" name="password" type="password" autocomplete="current-password"></p>
   <button type="submit">Sign in</button>
 </form>
 {% endblock %}
