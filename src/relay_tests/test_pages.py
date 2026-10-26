@@ -1,6 +1,7 @@
 import re
 
 import pytest
+from django.conf import settings
 from django.test import Client
 from django.urls import path
 
@@ -26,11 +27,18 @@ def test_public_landing_page(client):
         "Testing workflows are coming soon.",
     ):
         assert text in html
-    assert "<form" not in html
     assert html.count("<a") == 1
     assert re.findall(r"<a [^>]*>[^<]*</a>", html) == [
         '<a href="/sign-in/">Sign in</a>'
     ]
+    assert html.count("<form") == 1
+    assert '<form method="post" action="/demo/">' in html
+    assert 'name="csrfmiddlewaretoken"' in html
+    assert re.findall(r"<button[^>]*>[^<]*</button>", html) == [
+        '<button type="submit">Create a demo workspace</button>'
+    ]
+    assert html.count("<input") == 1
+    assert settings.CSRF_COOKIE_NAME in response.cookies
     assert client.head("/").status_code == 200
     assert client.head("/").content == b""
 
@@ -49,7 +57,7 @@ def test_landing_page_denies_other_methods(method):
 def test_missing_page_is_generic(client):
     response = client.get("/synthetic-private-detail/?detail=synthetic-private-detail")
     assert response.status_code == 404
-    assert b"Not Found" in response.content
+    assert b"<h1>Page not found.</h1>" in response.content
     assert b"synthetic-private-detail" not in response.content
     assert b"Traceback" not in response.content
 

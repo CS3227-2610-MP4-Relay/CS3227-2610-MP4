@@ -113,6 +113,9 @@ def test_sign_in_ignores_redirect_targets(client, coordinator, target):
         {"username": "coord-sign0001", "password": ""},
         {"username": "", "password": ""},
         {},
+        {"username": "coord-sign0001\x00", "password": PASSWORD},
+        {"username": "coord-sign0001", "password": PASSWORD + "\x00"},
+        {"username": "c" * 151, "password": PASSWORD},
     ],
 )
 def test_failed_sign_in_keeps_visitor_signed_out(client, coordinator, credentials):
@@ -127,8 +130,27 @@ def test_failed_sign_in_keeps_visitor_signed_out(client, coordinator, credential
 def test_failure_does_not_reveal_which_field_was_wrong(client, coordinator):
     wrong_password = sign_in(client, coordinator.username, "Wrong16Characters")
     unknown_user = sign_in(client, "unknown-sign0001")
+    assert FAILURE in wrong_password.content.decode()
     assert without_csrf_token(wrong_password) == without_csrf_token(unknown_user)
     assert coordinator.username not in wrong_password.content.decode()
+
+
+@pytest.mark.ac("ACC-1.2")
+def test_blank_fields_reach_the_server(client, db):
+    html = client.get("/sign-in/").content.decode()
+    inputs = [tag for tag in re.findall(r"<input [^>]*>", html) if "hidden" not in tag]
+    assert len(inputs) == 2
+    assert not [tag for tag in inputs if "required" in tag]
+
+
+@pytest.mark.ac("ACC-1.2")
+def test_sign_in_password_is_sensitive_and_never_cached(client, coordinator):
+    page = client.get("/sign-in/")
+    failed = sign_in(client, coordinator.username, "Wrong16Characters")
+    for response in (page, failed):
+        assert "no-store" in response["Cache-Control"]
+        assert "private" in response["Cache-Control"]
+    assert failed.wsgi_request.sensitive_post_parameters == ("password",)
 
 
 @pytest.mark.ac("ACC-1.2")
@@ -317,3 +339,72 @@ def test_sign_out_without_valid_csrf_or_origin_is_refused(coordinator, token, or
     assert DENIED in response.content.decode()
     assert session_key(client) == key
     assert client.get("/coordinator/").status_code == 200
+
+
+REFUSED_HTTPS = [
+    {},
+    {"HTTP_REFERER": "https://attacker.invalid/sign-in/"},
+    {"HTTP_ORIGIN": "http://testserver"},
+]
+
+
+@pytest.mark.ac("ACC-1.8")
+def test_https_sign_in_with_same_origin_succeeds(coordinator):
+    client, valid = csrf_client()
+    response = client.post(
+        "/sign-in/",
+        {"username": coordinator.username, "password": PASSWORD}
+        | csrf_data(valid, "valid"),
+        secure=True,
+        HTTP_ORIGIN="https://testserver",
+    )
+    assert response["Location"] == "/coordinator/"
+
+
+@pytest.mark.ac("ACC-1.8")
+@pytest.mark.parametrize("headers", REFUSED_HTTPS)
+def test_https_sign_in_without_matching_origin_is_refused(coordinator, headers):
+    client, valid = csrf_client()
+    response = client.post(
+        "/sign-in/",
+        {"username": coordinator.username, "password": PASSWORD}
+        | csrf_data(valid, "valid"),
+        secure=True,
+        **headers,
+    )
+    assert response.status_code == 403
+    assert DENIED in response.content.decode()
+    assert signed_in_user_id(client) is None
+    coordinator.refresh_from_db()
+    assert coordinator.last_login is None
+
+
+@pytest.mark.ac("ACC-1.8")
+@pytest.mark.parametrize("headers", REFUSED_HTTPS)
+def test_https_sign_out_without_matching_origin_is_refused(coordinator, headers):
+    client, valid = csrf_client()
+    client.post(
+        "/sign-in/",
+        {"username": coordinator.username, "password": PASSWORD}
+        | csrf_data(valid, "valid"),
+    )
+    key = session_key(client)
+    valid = client.cookies[django_settings.CSRF_COOKIE_NAME].value
+    response = client.post(
+        "/sign-out/", csrf_data(valid, "valid"), secure=True, **headers
+    )
+    assert response.status_code == 403
+    assert DENIED in response.content.decode()
+    assert session_key(client) == key
+    assert client.get("/coordinator/").status_code == 200
+
+
+@pytest.mark.ac("ACC-1.6")
+def test_sign_in_session_cookie_flags(client, coordinator):
+    response = sign_in(client, coordinator.username)
+    cookie = response.cookies[COOKIE]
+    assert cookie["httponly"] is True
+    assert cookie["samesite"] == "Lax"
+    assert cookie["secure"] is True
+    if cookie["max-age"] != "":
+        assert int(cookie["max-age"]) <= 8 * 60 * 60

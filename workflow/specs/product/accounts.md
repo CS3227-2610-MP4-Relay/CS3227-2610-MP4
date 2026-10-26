@@ -1,6 +1,6 @@
 # Accounts
 
-Planning area `ACC`. The criteria below are specified but not implemented yet. See the [roles](../PRODUCT-SPEC.md#roles); storage and routes are in the [technical spec](../TECHNICAL-SPEC.md#accounts-and-workspaces), and controls in the [security spec](../SECURITY-SPEC.md#sign-in-and-access-control).
+Planning area `ACC`. ACC-1 is implemented; ACC-2 and ACC-3 are specified but not implemented yet. See the [roles](../PRODUCT-SPEC.md#roles); storage and routes are in the [technical spec](../TECHNICAL-SPEC.md#accounts-and-workspaces), and controls in the [security spec](../SECURITY-SPEC.md#sign-in-and-access-control).
 
 Every account belongs to exactly one workspace and has exactly one role, Test Coordinator or Beta Tester. Accounts exist only through demo workspace creation (ACC-2). Self-registration, password reset, invitations, adding or removing accounts, email, MFA and SSO are not part of Relay.
 
@@ -22,6 +22,8 @@ A user signs in with a username and password and works on their own role's home 
 ## ACC-2 Create an isolated demo workspace
 
 A signed-out visitor can choose "Create a demo workspace" on the Relay start page to get a fresh workspace for trying both roles. The workspace also contains a sample draft round, which is RND-7 in [rounds](rounds.md).
+
+The "Your demo workspace" page, titled and headed "Your demo workspace", shows "Workspace: <workspace name>", then a table with the columns "Role", "Username" and "Password" and one row per account: the Test Coordinator first, then the two Beta Testers. Below it are "Save these passwords now. They will not be shown again." and a "Sign in" link to the sign-in page. The 503 page and the 404 page show only their message as their heading.
 
 - **ACC-2.1** (happy) Creating a demo workspace shows a "Your demo workspace" page listing the workspace name and, for each account, its role, username and password, with "Save these passwords now. They will not be shown again." The visitor stays signed out.
 - **ACC-2.2** (boundary) The workspace has exactly 1 Test Coordinator and 2 Beta Testers. Each listed username and password signs in to that account's role home page, which shows the new workspace's name.

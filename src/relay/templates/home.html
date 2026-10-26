@@ -4,4 +4,8 @@
 <p>A beta-testing portal for small software teams.</p>
 <p>Testing workflows are coming soon.</p>
 <p><a href="{% url 'accounts:sign-in' %}">Sign in</a></p>
+<form method="post" action="{% url 'accounts:demo' %}">
+  {% csrf_token %}
+  <button type="submit">Create a demo workspace</button>
+</form>
 {% endblock %}

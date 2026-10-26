@@ -2,7 +2,7 @@ import json
 
 import pytest
 from django.apps import apps
-from django.conf import settings
+from django.conf import global_settings, settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import identify_hasher
 from django.core.management import call_command
@@ -10,6 +10,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
 
 from accounts.models import Workspace
+from relay.settings import base
 from relay_tests.test_configuration import probe
 
 PASSWORD = "Synthetic16Chars"
@@ -120,3 +121,16 @@ def test_local_settings_turn_secure_cookies_off():
     assert result.returncode == 0, result.stderr
     cookies = json.loads(result.stdout)["cookies"]
     assert cookies == {"session_secure": False, "csrf_secure": False}
+
+
+MD5 = "django.contrib.auth.hashers.MD5PasswordHasher"
+
+
+def test_shared_and_local_settings_keep_the_default_hasher():
+    shared = getattr(base, "PASSWORD_HASHERS", global_settings.PASSWORD_HASHERS)
+    result = probe("relay.settings.local", DJANGO_SECRET_KEY="synthetic-local-key")
+    assert result.returncode == 0, result.stderr
+    local = json.loads(result.stdout)["hashers"]
+    for hashers in (shared, local):
+        assert hashers == global_settings.PASSWORD_HASHERS
+        assert MD5 not in hashers
