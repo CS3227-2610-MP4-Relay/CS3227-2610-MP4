@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<p>Username: {{ user.username }}</p>
+<p>Workspace: {{ user.workspace.name }}</p>
+<form method="post" action="{% url 'accounts:sign-out' %}">
+  {% csrf_token %}
+  <button type="submit">Sign out</button>
+</form>
+{% endblock %}

@@ -38,6 +38,8 @@ TIME_ZONE = "UTC"
 USE_TZ = True
 
 AUTH_USER_MODEL = "accounts.User"
+LOGIN_URL = "accounts:sign-in"
+CSRF_FAILURE_VIEW = "accounts.views.csrf_failure"
 # Database sessions; sign-in also sets an absolute expiry 8 hours ahead (ACC-1.6).
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 SESSION_COOKIE_AGE = 8 * 60 * 60
