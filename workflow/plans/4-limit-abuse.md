@@ -13,7 +13,7 @@ Made by the coordinator on 2026-10-27 under the human's (zheng-jj) delegation, "
 - **Tests:** ACC-3.6 and ACC-3.8 are PostgreSQL threaded tests (`django_db(transaction=True)`, a `threading.Barrier`, one connection per thread); time is controlled with `unittest.mock`; no new dependency.
 - **Demo pre-check** (from the ACC-2 security review): `/demo/` reads both creation counts without locking before generating and hashing passwords and refuses early with the ACC-3.4 429; the locked re-check in the transaction stays, so ACC-3.6 holds. Both 429s are returned outside ACC-2's generic `except Exception` handler, and tests assert status 429 for each.
 
-Builder's spec details within that scope (checkpoint 1), for the coordinator to confirm:
+Builder's spec details within that scope (checkpoint 1), confirmed by the coordinator on 2026-10-27 under the delegation (the narrowed 503 sentence, the IPv4-mapped rule, the timeouts with a function limit of at least 30 s, and the two 429 messages in the User Guide at checkpoint 4; also catching `django.db.Error` in sign-in, one insert-or-lock statement for all scopes, `serialized_rollback=True` where needed, no `Retry-After`):
 
 - Model, limit service contract, timeouts (lock 5 s, statement 10 s, idle in transaction 10 s, set per transaction with `set_config(..., true)`), window rules and client keying under [Accounts and workspaces](../specs/TECHNICAL-SPEC.md#accounts-and-workspaces). An IPv4-mapped IPv6 address counts as its IPv4 address, so a dual-stack server does not put every IPv4 client in one `/64`.
 - "A refused sign-in does not extend its window": refused requests write nothing, and only a counted request after a window has ended restarts it. The lock statement inserts a missing row with count 0 or locks an existing row unchanged.
@@ -35,7 +35,7 @@ Builder's spec details within that scope (checkpoint 1), for the coordinator to 
    - ACC-3.7: `peek`, `lock` and `record` raising `OperationalError`, and a real lock timeout (another connection holds the row; the timeout constant patched short), each give the 503 for sign-in and creation, sign no one in, create nothing and record nothing.
    - ACC-3.8 (threaded): with 1 failure left, 5 simultaneous wrong-password sign-ins give at most 1 normal failure and the rest 429.
    Red first: run them before the views change. Checks: focused `pytest src/accounts -q`, then full verification (serialised with other builders on the shared test PostgreSQL).
-4. **Guides and status** (`docs:`): `docs/DeveloperGuide.md` (design note on `limits.py`, the timeouts and the threaded tests), the opening status sentences of `accounts.md`, `TECHNICAL-SPEC.md` and `SECURITY-SPEC.md`. User Guide: the [accounts-spec](accounts-spec.md) exclusion of User Guide changes applied to that spec-only PR; ACC-1 and ACC-2 later documented their built behaviour, so the coordinator confirms whether the two 429 messages are added. Check: read back; `git diff --check`; builder scope check.
+4. **Guides and status** (`docs:`): `docs/DeveloperGuide.md` (design note on `limits.py`, the timeouts and the threaded tests), the opening status sentences of `accounts.md`, `TECHNICAL-SPEC.md` and `SECURITY-SPEC.md`. `docs/UserGuide.md`: the two 429 messages in the product's exact words (confirmed; the [accounts-spec](accounts-spec.md) exclusion applied only to that spec-only PR). Check: read back; `git diff --check`; builder scope check.
 
 Repairs after review are separate `fix:` commits.
 
@@ -52,7 +52,8 @@ Non-test, non-migration `src/` lines: model ~20, `limits.py` ~85, views ~45, `42
 
 ## Open issues
 
-- Confirm the builder's spec details above, especially narrowing the accounts-routes 503 sentence to limited transactions and the IPv4-mapped rule.
+- Resolved (coordinator, 2026-10-27): the builder's spec details above.
+- ACC-2's repair round 1 changes `views.py`, `demo.py`, the Creation bullet and the delivery-order sentence; the coordinator merges it into this branch before checkpoint 3.
 - Transactional tests flush the database, which deletes the migration's `demo-total` row; the threaded tests use `serialized_rollback=True`, and `lock` would recreate the row anyway.
 - Idle-in-transaction timeouts set with `SET LOCAL` persist to the end of a `TestCase` test's outer transaction; a test idle for over 10 s between queries would lose its connection.
 - After an idle timeout kills the connection, the 503 page must still render; checkpoint 3 tests this.
@@ -61,7 +62,7 @@ Non-test, non-migration `src/` lines: model ~20, `limits.py` ~85, views ~45, `42
 ## Checklist
 
 - [x] Checkpoint 1: specs and plan.
-- [ ] Checkpoint 2: model, migration, keying, limit service and tests (red evidence first).
+- [x] Checkpoint 2: model, migration, keying, limit service and tests (red evidence first). Red: `test_limits.py` failed to import (`accounts.limits` missing). Green: 27 passed; full verification 217 passed, 1 skipped, 85 subtests passed; Ruff clean; `makemigrations --check` clean. 138 of 400 budget lines (`models.py` +23, `limits.py` 115); migration 42 lines. The guards in `start` and `lock` refuse to run outside a transaction, where a lock would be released at once.
 - [ ] Checkpoint 3: views, 429 pages, timeouts, 503 and criterion tests incl. threaded ones (red evidence first).
 - [ ] Checkpoint 4: guides and status sentences.
 - [ ] Full verification, size budget and builder scope check.
