@@ -278,6 +278,40 @@ def test_failed_creation_leaves_nothing_and_shows_503(failure, caplog):
         assert patched.call_count == 3
 
 
+class FailingCredential:
+    """A third table row whose password raises while the page renders."""
+
+    role = "Beta Tester"
+    username = "tester2-render01"
+
+    @property
+    def password(self):
+        raise RuntimeError("synthetic failure inside the credentials table")
+
+
+@pytest.mark.django_db
+@pytest.mark.ac("ACC-2.3", "ACC-2.5")
+def test_failure_mid_table_keeps_rendered_passwords_out_of_error_reports(caplog):
+    seen, spy = capture_passwords()
+    real_create = demo.create_demo_workspace
+
+    def create(passwords):
+        workspace, credentials = real_create(passwords)
+        return workspace, [*credentials[:2], FailingCredential()]
+
+    client = Client()
+    client.raise_request_exception = False
+    with spy, mock.patch.object(demo, "create_demo_workspace", create):
+        response = client.post("/demo/")
+    assert_503_with_nothing_left(response, (0, 0), seen, caplog)
+    exc_info = failure_record(caplog)
+    assert "inside the credentials table" in str(exc_info[1])
+    report = error_report(exc_info)
+    assert "create_demo" in report
+    for password in seen:
+        assert password not in report
+
+
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.ac("ACC-2.5")
 def test_failed_commit_leaves_nothing_and_shows_503(caplog):
