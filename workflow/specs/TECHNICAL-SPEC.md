@@ -9,7 +9,7 @@ How Relay will be built and run. What it will do is in [`PRODUCT-SPEC.md`](PRODU
 - Configuration from environment variables, with no committed credentials.
 - SoC LLM through one shared gateway; feature code selects authorized context before invoking it. The planned boundary is in [`ai/llm-gateway.md`](ai/llm-gateway.md).
 
-`src/manage.py` starts the `relay` Django project; `relay.wsgi` is its WSGI entry point and `relay.pages` owns public presentation. Shared templates live in `src/relay/templates/`. The `accounts` app (`src/accounts/`) owns the [workspace and account models](#accounts-and-workspaces) and the accounts routes, with Django's `auth`, `contenttypes`, `sessions` and `messages` apps; `django.contrib.admin` is never installed. ACC-1 adds them; until then no auth/session apps or business models are installed. Runtime and dependency pins belong in the root configuration files.
+`src/manage.py` starts the `relay` Django project; `relay.wsgi` is its WSGI entry point and `relay.pages` owns public presentation. Shared templates live in `src/relay/templates/`. The `accounts` app (`src/accounts/`) owns the [workspace and account models](#accounts-and-workspaces) and the accounts routes, with Django's `auth`, `contenttypes`, `sessions` and `messages` apps; `django.contrib.admin` is never installed. The `rounds` app (`src/rounds/`), added by RND-1, owns the [round models](#rounds) and the [rounds routes](#rounds-routes). ACC-1 adds the accounts apps; until then no auth/session apps or business models are installed. Runtime and dependency pins belong in the root configuration files.
 
 ## Data model
 
@@ -38,13 +38,17 @@ For [ACC](product/accounts.md). Retention follows the [persistence decision](#da
 
 For [RND](product/rounds.md). Field limits, caps and messages are in its criteria. Nothing here deletes a round, build or result; retention and full storage follow the [persistence decision](#data-model). A round belongs to one workspace and every other record below to one round. URL records are looked up through the workspace helper, then checked to be in the round the URL names; form-submitted IDs are checked against the round in the form's validation ([checking order](product/rounds.md#rules-for-every-round-action)).
 
-- **Round:** a non-null workspace, a title, a state of `draft`, `open` or `closed`, and its creation, publication and closing times.
+- **Round:** a non-null workspace, a title of at most 120 characters, a state of `draft`, `open` or `closed` (a database check constraint), and its creation time; RND-3 adds its publication time and RND-6 its closing time. Lists order rounds by creation time, newest first, then by descending ID.
+- **Round creation:** one function, `rounds.services.create_round(workspace, title)`, used by the new-round route and later by the [demo creation](#accounts-and-workspaces) transaction (RND-7). Its workspace argument is only ever `request.user.workspace` or the workspace ACC-2 has just created, never a value from request data. In a transaction, it locks the workspace row, counts the workspace's rounds, and creates a Draft round below the cap of 20 or raises an error the view shows as the [RND-1.4](product/rounds.md#rnd-1-prepare-a-test-round) message.
+- **Text fields:** the form trims surrounding whitespace with Python's `str.strip()`, then counts characters (code points). A character is visible unless `str.isspace()` is true for it or its Unicode category is Cc or Cf; text without a visible character is treated as empty. A form field shared by all round text fields applies this check, the length limits and Django's null-character validator.
 - **Acceptance criterion** and **test case:** a round and their text fields ([RND-2.4](product/rounds.md#rnd-2-manage-acceptance-criteria-and-test-cases)), validated with Django's null-character validator and a visible-character check.
 - **Case–criterion link:** a many-to-many link between a case and criteria of the same round, checked by the form and again inside the write transaction.
 - **Build:** a round, a label, a comparison key (the label with format characters, Unicode category Cf, removed and then NFC-normalised), its creation time and the cases it covers, with a database unique constraint on round and comparison key ([RND-5.3](product/rounds.md#rnd-5-request-a-retest)). Publishing creates the first build covering every case; a retest request is stored as a build covering the selected cases. A case's current build is the newest build covering it.
 - **Results (RES), provisional:** a result will reference one case and one build of the same round that covers the case, so its criteria are the case's frozen links. The result itself is specified in [RES](product/results.md).
 - **Deletion:** every foreign key here, including those from results, uses `PROTECT`. Deleting a case first deletes its links explicitly in the same transaction; a linked criterion is not deleted. Criteria and cases can be deleted only while Draft, before any build or result exists.
 - **Writes:** every round change runs in one transaction that locks the round row (`select_for_update`), then re-checks the state, caps, label uniqueness and that submitted records are in the round. Creating a round locks the workspace row to check the round cap. Provisionally, creating or changing a result (RES) also locks the round row, then re-checks the state, that the build is in the round and covers the case, and that it is the case's current build. Concurrent Draft edits to the same record are not merged; the last saved edit wins.
+- **Storage failure:** a rounds route that raises Django's `DatabaseError` rolls back its transaction, logs the exception with its traceback, and renders `503.html` with status 503 ([rules for every round action](product/rounds.md#rules-for-every-round-action)). The round list on the Coordinator home follows the [accounts routes](#accounts-routes) storage rule, because that page is an accounts route.
+- **Rendering:** a template filter removes the bidi controls U+202A to U+202E and U+2066 to U+2069 from user text used in a `<title>` and wraps it in U+2068 and U+2069; Django's autoescaping still applies. In page content, user text is escaped, line breaks become `<br>`, and the element carrying `dir="auto"` contains only that text ([rendering rule](product/rounds.md#rules-for-every-round-action)).
 - **Sample round:** fixed synthetic text, written by the shared round-creation code inside the [demo creation](#accounts-and-workspaces) transaction ([RND-7](product/rounds.md#rnd-7-sample-draft-round-in-a-new-demo-workspace)).
 
 ## Routes
@@ -76,7 +80,7 @@ Delivery order: ACC-1 builds `/sign-in/` (page title "Sign in"), `/sign-out/`, `
 
 ### Rounds routes
 
-For [RND](product/rounds.md). Every route requires a signed-in Test Coordinator and applies the [rules for every round action](product/rounds.md#rules-for-every-round-action) in their order; a state not listed below gets their 409. Invalid input re-renders the form, and a refused delete the round page, with status 200 and the message. A successful POST redirects to the round page, which shows the success message once. The Coordinator home (`/coordinator/`) also lists the workspace's rounds. `<round>`, `<criterion>` and `<case>` are integer IDs; no route takes a build ID.
+For [RND](product/rounds.md). Every route requires a signed-in Test Coordinator and applies the [rules for every round action](product/rounds.md#rules-for-every-round-action) in their order; a state not listed below gets their 409. Invalid input re-renders the form, and a refused delete the round page, with status 200 and the message. A successful POST redirects to the round page, which shows the criterion's success message, if any, once. The Coordinator home (`/coordinator/`) also lists the workspace's rounds. `<round>`, `<criterion>` and `<case>` are integer IDs; no route takes a build ID. A route accepts exactly the methods listed, so HEAD gets 405 where only GET is listed. The 409 page is titled "Action not available", with the state message as its heading.
 
 | Route | Method | States | Page title or result |
 | --- | --- | --- | --- |
@@ -93,6 +97,8 @@ For [RND](product/rounds.md). Every route requires a signed-in Test Coordinator 
 | `/coordinator/rounds/<round>/results/` | GET | Open, Closed | "Results: <title>" |
 | `/coordinator/rounds/<round>/retest/` | GET, POST | Open | "Request a retest"; creates a build covering the selected cases |
 | `/coordinator/rounds/<round>/close/` | POST | Open | Button on the round page; closes the round |
+
+Delivery order: RND-1 builds the Coordinator home's round list, `/coordinator/rounds/new/`, the round page with its title and state, and `/coordinator/rounds/<round>/edit/`; each later requirement adds its own routes and round-page parts in the [code-slice order](../plans/rounds-spec.md#requirements-and-code-slice-order).
 
 ## Configuration
 
