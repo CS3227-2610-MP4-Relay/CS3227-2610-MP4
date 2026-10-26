@@ -121,12 +121,16 @@ def edit_round(request, round_id):
     return redirect(round_)
 
 
-# RND-2: each kind of record, by the round's related name; services by name,
-# so tests can replace them.
+# RND-2: each kind of record, by the round's related name.
 RECORDS = {
-    "criteria": (CriterionForm, "acceptance criterion", "delete_criterion"),
-    "cases": (CaseForm, "test case", "delete_case"),
+    "criteria": (CriterionForm, "acceptance criterion"),
+    "cases": (CaseForm, "test case"),
 }
+
+
+def url_record_id(kind, criterion_id, case_id):
+    """The record ID the URL names, or None on an add route; 0 is an ID too."""
+    return criterion_id if kind == "criteria" else case_id
 
 
 def round_record(request, round_id, kind, record_id, *, lock=False):
@@ -140,42 +144,46 @@ def round_record(request, round_id, kind, record_id, *, lock=False):
 def save_record(kind, round_, record, data):
     """Add a criterion or case to the locked round, or change `record`."""
     if kind == "criteria" and record is None:
-        return services.add_criterion(round_, data["text"])
-    if kind == "criteria":
-        record.text = data["text"]
-        return record.save(update_fields=["text"])
-    ids = [item.pk for item in data.pop("criteria")]
-    if record is None:
-        return services.add_case(round_, data, ids)
-    return services.save_case(record, data, ids)
+        services.add_criterion(round_, data["text"])
+    elif kind == "criteria":
+        services.save_criterion(record, data["text"])
+    else:
+        ids = [item.pk for item in data.pop("criteria")]
+        if record is None:
+            services.add_case(round_, data, ids)
+        else:
+            services.save_case(record, data, ids)
 
 
 @coordinator_view(["GET", "POST"])
 def record_form(request, round_id, kind, criterion_id=None, case_id=None):
     """Add or edit a Draft round's criterion or case."""
-    form_class, noun, _ = RECORDS[kind]
-    record_id = criterion_id or case_id
+    form_class, noun = RECORDS[kind]
+    record_id = url_record_id(kind, criterion_id, case_id)
     round_, record = round_record(request, round_id, kind, record_id)
     if round_.state != Round.State.DRAFT:
         return state_conflict(request, round_)
-    initial = model_to_dict(record) if record else None
+    initial = model_to_dict(record) if record is not None else None
     data = request.POST if request.method == "POST" else None
     form = form_class(round_, data, initial=initial)
     if data is not None and form.is_valid():
-        with transaction.atomic():
-            round_, record = round_record(request, round_id, kind, record_id, lock=True)
-            if round_.state != Round.State.DRAFT:
-                return state_conflict(request, round_)
-            try:
+        # A refusal leaves the transaction by its exception, so nothing commits.
+        try:
+            with transaction.atomic():
+                round_, record = round_record(
+                    request, round_id, kind, record_id, lock=True
+                )
+                if round_.state != Round.State.DRAFT:
+                    return state_conflict(request, round_)
                 save_record(kind, round_, record, dict(form.cleaned_data))
-            except services.Refused as refused:
-                form.add_error(refused.field, str(refused))
-            else:
-                return redirect(round_)
+        except services.Refused as refused:
+            form.add_error(refused.field, str(refused))
+        else:
+            return redirect(round_)
     context = {
         "form": form,
-        "title": f"{'Edit' if record else 'New'} {noun}",
-        "button": "Save" if record else f"Add {noun}",
+        "title": f"{'New' if record is None else 'Edit'} {noun}",
+        "button": f"Add {noun}" if record is None else "Save",
         "round": round_,
     }
     return render(request, "rounds/round_form.html", context)
@@ -184,14 +192,16 @@ def record_form(request, round_id, kind, criterion_id=None, case_id=None):
 @coordinator_view(["POST"])
 def delete_record(request, round_id, kind, criterion_id=None, case_id=None):
     """Delete a Draft round's case, or its criterion if no case links to it."""
-    with transaction.atomic():
-        round_, record = round_record(
-            request, round_id, kind, criterion_id or case_id, lock=True
-        )
-        if round_.state != Round.State.DRAFT:
-            return state_conflict(request, round_)
-        try:
-            getattr(services, RECORDS[kind][2])(record)
-        except services.Refused as refused:
-            return show_round(request, round_, (record.pk, str(refused)))
+    record_id = url_record_id(kind, criterion_id, case_id)
+    try:
+        with transaction.atomic():
+            round_, record = round_record(request, round_id, kind, record_id, lock=True)
+            if round_.state != Round.State.DRAFT:
+                return state_conflict(request, round_)
+            if kind == "criteria":
+                services.delete_criterion(record)
+            else:
+                services.delete_case(record)
+    except services.Refused as refused:
+        return show_round(request, round_, (record.pk, str(refused)))
     return redirect(round_)
