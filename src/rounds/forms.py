@@ -25,6 +25,12 @@ class RoundTextField(forms.CharField):
             **kwargs,
         )
 
+    def to_python(self, value):
+        """Count a browser's CR LF line break as one character, then trim."""
+        if isinstance(value, str):
+            value = value.replace("\r\n", "\n")
+        return super().to_python(value)
+
     def clean(self, value):
         """Apply Django's checks, including null characters, then visibility."""
         value = super().clean(value)
