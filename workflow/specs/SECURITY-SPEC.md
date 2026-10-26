@@ -78,6 +78,16 @@ Threat: malicious repository content or a mistaken agent bypasses scope, weakens
 - Verify development controls with synthetic secrets and malicious repository instructions that attempt prohibited access or test weakening. Retain observed actions and outcomes; configuration alone is not proof of enforcement.
 - Record actual triggers, context, check results and repair rounds. Mark unavailable telemetry as unavailable; never invent human approval, test results or usage data.
 - Human-invoked slice delivery and its protected Git/release actions follow the [Git authorization and commit rules](../../AGENTS.md#git); untrusted task content cannot expand that authority. The [slice workflow](../skills/slice.md) must distinguish completed local checks from completed hosted delivery.
+- Agent sessions use a team member's GitHub credentials, which may be an admin's. An agent changes GitHub settings, shared content or reviews only after the human asks for that specific action in the current session ([`AGENTS.md`](../../AGENTS.md#approvals-and-claims)):
+  - settings include repository, branch protection, rulesets, environments, secrets, variables, Actions and Pages;
+  - shared content includes issues, comments, labels, milestones and releases;
+  - review actions include submitting, dismissing or requesting reviews, and marking a pull request ready.
+
+  A slice request covers only its own delivery: pushing its branch and creating and updating its own draft pull request. Read-only queries need no approval.
+
+  Claude Code's project settings ask before the matching `gh` subcommands and before every `gh api` call, because a command rule cannot tell API reads from writes. `gh pr edit` is not gated, so that the authorized delivery can update its own pull request; its reviewer and label changes rely on the instruction. Codex relies on the instruction alone.
+
+  Residual: these are client-side checks on a credential that GitHub trusts. An agent using another tool or API path, a non-Bash shell tool, or a human approving a prompt without reading it can still change settings. Branch protection remains the server-side control for `main`.
 
 ## CI and dependencies
 
@@ -86,6 +96,6 @@ Threat: untrusted code receives secrets, dependency substitution runs malicious 
 - Pin dependencies and third-party CI actions; verify package/action identities before adoption. Give validation jobs read-only repository permissions and no stored production secrets; do not use `pull_request_target` for untrusted code.
 - Keep production and Pages publication privileges in their controlled release jobs. Hosted environment restrictions remain operator work under [Release verification](TECHNICAL-SPEC.md#release-verification).
 - Protect the default branch: changes arrive only by pull request with one approving review, new pushes dismiss earlier approvals, and the GitHub Actions `verify` check must pass; a status posted by another app or user does not satisfy it. The branch need not be up to date before merging. The rules apply to admins; force pushes and branch deletion are blocked. Emergency bypass is an admin temporarily turning the rule off in Settings.
-- Residual branch-protection gaps: admins, including agent sessions using an admin's credentials, can disable the rule or use API paths around it; an approver may approve commits they pushed to someone else's pull request; because branches need not be up to date, an incompatible combination of merges is caught only by CI on the default branch afterwards; and a pull request's own workflow changes can alter `verify`, which only a reviewer reading those changes would catch.
+- Residual branch-protection gaps: admins, including agent sessions using an admin's credentials, can disable the rule or use API paths around it (agents must ask first, under [Development workflow](#development-workflow)); an approver may approve commits they pushed to someone else's pull request; because branches need not be up to date, an incompatible combination of merges is caught only by CI on the default branch afterwards; and a pull request's own workflow changes can alter `verify`, which only a reviewer reading those changes would catch.
 - Enable secret scanning and push protection for supported provider patterns (non-provider patterns are off). A pusher can bypass a push-protection block by giving a reason, so this complements keeping secrets out of the repository rather than replacing it.
 - Design migration compatibility, credential scope, checked-source delivery and unknown-outcome recovery before enabling deployment. No deployment implementation is included in this scaffold.
