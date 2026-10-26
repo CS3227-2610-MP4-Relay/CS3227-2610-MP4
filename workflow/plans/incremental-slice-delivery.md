@@ -26,4 +26,10 @@ Manual policy scenarios to inspect (instructions cannot prove runtime compliance
 
 Checks: changed-section readback and scenario walkthrough; `python -m unittest discover -s workflow/scripts`; tier-required full verification on the final integrated candidate; role scope/candidate stability checks. No phrase-matching tests are added for prose rules. Hosted checks and independent reviews will be recorded here.
 
-Next: commit checkpoint 1, then implement the checkpoint/delivery procedures.
+Outcome: checkpoints 1 and 2 are committed as `3e2a0d1` (38 changed lines) and `f68310a` (36 changed lines). [Draft PR #46](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/pull/46) is stacked on #43; the earlier slice commits are unchanged.
+
+Verification: changed sections and all five policy scenarios were reviewed; `git diff --check` passed. Local workflow unittest discovery ran 70 tests successfully with one existing Windows symlink skip. [Hosted CI 40294068816](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/actions/runs/40294068816) passed on `f68310a46193ea4ed5415abf8dccbca838ca416d`: Django system check, Ruff, format check (24 files), and 97 tests.
+
+Independent verifier and security-reviewer inspected `3d911ea..f68310a` against manifest SHA256 `d065a3dc0952ef41ae817dfb293b0060f893b5a7560422beabf55a006adeb9cc`. Both returned no findings; their scope checks passed and the candidate remained unchanged. They independently inspected the rules/history and reused the supplied suite results. No repairs were required. These checks assess the instructions, not future agent compliance or native enforcement.
+
+Checkpoint 3 changes only this plan and the [session log](../../logs/Whimsyturtle/006-build-django-foundation-and-ci.md). The coordinator will verify hosted checks on that final summary head; its result belongs in the PR's live checks and delivery report. Next: human review and merge decision after those checks pass. No merge or release is authorized by this task.

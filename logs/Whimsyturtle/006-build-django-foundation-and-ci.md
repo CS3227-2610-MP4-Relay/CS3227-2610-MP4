@@ -2,7 +2,7 @@
 
 Slice: #1 · Tier: High · Tool: Codex · Orchestrator model: gpt-6-astra, xhigh (observed runtime metadata) · Date: 2026-10-26
 
-Tokens: initial recorded totals across five sources: input 9,438,438, output 50,434, total 9,488,872; cutoff 16:08:14 SGT. Separate coordinator delivery interval: input 1,238,741, output 5,224, total 1,243,965; cutoff 16:23:45 SGT. Exact whole-task usage remains unavailable; these intervals are not presented as a complete conversation total.
+Tokens: initial recorded totals across five sources: input 9,438,438, output 50,434, total 9,488,872; cutoff 16:08:14 SGT. Separate coordinator delivery interval: input 1,238,741, output 5,224, total 1,243,965; cutoff 16:23:45 SGT. Rules follow-up interval across coordinator and two new reviewers: input 2,373,112, output 20,050, total 2,393,162; cutoff 16:49:08 SGT. Exact whole-task usage remains unavailable; these intervals are not presented as a complete conversation total.
 
 | Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
@@ -12,12 +12,17 @@ Tokens: initial recorded totals across five sources: input 9,438,438, output 50,
 | Verifier — gpt-6.1-sol/high, `codex:16ef6563a01a9d484377c7d5` | 1,186,952 | 1,117,824 | 6,477 | 1,748 | 1,193,429 | 12m 50.8s |
 | Security reviewer — gpt-6.1-sol/high, `codex:e3160e8aaa4ff42ddebf19d8` | 789,879 | 749,696 | 4,719 | 1,585 | 794,598 | 12m 21.0s |
 | Platform approval reviewer — codex-auto-review/low, `codex:b0b33a19c0abd6deccb06ac8` | 141,144 | 104,960 | 605 | 274 | 141,749 | 28m 18.1s |
+| Orchestrator rules interval — gpt-6-astra/xhigh, `codex:9d5e5df57fd5eaff378c94c5` | 1,751,824 | 1,704,960 | 15,833 | 6,088 | 1,767,657 | 18m 40.3s |
+| Rules verifier — gpt-6.1-sol/high, `codex:ecfd320b69c0f4ed0d2b6740` | 323,576 | 275,200 | 2,356 | 675 | 325,932 | 5m 14.3s |
+| Rules security reviewer — gpt-6.1-sol/high, `codex:c46b1e99b29f5a155958f4df` | 297,712 | 267,648 | 1,861 | 451 | 299,573 | 4m 41.0s |
 
-Three delegated roles and one automatically created approval-review source; observed model/effort metadata matches the configured role settings. Spans run from source creation to the common cutoff, include idle time and are not additive. All sources recorded zero cache-write tokens. Two model-capacity retries occurred (builder and verifier), with one independent-review repair round and one earlier configuration correction. The baseline at 15:40:45 SGT covered the coordinator before delegation but omitted the already-started approval source. The final `resource_usage.py report` therefore marks the aggregate task delta unavailable (`added_session_has_no_task_start_baseline`); the separate session-total snapshot above has no warnings. Fresh, non-forked role sources were counted once; overlapping intermediate reports were not added. Initial coordinator inspection precedes the baseline. Log writing and delivery after the cutoff are excluded. See [token reporting](../../workflow/README.md#token-reporting).
+The initial slice used three delegated roles and one automatically created approval-review source; the rules follow-up used two additional reviewers. Observed model/effort metadata matches the configured role settings. Initial spans run from source creation to the common cutoff, include idle time and are not additive. All sources recorded zero cache-write tokens. Two model-capacity retries occurred (builder and verifier), with one independent-review repair round and one earlier configuration correction. The baseline at 15:40:45 SGT covered the coordinator before delegation but omitted the already-started approval source. The initial `resource_usage.py report` therefore marks its aggregate task delta unavailable (`added_session_has_no_task_start_baseline`); the separate session-total snapshot above has no warnings. Fresh, non-forked role sources were counted once; overlapping intermediate reports were not added. Initial coordinator inspection precedes the baseline. Log writing and delivery after each cutoff are excluded. See [token reporting](../../workflow/README.md#token-reporting).
 
 ## Requests
 
 Run `/slice 1`. Resolved this to repository [issue #1](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/issues/1), “Set up the Django application and CI”; the API confirmed its author association was MEMBER and it had no comments. During work, the human confirmed removing or moving the two initially untracked reference documents; their absence was preserved. After the initial local handoff, the human explicitly corrected the omitted delivery: commit, push, open a draft PR and run its hosted checks.
+
+The human then requested agent-rule changes to prevent early stopping and oversized implementation commits, with small incremental commits during development. They explicitly said not to redo the existing slice commit.
 
 ## Agent runs
 
@@ -33,11 +38,22 @@ Delivery continuation used the coordinator only, with no new delegated runs. The
 
 The separate delivery measurement runs from 16:12:54 to 16:23:45 SGT and covers the coordinator only; its report has no warnings, zero model retries and zero repair rounds. Automatic approval-source usage for that interval is unavailable because it was not baselined. The gap after the initial cutoff and work after the delivery cutoff, including final notes and the last CI poll, are excluded. No overlapping intermediate reports were added.
 
+The rules follow-up used High tier because it changes development authorization/completion controls. The coordinator edited the workflow paths outside builder scope using the [follow-up plan](../../workflow/plans/incremental-slice-delivery.md), then committed the core rules/spec first (`3e2a0d1`, 38 changed lines) and the checkpoint/delivery procedures second (`f68310a`, 36 changed lines). Focused checks passed before each commit. Local workflow unittest discovery ran 70 tests successfully with one existing Windows symlink skip. [Draft PR #46](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/pull/46) is stacked on #43. [CI 40294068816](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/actions/runs/40294068816) passed on `f68310a`: Django system check, Ruff, formatting and 97 tests. Final summary-head CI is recorded in the PR's live checks and delivery report.
+
+- **Rules verifier:** High-tier trigger; role hash `e39f3b8296e0de54c02fd99acd545f7ff123a6e096c4eecf45736f1a528a6c36`. Supplied the human request, relevant paths, commit range, scope manifest and actual checks, without conversation history. Independently inspected all eight changed files, surrounding controls, commit sizes and the five policy scenarios; no findings. Scope, unchanged-candidate and diff checks passed. Reused supplied test/CI results; no repairs or retries.
+- **Rules security reviewer:** High-tier trigger; role hash `3e7ee3da2a29fb009fce10fda3381e0032528c83aba53e5bc7513aa1f1697598`. Supplied the same fixed candidate/context, focusing on authorization, role boundaries and honest completion. No findings within `3d911ea81a4e062ec1f693eb8862e3c35406dca4..f68310a46193ea4ed5415abf8dccbca838ca416d`. Independently passed scope, candidate-stability and diff checks; reused supplied suites. One tool-launch retry; no repair.
+
+Both new reviewers used manifest SHA256 `d065a3dc0952ef41ae817dfb293b0060f893b5a7560422beabf55a006adeb9cc`; coordinator scope/unchanged checks passed after both completed. Only plan/log summaries changed afterwards. No new builder run was required. Rule review does not prove future agent compliance or native enforcement.
+
+The rules usage report covers 16:30:27 to 16:49:08 SGT: coordinator delta and the two new, non-forked reviewer sources created after the baseline. Observed models/efforts match the table. It has no warnings, zero cache-write tokens and zero repairs; the one retry was the security reviewer's tool launch. Spans use the common cutoff and include idle time. Reviewers could not select their own telemetry; coordinator collected it centrally. Earlier agents are excluded; the automatic approval source was not baselined for this interval and its delta is unavailable. Initial inspection, gaps between measured intervals, log writing and final delivery after the cutoff are excluded.
+
 ## Decisions and corrections
 
 Kept the work to a public landing page, local/test settings, PostgreSQL verification and the existing CI job using installed/pinned packages. No accounts, business persistence, AI or deployment was added. Fixed test-settings selection and inherited database-address redirection within the original isolation criteria. Human confirmation explained the original scope check's two missing-file exceptions; subsequent builder and reviewer checks passed. The builder refused the deliberate out-of-scope AGENTS.md edit probe; this demonstrates role refusal only.
 
 At the initial handoff the implementation and required reviews were complete but uncommitted. That handoff stopped short of the human's intended delivery; the follow-up committed the work, opened the draft PR and verified hosted CI. Docker examples, live IPv6 connectivity, live hook enforcement, merge and release remain unverified or unperformed. Deployment is outside this slice and not configured. The human still owns review of this log and merge/release decisions.
+
+The rules follow-up makes normal human slice requests authorize feature-branch commits/pushes, draft PRs and latest-head CI, while respecting explicit delivery restrictions and separately protected actions. The coordinator selected a 200 changed-line commit limit, including tests/docs, with specific human exceptions for indivisible units. Existing history is preserved. The procedures require planned checkpoints, coordinator commits between builder turns and fresh scope snapshots; no hook, dependency or deployment capability was added. Human review and merge remain pending.
 
 ## Problems
 
