@@ -29,15 +29,17 @@ Non-test, non-migration `src/` lines: models/apps ~60, settings ~25, forms/views
 
 ## Open issues
 
-- CSRF refusals: Django's default non-debug CSRF failure page (403) or the ACC-1.4 403 template via `CSRF_FAILURE_VIEW`; a routine choice at checkpoint 3, both meet ACC-1.8.
-- PLT-1.1 test expectation changes from "no account actions" to the "Sign in" link; listed for the verifier at checkpoint 3.
+- Resolved (coordinator, checkpoint 2 review): CSRF refusals use the ACC-1.4 `403.html` through `CSRF_FAILURE_VIEW`.
+- Resolved (coordinator, checkpoint 3): `relay.settings.test` uses Django's MD5 hasher, because the default hasher made the focused tests take 46 s instead of 2 s; shared and local settings keep Django's default.
+- Checkpoint 3 finding: Django's `login()` keeps the session identifier when the same user signs in again, so sign-in calls `cycle_key()` first (ACC-1.7, caught by its test).
+- PLT-1.1 test expectation changed (checkpoint 3): "no `<a `" became "exactly one link, `<a href="/sign-in/">Sign in</a>`"; the no-form assertion stays. For the verifier.
 - From [accounts-spec](accounts-spec.md#notes-for-the-code-slices) for Whimsyturtle: production settings and their release check stay with #5.
 - Human review and merge remain pending.
 
 ## Checklist
 
 - [x] Checkpoint 1: specs and plan.
-- [ ] Checkpoint 2: models, settings, migrations, model tests.
-- [ ] Checkpoint 3: views and ACC-1/PLT-1.1 tests (red evidence first).
+- [x] Checkpoint 2: models, settings, migrations, model tests.
+- [x] Checkpoint 3: views and ACC-1/PLT-1.1 tests (red evidence first).
 - [ ] Checkpoint 4: guides.
 - [ ] Full verification, size budget and `check_scope.py builder --base 9fe329a`.
