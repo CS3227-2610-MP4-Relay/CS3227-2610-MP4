@@ -1,6 +1,6 @@
 # Technical spec
 
-How Relay will be built and run. What it will do is in [`PRODUCT-SPEC.md`](PRODUCT-SPEC.md). The application runs locally and in CI only. Workspaces, accounts and sessions exist (ACC-1); other business schema and hosted environments remain planned.
+How Relay will be built and run. What it will do is in [`PRODUCT-SPEC.md`](PRODUCT-SPEC.md). The application runs locally and in CI only. Workspaces, accounts and sessions (ACC-1) and demo workspace creation (ACC-2) exist; other business schema and hosted environments remain planned.
 
 ## Architecture
 
