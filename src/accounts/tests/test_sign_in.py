@@ -399,12 +399,21 @@ def test_https_sign_out_without_matching_origin_is_refused(coordinator, headers)
     assert client.get("/coordinator/").status_code == 200
 
 
-@pytest.mark.ac("ACC-1.6")
 def test_sign_in_session_cookie_flags(client, coordinator):
+    """Check the cookie rules in the technical spec's accounts routes."""
     response = sign_in(client, coordinator.username)
     cookie = response.cookies[COOKIE]
     assert cookie["httponly"] is True
     assert cookie["samesite"] == "Lax"
     assert cookie["secure"] is True
-    if cookie["max-age"] != "":
-        assert int(cookie["max-age"]) <= 8 * 60 * 60
+    assert 0 < int(cookie["max-age"]) <= 8 * 60 * 60
+
+
+@pytest.mark.parametrize("role", ["coordinator", "tester"])
+def test_role_homes_are_never_cached(client, coordinator, tester, role):
+    """Check the caching rule in the technical spec's accounts routes."""
+    user = coordinator if role == "coordinator" else tester
+    sign_in(client, user.username)
+    cache_control = client.get(f"/{role}/")["Cache-Control"]
+    assert "no-store" in cache_control
+    assert "private" in cache_control
