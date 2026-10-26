@@ -31,16 +31,16 @@ For [ACC](product/accounts.md). The retention, workspace-lifetime and expired-se
 
 ### Rounds
 
-For [RND](product/rounds.md). Nothing here deletes a round, build or result; retention stays with the open decisions above. A round belongs to one workspace and every other record below to one round; every lookup goes through the workspace helper and then checks that the record is in the round named by the URL.
+For [RND](product/rounds.md). Field limits, caps and messages are in its criteria. Nothing here deletes a round, build or result, and the [persistence decisions](#accounts-and-workspaces) are a precondition of the first persisting code slice. A round belongs to one workspace and every other record below to one round. URL records are looked up through the workspace helper, then checked to be in the round the URL names; form-submitted IDs are checked against the round in the form's validation ([checking order](product/rounds.md#rules-for-every-round-action)).
 
-- **Round:** a non-null workspace, a title (1 to 120 characters), a state of `draft`, `open` or `closed`, and its creation, publication and closing times. At most 20 per workspace, the sample round included.
-- **Acceptance criterion:** a round and its text (1 to 500 characters). At most 20 per round.
-- **Test case:** a round, a title (1 to 120), steps (1 to 2000) and an expected result (1 to 1000). At most 30 per round.
-- **Case–criterion link:** a many-to-many link between a case and criteria of the same round, checked by the form and again inside the write transaction. A case always has at least one link; a linked criterion cannot be deleted.
-- **Build:** a round, a label (1 to 100 characters, unique within the round), its creation time and the cases it covers. Publishing creates the first build covering every case; each retest request is a build covering the selected cases. A case's current build is the newest build covering it. At most 10 per round.
-- **Results (RES):** a result will reference one case and one build covering that case, so its criteria are the case's frozen links. Foreign keys from results, builds and links use `PROTECT`; criteria and cases are deleted only while Draft, when no build or result can reference them. The result itself is specified in [RES](product/results.md).
-- **Writes:** every round change runs in one transaction that locks the round row (`select_for_update`), then re-checks the state, limits, label uniqueness and that linked records are in the round. Creating a round locks the workspace row to check the round limit. Concurrent Draft edits to the same record are not merged; the last saved edit wins.
-- **Sample round:** "Sample round" with 3 criteria and 4 cases of fixed synthetic text, written by the shared round code inside the [demo creation](#accounts-and-workspaces) transaction.
+- **Round:** a non-null workspace, a title, a state of `draft`, `open` or `closed`, and its creation, publication and closing times.
+- **Acceptance criterion** and **test case:** a round and their text fields ([RND-2.4](product/rounds.md#rnd-2-manage-acceptance-criteria-and-test-cases)), validated with Django's null-character validator and a visible-character check.
+- **Case–criterion link:** a many-to-many link between a case and criteria of the same round, checked by the form and again inside the write transaction.
+- **Build:** a round, a label stored NFC-normalised, its creation time and the cases it covers, with a database unique constraint on round and label. Publishing creates the first build covering every case; a retest request is stored as a build covering the selected cases. A case's current build is the newest build covering it.
+- **Results (RES), provisional:** a result will reference one case and one build of the same round that covers the case, so its criteria are the case's frozen links. The result itself is specified in [RES](product/results.md).
+- **Deletion:** every foreign key here, including those from results, uses `PROTECT`. Deleting a case first deletes its links explicitly in the same transaction; a linked criterion is not deleted. Criteria and cases can be deleted only while Draft, before any build or result exists.
+- **Writes:** every round change runs in one transaction that locks the round row (`select_for_update`), then re-checks the state, caps, label uniqueness and that submitted records are in the round. Creating a round locks the workspace row to check the round cap. Provisionally, creating or changing a result (RES) also locks the round row, then re-checks the state, that the build is in the round and covers the case, and that it is the case's current build. Concurrent Draft edits to the same record are not merged; the last saved edit wins.
+- **Sample round:** fixed synthetic text, written by the shared round-creation code inside the [demo creation](#accounts-and-workspaces) transaction ([RND-7](product/rounds.md#rnd-7-sample-draft-round-in-a-new-demo-workspace)).
 
 ## Routes
 
@@ -63,12 +63,12 @@ The session cookie is `HttpOnly`; session and CSRF cookies are `SameSite=Lax`, a
 
 ### Rounds routes
 
-For [RND](product/rounds.md). Every route requires a signed-in Test Coordinator and follows the [rules for every round action](product/rounds.md#rules-for-every-round-action): signed out redirects to `/sign-in/`, a Beta Tester gets 403, a missing, other-workspace or other-round record gets 404, a POST without a valid CSRF token or with a cross-site `Origin` gets 403, a request in a state not listed gets 409, and a storage failure gets 503. Invalid input re-renders the form, and a refused delete the round page, with status 200 and the message. A successful POST redirects to the round page, which shows the success message once. The Coordinator home (`/coordinator/`) also lists the workspace's rounds. `<round>`, `<criterion>` and `<case>` are integer IDs.
+For [RND](product/rounds.md). Every route requires a signed-in Test Coordinator and applies the [rules for every round action](product/rounds.md#rules-for-every-round-action) in their order; a state not listed below gets their 409. Invalid input re-renders the form, and a refused delete the round page, with status 200 and the message. A successful POST redirects to the round page, which shows the success message once. The Coordinator home (`/coordinator/`) also lists the workspace's rounds. `<round>`, `<criterion>` and `<case>` are integer IDs; no route takes a build ID.
 
 | Route | Method | States | Page title or result |
 | --- | --- | --- | --- |
 | `/coordinator/rounds/new/` | GET, POST | — | "New round"; creates a Draft round |
-| `/coordinator/rounds/<round>/` | GET | Any | The round's title, its state and, once Open, each case's current build |
+| `/coordinator/rounds/<round>/` | GET | Any | The round's title as page title, its state, criteria and cases and, from publishing, builds ([RND-2](product/rounds.md#rnd-2-manage-acceptance-criteria-and-test-cases), [RND-3](product/rounds.md#rnd-3-publish-a-round-to-beta-testers)) |
 | `/coordinator/rounds/<round>/edit/` | GET, POST | Draft | "Edit round"; changes the title |
 | `/coordinator/rounds/<round>/criteria/new/` | GET, POST | Draft | "New acceptance criterion" |
 | `/coordinator/rounds/<round>/criteria/<criterion>/edit/` | GET, POST | Draft | "Edit acceptance criterion" |
