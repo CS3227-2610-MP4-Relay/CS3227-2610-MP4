@@ -41,7 +41,7 @@ def sign_in(request):
     try:
         user, error = _check_sign_in(request)
     except db.Error:
-        logger.exception("Sign-in limit check failed.")
+        logger.exception("Sign-in failed in storage.")
         return render(request, "503.html", status=503)
     if error:
         status = 429 if error == SIGN_IN_LIMITED else 200
@@ -55,22 +55,27 @@ def sign_in(request):
 
 
 def _check_sign_in(request):
-    """Lock the address's count, then authenticate and count a failure (ACC-3).
+    """Check the address's count, authenticate, then count a failure (ACC-3).
 
-    Returns the user, or None and the message to show. The session starts only
-    after this transaction commits, so a failure in it signs no one in.
+    An unlocked read refuses early; the password is checked outside any lock,
+    then the count is locked, checked again and a failure recorded. Returns the
+    user, or None and the message to show. The session starts only after this
+    transaction commits, so a failure in it signs no one in.
     """
+    key = limits.client_key(request)
+    if limits.reached(limits.peek(limits.SIGN_IN, key), limits.SIGN_IN):
+        return None, SIGN_IN_LIMITED
+    form = SignInForm(request.POST)
+    user = form.is_valid() and authenticate(request, **form.cleaned_data)
     with transaction.atomic():
         limits.start()
-        counter = limits.lock(limits.SIGN_IN, limits.client_key(request))
+        counter = limits.lock(limits.SIGN_IN, key)
         if limits.reached(counter, limits.SIGN_IN):
             return None, SIGN_IN_LIMITED
-        form = SignInForm(request.POST)
-        user = form.is_valid() and authenticate(request, **form.cleaned_data)
         if user:
             return user, None
         limits.record(counter, limits.SIGN_IN)
-        return None, FAILED
+    return None, FAILED
 
 
 @require_POST

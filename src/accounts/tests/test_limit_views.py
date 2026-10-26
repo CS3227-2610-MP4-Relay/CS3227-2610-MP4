@@ -1,12 +1,13 @@
 import threading
+import time
 from datetime import UTC, datetime, timedelta
 from unittest import mock
 
 import pytest
 from django.conf import settings
-from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate, get_user_model
 from django.contrib.sessions.models import Session
-from django.db import OperationalError, connection, transaction
+from django.db import DatabaseError, OperationalError, connection, transaction
 from django.test import Client, RequestFactory
 
 from accounts import demo, limits
@@ -68,6 +69,23 @@ def sign_in(client=None, username="coord-limit001", password=WRONG, **extra):
 def create(client=None, **extra):
     extra.setdefault("REMOTE_ADDR", ADDRESS)
     return (client or Client()).post("/demo/", **extra)
+
+
+def snapshot():
+    rows = LimitCounter.objects.order_by("scope", "key")
+    return list(rows.values_list("scope", "key", "window_start", "count"))
+
+
+def in_transaction_then(action):
+    """Run `action` whenever a limit is checked inside a limited transaction."""
+    real = limits.reached
+
+    def reached(counter, limit):
+        if connection.in_atomic_block:
+            action()
+        return real(counter, limit)
+
+    return mock.patch.object(limits, "reached", side_effect=reached)
 
 
 def signed_in(client):
@@ -279,6 +297,82 @@ def test_locked_recheck_refuses_with_429_not_503(db, limit):
         assert_demo_limited(create())
     assert generate.called
     assert Workspace.objects.count() == 0
+    assert stored(limit).count == limit.limit
+    assert count_of(limits.DEMO) == (10 if limit is limits.DEMO else 0)
+
+
+@pytest.mark.ac("ACC-2.5", "ACC-3.3")
+def test_password_generation_failure_gives_503_and_counts_nothing(db):
+    before = count_of(limits.DEMO_TOTAL)
+    with mock.patch.object(
+        demo, "generate_passwords", side_effect=RuntimeError("synthetic")
+    ):
+        assert_unavailable(create())
+    assert Workspace.objects.count() == 0
+    assert (count_of(limits.DEMO), count_of(limits.DEMO_TOTAL)) == (0, before)
+
+
+@pytest.mark.ac("ACC-2.5", "ACC-3.3")
+def test_render_failure_gives_503_and_counts_nothing(db):
+    before = count_of(limits.DEMO_TOTAL)
+    with mock.patch(
+        "accounts.views.render_to_string", side_effect=RuntimeError("synthetic")
+    ):
+        assert_unavailable(create())
+    assert Workspace.objects.count() == 0
+    assert (count_of(limits.DEMO), count_of(limits.DEMO_TOTAL)) == (0, before)
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.ac("ACC-2.5", "ACC-3.3")
+def test_commit_failure_gives_503_and_counts_nothing():
+    before = count_of(limits.DEMO_TOTAL)
+    with mock.patch.object(
+        connection, "commit", side_effect=DatabaseError("synthetic commit failure")
+    ) as commit:
+        response = create()
+    assert commit.called
+    assert_unavailable(response)
+    assert Workspace.objects.count() == 0
+    assert (count_of(limits.DEMO), count_of(limits.DEMO_TOTAL)) == (0, before)
+
+
+@pytest.mark.ac("ACC-3.1", "ACC-3.3")
+def test_limited_sign_in_never_checks_the_password(user):
+    set_count(limits.SIGN_IN, 30)
+    with mock.patch("accounts.views.authenticate") as checked:
+        assert_sign_in_limited(sign_in(password=PASSWORD))
+    assert not checked.called
+
+
+@pytest.mark.ac("ACC-3.1")
+def test_correct_password_racing_to_the_limit_is_refused_by_the_locked_recheck(user):
+    set_count(limits.SIGN_IN, 30)
+    passed = LimitCounter(window_start=datetime.now(UTC), count=0)
+    client = Client()
+    with (
+        mock.patch.object(limits, "peek", return_value=passed),
+        mock.patch("accounts.views.authenticate", wraps=authenticate) as checked,
+    ):
+        response = sign_in(client, password=PASSWORD)
+    assert_sign_in_limited(response)
+    assert checked.called
+    assert settings.SESSION_COOKIE_NAME not in response.cookies
+    assert count_of(limits.SIGN_IN) == 30
+
+
+@pytest.mark.django_db(transaction=True)
+def test_password_is_checked_outside_any_transaction(user):
+    in_transaction = []
+
+    def check(*args, **kwargs):
+        in_transaction.append(connection.in_atomic_block)
+        return authenticate(*args, **kwargs)
+
+    with mock.patch("accounts.views.authenticate", side_effect=check):
+        assert_failure(sign_in())
+        assert sign_in(password=PASSWORD).status_code == 302
+    assert in_transaction == [False, False]
 
 
 # ACC-3.5
@@ -406,7 +500,9 @@ def simultaneously(request, count=5):
 @pytest.mark.ac("ACC-3.6")
 def test_simultaneous_creations_cannot_exceed_the_limit():
     set_count(limits.DEMO, 8)
-    statuses = simultaneously(create)
+    # A pause under the lock widens any race between reading and recording.
+    with in_transaction_then(lambda: time.sleep(0.1)):
+        statuses = simultaneously(create)
     assert sorted(statuses) == [200, 200, 429, 429, 429]
     assert Workspace.objects.count() == 2
     assert stored(limits.DEMO).count == 10
@@ -420,6 +516,50 @@ def test_simultaneous_failed_sign_ins_cannot_exceed_the_limit():
         "coord-limit001", PASSWORD, workspace=workspace, role="coordinator"
     )
     set_count(limits.SIGN_IN, 29)
-    statuses = simultaneously(sign_in)
+    with in_transaction_then(lambda: time.sleep(0.1)):
+        statuses = simultaneously(sign_in)
     assert sorted(statuses) == [200, 429, 429, 429, 429]
     assert stored(limits.SIGN_IN).count == 30
+
+
+def pg_sleep():
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT pg_sleep(0.5)")
+
+
+TIMEOUT_CASES = {
+    "idle": (
+        "idle_in_transaction_session_timeout",
+        lambda: time.sleep(0.5),
+        "idle-in-transaction timeout",
+    ),
+    "statement": ("statement_timeout", pg_sleep, "statement timeout"),
+}
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.ac("ACC-3.7")
+@pytest.mark.parametrize("timeout", TIMEOUT_CASES)
+@pytest.mark.parametrize("route", ["wrong password", "correct password", "demo"])
+def test_timeout_inside_a_limited_transaction_gives_503(caplog, user, timeout, route):
+    set_count(limits.SIGN_IN, 3)
+    set_count(limits.DEMO, 3)
+    before = snapshot()
+    setting, action, reason = TIMEOUT_CASES[timeout]
+    client = Client()
+    with (
+        mock.patch.dict(limits.TIMEOUTS, {setting: "100ms"}),
+        in_transaction_then(action),
+    ):
+        if route == "demo":
+            response = create(client)
+        else:
+            password = PASSWORD if route == "correct password" else WRONG
+            response = sign_in(client, password=password)
+    assert_unavailable(response)
+    assert settings.SESSION_COOKIE_NAME not in response.cookies
+    assert Session.objects.count() == 0
+    assert snapshot() == before
+    assert Workspace.objects.count() == 1
+    assert reason in caplog.text
+    assert PASSWORD not in caplog.text
