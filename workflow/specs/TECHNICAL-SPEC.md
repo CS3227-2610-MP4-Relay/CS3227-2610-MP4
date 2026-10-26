@@ -45,10 +45,12 @@ Delivery will verify the final candidate before a controlled production deployme
 
 ### Review decisions and operator prerequisites
 
+Default-branch protection and secret scanning are configured under the [CI and dependencies](SECURITY-SPEC.md#ci-and-dependencies) control.
+
 Future work:
 
 - Verify the [team repository](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4) is publicly accessible; confirm role ownership and initial slice issues/milestones.
-- Configure branch protection and human review requirements; verify required CI checks, environment restrictions and secret scanning/push protection where available.
+- Configure and verify hosted environment restrictions.
 - Configure GitHub Pages and verify its built artifact and links before publication.
 - Create the Vercel project and separate managed PostgreSQL database; confirm the actual provider runtime, limits, secure database connection and least-privilege deployment access.
 - Keep production credentials in protected production settings, outside development, CI validation and untrusted builds. Design and verify migrations and deployment approvals before enabling releases.
