@@ -127,6 +127,35 @@ class AdapterTest(unittest.TestCase):
         for command in commands:
             self.assertIn(f"Bash({command} *)", config["permissions"]["ask"])
 
+    def test_github_changes_ask_first_in_claude_code(self):
+        """GitHub settings, content and review changes need the human (#40)."""
+        ask = json.loads(
+            (ROOT / ".claude" / "settings.json").read_text(encoding="utf-8")
+        )["permissions"]["ask"]
+        commands = (
+            "gh api",
+            "gh pr create",
+            "gh pr merge",
+            "gh pr comment",
+            "gh pr review",
+            "gh pr ready",
+            "gh pr close",
+            "gh issue create",
+            "gh issue edit",
+            "gh issue close",
+            "gh issue comment",
+            "gh label",
+            "gh release",
+            "gh repo edit",
+            "gh repo delete",
+            "gh secret",
+            "gh variable",
+            "gh ruleset",
+            "gh workflow",
+        )
+        for command in commands:
+            self.assertIn(f"Bash({command} *)", ask)
+
     def test_slice_is_user_invoked_only_in_both_tools(self):
         self.assertEqual(
             front_matter(ROOT / ".claude" / "skills" / "slice" / "SKILL.md")[
