@@ -34,7 +34,12 @@ Non-test, non-migration `src/` lines: models/apps ~60, settings ~25, forms/views
 - Checkpoint 3 finding: Django's `login()` keeps the session identifier when the same user signs in again, so sign-in calls `cycle_key()` first (ACC-1.7, caught by its test).
 - PLT-1.1 test expectation changed (checkpoint 3): "no `<a `" became "exactly one link, `<a href="/sign-in/">Sign in</a>`"; the no-form assertion stays. For the verifier.
 - From [accounts-spec](accounts-spec.md#notes-for-the-code-slices) for Whimsyturtle: production settings and their release check stay with #5.
-- For #5 (Whimsyturtle), from the repair-round-1 review; no ACC-1 code: HTTPS detection through the verified forwarded-protocol header (`SECURE_PROXY_SSL_HEADER`); frame blocking; `Cache-Control: private, no-store` on `/coordinator/` and `/tester/`; `LOGIN_URL` is set but unused, because the role homes redirect explicitly.
+- For #5 (Whimsyturtle), from the round-0 review; no ACC-1 code: HTTPS detection through the verified forwarded-protocol header (`SECURE_PROXY_SSL_HEADER`); frame blocking; `LOGIN_URL` is set but unused, because the role homes redirect explicitly.
+- Coordinator decisions on 2026-10-27, under the human's delegation:
+  - The narrower storage-failure wording is accepted. Sign-in's session cycle, `last_login` update and session save are separate writes, not one transaction; a failure part-way fails safe (signed out, generic 500).
+  - Removing surrounding whitespace from the username (Django's `CharField` default) is accepted; generated usernames have no spaces.
+  - Invalid sign-in input is a failed sign-in, counted under ACC-3.3 once ACC-3 exists.
+- For the human: with `DJANGO_DEBUG=true`, Django's local debug page can show POST data, including a password, by Django's design. The #5 notes above also remain open.
 - Human review and merge remain pending.
 
 ## Checklist
@@ -44,6 +49,8 @@ Non-test, non-migration `src/` lines: models/apps ~60, settings ~25, forms/views
 - [x] Checkpoint 3: views and ACC-1/PLT-1.1 tests (red evidence first).
 - [x] Checkpoint 4: guides.
 - [x] Full verification, size budget and builder scope check (checkpoint 4, Windows): 147 passed, 1 skipped; 232 of 400 budget lines since `9fe329a`; scope clean against the coordinator's snapshot `0b6ecf9`.
-- [x] Independent verifier and security review of `9dc41a7`: no High, two Medium, several Low.
+- [x] Round 0 review of `9dc41a7`: verifier 2 Medium (NUL gave 500; `required` attributes) and 6 Low; security-reviewer 2 Low (`sensitive_post_parameters`/`never_cache`; NUL) plus test gaps and Info.
 - [x] Repair round 1 (separate units): spec wording; sign-in form validation (NUL gave 500), no `required` attributes, sensitive password and `never_cache`, stronger ACC-1.2 test; hasher guard and real-response tests (cookie flags, HTTPS `Origin`/`Referer`); these #5 notes.
-- [ ] Re-review of repair round 1; human review and merge.
+- [x] Re-review of `9dc41a7..bed216f`: all round-0 findings fixed; verifier 3 Low, security-reviewer 1 Low and 2 Info, no new code finding.
+- [x] Repair round 2 (final): cookie-flag test unmarked with an unconditional max-age check; `/sign-in/` row orders the count lock before validation and states username stripping; role homes never cached, with spec and test.
+- [ ] Human review and merge.

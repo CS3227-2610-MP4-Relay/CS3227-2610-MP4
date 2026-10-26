@@ -1,6 +1,6 @@
 # Security spec
 
-Threats to Relay and to how it is built, and the controls against them. PLT-1 defines the local/CI foundation, and ACC-1 implements sign-in, sessions and role access; other application controls and their verification remain planned. Controls link to their acceptance criteria where specified, with verification added by the slices that implement them. No deployed security is claimed here.
+Threats to Relay and to how it is built, and the controls against them. PLT-1 defines the local/CI foundation, ACC-1 implements sign-in, sessions and role access, and ACC-2 demo workspace creation and the shared workspace lookup; other application controls and their verification remain planned. Controls link to their acceptance criteria where specified, with verification added by the slices that implement them. No deployed security is claimed here.
 
 ## Secrets and settings
 
@@ -19,7 +19,7 @@ Explicit database network addresses enforce loopback destinations despite inheri
 Threat: a visitor or user accesses another role's operations, another workspace's records or another tester's private draft.
 
 - Authorize every route and record lookup on the server before reading data or selecting AI context. Define role, workspace, ownership and state permissions for each operation.
-- Use Django's authentication, password hashing and CSRF protections, including its `Origin` check. Sessions are server-side, get a new identifier at every sign-in, end at sign-out and expire at an absolute time; sign-in ignores redirect targets ([ACC-1](product/accounts.md#acc-1-sign-in-and-out-by-role)). Sign-in validates its fields before authenticating, marks the password as sensitive so error reports omit it, and is never cached. Session and cookie settings are in the [accounts routes](TECHNICAL-SPEC.md#accounts-routes), and production settings under [Configuration](TECHNICAL-SPEC.md#configuration).
+- Use Django's authentication, password hashing and CSRF protections, including its `Origin` check. Sessions are server-side, get a new identifier at every sign-in, end at sign-out and expire at an absolute time; sign-in ignores redirect targets ([ACC-1](product/accounts.md#acc-1-sign-in-and-out-by-role)). Sign-in validates its fields before authenticating, and marks the password as sensitive so error reports omit it; sign-in and the role home pages are never cached. Session and cookie settings are in the [accounts routes](TECHNICAL-SPEC.md#accounts-routes), and production settings under [Configuration](TECHNICAL-SPEC.md#configuration).
 - Accounts come only from demo workspace creation, with generated passwords shown once on an uncached response and stored only as hashes ([ACC-2.1 to ACC-2.3](product/accounts.md#acc-2-create-an-isolated-demo-workspace)). Accounts have no staff or admin capability ([account model](TECHNICAL-SPEC.md#accounts-and-workspaces)).
 - Check the role before any record lookup, and filter every lookup by the signed-in user's workspace before reading; another workspace's record is indistinguishable from a missing one ([ACC-2.4](product/accounts.md#acc-2-create-an-isolated-demo-workspace)).
 - Share an authorization test matrix across manual and AI actions. Include forged identifiers, cross-workspace requests and denied state transitions.

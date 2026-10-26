@@ -10,11 +10,21 @@ The page is headed **Relay** and says:
 >
 > Testing workflows are coming soon.
 
-Its only action is the **Sign in** link.
+It has two actions: the **Sign in** link and the **Create a demo workspace** button. If you are already signed in, opening the start page takes you to your own home page.
 
 ## Accounts
 
-Each account has one role, **Test Coordinator** or **Beta Tester**, in one workspace. You cannot get an account through Relay yet: there is no registration, and demo workspaces are planned but not built. For local testing, a developer creates accounts as described in the [Developer Guide](DeveloperGuide.md#create-accounts-for-manual-testing).
+Each account has one role, **Test Coordinator** or **Beta Tester**, in one workspace. Accounts come only from demo workspaces: there is no registration, password reset or way to add accounts.
+
+## Create a demo workspace
+
+1. While signed out, choose **Create a demo workspace** on the start page.
+2. The **Your demo workspace** page shows `Workspace:` with the new workspace's name, and a table with the **Role**, **Username** and **Password** of one Test Coordinator and two Beta Testers. It says "Save these passwords now. They will not be shown again."
+3. Save the usernames and passwords, then choose **Sign in** to sign in with any of them.
+
+Creating a workspace does not sign you in. Each workspace is separate: its accounts never see another workspace's records. Reloading the page creates another new workspace instead of showing the same passwords again. While you are signed in, choosing **Create a demo workspace** takes you to your own home page and creates nothing.
+
+If creation fails, the page says "Relay is temporarily unavailable. Try again later." and nothing is created.
 
 ## Sign in
 
