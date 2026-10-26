@@ -22,22 +22,33 @@ Decisions (coordinator, under the human's delegation of 2026-10-26, "make my dec
   - require sessions to start at the repository or worktree root ([workflow README](../README.md#using-it));
   - assert the full rule list in the test.
 
-  Not adopted: mid-pattern `gh pr edit` flag rules, because their wildcard support is unverified on our client. That case is a stated residual instead.
+  Not adopted in round 1: mid-pattern `gh pr edit` flag rules, because wildcard support was unverified.
+- Review round 2 (findings from both reviewers on `d361535..5fbac08`, all Low):
+  - Repository-flag rules no longer need a space (`gh pr -R*`, `gh pr --repo*`), so `--repo=x` and `-Rx` are covered; the same rules now exist for `run` and `cache`, and `gh agent-task` is gated.
+  - Reviewer, label, assignee, project, milestone and base changes through `gh pr edit` are gated after the wildcard behaviour was observed. Title and body edits stay ungated.
+  - Wording: delivery covers the title and body of its own draft PR; "beyond the slice's authorized delivery"; codespaces and created or forked repositories; "some read-only commands, such as `gh api`"; "only the orchestrating session changes GitHub state".
+  - Residual wording: root launch loads no project settings or ask rules and doesn't load `AGENTS.md` at launch; PowerShell call forms and aliases named; PowerShell mirrors marked configured but unobserved. Test results stay in this plan, not the spec.
+  - Out of scope, for the human to file if wanted: PowerShell mirrors of the existing deny rules (`git push --force`, `git reset --hard`, `git checkout --`, `git clean`, `rm -rf`). These predate #40; in PowerShell a force push still meets the `git push` ask.
 
 ## Checkpoints
 
 1. `spec:` SECURITY-SPEC control and this plan (`c89fe17`).
 2. `chore:` the `AGENTS.md` rule, the ask rules and the adapter test (`d361535`).
-3. Round-1 repairs: `spec:` SECURITY-SPEC; `fix:` `AGENTS.md`, settings, workflow README and test; `plan:` this record.
+3. Round-1 repairs: `spec:` SECURITY-SPEC; `fix:` `AGENTS.md`, settings, workflow README and test; `plan:` this record (`80c9451`, `7d1b32c`, `5fbac08`).
+4. Round-2 repairs: `spec:` SECURITY-SPEC; `fix:` `AGENTS.md`, settings, workflow README and test; `plan:` this record.
 
 ## Verification
 
-- The adapter test asserts all 114 Bash and PowerShell rules (`git push` plus 56 `gh` forms in each tool). Run against round 0's settings, 84 of them are missing, so the test would have failed there.
+- The adapter test asserts all 148 Bash and PowerShell rules: 74 per tool, covering `git push`, the `gh` forms, the repository-flag prefixes and the `gh pr edit` flags. Run against round 0's settings, 118 of them are missing, so the test would have failed there. A second test checks that title and body edits stay ungated.
 - Observed, round 1: a headless Claude Code 2.1.89 session (`claude -p`) was started at the `relay-40` worktree root, with the round-1 settings and `--allowedTools "Bash(gh *)"`. In that session:
   - `gh pr view 48 --json number` ran;
   - `gh api repos/CS3227-2610-MP4-Relay/CS3227-2610-MP4 --jq .name` and `gh pr ready 999999` were refused.
 
-  A control run without the allow flag refused `gh api` too, as expected in headless mode. The PowerShell tool and the interactive prompt were not observed.
+  A control run without the allow flag refused `gh api` too, as expected in headless mode.
+- Observed, round 2: in the same setup, with the round-2 settings:
+  - refused: `gh pr --repo=<repo> view 48`, `gh pr -R<repo> view 48`, `gh run -R <repo> list` and `gh pr edit 999999 --add-reviewer=<name>`;
+  - ran: `gh pr view 48` and `gh pr edit 999999 --title probe` (GitHub answered that PR 999999 doesn't exist).
+- The local CLI 2.1.89 has no PowerShell tool, so the PowerShell rules and the interactive prompt were not observed.
 - Manual check (reviewer), in an interactive session opened at the repository root: ask for `gh api repos/CS3227-2610-MP4-Relay/CS3227-2610-MP4` and `gh pr ready 999999`, with a PR number that doesn't exist. Each must prompt; deny both.
 - Full verification runs on the final candidate, and the reviewers re-check the repaired range.
 
