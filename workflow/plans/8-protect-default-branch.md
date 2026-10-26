@@ -15,7 +15,7 @@ Budget: three security-spec bullets, two technical-spec lines and this plan; app
 - [x] Update the security control and the operator-prerequisite bullet; read changed sections back.
 - [x] Run full verification and `git diff --check` on the spec candidate.
 - [x] Coordinator applies branch protection, secret scanning and push protection.
-- [ ] Coordinator runs the manual verification below and records actual output. Steps 1–2 done; steps 3–4 wait for the PR and the human's push approval.
+- [x] Coordinator runs the manual verification below and records actual output.
 - [x] Round 0: verifier and security-reviewer review the candidate.
 - [ ] Round 1: verifier and security-reviewer re-review the repaired range.
 - [ ] Human merge decision.
@@ -45,3 +45,7 @@ Readback for step 1, from the protection endpoint projected with `--jq`:
 ```
 
 `.required_pull_request_reviews` showed `bypass_pull_request_allowances` and `dismissal_restrictions` as `null`. The organisation has no installed GitHub Apps. For step 2, `secret_scanning` and `secret_scanning_push_protection` are `enabled`; non-provider patterns, validity checks and Dependabot security updates are `disabled`. `branches/main` reports `protected: true`.
+
+Step 3, on [PR #41](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/pull/41) at head `b02e843`: `mergeStateStatus: BLOCKED` and `reviewDecision: REVIEW_REQUIRED`, while `verify` [concluded SUCCESS](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/actions/runs/40285610616/job/121448429746). That Linux CI run is this candidate's passing full verification.
+
+Step 4, at 2026-10-26T07:24:56Z, with the human's approval: zheng-jj, an admin, pushed probe commit `35ce6b1` (empty, parent `d1cbde4`, built with `git commit-tree`) to `refs/heads/main`. GitHub rejected it with `GH006: Protected branch update failed`, listing "Changes must be made through a pull request" and "Required status check "verify" is expected". `origin/main` stayed at `d1cbde4`. An earlier attempt failed locally before contacting GitHub, because zsh read `$C:r` in the refspec as a modifier.
