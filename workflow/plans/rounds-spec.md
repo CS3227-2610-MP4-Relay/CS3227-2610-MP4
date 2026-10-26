@@ -34,8 +34,6 @@ Slice notes:
 - RND-1 and RND-7: the shared round-creation code takes an explicit workspace argument, only ever `request.user.workspace` or the workspace ACC-2 has just created, never a value from request data.
 - RND-7: the slice first updates the spec with the sample round's exact text, then writes code. It extends ACC-2.5's tests so a failed creation also leaves no sample round, criteria, cases or links.
 - Every slice: its rules criterion runs the escaping and direction-isolation tests from the [rules for every round action](../specs/product/rounds.md#rules-for-every-round-action) for the user text its pages render, starting with RND-1.
-- RND-1 slice (deferred from the final security check): remove bidi control characters (U+202A–U+202E, U+2066–U+2069) from user text placed in a page `<title>`, so a stray U+2069 can't end the isolate early. Test a stray U+2069 followed by U+202E in both the title and page content.
-- RND-5 slice (deferred from the final security check): build the label key by removing format characters first, then applying NFC.
 
 ## Defaults
 
@@ -45,14 +43,14 @@ The coordinator accepted these defaults on 2026-10-26 after three verifier and s
 - Caps, since storage is shared and nothing is cleaned up: 20 rounds per workspace (the sample round included), 20 criteria and 30 cases per round, 10 builds per round (the publish build included).
 - Cases link to one or more criteria of the same round (many-to-many). A case always has at least one link, so a linked criterion cannot be deleted; deleting a case deletes its links explicitly. Unlinked criteria are allowed, including at publishing. Every foreign key uses `PROTECT`.
 - Publishing needs at least one case (and so at least one criterion) and a build label.
-- A retest selects cases by checkbox and names a new build. Labels are unique within a round, compared case-sensitively after NFC normalisation and removal of format characters (Cf), with a database unique constraint on round and that normalised key. A retest request is stored as a build covering the selected cases; a case's current build is the newest build covering it. The success message counts distinct cases and uses "1 test case" for one.
+- A retest selects cases by checkbox and names a new build. Labels are unique within a round, compared case-sensitively after removing format characters (Cf) and then applying NFC, with a database unique constraint on round and that normalised key. A retest request is stored as a build covering the selected cases; a case's current build is the newest build covering it. The success message counts distinct cases and uses "1 test case" for one.
 - Closing has no precondition; the close button warns that the round cannot be reopened.
 - No round deletion, reopening, published-case edits or versioning.
 - Checking order: method (405); sign-in, role and CSRF/`Origin` before any record is read (redirect or 403); URL records by workspace, then round membership (404); state (409); validation, including form-submitted IDs. Django's CSRF middleware runs before the view, so a signed-out POST without a token may get 403 rather than a redirect; tests of the redirect send a valid token.
 - Page titles and routes under `/coordinator/rounds/` are in the [rounds routes](../specs/TECHNICAL-SPEC.md#rounds-routes); messages, including success messages, are in the [criteria](../specs/product/rounds.md). Coordinator home lists rounds newest first, with no pagination given the cap. The round page shows each case's fields and links and, from publishing, each case's current build and the builds list. "Earlier builds" sits under each case on the results page, after its current-build results.
 - Concurrency: every round write locks the round row and re-checks state, caps and label uniqueness; round creation locks the workspace row. Racing requests: exactly one succeeds, and the losers get the cap message, the duplicate-label message or 409. Concurrent Draft edits to one record: last saved wins.
 - Storage failure: ACC's 503 page; the whole change rolls back. The sample round shares ACC-2's transaction, so ACC-2.5 covers its failure.
-- All user-written text is escaped, keeps its line breaks and sits in an element with `dir="auto"` around only the user text, which isolates its direction; site CSS does not reset `unicode-bidi`. In page titles, the user part sits between U+2068 and U+2069.
+- All user-written text is escaped, keeps its line breaks and sits in an element with `dir="auto"` around only the user text, which isolates its direction; site CSS does not reset `unicode-bidi`. In page titles, bidi controls are removed from the user part, which then sits between U+2068 and U+2069.
 
 ## Out of scope
 
