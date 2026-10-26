@@ -1,4 +1,4 @@
-"""The coordinator's round pages (RND-1 to RND-3), under the round action rules."""
+"""The coordinator's round pages (RND-1 to RND-3, RND-6), under the action rules."""
 
 import logging
 from functools import wraps

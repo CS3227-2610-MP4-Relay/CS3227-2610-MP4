@@ -75,3 +75,22 @@ def test_closing_time_is_empty_until_closing(round_):
     assert round_.closed_at is None
     published(round_)
     assert round_.closed_at is None
+
+
+@pytest.mark.ac("RND-6.3")
+@pytest.mark.parametrize("state", [Round.State.DRAFT, Round.State.CLOSED])
+def test_close_refuses_a_round_that_is_not_open(round_, state):
+    published(round_)
+    if state == Round.State.DRAFT:
+        draft = Round.objects.create(workspace=round_.workspace, title="Synthetic")
+        target = draft
+    else:
+        services.close(locked(round_))
+        target = round_
+    target.refresh_from_db()
+    before = (target.state, target.closed_at, snapshot(target))
+    with pytest.raises(services.RoundNotOpen) as refused:
+        services.close(locked(target))
+    assert str(refused.value) == "Only an Open round can be closed."
+    target.refresh_from_db()
+    assert (target.state, target.closed_at, snapshot(target)) == before

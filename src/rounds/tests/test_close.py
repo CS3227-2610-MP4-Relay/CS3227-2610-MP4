@@ -4,8 +4,11 @@ from unittest import mock
 
 import pytest
 from django.db import DatabaseError, transaction
+from django.db.models import QuerySet
 from django.test import Client
 from django.urls import reverse
+from django.utils import timezone
+from django.utils.formats import date_format
 from django.utils.html import escape
 
 from rounds import services
@@ -343,7 +346,11 @@ def test_storage_failure_mid_close_gives_503_and_changes_nothing(
     coord_client, opened, caplog
 ):
     before = everything()
-    with mock.patch.object(Round, "save", side_effect=DatabaseError("synthetic")):
+    # The close is one conditional UPDATE, so storage fails there.
+    failing = mock.patch.object(
+        QuerySet, "update", side_effect=DatabaseError("synthetic")
+    )
+    with failing:
         response = coord_client.post(close_url(opened.pk))
     assert response.status_code == 503
     assert UNAVAILABLE in page(response)
@@ -364,6 +371,19 @@ def test_injected_fields_are_ignored(coord_client, opened, make_round):
     stays_open(other)
 
 
+# Heading; criterion in its list and under the case; the case's title, steps,
+# expected result and current build; the build label and the covered case's
+# title in the builds list.
+EVERY_PLACE = 9
+
+
+def everywhere(make_round, text):
+    """A published round with `text` in every user-written field it shows."""
+    made = published(make_round(text), criterion=text, label=text, cases=1)
+    Case.objects.filter(round=made).update(title=text, steps=text, expected_result=text)
+    return made
+
+
 def closed_page(client, round_):
     client.post(close_url(round_.pk))
     html = page(client.get(detail(round_.pk)))
@@ -373,16 +393,9 @@ def closed_page(client, round_):
 
 @pytest.mark.ac("RND-6.5")
 def test_markup_on_the_closed_page_is_escaped(coord_client, make_round):
-    made = published(make_round(MARKUP), criterion=MARKUP, label=MARKUP, cases=1)
-    Case.objects.filter(round=made).update(
-        title=MARKUP, steps=MARKUP, expected_result=MARKUP
-    )
-    html = closed_page(coord_client, made)
+    html = closed_page(coord_client, everywhere(make_round, MARKUP))
     isolated = f'<span dir="auto">{escape(MARKUP)}</span>'
-    # Heading; criterion in its list and under the case; the case's title,
-    # steps, expected result and current build; the build label and the
-    # covered case's title in the builds list.
-    assert html.count(isolated) == 9
+    assert html.count(isolated) == EVERY_PLACE
     assert "<script>" not in html and "<img" not in html
     title = html.split("<title>", 1)[1].split("</title>", 1)[0]
     assert title == FSI + escape(MARKUP) + PDI
@@ -401,12 +414,9 @@ def test_line_breaks_on_the_closed_page_are_isolated_line_by_line(
     coord_client, make_round
 ):
     text = "Synthetic one" + LF + "two"
-    made = published(make_round(text), criterion=text, label=text, cases=1)
-    html = closed_page(coord_client, made)
+    html = closed_page(coord_client, everywhere(make_round, text))
     lines = '<span dir="auto">Synthetic one</span><br><span dir="auto">two</span>'
-    # Heading, the criterion in its list and under the case, the current
-    # build and the build label.
-    assert html.count(lines) == 5
+    assert html.count(lines) == EVERY_PLACE
 
 
 @pytest.mark.ac("RND-6.5")
@@ -414,11 +424,37 @@ def test_bidi_and_zero_width_characters_stay_inside_their_element(
     coord_client, make_round
 ):
     text = BIDI_AND_INVISIBLE
-    made = published(make_round(text), criterion=text, label=text, cases=1)
-    html = closed_page(coord_client, made)
+    html = closed_page(coord_client, everywhere(make_round, text))
     isolated = f'<span dir="auto">{text}</span>'
-    assert html.count(isolated) == 5
+    assert html.count(isolated) == EVERY_PLACE
     body = html.split("</title>", 1)[1]
     for char in (RLO, ZWSP, chr(0x2066)):
         assert char not in body.replace(isolated, ""), hex(ord(char))
     assert CLOSED in html
+
+
+@pytest.mark.ac("RND-6.1")
+def test_closed_page_does_not_show_the_closing_time(coord_client, opened):
+    html = closed_page(coord_client, opened)
+    opened.refresh_from_db()
+    closed_at = timezone.localtime(opened.closed_at)
+    for shown in (
+        date_format(closed_at, "DATE_FORMAT"),
+        date_format(closed_at, "SHORT_DATE_FORMAT"),
+        closed_at.isoformat(),
+        str(closed_at.year),
+    ):
+        assert shown not in html, shown
+
+
+@pytest.mark.ac("RND-6.2")
+def test_the_close_form_on_the_page_carries_a_working_csrf_token(coordinator, opened):
+    client = signed_in(coordinator, enforce_csrf_checks=True)
+    html = page(client.get(detail(opened.pk)))
+    form = html[html.index(f'action="{close_url(opened.pk)}"') :]
+    form = form[: form.index("</form>")]
+    token = form.split('name="csrfmiddlewaretoken" value="', 1)[1].split('"', 1)[0]
+    response = client.post(close_url(opened.pk), {"csrfmiddlewaretoken": token})
+    assert response.status_code == 302
+    opened.refresh_from_db()
+    assert opened.state == Round.State.CLOSED
