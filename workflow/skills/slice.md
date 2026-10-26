@@ -12,7 +12,11 @@ Choose and report the tier from the confirmed scope; ask only for unresolved beh
 | Standard | Other behaviour changes, including bug fixes | Builder, full verification and verifier; security-reviewer if the trigger below applies |
 | Fast lane | Cosmetic changes leaving behaviour, acceptance criteria and security controls unchanged | One builder or `maintain-docs`, targeted checks and human diff review; reclassify if behaviour changes |
 
-**Size budget:** A slice adds or changes criteria in at most one requirement, at most 8 of them, and changes at most 400 lines under `src/` outside tests and migrations, counting insertions plus deletions. Count the whole slice, including untracked source files. For committed work, use `git diff --shortstat <base> -- src ':(exclude)*/tests/*' ':(exclude)*/migrations/*' ':(exclude)src/e2e/*' ':(exclude)*/conftest.py'`; inspect new files separately because Git diff omits untracked files. The human may raise the budget for one slice after seeing its scope and burden.
+**Size budget:** A slice adds or changes criteria in at most one requirement and changes at most 400 lines under `src/` outside tests and migrations, counting insertions plus deletions. Count the whole slice, including untracked source files. For committed work, use `git diff --shortstat <base> -- src ':(exclude)*/tests/*' ':(exclude)*/migrations/*' ':(exclude)src/e2e/*' ':(exclude)*/conftest.py'`; inspect new files separately because Git diff omits untracked files. The human may raise these budgets for one slice after seeing its scope and burden.
+
+**Criterion-count guideline:** Aim for at most 8 added or changed criteria per slice. Above 8, review the scope and implementation and verification burden, including obligations inherited from shared rules; record in the plan why the slice remains reviewable or split it. Count alone does not require a budget exception, and staying at or below 8 does not establish that a slice is small. This is not a limit on a requirement's lifetime total; scope confirmation and the size budgets still apply.
+
+Give independently changeable behaviours distinct criterion IDs. Keep equivalent input and boundary variants of one coherent behaviour together; do not combine unrelated obligations merely to meet the guideline. Apply this when writing or changing criteria, preserving the [builder's stable-ID rules](../agents/builder.md).
 
 Apply [scope confirmation](../../AGENTS.md#scope-confirmation) throughout every tier. Routine choices within the confirmed request need no repeated permission.
 
