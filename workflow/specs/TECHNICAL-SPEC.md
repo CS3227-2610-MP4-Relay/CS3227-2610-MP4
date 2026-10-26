@@ -13,13 +13,40 @@ Keep shared storage, authorization, AI transport and presentation responsibiliti
 
 ## Data model
 
-Not specified yet. Design workspaces, role-based accounts, rounds, requirements, cases, build references and results around the [product areas](PRODUCT-SPEC.md#areas). Before schema implementation, settle ownership, state transitions, published-case edits, submitted-observation edits and result-history/version rules. Do not infer these from a proposed screen or table name.
+Only the subsections below are specified. Design workspaces, role-based accounts, rounds, requirements, cases, build references and results around the [product areas](PRODUCT-SPEC.md#areas). Before schema implementation, settle ownership, state transitions, published-case edits, submitted-observation edits and result-history/version rules. Do not infer these from a proposed screen or table name.
 
 Before implementing persistence, decide retention for accumulated business records, workspace lifetime, expired-session handling and behaviour when shared storage capacity is exhausted, including failed writes and preservation of required result history. These are open design decisions; no cleanup subsystem or retention duration is prescribed yet.
 
+### Accounts and workspaces
+
+For [ACC](product/accounts.md). The demo slice deletes nothing: workspace lifetime, retention of workspaces and limit rows, and expired-session handling remain the open decisions above.
+
+- **Workspace:** a unique name, `Demo workspace <suffix>`, and its creation time. Every workspace-owned record has a non-null workspace reference. Record lookups go through one shared helper that filters by the signed-in user's workspace before reading, so another workspace's record is indistinguishable from a missing one.
+- **Account:** a custom Django user model from the first migration, with a globally unique username, a Django password hash, a non-null workspace and a role of `coordinator` or `tester`, all fixed at creation. Accounts are never staff or superusers, and every account can sign in.
+- **Generated credentials:** usernames are `coord-<suffix>`, `tester1-<suffix>` and `tester2-<suffix>`, sharing the workspace's suffix of 8 random lowercase letters and digits; a suffix collision is retried. Each password is 16 random characters from `a-z`, `A-Z` and `0-9`, generated with `secrets`. Plain passwords exist only in memory while rendering the creation response.
+- **Creation:** the workspace, its accounts and its sample round are written in one transaction, together with the limit counts.
+- **Limit counter:** one row per scope and key, holding a window start and a count, unique on scope and key. Scopes are failed sign-in per address (15 minutes, 10), demo creation per address (1 hour, 3) and demo creation overall (24 hours, 50, one fixed key). A request reads and updates its row under a row lock; once the window has elapsed, the row restarts its window and count. The key is an HMAC of the client address keyed by Django's `SECRET_KEY`, never the address itself. Rows are not deleted.
+- **Client address:** `REMOTE_ADDR`, never a client-supplied forwarding header. IPv4 addresses count individually and IPv6 addresses by their `/64` prefix. Using a hosting provider's client-address header requires a verified setting naming it; until then, a proxy address shared by all clients makes the per-address limits shared too.
+- **Sessions:** Django's database-backed sessions, ending 8 hours after sign-in regardless of activity; sign-out deletes the session row.
+
 ## Routes
 
-Not specified yet. Each route contract must name its method, role/workspace/ownership checks, input validation, state preconditions, success result and denied/failure behaviour before implementation.
+Only the subsections below are specified. Each route contract must name its method, role/workspace/ownership checks, input validation, state preconditions, success result and denied/failure behaviour before implementation.
+
+### Accounts routes
+
+For [ACC](product/accounts.md). Every POST uses Django's CSRF protection, which also rejects an `Origin` header naming another site; a refused request gets 403 and changes nothing. A route that cannot reach storage, including its limit counts, returns 503 "Relay is temporarily unavailable. Try again later." and changes nothing. There is no Django admin route.
+
+| Route | Method | Access | Validation and success | Denied or failed |
+| --- | --- | --- | --- | --- |
+| `/` | GET | Signed out | Page "Relay" with a sign-in link and the "Create a demo workspace" button | Signed in: redirect to own role home |
+| `/sign-in/` | GET, POST | Anyone | If the failed sign-in limit allows it, Django's authentication checks the username and password. Success rotates the session and redirects to own role home; `next` is ignored | Invalid: form again, "Username or password is incorrect."; limited: 429 |
+| `/sign-out/` | POST | Anyone | Flushes the session; redirects to `/sign-in/` with "You have signed out." | Other methods: 405 |
+| `/demo/` | POST | Signed out | Checks both demo limits, creates the workspace in one transaction, then renders "Your demo workspace" with `Cache-Control: no-store`; no redirect | Signed in: redirect to own role home; other methods: 405; limited: 429 |
+| `/coordinator/` | GET | Test Coordinator | Page "Coordinator home" with username and workspace name | Signed out: redirect to `/sign-in/`; Beta Tester: 403 |
+| `/tester/` | GET | Beta Tester | Page "Tester home" with username and workspace name | Signed out: redirect to `/sign-in/`; Test Coordinator: 403 |
+
+The session cookie is `HttpOnly`; session and CSRF cookies are `SameSite=Lax`, and `Secure` outside local development. Later workspace routes require a signed-in user of the route's role, look records up through the workspace helper and return 404 "Page not found." for another workspace's record.
 
 ## Configuration
 

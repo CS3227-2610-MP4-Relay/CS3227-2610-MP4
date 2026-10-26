@@ -15,8 +15,15 @@ Threat: leaked keys, credentials or debug details expose data and production acc
 Threat: a visitor or user accesses another role's operations, another workspace's records or another tester's private draft.
 
 - Authorize every route and record lookup on the server before reading data or selecting AI context. Define role, workspace, ownership and state permissions for each operation.
-- Use Django's authentication, password hashing and CSRF protections. Specify session/cookie policy, demo-account creation, abuse limits and denied-request behaviour before implementing accounts.
+- Use Django's authentication, password hashing and CSRF protections, including its `Origin` check. Sessions are server-side, rotate at sign-in, end at sign-out and expire after a fixed lifetime; sign-in ignores redirect targets ([ACC-1](product/accounts.md#acc-1-sign-in-and-out-by-role)). Session and cookie settings are in the [accounts routes](TECHNICAL-SPEC.md#accounts-routes).
+- Accounts come only from demo workspace creation, with generated passwords shown once on an uncached response and stored only as hashes ([ACC-2.1 to ACC-2.3](product/accounts.md#acc-2-create-an-isolated-demo-workspace)). No account is staff or superuser, and there is no admin route.
+- Filter every record lookup by the signed-in user's workspace before reading; another workspace's record is indistinguishable from a missing one ([ACC-2.4](product/accounts.md#acc-2-create-an-isolated-demo-workspace)).
 - Share an authorization test matrix across manual and AI actions. Include forged identifiers, cross-workspace requests and denied state transitions.
+
+Threat: repeated sign-in attempts guess passwords, or repeated demo creation exhausts shared storage.
+
+- Count failed sign-ins and demo creations per client address, with an overall creation cap, atomically in the database; refuse when the count cannot be checked ([ACC-3](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation)). Store addresses only as keyed hashes, and never trust client-supplied forwarding headers.
+- Residual gaps: an attacker with many addresses can use up the overall cap and block demo creation for everyone. Behind a proxy that hides client addresses, per-address limits are shared by all clients until the provider's client-address header is verified.
 
 ## Rounds, observations and history
 
