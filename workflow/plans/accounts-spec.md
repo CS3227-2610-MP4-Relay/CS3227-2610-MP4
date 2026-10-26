@@ -4,7 +4,7 @@ Goal: specify sign-in by role, isolated demo workspaces and their abuse limits, 
 
 Tier: High, because it specifies sign-in, sessions and role/workspace permissions. Base: `03f7008`. Spec only: no code, tests, dependencies or guide changes. The Django project (#1) does not exist yet.
 
-Decisions (human, zheng-jj):
+Decisions (human, zheng-jj, and the coordinator under the delegation below):
 
 - Requirements live in [`accounts.md`](../specs/product/accounts.md) with prefix `ACC`: ACC-1 sign in and out by role (#2), ACC-2 create an isolated demo workspace (#3), ACC-3 limit abuse of sign-in and demo workspace creation (#4).
 - Signed-out visitors can create a demo workspace with exactly 1 Test Coordinator and 2 Beta Testers; generated usernames and passwords are shown once, on the creation response, and stored only as hashes.
@@ -12,6 +12,7 @@ Decisions (human, zheng-jj):
 - No self-registration, password reset, invitations, account changes, email, MFA or SSO. The sample draft round belongs to RND (RND-7). Rounds follow Draft → Open → Closed, as confirmed in [rounds-spec](rounds-spec.md).
 - From the rounds review: a record named in the URL from another workspace gets the 404, but an ID submitted in a form gets a form message instead. A GET to a POST-only route gets 405 everywhere. The coordinator applied the ACC-2.4 wording.
 - The human raised the one-requirement budget for this spec-only PR; each requirement still fits one later code slice (ACC-1 has 8 criteria, ACC-2 has 7, ACC-3 has 8).
+- Delegation: in their message of 2026-10-26, "just make my decisions for me, and do whats right", the human delegated the remaining decisions to the coordinator. Decisions made after that message, including the Defaults and the follow-ups, are the coordinator's.
 - Repair round 1: limits are loosened for shared networks, because peers in one lab share an address: 30 failed sign-ins per address per 15 minutes, 10 demo creations per address per hour and 200 overall per 24 hours.
 - Repair round 1: production is not released until Vercel's real client-address source is verified and recorded ([release gate](../specs/TECHNICAL-SPEC.md#release-verification)). A missing or unparseable address counts in one shared "unknown" counter instead of giving a 503.
 - Repair round 1: the retention, workspace-lifetime and expired-session decision is a precondition of ACC-1's code slice. Until then, hashed addresses are kept indefinitely. Unbounded session and counter rows are recorded as residual risks in the [security spec](../specs/SECURITY-SPEC.md#sign-in-and-access-control).
@@ -24,7 +25,7 @@ Decisions (human, zheng-jj):
 
 ## Defaults
 
-The coordinator accepted these defaults on 2026-10-26 under the human's delegation, after three verifier and security-review rounds.
+The coordinator accepted these defaults on 2026-10-26 under the human's delegation (see Decisions), after three verifier and security-review rounds.
 
 - Routes `/` (the Relay start page), `/sign-in/`, `/sign-out/` (POST only), `/demo/` (POST only), `/coordinator/` and `/tester/`; page titles "Relay", "Coordinator home", "Tester home" and "Your demo workspace".
 - The messages, the 403, 404, 429 and 503 pages, and the 8-hour session lifetime are as written in the criteria.
@@ -41,7 +42,7 @@ The coordinator accepted these defaults on 2026-10-26 under the human's delegati
 
 ## Notes for the code slices
 
-- The custom user model must be in place before any persistent database is migrated, in particular production under #5. PR #43 (#1) currently has none; if #1 ships without it, the ACC-1 slice adds it while no persistent database exists. Flag this for Whimsyturtle's #1.
+- PR #43 (#1) currently has no custom user model; when it must exist, and who adds it, is in the [account model](../specs/TECHNICAL-SPEC.md#accounts-and-workspaces). Flag this for Whimsyturtle's #1.
 - ACC-2.4 is tested through the shared lookup helper in unit tests. Later record routes test isolation under their own criteria. Ownership filtering of testers' private records is RES's job (for Whimsyturtle).
 - Time control uses `unittest.mock`, with no new dependency. ACC-3.6 and ACC-3.8 need PostgreSQL `TransactionTestCase` tests with threads.
 - If ACC-2 is implemented before RND-7, the RND slice adds the sample round to the creation transaction.
@@ -75,3 +76,5 @@ Check evidence, repair round 1 (builder, macOS, `.venv`): Ruff lint and format p
 Check evidence, repair round 2 (builder, macOS, `.venv`): Ruff lint and format passed; pytest reported 70 passed, 85 subtests passed. `git diff --check` is clean, and `check_scope.py builder --base 8e7d180` reported all changes within scope.
 
 Check evidence, follow-up after round 2 (builder, macOS, `.venv`): Ruff lint and format passed; pytest reported 70 passed, 85 subtests passed. `git diff --check` is clean, and `check_scope.py builder --base 43626bc` reported all changes within scope.
+
+Check evidence, last follow-up (builder, macOS, `.venv`): Ruff lint and format passed; pytest reported 70 passed, 85 subtests passed. `git diff --check` is clean, and `check_scope.py builder --base 9883f84` reported all changes within scope.
