@@ -413,7 +413,7 @@ def assert_signed_out_and_nothing_created(client):
 
 
 @pytest.mark.ac("ACC-3.7")
-@pytest.mark.parametrize("function", ["lock", "record", "start"])
+@pytest.mark.parametrize("function", ["peek", "lock", "record", "start"])
 def test_sign_in_limit_failure_gives_503(user, caplog, function):
     password = PASSWORD if function != "record" else WRONG
     client = Client()

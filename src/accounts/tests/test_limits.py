@@ -5,7 +5,7 @@ from unittest import mock
 
 import pytest
 from django.apps import apps
-from django.db import connection, transaction
+from django.db import connection, migrations, transaction
 from django.db.transaction import TransactionManagementError
 from django.test import RequestFactory
 
@@ -75,6 +75,11 @@ def test_stored_key_is_a_keyed_hash_not_the_address():
 def test_migration_creates_the_overall_creation_row():
     migration = importlib.import_module("accounts.migrations.0002_limit_counter")
     LimitCounter.objects.filter(scope="demo-total").delete()
+    assert any(
+        isinstance(operation, migrations.RunPython)
+        and operation.code is migration.create_overall_row
+        for operation in migration.Migration.operations
+    )
     migration.create_overall_row(apps, None)
     row = LimitCounter.objects.get(scope="demo-total", key="all")
     assert row.count == 0
