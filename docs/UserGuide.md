@@ -118,7 +118,7 @@ Under each case's linked criteria, **Current build** shows the label of the buil
 
 ### Close a round
 
-Closing ends testing on an Open round and makes it read-only. While a round is Open, its round page ends with "Closing makes this round read-only. It cannot be reopened." and a **Close round** button. A round can be closed at any time, even if some cases have not been tested.
+Closing ends testing on an Open round and makes it read-only. While a round is Open, its round page ends with "Closing makes this round read-only. It cannot be reopened." and a **Close round** button. A round can be closed at any time while it is Open, even if some cases have not been tested.
 
 1. On the Open round's page, choose **Close round**. There is no further confirmation.
 
