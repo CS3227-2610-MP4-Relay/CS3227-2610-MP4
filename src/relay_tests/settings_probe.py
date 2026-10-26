@@ -15,6 +15,10 @@ def main():
                 "debug": settings.DEBUG,
                 "hosts": settings.ALLOWED_HOSTS,
                 "database": settings.DATABASES["default"],
+                "cookies": {
+                    "session_secure": settings.SESSION_COOKIE_SECURE,
+                    "csrf_secure": settings.CSRF_COOKIE_SECURE,
+                },
             }
         )
     )

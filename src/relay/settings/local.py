@@ -36,3 +36,7 @@ DATABASES = {
         "PORT": os.environ.get("POSTGRES_PORT", "5432"),
     }
 }
+
+# Local development is served over plain HTTP.
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
