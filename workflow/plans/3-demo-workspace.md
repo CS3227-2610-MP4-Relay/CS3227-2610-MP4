@@ -13,12 +13,12 @@ Made by the coordinator on 2026-10-27 under the human's (zheng-jj) delegation, "
 - **PLT-1.1** keeps its ID; the start page has only the "Sign in" link and the "Create a demo workspace" button.
 - **Guides:** the User Guide says accounts come from demo workspaces; the Developer Guide's manual-account section points to the button.
 
-Builder's spec details within that scope (checkpoint 1), for the coordinator to confirm:
+Builder's spec details within that scope (checkpoint 1), confirmed by the coordinator on 2026-10-27 under the delegation:
 
 - Page text and layout of "Your demo workspace" in [ACC-2](../specs/product/accounts.md#acc-2-create-an-isolated-demo-workspace), including a "Sign in" link to `/sign-in/`; creation, lookup helper, collision handling and the 503 handling under [Accounts and workspaces](../specs/TECHNICAL-SPEC.md#accounts-and-workspaces).
 - Suffix collisions: up to 3 suffix draws checked by query; a final collision or a concurrent race fails on the unique constraint and gives the 503. No savepoint retry loop.
 - A `404.html` saying "Page not found." serves every 404, as ACC-2.4 states its text. PLT-1.3 stays generic, but its test's `b"Not Found"` assertion becomes `b"Page not found."` (listed for the verifier).
-- Any exception inside the creation block gives the 503 and is logged with its traceback only.
+- Any exception inside the creation block, including a rendering failure, gives the 503 and is logged with its traceback only (confirmed again after checkpoint 3, because ACC-2.5 names rendering failures).
 - `/` stays CSRF-exempt so PLT-1.2's 405s are unchanged; checkpoint 3 confirms the button's CSRF token still renders and its cookie is set.
 - The Developer Guide's shell recipe is removed: the button now gives the same accounts, so it is not useful.
 
@@ -37,7 +37,8 @@ Non-test, non-migration `src/` lines: `demo.py` ~55, `workspaces.py` ~12, views 
 
 ## Open issues
 
-- Coordinator to confirm the builder's spec details above, in particular the `404.html` change to the PLT-1.3 test expectation.
+- Resolved (coordinator, 2026-10-27): the builder's spec details above, including the `404.html` change to the PLT-1.3 test expectation.
+- `README.md` still says demo workspaces are planned; it is outside the builder's scope, so the coordinator updates it.
 - ACC-2 is not deployed to production before ACC-3 ([accounts-spec](accounts-spec.md)).
 - Human review and merge remain pending.
 
@@ -46,6 +47,6 @@ Non-test, non-migration `src/` lines: `demo.py` ~55, `workspaces.py` ~12, views 
 - [x] Checkpoint 1: specs and plan.
 - [x] Checkpoint 2: creation service, lookup helper and tests (red evidence first). Red: both test modules failed to import (`accounts.demo`, `accounts.workspaces` missing). Green: `pytest src/accounts -q` 63 passed; Ruff clean. 92 of 400 budget lines.
 - [x] Checkpoint 3: routes, start page, templates, 503 page and tests (red evidence first). Red: 17 failed, 8 passed (`/demo/` gave 404, `/` set no CSRF cookie, Django's default 404 page). Green: full verification 174 passed, 1 skipped; Ruff clean. 169 of 400 budget lines since `9dc41a7`. Expectation changes for the verifier: PLT-1.1 now requires one form posting to `/demo/` (was no form); PLT-1.3 requires "Page not found." (was "Not Found").
-- [ ] Checkpoint 4: guides.
-- [ ] Full verification, size budget and builder scope check.
+- [x] Checkpoint 4: guides, and the opening status sentences of `accounts.md`, `TECHNICAL-SPEC.md` and `SECURITY-SPEC.md`. The shell recipe is removed.
+- [x] Full verification, size budget and builder scope check (checkpoint 4, Windows, on `fea7923` plus the checkpoint 4 edits): `manage.py check` and `makemigrations --check` clean; Ruff clean; 188 passed, 1 skipped, 85 subtests passed. `git diff --check` clean; `check_scope.py builder --base fea7923` clean. Budget: 169 of 400 lines since `9dc41a7` for ACC-2; the raw `src/` diff is 197, including 28 lines from the merged ACC-1 repair.
 - [ ] Independent verifier and security review; human review and merge.
