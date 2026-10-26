@@ -70,8 +70,18 @@ Verifier: 0 Critical, High or Medium, 3 Low, 6 Info. Security reviewer: 0 Critic
 ## Repair round 1
 
 - Fix with tests (`fix:`): `src/rounds/views.py` (count from the request), `src/rounds/templates/rounds/round_form.html` (empty text), `src/rounds/tests/test_retest.py` (`test_a_storage_failure_after_the_commit_cannot_lose_a_saved_retest`, `test_the_case_group_has_its_own_empty_text`). Red: the storage test gave a 503 with the build saved (`assert (503, True) in ((302, True), (503, False))`); the empty-text test found no "No test cases yet.". Mutation: reading the count from `build.links` again fails the storage test.
-- Test-only (`test:`): `src/rounds/tests/test_retest.py` (counts 10 and 30, "02" and "010", the null-character label, out-of-range and malformed case IDs, the 10th-build race) and `src/rounds/tests/test_retest_services.py` (a Closed round at the cap). They passed on first run: they pin behaviour already in place. Mutations on temporary copies, restored and checked with `cmp`: the count pattern narrowed to `[2-9]` failed the 10 and 30 cases; allowing leading zeros failed "02", "010" and two earlier cases; no row lock in the view failed the 10th-build race and the two earlier races; checking the cap before the Open state failed the service-order test; without the form's `invalid_pk_value` message the "1.5" case failed. Out-of-range IDs already reach the RND-5.6 message through Django 6.1's `invalid_choice`, so the form needed no change.
+- Pinning tests, committed with the fix in `02ef233` (all of `test_retest.py`'s additions): counts 10 and 30, "02" and "010", the null-character label, out-of-range and malformed case IDs, the 10th-build race. Test-only (`test:`, `188a098`): `src/rounds/tests/test_retest_services.py` (a Closed round at the cap). These passed on first run: they pin behaviour already in place. Mutations on temporary copies, restored and checked with `cmp`: the count pattern narrowed to `[2-9]` failed the 10 and 30 cases; allowing leading zeros failed "02", "010" and two earlier cases; no row lock in the view failed the 10th-build race and the two earlier races; checking the cap before the Open state failed the service-order test; without the form's `invalid_pk_value` message the "1.5" case failed. Out-of-range IDs already reach the RND-5.6 message through Django 6.1's `invalid_choice`, so the form needed no change.
 - Spec and docs: the SECURITY-SPEC residual (`spec:`), the User Guide message placement (`docs:`).
+
+## Re-review of repair round 1 and repair round 2
+
+Re-reviews of repair round 1 (`6609089` to `c31c07e`): the security reviewer found every finding resolved and nothing new; the verifier found every finding resolved, with 1 Low (R1, this plan's record of which commit holds which tests) and 2 Info (R2, the storage test's criterion mark; R3, the message-storage wording).
+
+Repair round 2, the last (coordinator decisions, 2026-10-27, under the human's delegation):
+
+- R1 (plan): the repair round 1 record above now says the pinning tests in `test_retest.py` were committed with the fix in `02ef233`, and only the Closed-at-cap service test in the test-only commit `188a098`. History is not rewritten.
+- R2 (`test:`): `test_a_storage_failure_after_the_commit_cannot_lose_a_saved_retest` is marked RND-5.8, since it checks the 503 rule; its assertions are unchanged.
+- R3 (`spec:`): the SECURITY-SPEC residual says the default storage falls back to the session only for large message sets.
 
 ## Open issues
 
@@ -86,3 +96,4 @@ Verifier: 0 Critical, High or Medium, 3 Low, 6 Info. Security reviewer: 0 Critic
 - [x] Checkpoint 4: guides and status. User Guide: a "Request a retest" section (link, fields, button, messages, the 10-build cap, earlier builds kept, Open rounds only) and the Open and Closed round text. Developer Guide: `RetestForm`, `retest_round`, `request_retest` and its check order, `status_message` and its exact-match rule. Status sentences of `rounds.md`, `TECHNICAL-SPEC.md` and `SECURITY-SPEC.md`. README text proposed to the coordinator.
 - [x] Full verification, size budget and builder scope check (checkpoint 4, Windows, test-database lock): `check` and `makemigrations --check` clean, Ruff clean, 684 passed, 1 skipped, 85 subtests passed; `git diff --check` clean; scope clean against `4381eae`; RND-5's own `src/` lines since `29b81c0`: 138 added and 12 removed, of 400.
 - [x] Repair round 1: full verification 698 passed, 1 skipped, 85 subtests passed, Ruff clean; the four RND-5.7 races passed 5 runs in a row; RND-5's own `src/` lines since `29b81c0` 140 added and 13 removed, of 400; builder scope check passed.
+- [x] Repair round 2: full verification 698 passed, 1 skipped, 85 subtests passed, Ruff clean; no `src/` change outside tests; builder scope check passed.
