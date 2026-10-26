@@ -45,11 +45,11 @@ You are also signed out 8 hours after signing in, whatever you do in between; op
 
 ## Test rounds
 
-Only a Test Coordinator can prepare, publish and close test rounds. A new round is in the **Draft** state; [publishing](#publish-a-round) it makes it **Open**, and [closing](#close-a-round) it makes it **Closed**. Beta Testers do not see rounds yet.
+Only a Test Coordinator can prepare, publish, retest and close test rounds. A new round is in the **Draft** state; [publishing](#publish-a-round) it makes it **Open**, and [closing](#close-a-round) it makes it **Closed**. Beta Testers do not see rounds yet.
 
 **Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". With no rounds, it says "No rounds yet."
 
-Whenever creating, publishing or closing a round, or saving or deleting anything in it, fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
+Whenever creating, publishing, retesting or closing a round, or saving or deleting anything in it, fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
 
 ### Create a round
 
@@ -112,9 +112,29 @@ A build label has 1 to 100 characters; spaces or line breaks at either end are r
 
 ### An Open round
 
-An Open round's page shows "State: Open" and the criteria and cases exactly as they were when it was published. Its title, criteria and cases can no longer be changed, so the page has no **Edit round** link, no add, edit or delete links and buttons, and no **Publish round** button. The only action left is to [close](#close-a-round) the round.
+An Open round's page shows "State: Open" and the criteria and cases exactly as they were when it was published. Its title, criteria and cases can no longer be changed, so the page has no **Edit round** link, no add, edit or delete links and buttons, and no **Publish round** button. You can still [request a retest](#request-a-retest) or [close](#close-a-round) the round.
 
-Under each case's linked criteria, **Current build** shows the label of the build the case is tested on. After the test cases, a **Builds** heading lists the round's builds, oldest first: each build's label, then **Covered test cases** with the titles of the cases it covers. A newly published round has one build, covering every case.
+Under each case's linked criteria, **Current build** shows the label of the build the case is tested on. After the test cases, a **Builds** heading lists the round's builds, oldest first: each build's label, then **Covered test cases** with the titles of the cases it covers. A newly published round has one build, covering every case; each [retest](#request-a-retest) adds another.
+
+### Request a retest
+
+A retest asks for some of an Open round's cases to be tested again on a new build. Only an Open round can be retested: while a round is Open, its round page has a **Request a retest** link directly under the **Builds** heading.
+
+1. On the Open round's page, choose **Request a retest**.
+2. Under **Test cases to retest**, tick the cases to test again. No case is ticked at first.
+3. Enter a **Build label** for the new build, then choose **Request retest**.
+
+The round page shows, for example, "Retest requested for 2 test cases on build 1.4.1-beta.", or "Retest requested for 1 test case on build 1.4.1-beta." for one case. The cases you ticked now show the new build as their **Current build**, and the other cases keep theirs. The new build is added to the end of the **Builds** list with the cases it covers; earlier builds stay listed with theirs, and the round's criteria and cases do not change. A case can be retested again later on another build. The **Request a retest** page also has a **Back to round** link.
+
+If something is wrong, the page shows again with your ticks and label kept:
+
+- With no case ticked: "Select at least one test case." next to **Test cases to retest**.
+- The build label follows the same rules as when publishing: "Enter 1 to 100 characters." or "Null characters are not allowed." next to **Build label**.
+- A label already used for a build of this round, including the one named at publishing: "This build label is already used in this round." Upper and lower case count as different, but invisible formatting characters such as zero-width spaces are ignored, and the same accented letter typed in different ways counts as the same.
+- A round can have up to 10 builds, counting the one named at publishing. Requesting an 11th gets "This round has reached its limit of 10 builds."
+- A ticked case that is not in this round gets "Choose test cases from this round."
+
+If the round was closed in the meantime, the page says "This action is not available while the round is Closed." and no build is added.
 
 ### Close a round
 
@@ -124,4 +144,4 @@ Closing ends testing on an Open round and makes it read-only. While a round is O
 
 The round page shows "Round closed." and "State: Closed". A Closed round cannot be reopened or returned to Draft.
 
-A Closed round's page still shows its criteria, its cases with their linked criteria and **Current build**, and the **Builds** list. It has no links or buttons for changing the round, and no **Close round** button.
+A Closed round's page still shows its criteria, its cases with their linked criteria and **Current build**, and the **Builds** list. It has no links or buttons for changing the round, no **Request a retest** link and no **Close round** button.
