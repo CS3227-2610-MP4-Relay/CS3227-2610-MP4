@@ -42,3 +42,31 @@ Opening a home page while signed out takes you to the sign-in page. Opening the 
 Choose **Sign out** on your home page. The sign-in page shows "You have signed out."
 
 You are also signed out 8 hours after signing in, whatever you do in between; opening a home page after that takes you to the sign-in page.
+
+## Test rounds
+
+Only a Test Coordinator can prepare test rounds. A round starts in the **Draft** state; later states are **Open** and **Closed**. Beta Testers do not see rounds yet.
+
+**Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". With no rounds, it says "No rounds yet."
+
+### Create a round
+
+1. On **Coordinator home**, choose **New round**.
+2. Enter a **Title**, then choose **Create round**.
+
+The round page opens. It shows the title as its heading, "State: Draft", an **Edit round** link and a **Coordinator home** link.
+
+### Change a round's title
+
+1. On the round page, choose **Edit round**.
+2. Change the **Title**, then choose **Save**.
+
+The round page shows the new title. You can change the title only while the round is Draft; otherwise the page says "This action is not available while the round is Open." (or "Closed.").
+
+### Titles and limits
+
+A title has 1 to 120 characters; spaces at either end are removed. An empty title, a title of only spaces or invisible characters, or a longer one gets "Enter 1 to 120 characters." A title containing a null character gets "Null characters are not allowed."
+
+A workspace can have up to 20 rounds. Creating a 21st gets "This workspace has reached its limit of 20 rounds." Nothing deletes a round.
+
+If saving fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
