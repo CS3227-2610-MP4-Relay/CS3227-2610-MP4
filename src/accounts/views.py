@@ -7,8 +7,11 @@ from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
+from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from .forms import SignInForm
 from .models import User
 
 SESSION_LIFETIME = timedelta(hours=8)
@@ -18,17 +21,16 @@ HOMES = {
 }
 
 
+@sensitive_post_parameters("password")
+@never_cache
 @require_http_methods(["GET", "POST"])
 def sign_in(request):
     """Show the sign-in form; on valid credentials start a fresh session."""
     if request.method == "GET":
         return render(request, "accounts/sign_in.html")
-    user = authenticate(
-        request,
-        username=request.POST.get("username", ""),
-        password=request.POST.get("password", ""),
-    )
-    if user is None:
+    form = SignInForm(request.POST)
+    user = form.is_valid() and authenticate(request, **form.cleaned_data)
+    if not user:
         context = {"error": "Username or password is incorrect."}
         return render(request, "accounts/sign_in.html", context)
     # login() keeps the identifier when the same user signs in again (ACC-1.7).

@@ -4,6 +4,8 @@ import importlib
 import json
 import sys
 
+from django.conf import global_settings
+
 
 def main():
     """Print the selected settings for configuration assertions."""
@@ -15,6 +17,9 @@ def main():
                 "debug": settings.DEBUG,
                 "hosts": settings.ALLOWED_HOSTS,
                 "database": settings.DATABASES["default"],
+                "hashers": getattr(
+                    settings, "PASSWORD_HASHERS", global_settings.PASSWORD_HASHERS
+                ),
                 "cookies": {
                     "session_secure": settings.SESSION_COOKIE_SECURE,
                     "csrf_secure": settings.CSRF_COOKIE_SECURE,
