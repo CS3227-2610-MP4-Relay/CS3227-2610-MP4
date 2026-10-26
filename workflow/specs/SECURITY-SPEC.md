@@ -27,7 +27,9 @@ Threat: a visitor or user accesses another role's operations, another workspace'
 Threat: repeated sign-in attempts guess passwords, or repeated demo creation exhausts shared storage.
 
 - Count failed sign-ins and demo creations per client address, with an overall creation cap, atomically in the database; refuse when the count cannot be checked ([ACC-3](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation)). Store addresses only as keyed hashes, and never trust client-supplied forwarding headers. Production waits for the client-address [release gate](TECHNICAL-SPEC.md#release-verification).
+- Demo creation checks both creation counts before hashing any password, so a refused request costs no hashing; the locked re-check inside the transaction is what enforces the limit. Lock, statement and idle-in-transaction timeouts bound how long a counter lock is held ([limited transactions](TECHNICAL-SPEC.md#accounts-and-workspaces)).
 - Residual gaps, accepted for now:
+  - The pre-check is unlocked, so concurrent creation requests near a limit can each pass it and pay for hashing before the locked re-check refuses them.
   - An attacker with many addresses can use up the overall cap and block demo creation for everyone.
   - Behind a proxy that hides client addresses, or for requests without a parseable address, clients share one count.
   - Fixed windows allow a burst across a window boundary.

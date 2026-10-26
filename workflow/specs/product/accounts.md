@@ -37,6 +37,8 @@ The "Your demo workspace" page, titled and headed "Your demo workspace", shows "
 
 Failed sign-ins and demo creations are limited per client address, as defined in the [technical spec](../TECHNICAL-SPEC.md#accounts-and-workspaces), and demo creations also in total across all addresses. Each limit's window starts at its first counted request. The limits allow for peers in one lab sharing an address.
 
+A limited sign-in shows the sign-in page, titled and headed "Sign in", with its message in place of the failure message and the form below it. The limited demo creation page shows only its message as its heading.
+
 - **ACC-3.1** (boundary) The 30th failed sign-in from one client address within 15 minutes still gets the normal failure message. Any further sign-in from that address in the window, even with a correct password, gets a 429 sign-in page saying "Too many sign-in attempts. Try again later." and does not sign in.
 - **ACC-3.2** (boundary) Just before a limit's window ends, its refused requests are still refused; at or after the end, they are checked normally again.
 - **ACC-3.3** (ambiguous) Only failed sign-ins, including blank fields, and completed demo creations count. Successful sign-ins neither count nor reset the failed count. Refused (403, 429 or 503) requests and failed creations count toward no limit, and a refused sign-in does not extend its window. Viewing the sign-in page is never limited.
