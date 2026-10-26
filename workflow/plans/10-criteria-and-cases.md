@@ -1,0 +1,58 @@
+# Slice 10: Manage a round's acceptance criteria and test cases (#10)
+
+Goal: implement [RND-2](../specs/product/rounds.md#rnd-2-manage-acceptance-criteria-and-test-cases) under the [rules for every round action](../specs/product/rounds.md#rules-for-every-round-action), the second rounds code slice.
+
+Tier: High (workspace and round isolation of nested records, form-submitted IDs, rendering of user-written text). Base: `ef3b11f`, branch `10-criteria-and-cases`, stacked on RND-1's `9-prepare-round` (which contains ACC-1 and ACC-2); the PR base is `9-prepare-round`. Owner: zheng-jj. Budget: one requirement (RND-2, 8 existing criteria, none added or changed); at most 400 changed lines under `src/` outside tests and migrations.
+
+## Decisions
+
+Made by the coordinator on 2026-10-27 under the human's (zheng-jj) delegation, "make my decisions for me":
+
+- **Scope:** RND-2 only: criterion and case models with their links and migration; the criterion and case add, edit and delete routes and forms from the [Rounds routes](../specs/TECHNICAL-SPEC.md#rounds-routes); the round page's criteria and cases sections; the caps (20 criteria, 30 cases) under the round row lock; same-round link validation in the form and again in the write transaction; the RND-2.8 rule and rendering tests.
+- **Reuse:** extend RND-1's `coordinator_view`, `own_round`, `RoundTextField`, `isolated_lines`, `title_isolate` and 409 page instead of duplicating them. Criterion and case writes lock only the round row.
+- **Not included:** publishing (RND-3), builds and retests (RND-5), closing (RND-6), the sample round (RND-7), tester views (RES). Rounds cannot reach Open or Closed yet; 409 tests set the state directly in test data.
+- **Merge:** if RND-1's repair round 2 changes shared code, the coordinator merges it before checkpoint 3.
+
+Builder's spec details within that scope (checkpoint 1), awaiting the coordinator's confirmation:
+
+- Page text and layout in the [RND-2 introduction](../specs/product/rounds.md#rnd-2-manage-acceptance-criteria-and-test-cases): "Acceptance criteria" and "Test cases" headings with "No acceptance criteria yet." and "No test cases yet."; each case's title as a subheading, then "Steps", "Expected result" and "Linked acceptance criteria", linked criteria shown by their text; Draft-only controls "Add acceptance criterion", "Add test case", "Edit criterion", "Delete criterion", "Edit test case", "Delete test case"; deletion without confirmation; form fields "Text", "Title", "Steps", "Expected result" and checkboxes under "Linked acceptance criteria" labelled with each criterion's text; buttons "Add acceptance criterion", "Add test case" and "Save"; a "Back to round" link; no success messages; where each message appears.
+- The sections show in every state, with controls only while Draft, because the round route already shows criteria and cases in any state and RND-3.1 and RND-6.1 rely on them. No numbering of criteria, since positions would shift on deletion.
+- [Technical details](../specs/TECHNICAL-SPEC.md#rounds): models `Criterion`, `Case` (not `TestCase`, which pytest would try to collect when imported into tests) and an explicit `CaseCriterion` link model with `PROTECT` keys and a unique pair constraint; ordering by ascending ID; choice-field messages for other-round, missing and non-integer IDs; the in-transaction re-check; a record deleted after its form opened gives 404 on save; the shared text field turns CR LF into LF before trimming, so a browser line break counts as one character and the textarea's `maxlength` agrees with the server; textareas carry `dir="auto"`. One delivery-order sentence under [Rounds routes](../specs/TECHNICAL-SPEC.md#rounds-routes). The security spec needs no change: its rounds section already covers form-submitted IDs, round membership, the lock and the caps.
+
+## Checkpoints
+
+1. **Specs and plan** (this checkpoint, `spec:`/`plan:`): `workflow/specs/product/rounds.md`, `workflow/specs/TECHNICAL-SPEC.md`, this plan. Check: `git diff --check`; read changed sections back.
+2. **Models, migration and services** (`feat:`): `src/rounds/models.py`, `src/rounds/migrations/0002_criteria_and_cases.py`, `src/rounds/services.py`, `src/rounds/tests/test_services.py`. Services take an already locked round: `add_criterion(round_, text)`, `add_case(round_, fields, criterion_ids)`, `save_case(case, fields, criterion_ids)` (re-checks the IDs against the round, replaces links), `delete_case(case)` (links first), `delete_criterion(criterion)` (refuses if linked); limit and link errors carry the exact RND-2 messages. Tests, marked: RND-2.5 the 20th criterion and 30th case are created, the 21st and 31st raise with nothing created, another round's records don't count; RND-2.7 an ID of another round or a missing ID raises the message with nothing changed; RND-2.3 deleting a case removes its links and keeps its criteria; RND-2.6 deleting a linked criterion raises with nothing deleted; database limits (500, 120, 2000, 1000) and the unique link pair; `PROTECT` refuses deleting a linked criterion directly. Red first. Checks: `makemigrations --check`, `pytest src/rounds -q` through the shared test-database lock.
+3. **Routes, forms, templates and RND-2 tests** (`feat:`): `src/rounds/{forms,views,urls}.py`, `src/rounds/templates/rounds/{round,round_form}.html`, `src/rounds/tests/test_records.py` (new), `src/rounds/tests/test_rendering.py`, `src/rounds/tests/conftest.py`, `src/rounds/tests/test_views.py` (RND-1.1 expectation, below). Shape, to stay in budget: one generic form template for all round forms (fields in order, checkbox labels through `isolated_lines`); one view helper for the four add and edit routes (URL lookups, 409 on GET and POST, locked re-check, form save) and one for the two delete routes. Tests, each marked:
+   - RND-2.1 adding a criterion redirects to the round page, which lists its text; creation order.
+   - RND-2.2 adding a case with two criteria shows its title, steps, expected result and those criteria's text; creation order.
+   - RND-2.3 editing a criterion and a case (text, fields and links, the edit forms holding current values and checked links); deleting a case keeps its criteria; deleting an unlinked criterion removes it.
+   - RND-2.4 each field at its maximum saved (also after trimming and with CR LF line breaks counted as one); each field empty, invisible-only and one over gets its own "Enter 1 to <maximum> characters." with the other fields valid and nothing changed, on add and edit; a null character gets "Null characters are not allowed.".
+   - RND-2.5 the 20th criterion and 30th case through the routes, the 21st and 31st refused with the message next to "Text" or "Title"; a threaded race (as RND-1.5) with one slot left: exactly one of 5 criterion adds succeeds.
+   - RND-2.6 a case with no criteria gets the message, on add and edit; deleting a linked criterion shows the round page, status 200, with the message under it and nothing deleted.
+   - RND-2.7 another round's criterion (same workspace), another workspace's, a missing ID and a non-integer value each get "Choose criteria from this round." with nothing saved, on add and edit; a criterion deleted between form validation and the locked write (patched) gets the same message.
+   - RND-2.8 rules: 405 (GET on both delete routes, PUT on add and edit, HEAD where only GET and POST are listed); signed-out redirect and tester 403 on every route, before any lookup (identical for existing and missing IDs); 403 for a missing CSRF token and a foreign `Origin` with nothing changed; 404 "Page not found." for another workspace's round in any state, for a missing criterion or case, and for an Open round's criterion or case under a Draft round's URL in the same workspace (record unchanged), never 409; 409 with the exact message for every add, edit (GET and POST) and delete on an Open or Closed round, nothing changed; a state change between the first check and the locked write gives 409; `DatabaseError` gives the 503 with nothing changed; never-cached responses. Rendering of criterion text, case title, steps and expected result on the round page and of criterion text in checkbox labels and linked-criteria lists: markup escaped in content and in edit-form values, line breaks as per-line `<span dir="auto">` elements, bidi and zero-width characters kept inside those elements; none of this text reaches a page title (the form pages have fixed titles).
+   Red first, recording the failures. Checks: focused `pytest src/rounds -q`, then full verification.
+4. **Guides and status** (`docs:`): `docs/UserGuide.md` (criteria and cases sections, forms, limits, messages, in the product's exact words), `docs/DeveloperGuide.md` (models, services, view helpers), the status sentence of `rounds.md`. Check: read back; `git diff --check`; builder scope check.
+
+Repairs after review are separate `fix:` commits.
+
+Test expectation change (for the verifier): RND-1.1's test asserts that a new round page contains no "criteri" or "test case" text. RND-1.1 says the page shows "no criteria or cases", which from RND-2 means the empty sections; the test will instead assert "No acceptance criteria yet." and "No test cases yet." and no list items. Its other assertions stay.
+
+## Size estimate
+
+Non-test, non-migration `src/` lines: models ~50 (criterion ~12, case ~15, link ~15, ordering), services ~60, forms ~45 (CR LF in the shared field, criterion and case forms, the criteria choice field and messages), views ~120 (two shared helpers and six thin routes), urls ~8, templates ~65 (round page sections ~45, generic form ~20 net); about 350 of 400. Checkpoint 3 is the risk; if it trends above 400, the fallback is to drop per-route view wrappers in favour of the helpers called from `urls.py`, and otherwise stop with `needs-decision`. Reported with real numbers at checkpoints 2 and 3.
+
+## Open issues
+
+- Browser check of the per-line `dir="auto"` rendering in checkbox labels and case text: open for the human (automated tests check the markup only).
+- `maxlength` in browsers counts UTF-16 units while the server counts code points (accepted in RND-1); after CR LF normalisation, line breaks agree.
+- RND-1 is still in review; human review and merge of both slices pending.
+
+## Checklist
+
+- [x] Checkpoint 1: specs and plan.
+- [ ] Checkpoint 2: models, migration, services and tests.
+- [ ] Checkpoint 3: routes, forms, templates and RND-2 tests.
+- [ ] Checkpoint 4: guides and status.
+- [ ] Full verification, size budget and builder scope check.
