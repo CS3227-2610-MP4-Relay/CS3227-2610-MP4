@@ -151,10 +151,10 @@ def publish(round_, label):
 
 
 class RoundNotOpen(Exception):
-    """A close of a round that is not Open; the view's 409 normally comes first."""
+    """A close or retest of a round that is not Open; the view gives the 409."""
 
     def __init__(self):
-        super().__init__("Only an Open round can be closed.")
+        super().__init__("The round is not Open.")
 
 
 def close(round_):
@@ -170,3 +170,36 @@ def close(round_):
     if not closed:
         raise RoundNotOpen
     round_.state, round_.closed_at = Round.State.CLOSED, now
+
+
+BUILD_LIMIT = 10
+NO_CASE = "Select at least one test case."
+FOREIGN_CASE = "Choose test cases from this round."
+DUPLICATE_LABEL = "This build label is already used in this round."
+
+
+def request_retest(round_, label, case_ids):
+    """Add a build of the locked Open `round_` covering the chosen cases (RND-5).
+
+    Every check runs before any write, and no refusal names the label: the
+    round must still be Open, below the build cap, the cases its own (nothing
+    in the database ties a covered case to its build's round), and the label's
+    key unused in it, so racing duplicates never reach the unique constraint.
+    """
+    if not Round.objects.filter(pk=round_.pk, state=Round.State.OPEN).exists():
+        raise RoundNotOpen
+    if round_.builds.count() >= BUILD_LIMIT:
+        message = f"This round has reached its limit of {BUILD_LIMIT} builds."
+        raise Refused(message, "label")
+    ids = set(case_ids)
+    if not ids:
+        raise Refused(NO_CASE, "cases")
+    chosen = list(round_.cases.filter(pk__in=ids))
+    if len(chosen) != len(ids):
+        raise Refused(FOREIGN_CASE, "cases")
+    key = build_key(label)
+    if round_.builds.filter(key=key).exists():
+        raise Refused(DUPLICATE_LABEL, "label")
+    build = Build.objects.create(round=round_, label=label, key=key)
+    BuildCase.objects.bulk_create(BuildCase(build=build, case=case) for case in chosen)
+    return build

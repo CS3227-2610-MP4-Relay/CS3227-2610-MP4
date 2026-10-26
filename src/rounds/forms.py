@@ -6,7 +6,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from . import services
-from .models import Criterion
+from .models import Case, Criterion
 
 
 def has_visible_character(text):
@@ -90,11 +90,36 @@ class CaseForm(RecordForm):
     )
 
 
-class PublishForm(forms.Form):
-    """The label of the build a Draft round is published on (RND-3)."""
-
-    label = RoundTextField(
+def build_label():
+    """A new build's "Build label" field, 1 to 100 characters."""
+    return RoundTextField(
         max_length=100,
         label="Build label",
         widget=forms.TextInput(attrs={"dir": "auto"}),
     )
+
+
+class PublishForm(forms.Form):
+    """The label of the build a Draft round is published on (RND-3)."""
+
+    label = build_label()
+
+
+class RetestForm(forms.Form):
+    """The cases of `round_` to test again and the new build's label (RND-5)."""
+
+    cases = forms.ModelMultipleChoiceField(
+        Case.objects.none(),
+        label="Test cases to retest",
+        widget=forms.CheckboxSelectMultiple,
+        error_messages={
+            "required": services.NO_CASE,
+            "invalid_choice": services.FOREIGN_CASE,
+            "invalid_pk_value": services.FOREIGN_CASE,
+        },
+    )
+    label = build_label()
+
+    def __init__(self, round_, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["cases"].queryset = round_.cases.all()
