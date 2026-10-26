@@ -1,5 +1,4 @@
-# Verify the development scaffold. Add an isolated PostgreSQL service and
-# application checks when Relay's Django project is implemented.
+# Verify the application and development workflow against throwaway PostgreSQL.
 name: CI
 
 on:
@@ -19,6 +18,20 @@ jobs:
   verify:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_DB: relay_test
+          POSTGRES_USER: relay_test
+          POSTGRES_PASSWORD: relay_test
+        ports:
+          - "55432:5432"
+        options: >-
+          --health-cmd "pg_isready -U relay_test -d relay_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -33,4 +46,5 @@ jobs:
       - name: Verify
         run: |
           source .venv/bin/activate
+          python src/manage.py check --settings=relay.settings.test
           ruff check . && ruff format --check . && pytest

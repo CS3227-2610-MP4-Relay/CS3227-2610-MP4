@@ -1,6 +1,6 @@
 # Security spec
 
-Threats to Relay and to how it is built, and the intended controls against them. This is a planning scaffold. Controls link to their acceptance criteria where these are specified; verification is added by the slices that implement them, and no deployed security is claimed here.
+Threats to Relay and to how it is built, and the controls against them. PLT-1 defines the local/CI foundation; other application controls and their verification remain planned. Controls link to their acceptance criteria where specified, with verification added by the slices that implement them. No deployed security is claimed here.
 
 ## Secrets and settings
 
@@ -9,6 +9,10 @@ Threat: leaked keys, credentials or debug details expose data and production acc
 - Keep secrets and personal data out of code, logs, fixtures and experiment evidence. Agents must not read secret files; see [`AGENTS.md`](../../AGENTS.md).
 - Use separate development/test and production credentials and databases. Disable production debug mode and validate production configuration before startup.
 - Tests use fixed non-secret values and a fake LLM provider. CI validation receives no production secrets. Production database TLS, host validation and error-detail handling must be specified and tested before deployment.
+
+The PLT-1 foundation installs Django SecurityMiddleware, CommonMiddleware and CsrfViewMiddleware. Its only public route is read-only and permits GET/HEAD; that immutable view is CSRF-exempt so all other methods consistently return 405 even without a CSRF token. Future state-changing routes must retain CSRF checks. Local settings require an environment secret key and restrict allowed hosts and the database host to loopback; test settings do not import local settings or read environment values. Debug defaults off locally and stays off in tests, using generic Django error pages. This does not establish production configuration or deployment security. CI's PostgreSQL service uses throwaway test values only.
+
+Explicit database network addresses enforce loopback destinations despite inherited libpq environment overrides; see [configuration](TECHNICAL-SPEC.md#configuration).
 
 ## Sign-in and access control
 
