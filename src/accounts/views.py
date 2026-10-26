@@ -113,6 +113,7 @@ def _any_reached(counts):
 
 
 @require_POST
+# No names: hide every variable in every frame below, template frames included.
 @sensitive_variables()
 def create_demo(request):
     """Create a demo workspace and show its passwords once, uncached (ACC-2).
