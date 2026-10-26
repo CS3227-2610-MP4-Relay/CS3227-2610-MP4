@@ -13,13 +13,77 @@ How Relay will be built and run. What it will do is in [`PRODUCT-SPEC.md`](PRODU
 
 ## Data model
 
-Not specified yet. Design workspaces, role-based accounts, rounds, requirements, cases, build references and results around the [product areas](PRODUCT-SPEC.md#areas). Before schema implementation, settle ownership, state transitions, published-case edits, submitted-observation edits and result-history/version rules. Do not infer these from a proposed screen or table name.
+Only the subsections below are specified. Design workspaces, role-based accounts, rounds, requirements, cases, build references and results around the [product areas](PRODUCT-SPEC.md#areas). Before schema implementation, settle ownership, state transitions, published-case edits, submitted-observation edits and result-history/version rules. Do not infer these from a proposed screen or table name.
 
 Before implementing persistence, decide retention for accumulated business records, workspace lifetime, expired-session handling and behaviour when shared storage capacity is exhausted, including failed writes and preservation of required result history. These are open design decisions; no cleanup subsystem or retention duration is prescribed yet.
 
+### Accounts and workspaces
+
+For [ACC](product/accounts.md). The retention, workspace-lifetime and expired-session decisions above are a precondition of the first ACC code slice (ACC-1). Until they are made, nothing is deleted, and hashed addresses are kept indefinitely.
+
+- **Workspace:** a unique name, `Demo workspace <suffix>`, and its creation time. Every workspace-owned record has a non-null workspace reference. Routes check the role first, then look records up through one shared helper that filters by the signed-in user's workspace before reading and gives the 404 of [ACC-2.4](product/accounts.md#acc-2-create-an-isolated-demo-workspace) for any other workspace's record.
+- **Account:** a custom Django user model, which exists before any persistent database (in particular production, under #5) is migrated; if #1 ships without it, the ACC-1 slice adds it. It has a globally unique username, a Django password hash, a non-null workspace and a role of `coordinator` or `tester`, all fixed at creation. The model has no staff, superuser or permission fields, and `django.contrib.admin` is not installed, so there is no admin route.
+- **Generated credentials:** usernames are `coord-<suffix>`, `tester1-<suffix>` and `tester2-<suffix>`, sharing the workspace's suffix of 8 random lowercase letters and digits; a suffix collision is retried. Each password is 16 random characters from `a-z`, `A-Z` and `0-9`, generated with `secrets` and hashed before any lock is taken. Plain passwords exist only in memory while rendering the creation response.
+- **Creation:** one transaction holds the limit counts, the workspace, its accounts, its sample round and the rendering of the creation response, so any failure rolls everything back ([ACC-2.5](product/accounts.md#acc-2-create-an-isolated-demo-workspace)).
+- **Limit counter:** one row per scope and key, holding a window start and a count, unique on scope and key; scopes, numbers and windows are in [ACC-3](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation). A migration creates the overall creation row; per-address rows are inserted or updated in one statement. A creation locks its per-address row, then the overall row. A sign-in locks its per-address row, checks the count, checks the password and records any failure in one transaction, so concurrent attempts cannot overshoot and a rollback records nothing. These transactions set a 5-second lock timeout and a statement timeout, and PostgreSQL's `idle_in_transaction_session_timeout` is set so an abandoned transaction cannot keep a lock. That timeout must be longer than the work done while a lock is held, because PostgreSQL counts the session as idle while Python works: one password hash during sign-in, and writing and rendering during demo creation, whose passwords are hashed first. Any timeout gives the 503 of ACC-3.7. The idle timeout, and lock wait plus the work under the lock, must stay below the platform's function time limit, which is verified under the [release gate](#release-verification). Once a window has elapsed, the row restarts its window and count.
+- **Client address:** `REMOTE_ADDR`, never a client-supplied forwarding header. IPv4 addresses count individually and IPv6 addresses by their `/64` prefix; a missing or unparseable address uses the fixed key `unknown`. The stored key is Django's `salted_hmac` of the address with its own salt, never the address itself. Production depends on the client-address gate under [Release verification](#release-verification); a trusted-proxy header setting is a separate decision, needed only if that verification shows it.
+- **Sessions:** Django's database-backed sessions. Sign-in sets an absolute expiry time, so later session writes cannot extend it ([ACC-1.6](product/accounts.md#acc-1-sign-in-and-out-by-role)); sign-out deletes the session row.
+
+### Rounds
+
+For [RND](product/rounds.md). Field limits, caps and messages are in its criteria. Nothing here deletes a round, build or result, and the [persistence decisions](#data-model), including shared-storage capacity, are a precondition of the first persisting code slice. A round belongs to one workspace and every other record below to one round. URL records are looked up through the workspace helper, then checked to be in the round the URL names; form-submitted IDs are checked against the round in the form's validation ([checking order](product/rounds.md#rules-for-every-round-action)).
+
+- **Round:** a non-null workspace, a title, a state of `draft`, `open` or `closed`, and its creation, publication and closing times.
+- **Acceptance criterion** and **test case:** a round and their text fields ([RND-2.4](product/rounds.md#rnd-2-manage-acceptance-criteria-and-test-cases)), validated with Django's null-character validator and a visible-character check.
+- **Case–criterion link:** a many-to-many link between a case and criteria of the same round, checked by the form and again inside the write transaction.
+- **Build:** a round, a label, a comparison key (the label with format characters, Unicode category Cf, removed and then NFC-normalised), its creation time and the cases it covers, with a database unique constraint on round and comparison key ([RND-5.3](product/rounds.md#rnd-5-request-a-retest)). Publishing creates the first build covering every case; a retest request is stored as a build covering the selected cases. A case's current build is the newest build covering it.
+- **Results (RES), provisional:** a result will reference one case and one build of the same round that covers the case, so its criteria are the case's frozen links. The result itself is specified in [RES](product/results.md).
+- **Deletion:** every foreign key here, including those from results, uses `PROTECT`. Deleting a case first deletes its links explicitly in the same transaction; a linked criterion is not deleted. Criteria and cases can be deleted only while Draft, before any build or result exists.
+- **Writes:** every round change runs in one transaction that locks the round row (`select_for_update`), then re-checks the state, caps, label uniqueness and that submitted records are in the round. Creating a round locks the workspace row to check the round cap. Provisionally, creating or changing a result (RES) also locks the round row, then re-checks the state, that the build is in the round and covers the case, and that it is the case's current build. Concurrent Draft edits to the same record are not merged; the last saved edit wins.
+- **Sample round:** fixed synthetic text, written by the shared round-creation code inside the [demo creation](#accounts-and-workspaces) transaction ([RND-7](product/rounds.md#rnd-7-sample-draft-round-in-a-new-demo-workspace)).
+
 ## Routes
 
+### Foundation route
+
 `/` is a public, stateless GET/HEAD route rendering `home.html`, with no input or role/workspace/state preconditions. Other methods return 405; unresolved paths and uncaught exceptions use Django's generic nondebug 404/500 responses. Its observable contract is [PLT-1](product/platform.md#plt-1-django-foundation-and-continuous-verification). Future routes must define authorization, validation and state contracts before implementation.
+
+The accounts and rounds routes below are planned for their implementation slices; the accounts start page will replace the foundation's `/` behaviour. Each route contract must name its method, role/workspace/ownership checks, input validation, state preconditions, success result and denied/failure behaviour before implementation.
+
+### Accounts routes
+
+For [ACC](product/accounts.md). Every POST uses Django's CSRF protection, which also rejects an `Origin` header naming another origin, with 403 ([ACC-1.8](product/accounts.md#acc-1-sign-in-and-out-by-role), [ACC-2.7](product/accounts.md#acc-2-create-an-isolated-demo-workspace)). A route that cannot reach storage, including its limit counts, gives the 503 page of [ACC-2.5](product/accounts.md#acc-2-create-an-isolated-demo-workspace) and changes nothing.
+
+| Route | Method | Access | Validation and success | Denied or failed |
+| --- | --- | --- | --- | --- |
+| `/` | GET | Signed out | Relay start page, titled "Relay", with a sign-in link and the "Create a demo workspace" button | Signed in: redirect to own role home |
+| `/sign-in/` | GET, POST | Anyone | GET shows the form, unlimited. POST locks the per-address count, then Django's authentication checks the username and password in the same transaction; success starts a new session and redirects to own role home, ignoring `next` ([ACC-1.1, 1.2, 1.7](product/accounts.md#acc-1-sign-in-and-out-by-role)) | Invalid: [ACC-1.2](product/accounts.md#acc-1-sign-in-and-out-by-role); limited: [ACC-3.1](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation) |
+| `/sign-out/` | POST | Anyone | Flushes the session and redirects to `/sign-in/` ([ACC-1.5](product/accounts.md#acc-1-sign-in-and-out-by-role)) | Other methods: 405 |
+| `/demo/` | POST | Signed out | Checks both creation limits, then creates and renders "Your demo workspace" in one transaction, with `Cache-Control: no-store` and no redirect ([ACC-2.1 to 2.3](product/accounts.md#acc-2-create-an-isolated-demo-workspace)) | Signed in: [ACC-2.6](product/accounts.md#acc-2-create-an-isolated-demo-workspace); other methods: 405; limited: [ACC-3.4](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation) |
+| `/coordinator/` | GET | Test Coordinator | "Coordinator home" | Signed out: redirect to `/sign-in/`; Beta Tester: 403 of [ACC-1.4](product/accounts.md#acc-1-sign-in-and-out-by-role) |
+| `/tester/` | GET | Beta Tester | "Tester home" | Signed out: redirect to `/sign-in/`; Test Coordinator: 403 of ACC-1.4 |
+
+The session cookie is `HttpOnly`; session and CSRF cookies are `SameSite=Lax`, and `Secure` outside local development.
+
+### Rounds routes
+
+For [RND](product/rounds.md). Every route requires a signed-in Test Coordinator and applies the [rules for every round action](product/rounds.md#rules-for-every-round-action) in their order; a state not listed below gets their 409. Invalid input re-renders the form, and a refused delete the round page, with status 200 and the message. A successful POST redirects to the round page, which shows the success message once. The Coordinator home (`/coordinator/`) also lists the workspace's rounds. `<round>`, `<criterion>` and `<case>` are integer IDs; no route takes a build ID.
+
+| Route | Method | States | Page title or result |
+| --- | --- | --- | --- |
+| `/coordinator/rounds/new/` | GET, POST | — | "New round"; creates a Draft round |
+| `/coordinator/rounds/<round>/` | GET | Any | The round's title as page title, its state, criteria and cases and, from publishing, builds ([RND-2](product/rounds.md#rnd-2-manage-acceptance-criteria-and-test-cases), [RND-3](product/rounds.md#rnd-3-publish-a-round-to-beta-testers)) |
+| `/coordinator/rounds/<round>/edit/` | GET, POST | Draft | "Edit round"; changes the title |
+| `/coordinator/rounds/<round>/criteria/new/` | GET, POST | Draft | "New acceptance criterion" |
+| `/coordinator/rounds/<round>/criteria/<criterion>/edit/` | GET, POST | Draft | "Edit acceptance criterion" |
+| `/coordinator/rounds/<round>/criteria/<criterion>/delete/` | POST | Draft | Deletes an unlinked criterion |
+| `/coordinator/rounds/<round>/cases/new/` | GET, POST | Draft | "New test case" |
+| `/coordinator/rounds/<round>/cases/<case>/edit/` | GET, POST | Draft | "Edit test case" |
+| `/coordinator/rounds/<round>/cases/<case>/delete/` | POST | Draft | Deletes the case and its links |
+| `/coordinator/rounds/<round>/publish/` | POST | Draft | Build label form on the round page; creates the first build and opens the round |
+| `/coordinator/rounds/<round>/results/` | GET | Open, Closed | "Results: <title>" |
+| `/coordinator/rounds/<round>/retest/` | GET, POST | Open | "Request a retest"; creates a build covering the selected cases |
+| `/coordinator/rounds/<round>/close/` | POST | Open | Button on the round page; closes the round |
 
 ## Configuration
 
@@ -28,6 +92,12 @@ The `.env.example` file may contain only empty placeholders and throwaway local 
 `relay.settings.test` imports only shared settings and uses fixed non-secret values: PostgreSQL database/user/password `relay_test`, host 127.0.0.1, port 55432, test database `test_relay_test`, debug false and hosts testserver/localhost/127.0.0.1. `pytest.ini` selects these settings; tests use no provider. The test role needs database creation permission on its throwaway server. No business migrations exist.
 
 Both database configurations explicitly set libpq `hostaddr` through Django's database `OPTIONS`, preventing inherited `PGHOSTADDR` from redirecting connections. Local localhost/127.0.0.1 map to 127.0.0.1; local ::1 maps to ::1. Tests fix the address to 127.0.0.1.
+
+Production settings, checked before release:
+
+- `DEBUG` off; `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` list only the production host and origin, with no wildcard.
+- HTTPS is detected through `SECURE_PROXY_SSL_HEADER` only once Vercel's forwarded-protocol header is verified under the [release gate](#release-verification).
+- Every page is refused framing (`X-Frame-Options: DENY`), and HSTS is on.
 
 ## Environments
 
@@ -46,6 +116,8 @@ The static GitHub Pages site uses `docs/index.md`, `docs/Reflections.md` and `do
 ## Release verification
 
 Delivery will verify the final candidate before a controlled production deployment, then run smoke checks. Deployment workflows, migration handling, checked-source provenance, failure recovery and smoke-check contracts remain to be designed and tested. The scaffold does not claim any release controls are configured.
+
+Release gate: production is not released until Vercel's actual client-address source, forwarded-protocol header and function time limit are verified and recorded, and the production settings under [Configuration](#configuration) are checked.
 
 ### Review decisions and operator prerequisites
 
