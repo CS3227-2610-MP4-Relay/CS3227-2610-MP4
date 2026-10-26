@@ -347,3 +347,15 @@ def test_form_refuses_a_foreign_missing_or_non_integer_case(open_round):
             invalid = form(round_, chosen)
             assert not invalid.is_valid()
             assert invalid.errors == {"cases": [FOREIGN]}, foreign
+
+
+@pytest.mark.ac("RND-5.8")
+def test_a_closed_round_at_the_cap_is_refused_as_not_open(open_round):
+    round_, (one, _, _) = open_round
+    for n in range(1, 10):
+        retest(round_, f"Synthetic build 1.{n}", [one])
+    services.close(locked(round_))
+    before = stored(round_)
+    with pytest.raises(services.RoundNotOpen):
+        retest(round_, "Synthetic build 2.0", [one])
+    assert stored(round_) == before
