@@ -65,6 +65,12 @@ def add_criterion(round_, text):
     return Criterion.objects.create(round=round_, text=text)
 
 
+def save_criterion(criterion, text):
+    """Change a criterion's text; its links stay."""
+    criterion.text = text
+    criterion.save(update_fields=["text"])
+
+
 def _round_criteria(round_, criterion_ids):
     """Return the chosen criteria, refusing none or any not in `round_`."""
     ids = set(criterion_ids)
