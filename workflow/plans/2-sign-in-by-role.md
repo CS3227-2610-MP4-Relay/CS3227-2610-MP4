@@ -41,5 +41,6 @@ Non-test, non-migration `src/` lines: models/apps ~60, settings ~25, forms/views
 - [x] Checkpoint 1: specs and plan.
 - [x] Checkpoint 2: models, settings, migrations, model tests.
 - [x] Checkpoint 3: views and ACC-1/PLT-1.1 tests (red evidence first).
-- [ ] Checkpoint 4: guides.
-- [ ] Full verification, size budget and `check_scope.py builder --base 9fe329a`.
+- [x] Checkpoint 4: guides.
+- [x] Full verification, size budget and builder scope check (checkpoint 4, Windows): 147 passed, 1 skipped; 232 of 400 budget lines since `9fe329a`; scope clean against the coordinator's snapshot `0b6ecf9`.
+- [ ] Independent verifier and security review; human review and merge.
