@@ -49,6 +49,8 @@ Only a Test Coordinator can prepare test rounds. A new round is in the **Draft**
 
 **Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". With no rounds, it says "No rounds yet."
 
+Whenever creating a round, or saving or deleting anything in it, fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
+
 ### Create a round
 
 1. On **Coordinator home**, choose **New round**.
@@ -94,5 +96,3 @@ Criterion text has 1 to 500 characters; a case's title has 1 to 120, its steps 1
 A case with no linked criterion gets "Link at least one acceptance criterion." If a criterion you ticked was deleted meanwhile, the form says "Choose criteria from this round."
 
 A round can have up to 20 acceptance criteria and 30 test cases. Adding a 21st criterion gets "This round has reached its limit of 20 acceptance criteria." and a 31st case "This round has reached its limit of 30 test cases."
-
-If saving or deleting fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.

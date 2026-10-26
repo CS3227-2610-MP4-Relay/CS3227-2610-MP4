@@ -19,4 +19,5 @@ urlpatterns = [
     path("<int:round_id>/cases/new/", views.record_form, CASES, "case-new"),
     path(f"{CASE}/edit/", views.record_form, CASES, "case-edit"),
     path(f"{CASE}/delete/", views.delete_record, CASES, "case-delete"),
+    path("<int:round_id>/publish/", views.publish_round, name="publish"),
 ]

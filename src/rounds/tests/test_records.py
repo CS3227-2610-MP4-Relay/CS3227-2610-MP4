@@ -489,7 +489,9 @@ def test_deleting_a_linked_criterion_is_refused_on_the_round_page(coord_client, 
 
 @pytest.mark.ac("RND-2.7")
 @pytest.mark.parametrize("action", ["new", "edit"])
-@pytest.mark.parametrize("source", ["sibling", "other_workspace", "missing", "text"])
+@pytest.mark.parametrize(
+    "source", ["sibling", "other_workspace", "missing", "oversized", "text"]
+)
 def test_criteria_from_elsewhere_are_refused(
     coord_client, draft, make_round, other_workspace, action, source
 ):
@@ -501,6 +503,8 @@ def test_criteria_from_elsewhere_are_refused(
         wrong = criterion(make_round("Synthetic foreign", owner=other_workspace)).pk
     elif source == "missing":
         wrong = own.pk + 1000
+    elif source == "oversized":
+        wrong = "99999999999999999999"
     else:
         wrong = "abc"
     record_id = made.pk if action == "edit" else None
@@ -795,3 +799,162 @@ def test_storage_failure_editing_a_criterion_gives_503(coord_client, draft):
     assert response.status_code == 503
     item.refresh_from_db()
     assert item.text == "Synthetic stored"
+
+
+# Review round 0: choices, 404 before 409, mid-write failures, races, injection
+
+
+@pytest.mark.ac("RND-2.7")
+def test_case_forms_offer_only_the_url_rounds_criteria(
+    coord_client, draft, make_round, other_workspace
+):
+    own = [criterion(draft, f"Synthetic own {n}") for n in range(2)]
+    criterion(make_round("Synthetic sibling"), "Synthetic sibling criterion")
+    foreign = make_round("Synthetic foreign", owner=other_workspace)
+    criterion(foreign, "Synthetic foreign criterion")
+    made = case(draft, own[:1])
+    pages = [
+        coord_client.get(url(draft.pk, "cases", "new")),
+        coord_client.get(url(draft.pk, "cases", "edit", made.pk)),
+        coord_client.post(url(draft.pk, "cases", "new"), case_data(own[0], title="")),
+        coord_client.post(
+            url(draft.pk, "cases", "edit", made.pk), case_data(own[1], title="")
+        ),
+    ]
+    for response in pages:
+        assert response.status_code == 200
+        html = page(response)
+        assert html.count('type="checkbox"') == 2
+        for item in own:
+            assert f'value="{item.pk}"' in html
+            assert item.text in html
+        assert "Synthetic sibling criterion" not in html
+        assert "Synthetic foreign criterion" not in html
+
+
+@pytest.mark.ac("RND-2.8")
+@pytest.mark.parametrize("state", ["open", "closed"])
+def test_open_or_closed_round_url_with_a_foreign_or_missing_record_gets_404(
+    coord_client, make_round, state
+):
+    frozen = make_round("Synthetic frozen", state)
+    records(frozen)
+    linked, free, made = records(make_round("Synthetic elsewhere"))
+    reference = coord_client.get("/coordinator/rounds/999999/")
+    before = everything()
+    missing = made.pk + free.pk + 1000
+    for kind, record_id in (
+        ("criteria", free.pk),
+        ("cases", made.pk),
+        ("criteria", missing),
+        ("cases", missing),
+    ):
+        attempts = [
+            ("get", url(frozen.pk, kind, "edit", record_id)),
+            ("post", url(frozen.pk, kind, "edit", record_id)),
+            ("post", url(frozen.pk, kind, "delete", record_id)),
+        ]
+        for method, route in attempts:
+            data = valid_post(route, linked) if method == "post" else None
+            response = getattr(coord_client, method)(route, data)
+            assert response.status_code == 404, (method, route)
+            assert response.content == reference.content
+    assert everything() == before
+
+
+@pytest.mark.ac("RND-2.8")
+@pytest.mark.parametrize("action", ["new", "edit"])
+def test_link_failure_mid_write_gives_503_and_changes_nothing(
+    coord_client, draft, action
+):
+    _, free, made = records(draft)
+    record_id = made.pk if action == "edit" else None
+    route = url(draft.pk, "cases", action, record_id)
+    before = everything()
+    with mock.patch.object(
+        CaseCriterion.objects, "bulk_create", side_effect=DatabaseError("synthetic")
+    ):
+        response = coord_client.post(route, case_data(free, title="Synthetic new"))
+    assert response.status_code == 503
+    assert UNAVAILABLE in page(response)
+    assert everything() == before
+
+
+@pytest.mark.ac("RND-2.8")
+def test_case_delete_failure_after_unlinking_gives_503_and_keeps_links(
+    coord_client, draft
+):
+    _, _, made = records(draft)
+    before = everything()
+    with mock.patch.object(Case, "delete", side_effect=DatabaseError("synthetic")):
+        response = coord_client.post(url(draft.pk, "cases", "delete", made.pk))
+    assert response.status_code == 503
+    assert everything() == before
+
+
+@pytest.mark.ac("RND-2.5")
+@pytest.mark.django_db(transaction=True)
+def test_one_of_five_simultaneous_cases_takes_the_last_place(coordinator):
+    draft = Round.objects.create(workspace=coordinator.workspace, title="Synthetic")
+    linked = criterion(draft)
+    for n in range(29):
+        case(draft, [linked], title=f"Synthetic {n}")
+    clients = [signed_in(coordinator) for _ in range(5)]
+    barrier = threading.Barrier(5)
+    responses = [None] * 5
+    real_add = services.add_case
+
+    def slow_add(round_, fields, criterion_ids):
+        # Pause before counting, inside the locked transaction (as for criteria).
+        time.sleep(0.1)
+        return real_add(round_, fields, criterion_ids)
+
+    def add(index):
+        try:
+            barrier.wait()
+            data = case_data(linked, title=f"Synthetic racer {index}")
+            responses[index] = clients[index].post(url(draft.pk, "cases", "new"), data)
+        finally:
+            connection.close()
+
+    threads = [threading.Thread(target=add, args=(i,)) for i in range(5)]
+    with mock.patch.object(services, "add_case", slow_add):
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+    statuses = sorted(response.status_code for response in responses)
+    assert statuses == [200, 200, 200, 200, 302]
+    for response in responses:
+        if response.status_code == 200:
+            message_next_to(page(response), "title", CASE_CAP, 'name="steps"')
+    assert Case.objects.filter(round=draft).count() == 30
+
+
+@pytest.mark.ac("RND-2.8")
+def test_injected_fields_are_ignored(coord_client, draft, make_round):
+    sibling = make_round("Synthetic sibling")
+    other_linked, _, other_case = records(sibling)
+    _, free, made = records(draft)
+    injected = {
+        "round": sibling.pk,
+        "round_id": sibling.pk,
+        "id": other_case.pk,
+        "case": other_case.pk,
+        "criterion": other_linked.pk,
+    }
+    sibling_before = stored(sibling)
+    new = url(draft.pk, "criteria", "new")
+    redirects_to_round(
+        coord_client.post(new, {"text": "Synthetic new", **injected}), draft
+    )
+    added = Criterion.objects.get(text="Synthetic new")
+    assert added.round == draft and added.pk not in (other_linked.pk, other_case.pk)
+    data = {**case_data(free, title="Synthetic edited"), **injected}
+    redirects_to_round(
+        coord_client.post(url(draft.pk, "cases", "edit", made.pk), data), draft
+    )
+    made.refresh_from_db()
+    assert made.round == draft and made.title == "Synthetic edited"
+    assert list(made.criteria.all()) == [free]
+    assert stored(sibling) == sibling_before

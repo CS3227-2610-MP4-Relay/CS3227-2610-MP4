@@ -248,3 +248,11 @@ def test_foreign_keys_protect_linked_records(round_):
         with pytest.raises(ProtectedError), transaction.atomic():
             record.delete()
     assert snapshot(round_)[2]
+
+
+@pytest.mark.ac("RND-2.3")
+def test_save_criterion_changes_only_its_text(round_):
+    one, two = criteria(round_, 2)
+    services.save_criterion(one, "Synthetic edited")
+    assert Criterion.objects.get(pk=one.pk).text == "Synthetic edited"
+    assert Criterion.objects.get(pk=two.pk).text == "Synthetic criterion 1"
