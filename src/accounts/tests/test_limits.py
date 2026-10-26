@@ -116,7 +116,7 @@ def test_lock_finds_the_migrated_overall_row():
     assert counter.count == 0
 
 
-@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+@pytest.mark.django_db(transaction=True)
 def test_lock_requires_a_transaction():
     with pytest.raises(TransactionManagementError):
         limits.lock(limits.SIGN_IN, KEY)
@@ -211,7 +211,7 @@ def test_start_sets_the_transaction_timeouts():
         assert setting("idle_in_transaction_session_timeout") == "10s"
 
 
-@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+@pytest.mark.django_db(transaction=True)
 def test_start_timeouts_end_with_their_transaction():
     before = setting("lock_timeout")
     with transaction.atomic():
@@ -219,7 +219,7 @@ def test_start_timeouts_end_with_their_transaction():
     assert setting("lock_timeout") == before
 
 
-@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+@pytest.mark.django_db(transaction=True)
 def test_start_requires_a_transaction():
     with pytest.raises(TransactionManagementError):
         limits.start()

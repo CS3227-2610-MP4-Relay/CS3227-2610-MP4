@@ -1,8 +1,9 @@
-"""Sign-in, sign-out, the role home pages (ACC-1) and demo creation (ACC-2)."""
+"""Sign-in, sign-out, role homes (ACC-1), demo creation (ACC-2) and limits (ACC-3)."""
 
 import logging
 from datetime import timedelta
 
+from django import db
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import PermissionDenied
@@ -15,7 +16,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from . import demo
+from . import demo, limits
 from .forms import SignInForm
 from .models import User
 
@@ -26,6 +27,8 @@ HOMES = {
     User.Role.COORDINATOR: "accounts:coordinator",
     User.Role.TESTER: "accounts:tester",
 }
+FAILED = "Username or password is incorrect."
+SIGN_IN_LIMITED = "Too many sign-in attempts. Try again later."
 
 
 @sensitive_post_parameters("password")
@@ -35,16 +38,39 @@ def sign_in(request):
     """Show the sign-in form; on valid credentials start a fresh session."""
     if request.method == "GET":
         return render(request, "accounts/sign_in.html")
-    form = SignInForm(request.POST)
-    user = form.is_valid() and authenticate(request, **form.cleaned_data)
-    if not user:
-        context = {"error": "Username or password is incorrect."}
-        return render(request, "accounts/sign_in.html", context)
+    try:
+        user, error = _check_sign_in(request)
+    except db.Error:
+        logger.exception("Sign-in limit check failed.")
+        return render(request, "503.html", status=503)
+    if error:
+        status = 429 if error == SIGN_IN_LIMITED else 200
+        context = {"error": error}
+        return render(request, "accounts/sign_in.html", context, status=status)
     # login() keeps the identifier when the same user signs in again (ACC-1.7).
     request.session.cycle_key()
     login(request, user)
     request.session.set_expiry(timezone.now() + SESSION_LIFETIME)
     return redirect(HOMES[user.role])
+
+
+def _check_sign_in(request):
+    """Lock the address's count, then authenticate and count a failure (ACC-3).
+
+    Returns the user, or None and the message to show. The session starts only
+    after this transaction commits, so a failure in it signs no one in.
+    """
+    with transaction.atomic():
+        limits.start()
+        counter = limits.lock(limits.SIGN_IN, limits.client_key(request))
+        if limits.reached(counter, limits.SIGN_IN):
+            return None, SIGN_IN_LIMITED
+        form = SignInForm(request.POST)
+        user = form.is_valid() and authenticate(request, **form.cleaned_data)
+        if user:
+            return user, None
+        limits.record(counter, limits.SIGN_IN)
+        return None, FAILED
 
 
 @require_POST
@@ -74,25 +100,51 @@ coordinator_home = _role_home(User.Role.COORDINATOR, "Coordinator home")
 tester_home = _role_home(User.Role.TESTER, "Tester home")
 
 
+def _demo_counts(read, key):
+    """Read or lock the address's creation count, then the overall count."""
+    return [
+        (limits.DEMO, read(limits.DEMO, key)),
+        (limits.DEMO_TOTAL, read(limits.DEMO_TOTAL, limits.TOTAL_KEY)),
+    ]
+
+
+def _any_reached(counts):
+    return any(limits.reached(counter, limit) for limit, counter in counts)
+
+
 @require_POST
-@sensitive_variables("passwords", "credentials", "page")
+@sensitive_variables()
 def create_demo(request):
-    """Create a demo workspace and show its passwords once, uncached (ACC-2)."""
+    """Create a demo workspace and show its passwords once, uncached (ACC-2).
+
+    Both creation limits (ACC-3) are checked unlocked before any password is
+    hashed, then again under their locks inside the creation transaction.
+    """
     if request.user.is_authenticated:
         return redirect(HOMES[request.user.role])
-    passwords = demo.generate_passwords()
+    key = limits.client_key(request)
+    page = None
     try:
-        # ACC-3 locks its limit counts first, inside this same transaction.
-        with transaction.atomic():
-            workspace, credentials = demo.create_demo_workspace(passwords)
-            page = render_to_string(
-                "accounts/demo.html",
-                {"workspace": workspace, "credentials": credentials},
-            )
+        if not _any_reached(_demo_counts(limits.peek, key)):
+            passwords = demo.generate_passwords()
+            with transaction.atomic():
+                limits.start()
+                counts = _demo_counts(limits.lock, key)
+                if not _any_reached(counts):
+                    workspace, credentials = demo.create_demo_workspace(passwords)
+                    page = render_to_string(
+                        "accounts/demo.html",
+                        {"workspace": workspace, "credentials": credentials},
+                    )
+                    for limit, counter in counts:
+                        limits.record(counter, limit)
     except Exception:
         # The traceback names no password; the rendered page is never logged.
         logger.exception("Demo workspace creation failed.")
         return render(request, "503.html", status=503)
+    if page is None:
+        # Refused by a limit: a normal response, never routed through the 503.
+        return render(request, "429.html", status=429)
     response = HttpResponse(page)
     response["Cache-Control"] = "no-store"
     return response
