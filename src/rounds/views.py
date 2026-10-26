@@ -99,6 +99,7 @@ def show_round(request, round_, refused=None, publish_form=None):
     context = {
         "round": round_,
         "draft": draft,
+        "open": round_.state == Round.State.OPEN,
         "cases": cases,
         "builds": builds,
         "refused": refused,
@@ -240,4 +241,16 @@ def publish_round(request, round_id):
         form.add_error(refused.field, str(refused))
         return show_round(request, round_, publish_form=form)
     messages.success(request, "Round published.")
+    return redirect(round_)
+
+
+@coordinator_view(["POST"])
+def close_round(request, round_id):
+    """Close an Open round for good; nothing reopens it (RND-6)."""
+    with transaction.atomic():
+        round_ = own_round(request, round_id, lock=True)
+        if round_.state != Round.State.OPEN:
+            return state_conflict(request, round_)
+        services.close(round_)
+    messages.success(request, "Round closed.")
     return redirect(round_)

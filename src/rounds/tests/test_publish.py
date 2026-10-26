@@ -159,7 +159,9 @@ def test_round_page_after_publishing_shows_the_message_once_and_the_open_view(
         "Delete test case",
         "Publish round",
         "Build label",
-        "<form",
+        # RND-6 adds the "Close round" form; no RND-2 or RND-3 form remains.
+        '/delete/"',
+        '/publish/"',
     ):
         assert control not in html, control
     again = page(coord_client.get(detail(draft.pk)))
