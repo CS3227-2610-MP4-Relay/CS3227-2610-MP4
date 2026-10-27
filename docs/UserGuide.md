@@ -22,6 +22,8 @@ Each account has one role, **Test Coordinator** or **Beta Tester**, in one works
 2. The **Your demo workspace** page shows `Workspace:` with the new workspace's name, and a table with the **Role**, **Username** and **Password** of one Test Coordinator and two Beta Testers. It says "Save these passwords now. They will not be shown again."
 3. Save the usernames and passwords, then choose **Sign in** to sign in with any of them.
 
+Each new workspace starts with one round, **Sample round**, in the **Draft** state. It has 3 acceptance criteria and 4 test cases about an example to-do app, and each test case is linked to at least one criterion. Its Test Coordinator can [publish](#publish-a-round) it straight away by entering only a build label, or change it first like any Draft round. It counts toward the workspace's [limit of 20 rounds](#titles-and-limits).
+
 Creating a workspace does not sign you in. Each workspace is separate: its accounts never see another workspace's records. Resubmitting the page, which your browser asks about first, creates another new workspace rather than showing the same passwords again, and the browser's back button may still show the earlier page. While you are signed in, choosing **Create a demo workspace** takes you to your own home page and creates nothing.
 
 If creation fails, the page says "Relay is temporarily unavailable. Try again later." and nothing is created.
@@ -51,7 +53,7 @@ You are also signed out 8 hours after signing in, whatever you do in between; op
 
 Only a Test Coordinator can prepare, publish, retest and close test rounds. A new round is in the **Draft** state; [publishing](#publish-a-round) it makes it **Open**, and [closing](#close-a-round) it makes it **Closed**. Beta Testers do not see rounds yet.
 
-**Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". With no rounds, it says "No rounds yet."
+**Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". A new demo workspace starts with its [sample round](#create-a-demo-workspace), so its list is not empty; "No rounds yet." appears only for a workspace with no rounds.
 
 Whenever creating, publishing, retesting or closing a round, or saving or deleting anything in it, fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
 
@@ -71,9 +73,9 @@ The round page shows the new title.
 
 ### Titles and limits
 
-A title has 1 to 120 characters; spaces or line breaks at either end are removed. An empty title, a title of only spaces or invisible characters, or a longer one gets "Enter 1 to 120 characters." A title containing a null character gets "Null characters are not allowed."
+A title has 1 to 120 characters; spaces or line breaks at either end are removed. An empty title, a title of only spaces or invisible characters, or a longer one gets "Enter 1 to 120 characters." A title containing a null character gets "Null characters are not allowed." A title containing a hidden character that changes text direction gets "Hidden text-direction characters are not allowed." Letters of any language, accents and emoji are fine.
 
-A workspace can have up to 20 rounds. Creating a 21st gets "This workspace has reached its limit of 20 rounds." Nothing deletes a round.
+A workspace can have up to 20 rounds, including the sample round of a new demo workspace. Creating a 21st gets "This workspace has reached its limit of 20 rounds." Nothing deletes a round.
 
 ### Acceptance criteria and test cases
 
@@ -97,7 +99,7 @@ To delete, choose **Delete test case** under a case or **Delete criterion** next
 
 ### Criteria and test case limits
 
-Criterion text has 1 to 500 characters; a case's title has 1 to 120, its steps 1 to 2000 and its expected result 1 to 1000. Spaces or line breaks at either end are removed, and a line break counts as one character. A field that is empty, holds only spaces or invisible characters, or is too long gets "Enter 1 to N characters." next to it, with N its maximum, such as "Enter 1 to 500 characters." for criterion text; a null character gets "Null characters are not allowed."
+Criterion text has 1 to 500 characters; a case's title has 1 to 120, its steps 1 to 2000 and its expected result 1 to 1000. Spaces or line breaks at either end are removed, and a line break counts as one character. A field that is empty, holds only spaces or invisible characters, or is too long gets "Enter 1 to N characters." next to it, with N its maximum, such as "Enter 1 to 500 characters." for criterion text; a null character gets "Null characters are not allowed." and a hidden character that changes text direction gets "Hidden text-direction characters are not allowed."
 
 A case with no linked criterion gets "Link at least one acceptance criterion." If a criterion you ticked was deleted meanwhile, the form says "Choose criteria from this round."
 
@@ -112,7 +114,7 @@ While a round is Draft, its round page ends with a **Build label** field and a *
 
 The round page shows "Round published." and "State: Open". An Open round cannot return to Draft.
 
-A build label has 1 to 100 characters; spaces or line breaks at either end are removed. An empty label, a label of only spaces or invisible characters, or a longer one gets "Enter 1 to 100 characters." next to the field, and a label containing a null character gets "Null characters are not allowed." A round with no test cases gets "Add at least one test case before publishing." After any of these messages the round stays Draft, with your label still in the field.
+A build label has 1 to 100 characters; spaces or line breaks at either end are removed. An empty label, a label of only spaces or invisible characters, or a longer one gets "Enter 1 to 100 characters." next to the field, a label containing a null character gets "Null characters are not allowed.", and a label containing a hidden character that changes text direction gets "Hidden text-direction characters are not allowed." A round with no test cases gets "Add at least one test case before publishing." After any of these messages the round stays Draft, with your label still in the field.
 
 ### An Open round
 
@@ -133,7 +135,7 @@ The round page shows, for example, "Retest requested for 2 test cases on build 1
 If something is wrong, the page shows again with your ticks and label kept:
 
 - With no case ticked: "Select at least one test case." next to **Test cases to retest**.
-- The build label follows the same rules as when publishing: "Enter 1 to 100 characters." or "Null characters are not allowed." next to **Build label**.
+- The build label follows the same rules as when publishing: "Enter 1 to 100 characters.", "Null characters are not allowed." or "Hidden text-direction characters are not allowed." next to **Build label**.
 - A label already used for a build of this round, including the one named at publishing: "This build label is already used in this round." next to **Build label**. Upper and lower case count as different, but invisible formatting characters such as zero-width spaces are ignored, and the same accented letter typed in different ways counts as the same.
 - A round can have up to 10 builds, counting the one named at publishing. Requesting an 11th gets "This round has reached its limit of 10 builds." next to **Build label**.
 - A ticked case that is not in this round gets "Choose test cases from this round." next to **Test cases to retest**.

@@ -15,7 +15,7 @@ from django.db import DatabaseError, OperationalError
 from django.test import Client
 
 from relay.settings import base
-from relay_tests.test_configuration import probe
+from relay.tests.test_configuration import probe
 from rounds.models import Round
 
 from .conftest import close, detail, draft_with_case, open_with_case, page, signed_in
@@ -23,7 +23,7 @@ from .conftest import close, detail, draft_with_case, open_with_case, page, sign
 pytestmark = pytest.mark.django_db
 
 SRC = Path(__file__).resolve().parents[2]
-TEST_DIRECTORIES = {"tests", "relay_tests"}
+TEST_DIRECTORIES = {"tests"}
 # Lower-case text that exempts a view or sets the header or setting directly:
 # the xframe_options_* decorators and attribute, the header, X_FRAME_OPTIONS.
 OVERRIDES = ("xframe_options_", "x-frame-options", "x_frame_options")

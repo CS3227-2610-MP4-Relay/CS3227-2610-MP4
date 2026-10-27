@@ -8,6 +8,8 @@ from django.db import DatabaseError, IntegrityError, transaction
 
 from accounts import demo
 from accounts.models import User, Workspace
+from rounds import services as round_services
+from rounds.models import Case, CaseCriterion, Criterion, Round
 
 ALPHABET = set(string.ascii_letters + string.digits)
 
@@ -153,3 +155,25 @@ def test_creation_outside_a_transaction_writes_all_or_nothing():
     ):
         demo.create_demo_workspace(demo.generate_passwords())
     assert (Workspace.objects.count(), User.objects.count()) == (0, 0)
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.ac("ACC-2.5")
+def test_sample_round_failure_outside_a_transaction_writes_nothing():
+    real_add_criterion = round_services.add_criterion
+    calls = []
+
+    def add_criterion(round_, text):
+        calls.append(text)
+        if len(calls) == 2:
+            raise DatabaseError("synthetic storage failure")
+        return real_add_criterion(round_, text)
+
+    with (
+        mock.patch.object(round_services, "add_criterion", add_criterion),
+        pytest.raises(DatabaseError),
+    ):
+        demo.create_demo_workspace(demo.generate_passwords())
+    assert len(calls) == 2
+    models = (Workspace, User, Round, Criterion, Case, CaseCriterion)
+    assert [model.objects.count() for model in models] == [0] * len(models)
