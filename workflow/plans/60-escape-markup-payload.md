@@ -35,9 +35,9 @@ A Perl-regex grep for non-ASCII characters in `.py` and `.html` under `src/` fou
 
 ## Open issues
 
-- The escaped payload still spells `onerror` and `alert` in plain letters. Hiding those as well, for example by hex-encoding the whole string, would make it unreadable for no safety gain. This needs the human only if raw-term greps must return nothing.
+- None. The escaped payload still spells `onerror` and `alert` in plain letters. On 2026-10-27 the orchestrator chose option (a): escape only the markup characters, rather than hex-encoding the whole string, so the line stays readable and inert.
 
 ## Checklist
 
-- [ ] Checkpoint 1: plan.
-- [ ] Checkpoint 2: shared escaped payload and evidence.
+- [x] Checkpoint 1: plan (`6d6dc52`).
+- [x] Checkpoint 2: shared escaped payload (on `6d6dc52`). `conftest.py` holds `MARKUP`, `SCRIPT_TAG`, `IMG_TAG` and the import-time assert; the six modules import them, drop their copies and use the constants in every detection assertion (`test_messages.py` still checks only the script tag). Byte check: each module's `MARKUP` at `c6aee04` (parsed with `ast`) and the new constant are the same 61 UTF-8 bytes, SHA-256 `22e35a29…97f9`; both tag constants equal the old literals. Mutation (`isolated_lines` passes each line through `mark_safe`, on a temporary copy, empty `PYTHONPYCACHEPREFIX`, restored and checked with `cmp`), each module run alone, before and after the change: the same 11 tests failed in both runs (close 1, messages 1, publish 2, record_rendering 1, rendering 1, retest 5), and the pass counts matched. Green, each module alone with `pytest -q -p no:randomly`: 28, 9, 49, 7, 19 and 74 passed. `grep -rnE "<script|<img|onerror" src/rounds/tests` matches only the escaped `conftest.py` line. Ruff check and format clean.
