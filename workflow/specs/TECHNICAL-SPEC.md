@@ -113,11 +113,13 @@ The `.env.example` file may contain only empty placeholders and throwaway local 
 
 Both database configurations explicitly set libpq `hostaddr` through Django's database `OPTIONS`, preventing inherited `PGHOSTADDR` from redirecting connections. Local localhost/127.0.0.1 map to 127.0.0.1; local ::1 maps to ::1. Tests fix the address to 127.0.0.1.
 
+In every environment, the shared settings install Django's `XFrameOptionsMiddleware` right after `SecurityMiddleware`, so every response refuses framing (`X-Frame-Options: DENY`), error pages included, even a 500 or 400 made when another middleware fails, such as the session save after a view; no view is exempt (#58).
+
 Production settings, checked before release:
 
 - `DEBUG` off; `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` list only the production host and origin, with no wildcard.
 - HTTPS is detected through `SECURE_PROXY_SSL_HEADER` only once Vercel's forwarded-protocol header is verified under the [release gate](#release-verification).
-- Every page is refused framing (`X-Frame-Options: DENY`), and HSTS is on.
+- HSTS is on.
 
 ## Environments
 
