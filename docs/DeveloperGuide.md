@@ -2,7 +2,7 @@
 
 ## Setup
 
-Relay contains a local Django application with sign-in by role, and CI checks. Its architecture, configuration and environments are in [`TECHNICAL-SPEC.md`](../workflow/specs/TECHNICAL-SPEC.md).
+Relay contains a local Django application with demo workspaces and sign-in by role, and CI checks. Its architecture, configuration and environments are in [`TECHNICAL-SPEC.md`](../workflow/specs/TECHNICAL-SPEC.md).
 
 Install Python 3.14, as selected by [`.python-version`](../.python-version), before creating the local tooling environment. On Windows, use the Python launcher to select it explicitly; an unqualified `python` may select another installed version. From the repository root in Git Bash:
 
@@ -40,22 +40,7 @@ Settings read exported environment variables, not `.env` files; [`.env.example`]
 
 ### Create accounts for manual testing
 
-Relay cannot create accounts yet; demo workspaces arrive with ACC-2. To try sign-in locally, create a workspace and one account per role in Django's shell, with the same exported environment as above:
-
-```bash
-python src/manage.py shell
-```
-
-```python
-from getpass import getpass
-from accounts.models import User, Workspace
-workspace = Workspace.objects.create(name="Demo workspace local01")
-password = getpass("Password for both accounts: ")
-User.objects.create_user("coord-local01", password, workspace=workspace, role="coordinator")
-User.objects.create_user("tester1-local01", password, workspace=workspace, role="tester")
-```
-
-Use made-up names and a throwaway password; only the password hash is stored. There is no admin site or superuser.
+While signed out, choose **Create a demo workspace** on the start page. It creates a workspace in your local database with one Test Coordinator and two Beta Testers, and shows their generated passwords once; only the password hashes are stored. There is no admin site or superuser.
 
 ### Verify
 
@@ -93,7 +78,7 @@ Role write scopes live in `workflow/agents/`. The scope checker and tool hooks a
 
 ## Design
 
-The Django/PostgreSQL architecture, environment separation and planned delivery work are in [`TECHNICAL-SPEC.md`](../workflow/specs/TECHNICAL-SPEC.md). The `accounts` app (`src/accounts/`) holds the workspace and account models, sign-in, sign-out and the role home pages; its storage, routes and session rules are under [Accounts and workspaces](../workflow/specs/TECHNICAL-SPEC.md#accounts-and-workspaces) and [Accounts routes](../workflow/specs/TECHNICAL-SPEC.md#accounts-routes). Threats and controls are in [`SECURITY-SPEC.md`](../workflow/specs/SECURITY-SPEC.md).
+The Django/PostgreSQL architecture, environment separation and planned delivery work are in [`TECHNICAL-SPEC.md`](../workflow/specs/TECHNICAL-SPEC.md). The `accounts` app (`src/accounts/`) holds the workspace and account models, sign-in, sign-out, the role home pages and demo workspace creation; its storage, routes and session rules are under [Accounts and workspaces](../workflow/specs/TECHNICAL-SPEC.md#accounts-and-workspaces) and [Accounts routes](../workflow/specs/TECHNICAL-SPEC.md#accounts-routes). `accounts/demo.py` generates the credentials and writes a demo workspace inside the `/demo/` view's single transaction, and `accounts/workspaces.py` holds `workspace_records`, the one helper every workspace record lookup goes through. Threats and controls are in [`SECURITY-SPEC.md`](../workflow/specs/SECURITY-SPEC.md).
 
 ## SoC LLM
 
