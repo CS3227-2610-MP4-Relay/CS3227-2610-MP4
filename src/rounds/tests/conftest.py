@@ -19,6 +19,17 @@ UNAVAILABLE = "Relay is temporarily unavailable. Try again later."
 TITLE_MESSAGE = "Enter 1 to 120 characters."
 LIMIT_MESSAGE = "This workspace has reached its limit of 20 rounds."
 
+# Red-team markup payload and the raw tags it must never leave in a page. Markup
+# characters are stored as \x escapes (AGENTS.md: payloads are stored escaped);
+# Python decodes them only when a test module loads.
+MARKUP = (
+    "\x3cscript\x3ealert(1)\x3c/script\x3e\x22\x27\x3e"
+    "\x3cimg src=x onerror=alert(2)\x3e\x26amp;"
+)
+SCRIPT_TAG = "\x3cscript\x3e"
+IMG_TAG = "\x3cimg"
+assert SCRIPT_TAG in MARKUP and IMG_TAG in MARKUP
+
 
 def detail(round_id):
     """The round page URL."""

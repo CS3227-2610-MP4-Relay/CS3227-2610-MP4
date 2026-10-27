@@ -5,11 +5,10 @@ from django.utils.html import escape
 
 from rounds.models import Case, CaseCriterion, Criterion
 
-from .conftest import detail, page
+from .conftest import IMG_TAG, MARKUP, SCRIPT_TAG, detail, page
 
 pytestmark = [pytest.mark.django_db, pytest.mark.ac("RND-2.8")]
 
-MARKUP = "<script>alert(1)</script>\"'><img src=x onerror=alert(2)>&amp;"
 LF = chr(10)
 # Right-to-left override, zero-width space and left-to-right isolate.
 BIDI_AND_INVISIBLE = "abc" + chr(0x202E) + "def" + chr(0x200B) + "ghi" + chr(0x2066)
@@ -36,8 +35,8 @@ def pages(client, round_, item, made):
 
 
 def assert_no_raw_markup(html):
-    assert "<script>" not in html
-    assert "<img" not in html
+    assert SCRIPT_TAG not in html
+    assert IMG_TAG not in html
 
 
 def test_markup_is_escaped_in_content_and_form_values(coord_client, make_round):
