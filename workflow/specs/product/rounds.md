@@ -1,6 +1,6 @@
 # Test rounds
 
-Planning area `RND`. RND-1 to RND-3 and RND-6 are implemented; RND-4, RND-5 and RND-7 are specified but not implemented yet. See the [roles](../PRODUCT-SPEC.md#roles) and [accounts](accounts.md); data, routes and page titles are in the [technical spec](../TECHNICAL-SPEC.md#rounds), and controls in the [security spec](../SECURITY-SPEC.md#rounds-observations-and-history).
+Planning area `RND`. RND-1, RND-2, RND-3, RND-5 and RND-6 are implemented; RND-4 and RND-7 are specified but not implemented yet. See the [roles](../PRODUCT-SPEC.md#roles) and [accounts](accounts.md); data, routes and page titles are in the [technical spec](../TECHNICAL-SPEC.md#rounds), and controls in the [security spec](../SECURITY-SPEC.md#rounds-observations-and-history).
 
 A test round is a workspace's set of acceptance criteria and test cases, tested against named builds of the software under test. Only the workspace's Test Coordinator performs the actions below. What Beta Testers see and record, including the result format, belongs to [test results](results.md). The [test-drafting AI feature](../ai/test-drafting.md) is not part of these requirements.
 
@@ -90,6 +90,8 @@ For an Open or Closed round, the coordinator opens its results page. Which resul
 ## RND-5 Request a retest
 
 While the round is Open, the coordinator can ask for selected cases to be tested again on a new build. Provisionally, testers then record new results against that build ([RES](results.md)).
+
+While the round is Open, the round page has a "Request a retest" link directly under the "Builds" heading, before the first build; a Draft or Closed round's page has no such link. The "Request a retest" page has a "Test cases to retest" group with a checkbox for each of the round's cases, labelled with its title, in creation order, none selected; then a "Build label" field, a "Request retest" button and a "Back to round" link. Requesting opens the round page, which shows the RND-5.1 message once, directly under its heading, where only the label is user text. Invalid input shows the page again with the selected cases still selected and the entered label kept. Its checks run in this order after rules 1 to 4: both fields are checked, each on its own, so an invalid selection and an invalid label both get their message; then, once both are valid, the round's state is checked again (rule 4), followed by the build limit (RND-5.4), the selected cases again (RND-5.6) and the label's uniqueness (RND-5.3), in that order, against the round as it is at that moment; only the first refusal shows. The RND-5.2 selection message and the RND-5.6 message appear next to "Test cases to retest"; the RND-5.2 label message and the RND-5.3 and RND-5.4 messages appear next to "Build label".
 
 - **RND-5.1** (happy) Selecting cases and entering a new build label shows "Retest requested for <count> test cases on build <label>.", or "1 test case" for one, counting distinct cases. The selected cases' current build becomes the new build; other cases keep theirs.
 - **RND-5.2** (boundary) Selecting no case gets "Select at least one test case." A build label of 100 characters is accepted; an empty, invisible-only or 101-character label gets "Enter 1 to 100 characters."

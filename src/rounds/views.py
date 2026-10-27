@@ -1,4 +1,4 @@
-"""The coordinator's round pages (RND-1 to RND-3, RND-6), under the action rules."""
+"""The coordinator's round pages (RND-1 to 3, 5 and 6), under the action rules."""
 
 import logging
 from functools import wraps
@@ -15,9 +15,10 @@ from accounts.models import User
 from accounts.workspaces import workspace_records
 
 from . import services
-from .forms import CaseForm, CriterionForm, PublishForm, RoundForm
+from .forms import CaseForm, CriterionForm, PublishForm, RetestForm, RoundForm
 from .models import Round
 from .services import RoundLimitReached, create_round
+from .templatetags.rounds_text import retest_message
 
 logger = logging.getLogger(__name__)
 
@@ -254,3 +255,39 @@ def close_round(request, round_id):
         services.close(round_)
     messages.success(request, "Round closed.")
     return redirect(round_)
+
+
+@coordinator_view(["GET", "POST"])
+def retest_round(request, round_id):
+    """Ask for chosen cases of an Open round to be tested on a new build (RND-5)."""
+    round_ = own_round(request, round_id)
+    if round_.state != Round.State.OPEN:
+        return state_conflict(request, round_)
+    data = request.POST if request.method == "POST" else None
+    form = RetestForm(round_, data)
+    if data is not None and form.is_valid():
+        ids = [case.pk for case in form.cleaned_data["cases"]]
+        # A refusal leaves the transaction by its exception, so nothing commits.
+        try:
+            with transaction.atomic():
+                round_ = own_round(request, round_id, lock=True)
+                if round_.state != Round.State.OPEN:
+                    return state_conflict(request, round_)
+                build = services.request_retest(round_, form.cleaned_data["label"], ids)
+        except services.RoundNotOpen:
+            round_.refresh_from_db(fields=["state"])
+            return state_conflict(request, round_)
+        except services.Refused as refused:
+            form.add_error(refused.field, str(refused))
+        else:
+            # Counted from the request, so nothing reads storage after the commit.
+            text = retest_message(len(set(ids)), build.label)
+            messages.success(request, text, extra_tags="retest")
+            return redirect(round_)
+    context = {
+        "form": form,
+        "title": "Request a retest",
+        "button": "Request retest",
+        "round": round_,
+    }
+    return render(request, "rounds/round_form.html", context)

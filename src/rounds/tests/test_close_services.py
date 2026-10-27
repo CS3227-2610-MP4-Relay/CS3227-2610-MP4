@@ -91,6 +91,6 @@ def test_close_refuses_a_round_that_is_not_open(round_, state):
     before = (target.state, target.closed_at, snapshot(target))
     with pytest.raises(services.RoundNotOpen) as refused:
         services.close(locked(target))
-    assert str(refused.value) == "Only an Open round can be closed."
+    assert str(refused.value) == "The round is not Open."
     target.refresh_from_db()
     assert (target.state, target.closed_at, snapshot(target)) == before

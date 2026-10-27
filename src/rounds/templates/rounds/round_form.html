@@ -6,10 +6,10 @@
 <form method="post">
   {% csrf_token %}
   {% for field in form %}
-  {% if field.name == "criteria" %}<fieldset>
+  {% if field.name == "criteria" or field.name == "cases" %}<fieldset>
     <legend>{{ field.label }}</legend>
     {% for choice in field %}<p>{{ choice.tag }} <label for="{{ choice.id_for_label }}">{{ choice.choice_label|isolated_lines }}</label></p>
-    {% empty %}<p>No acceptance criteria yet.</p>{% endfor %}
+    {% empty %}<p>{% if field.name == "cases" %}No test cases yet.{% else %}No acceptance criteria yet.{% endif %}</p>{% endfor %}
   </fieldset>
   {% else %}<p><label for="{{ field.id_for_label }}">{{ field.label }}</label> {{ field }}</p>{% endif %}
   {% for error in field.errors %}<p>{{ error }}</p>{% endfor %}
