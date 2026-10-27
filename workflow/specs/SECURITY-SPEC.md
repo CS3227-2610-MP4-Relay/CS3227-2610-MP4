@@ -1,6 +1,6 @@
 # Security spec
 
-Threats to Relay and to how it is built, and the controls against them. PLT-1 defines the local/CI foundation; other application controls and their verification remain planned. Controls link to their acceptance criteria where specified, with verification added by the slices that implement them. No deployed security is claimed here.
+Threats to Relay and to how it is built, and the controls against them. PLT-1 defines the local/CI foundation, and ACC-1 implements sign-in, sessions and role access; other application controls and their verification remain planned. Controls link to their acceptance criteria where specified, with verification added by the slices that implement them. No deployed security is claimed here.
 
 ## Secrets and settings
 
@@ -19,7 +19,7 @@ Explicit database network addresses enforce loopback destinations despite inheri
 Threat: a visitor or user accesses another role's operations, another workspace's records or another tester's private draft.
 
 - Authorize every route and record lookup on the server before reading data or selecting AI context. Define role, workspace, ownership and state permissions for each operation.
-- Use Django's authentication, password hashing and CSRF protections, including its `Origin` check. Sessions are server-side, get a new identifier at every sign-in, end at sign-out and expire at an absolute time; sign-in ignores redirect targets ([ACC-1](product/accounts.md#acc-1-sign-in-and-out-by-role)). Session and cookie settings are in the [accounts routes](TECHNICAL-SPEC.md#accounts-routes), and production settings under [Configuration](TECHNICAL-SPEC.md#configuration).
+- Use Django's authentication, password hashing and CSRF protections, including its `Origin` check. Sessions are server-side, get a new identifier at every sign-in, end at sign-out and expire at an absolute time; sign-in ignores redirect targets ([ACC-1](product/accounts.md#acc-1-sign-in-and-out-by-role)). Sign-in validates its fields before authenticating, and marks the password as sensitive so error reports omit it; sign-in and the role home pages are never cached. Session and cookie settings are in the [accounts routes](TECHNICAL-SPEC.md#accounts-routes), and production settings under [Configuration](TECHNICAL-SPEC.md#configuration).
 - Accounts come only from demo workspace creation, with generated passwords shown once on an uncached response and stored only as hashes ([ACC-2.1 to ACC-2.3](product/accounts.md#acc-2-create-an-isolated-demo-workspace)). Accounts have no staff or admin capability ([account model](TECHNICAL-SPEC.md#accounts-and-workspaces)).
 - Check the role before any record lookup, and filter every lookup by the signed-in user's workspace before reading; another workspace's record is indistinguishable from a missing one ([ACC-2.4](product/accounts.md#acc-2-create-an-isolated-demo-workspace)).
 - Share an authorization test matrix across manual and AI actions. Include forged identifiers, cross-workspace requests and denied state transitions.
@@ -33,7 +33,7 @@ Threat: repeated sign-in attempts guess passwords, or repeated demo creation exh
   - Fixed windows allow a burst across a window boundary.
   - Sign-ins from one address queue on its counter lock, so a client sharing that address can delay or refuse others' sign-ins, and waiting requests hold database connections.
   - Reloading the demo creation page resubmits it and creates another workspace, within the limits, and a browser's back/forward cache may show the credentials again despite `no-store`.
-  - Storage still grows without bound: unlimited successful sign-ins create session rows, and expired sessions are never deleted; rotating addresses or IPv6 prefixes creates limit-counter rows. Hashed addresses are kept indefinitely until the [retention decision](TECHNICAL-SPEC.md#data-model) is made.
+  - Storage grows without bound, as the [persistence decision](TECHNICAL-SPEC.md#data-model) accepts for the course deployment: unlimited successful sign-ins create session rows, expired sessions are never deleted automatically, rotating addresses or IPv6 prefixes create limit-counter rows, and hashed addresses are kept for the life of the deployment.
 
 ## Rounds, observations and history
 
@@ -43,7 +43,7 @@ Threat: edits or concurrent submissions change the meaning of an earlier result,
 - Only the workspace's Test Coordinator performs round actions. Beta Testers never see a Draft round; on tester pages it is the same 404 as a missing round ([RES](product/results.md), [round states](product/rounds.md#round-states)). Each round action checks, in a fixed order, role and CSRF before any lookup, then workspace and round membership of URL records (404), then state (409), then form-submitted IDs; a 404 always wins over a 409 ([rules for every round action](product/rounds.md#rules-for-every-round-action), [RND-1.6](product/rounds.md#rnd-1-prepare-a-test-round), [RND-2.7, 2.8](product/rounds.md#rnd-2-manage-acceptance-criteria-and-test-cases), [RND-5.6](product/rounds.md#rnd-5-request-a-retest)).
 - Each round write locks the round row and re-checks state and caps inside its transaction, so an edit racing a publish, a retest racing a close, or duplicate requests cannot apply in the wrong state ([RND-1.5](product/rounds.md#rnd-1-prepare-a-test-round), [RND-3.5](product/rounds.md#rnd-3-publish-a-round-to-beta-testers), [RND-5.7](product/rounds.md#rnd-5-request-a-retest), [RND-6.4](product/rounds.md#rnd-6-close-a-round)). Provisionally, result creation and changes take the same lock and re-check the state, that the build is in the round and covers the case, and that it is the case's current build; RES tests a submit racing a close and a submit racing a retest.
 - All user-written text is rendered as escaped plain text on every page, in a direction-isolating element around only the user text, and between Unicode isolate characters in page titles, so bidi and zero-width characters stay inert; each slice tests the text its pages render ([rules for every round action](product/rounds.md#rules-for-every-round-action), [RND-4.5](product/rounds.md#rnd-4-review-submitted-results)). Coordinator-written text shown to testers needs the same tests in RES.
-- Caps on rounds, criteria, cases and builds bound each workspace's storage ([RND-1.4](product/rounds.md#rnd-1-prepare-a-test-round), [RND-2.5](product/rounds.md#rnd-2-manage-acceptance-criteria-and-test-cases), [RND-5.4](product/rounds.md#rnd-5-request-a-retest)). Residual gap, accepted for now: at the 200-a-day creation cap, full rounds allow about 419 million characters a day, roughly 1.6 GiB at 4 bytes per character, before any results. Capacity and retention are settled before the first persisting code slice ([data model](TECHNICAL-SPEC.md#data-model)); RES must cap results.
+- Caps on rounds, criteria, cases and builds bound each workspace's storage ([RND-1.4](product/rounds.md#rnd-1-prepare-a-test-round), [RND-2.5](product/rounds.md#rnd-2-manage-acceptance-criteria-and-test-cases), [RND-5.4](product/rounds.md#rnd-5-request-a-retest)). Residual gap, accepted for now: at the 200-a-day creation cap, full rounds allow about 419 million characters a day, roughly 1.6 GiB at 4 bytes per character, before any results. Capacity and retention follow the [persistence decision](TECHNICAL-SPEC.md#data-model); RES must cap results.
 - Still to define in [RES](product/results.md): observation edit/submission rules and result-level checks. Check permissions and state when applying writes, including explicit adoption of AI suggestions, and test overlapping submissions and failure outcomes once those contracts are settled.
 
 ## AI features and prompt injection
@@ -66,7 +66,7 @@ Threat: oversized inputs, repeated calls or incorrect cache reuse spend the shar
 - If result reuse is implemented, isolate it by access scope and source version; authorize before lookup and invalidate on relevant changes. Do not add a cache merely to fill out the scaffold.
 - Record only the necessary operational metadata; specify retention and failure behaviour before adding persistent telemetry. Do not log prompts, observations, credentials or provider error bodies by default.
 
-Threat: accumulated business records, abandoned workspaces and expired sessions exhaust shared storage and prevent other users from saving work. Settle the [persistence lifecycle and capacity decisions](TECHNICAL-SPEC.md#data-model) before implementing persistence.
+Threat: accumulated business records, abandoned workspaces and expired sessions exhaust shared storage and prevent other users from saving work. The controls and the accepted residual risk are in the [persistence decision](TECHNICAL-SPEC.md#data-model).
 
 ## Development workflow
 

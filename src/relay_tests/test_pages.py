@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from django.test import Client
 from django.urls import path
@@ -25,7 +27,10 @@ def test_public_landing_page(client):
     ):
         assert text in html
     assert "<form" not in html
-    assert "<a " not in html
+    assert html.count("<a") == 1
+    assert re.findall(r"<a [^>]*>[^<]*</a>", html) == [
+        '<a href="/sign-in/">Sign in</a>'
+    ]
     assert client.head("/").status_code == 200
     assert client.head("/").content == b""
 

@@ -17,3 +17,5 @@ DATABASES = {
         "TEST": {"NAME": "test_relay_test"},
     }
 }
+# A fast hasher keeps the suite quick; shared and local settings keep Django's default.
+PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]

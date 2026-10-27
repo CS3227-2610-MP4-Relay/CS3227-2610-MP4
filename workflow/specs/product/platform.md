@@ -4,7 +4,7 @@ Platform area `PLT`; see the [product spec](../PRODUCT-SPEC.md).
 
 ## PLT-1: Django foundation and continuous verification
 
-- **PLT-1.1:** Any visitor can GET `/` without an account and receive an HTML page titled `Relay`, headed `Relay`, with the text `A beta-testing portal for small software teams.` and `Testing workflows are coming soon.` A HEAD request succeeds with an empty body. The page has no account or testing actions yet.
+- **PLT-1.1:** Any visitor can GET `/` without an account and receive an HTML page titled `Relay`, headed `Relay`, with the text `A beta-testing portal for small software teams.` and `Testing workflows are coming soon.` A HEAD request succeeds with an empty body. The page has a "Sign in" link to `/sign-in/` and no other account or testing actions yet.
 - **PLT-1.2:** `/` accepts only GET and HEAD. Other HTTP methods return 405 and advertise GET and HEAD; requests do not create application state.
 - **PLT-1.3:** With debug disabled, unknown routes return a generic 404 and unexpected server failures return a generic 500, without reflecting request data, exception details or source paths.
 - **PLT-1.4:** Local startup uses explicit local settings, requires a nonblank environment secret key, permits only loopback hosts/database connections, and rejects malformed debug or host configuration. No production startup configuration is supplied.

@@ -2,7 +2,7 @@
 
 ## Setup
 
-Relay contains a local Django application foundation and CI checks. Its architecture, configuration and environments are in [`TECHNICAL-SPEC.md`](../workflow/specs/TECHNICAL-SPEC.md).
+Relay contains a local Django application with sign-in by role, and CI checks. Its architecture, configuration and environments are in [`TECHNICAL-SPEC.md`](../workflow/specs/TECHNICAL-SPEC.md).
 
 Install Python 3.14, as selected by [`.python-version`](../.python-version), before creating the local tooling environment. On Windows, use the Python launcher to select it explicitly; an unqualified `python` may select another installed version. From the repository root in Git Bash:
 
@@ -30,12 +30,32 @@ Wait for PostgreSQL to accept connections, then run from the repository root wit
 ```bash
 export DJANGO_SECRET_KEY='throwaway-local-development-only'
 python src/manage.py check
+python src/manage.py migrate
 python src/manage.py runserver 127.0.0.1:8000
 ```
 
-Open <http://127.0.0.1:8000/>. Stop Django with Ctrl+C. If you started the optional database container above, stop it with `docker stop relay-local-db`; its contents are discarded. No business models, migrations or demo accounts exist yet. The landing page needs no database query.
+Open <http://127.0.0.1:8000/>. Stop Django with Ctrl+C. If you started the optional database container above, stop it with `docker stop relay-local-db`; its contents are discarded, so run `migrate` again after restarting it. Run `migrate` whenever a pull request adds migrations; the first ones create workspaces, accounts and database sessions.
 
 Settings read exported environment variables, not `.env` files; [`.env.example`](../.env.example) lists local variable names. Debug defaults off; set `DJANGO_DEBUG=true` only for local debugging. Never use production credentials for development or tests. There is no production settings module or deployment workflow.
+
+### Create accounts for manual testing
+
+Relay cannot create accounts yet; demo workspaces arrive with ACC-2. To try sign-in locally, create a workspace and one account per role in Django's shell, with the same exported environment as above:
+
+```bash
+python src/manage.py shell
+```
+
+```python
+from getpass import getpass
+from accounts.models import User, Workspace
+workspace = Workspace.objects.create(name="Demo workspace local01")
+password = getpass("Password for both accounts: ")
+User.objects.create_user("coord-local01", password, workspace=workspace, role="coordinator")
+User.objects.create_user("tester1-local01", password, workspace=workspace, role="tester")
+```
+
+Use made-up names and a throwaway password; only the password hash is stored. There is no admin site or superuser.
 
 ### Verify
 
@@ -55,7 +75,7 @@ python src/manage.py check --settings=relay.settings.test
 ruff check . && ruff format --check . && pytest
 ```
 
-Pytest creates and destroys `test_relay_test`; it never selects the normal local database. Stop the optional test container with `docker stop relay-test-db`. CI provisions its own PostgreSQL service and runs the same checks. The workflow's own tests under `workflow/scripts/` still need no database. A local pass does not establish that hosted CI has run.
+Pytest creates and destroys `test_relay_test`, applying all migrations; it never selects the normal local database. Test settings use a fast password hasher; other settings keep Django's default. Stop the optional test container with `docker stop relay-test-db`. CI provisions its own PostgreSQL service and runs the same checks. The workflow's own tests under `workflow/scripts/` still need no database. A local pass does not establish that hosted CI has run.
 
 ## Development workflow
 
@@ -73,7 +93,7 @@ Role write scopes live in `workflow/agents/`. The scope checker and tool hooks a
 
 ## Design
 
-The Django/PostgreSQL architecture, environment separation and planned delivery work are in [`TECHNICAL-SPEC.md`](../workflow/specs/TECHNICAL-SPEC.md). Threats and controls are in [`SECURITY-SPEC.md`](../workflow/specs/SECURITY-SPEC.md).
+The Django/PostgreSQL architecture, environment separation and planned delivery work are in [`TECHNICAL-SPEC.md`](../workflow/specs/TECHNICAL-SPEC.md). The `accounts` app (`src/accounts/`) holds the workspace and account models, sign-in, sign-out and the role home pages; its storage, routes and session rules are under [Accounts and workspaces](../workflow/specs/TECHNICAL-SPEC.md#accounts-and-workspaces) and [Accounts routes](../workflow/specs/TECHNICAL-SPEC.md#accounts-routes). Threats and controls are in [`SECURITY-SPEC.md`](../workflow/specs/SECURITY-SPEC.md).
 
 ## SoC LLM
 

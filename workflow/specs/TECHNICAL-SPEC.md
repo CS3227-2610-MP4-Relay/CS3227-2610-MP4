@@ -1,6 +1,6 @@
 # Technical spec
 
-How Relay will be built and run. What it will do is in [`PRODUCT-SPEC.md`](PRODUCT-SPEC.md). The application foundation is local/CI only; business schema and hosted environments remain planned.
+How Relay will be built and run. What it will do is in [`PRODUCT-SPEC.md`](PRODUCT-SPEC.md). The application runs locally and in CI only. Workspaces, accounts and sessions exist (ACC-1); other business schema and hosted environments remain planned.
 
 ## Architecture
 
@@ -9,29 +9,34 @@ How Relay will be built and run. What it will do is in [`PRODUCT-SPEC.md`](PRODU
 - Configuration from environment variables, with no committed credentials.
 - SoC LLM through one shared gateway; feature code selects authorized context before invoking it. The planned boundary is in [`ai/llm-gateway.md`](ai/llm-gateway.md).
 
-`src/manage.py` starts the `relay` Django project; `relay.wsgi` is its WSGI entry point and `relay.pages` owns public presentation. Shared templates live in `src/relay/templates/`. No auth/session/admin apps or business models are installed. Runtime and dependency pins belong in the root configuration files.
+`src/manage.py` starts the `relay` Django project; `relay.wsgi` is its WSGI entry point and `relay.pages` owns public presentation. Shared templates live in `src/relay/templates/`. The `accounts` app (`src/accounts/`) owns the [workspace and account models](#accounts-and-workspaces) and the accounts routes, with Django's `auth`, `contenttypes`, `sessions` and `messages` apps; `django.contrib.admin` is never installed. ACC-1 adds them; until then no auth/session apps or business models are installed. Runtime and dependency pins belong in the root configuration files.
 
 ## Data model
 
 Only the subsections below are specified. Design workspaces, role-based accounts, rounds, requirements, cases, build references and results around the [product areas](PRODUCT-SPEC.md#areas). Before schema implementation, settle ownership, state transitions, published-case edits, submitted-observation edits and result-history/version rules. Do not infer these from a proposed screen or table name.
 
-Before implementing persistence, decide retention for accumulated business records, workspace lifetime, expired-session handling and behaviour when shared storage capacity is exhausted, including failed writes and preservation of required result history. These are open design decisions; no cleanup subsystem or retention duration is prescribed yet.
+Persistence and retention, decided for ACC-1 (see its [plan](../plans/2-sign-in-by-role.md)):
+
+- Workspaces, accounts, rounds, results, limit rows and their hashed address keys are kept for the life of the course deployment. Nothing expires or is deleted automatically, and there is no cleanup subsystem.
+- An expired session is refused by its absolute expiry; its row is not deleted automatically. Sign-out deletes its own session row.
+- When shared storage is exhausted, a failed write is not retried, and the user gets that route's existing error page: the generic 500 of [PLT-1.3](product/platform.md#plt-1-django-foundation-and-continuous-verification), or the 503 page that [ACC-2.5](product/accounts.md#acc-2-create-an-isolated-demo-workspace) and [ACC-3.7](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation) define. A route that writes in a transaction rolls the whole transaction back. Existing records, including result history, are never deleted or overwritten to make room.
+- Before peer testing, an operator checks the hosting database's storage use. Exhaustion and unbounded session and counter growth are [accepted residual risks](SECURITY-SPEC.md#sign-in-and-access-control) for the course deployment.
 
 ### Accounts and workspaces
 
-For [ACC](product/accounts.md). The retention, workspace-lifetime and expired-session decisions above are a precondition of the first ACC code slice (ACC-1). Until they are made, nothing is deleted, and hashed addresses are kept indefinitely.
+For [ACC](product/accounts.md). Retention follows the [persistence decision](#data-model) above.
 
 - **Workspace:** a unique name, `Demo workspace <suffix>`, and its creation time. Every workspace-owned record has a non-null workspace reference. Routes check the role first, then look records up through one shared helper that filters by the signed-in user's workspace before reading and gives the 404 of [ACC-2.4](product/accounts.md#acc-2-create-an-isolated-demo-workspace) for any other workspace's record.
-- **Account:** a custom Django user model, which exists before any persistent database (in particular production, under #5) is migrated; if #1 ships without it, the ACC-1 slice adds it. It has a globally unique username, a Django password hash, a non-null workspace and a role of `coordinator` or `tester`, all fixed at creation. The model has no staff, superuser or permission fields, and `django.contrib.admin` is not installed, so there is no admin route.
+- **Account:** a custom Django user model (`accounts.User`, the `AUTH_USER_MODEL`), added by ACC-1 before any persistent database (in particular production, under #5) is migrated. It has a globally unique username, a Django password hash, a non-null workspace (`PROTECT`) and a role of `coordinator` or `tester`, all fixed at creation, plus Django's last-sign-in time. The model has no staff, superuser or permission fields, and `django.contrib.admin` is not installed, so there is no admin route.
 - **Generated credentials:** usernames are `coord-<suffix>`, `tester1-<suffix>` and `tester2-<suffix>`, sharing the workspace's suffix of 8 random lowercase letters and digits; a suffix collision is retried. Each password is 16 random characters from `a-z`, `A-Z` and `0-9`, generated with `secrets` and hashed before any lock is taken. Plain passwords exist only in memory while rendering the creation response.
 - **Creation:** one transaction holds the limit counts, the workspace, its accounts, its sample round and the rendering of the creation response, so any failure rolls everything back ([ACC-2.5](product/accounts.md#acc-2-create-an-isolated-demo-workspace)).
 - **Limit counter:** one row per scope and key, holding a window start and a count, unique on scope and key; scopes, numbers and windows are in [ACC-3](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation). A migration creates the overall creation row; per-address rows are inserted or updated in one statement. A creation locks its per-address row, then the overall row. A sign-in locks its per-address row, checks the count, checks the password and records any failure in one transaction, so concurrent attempts cannot overshoot and a rollback records nothing. These transactions set a 5-second lock timeout and a statement timeout, and PostgreSQL's `idle_in_transaction_session_timeout` is set so an abandoned transaction cannot keep a lock. That timeout must be longer than the work done while a lock is held, because PostgreSQL counts the session as idle while Python works: one password hash during sign-in, and writing and rendering during demo creation, whose passwords are hashed first. Any timeout gives the 503 of ACC-3.7. The idle timeout, and lock wait plus the work under the lock, must stay below the platform's function time limit, which is verified under the [release gate](#release-verification). Once a window has elapsed, the row restarts its window and count.
 - **Client address:** `REMOTE_ADDR`, never a client-supplied forwarding header. IPv4 addresses count individually and IPv6 addresses by their `/64` prefix; a missing or unparseable address uses the fixed key `unknown`. The stored key is Django's `salted_hmac` of the address with its own salt, never the address itself. Production depends on the client-address gate under [Release verification](#release-verification); a trusted-proxy header setting is a separate decision, needed only if that verification shows it.
-- **Sessions:** Django's database-backed sessions. Sign-in sets an absolute expiry time, so later session writes cannot extend it ([ACC-1.6](product/accounts.md#acc-1-sign-in-and-out-by-role)); sign-out deletes the session row.
+- **Sessions:** Django's database-backed sessions. Sign-in sets an absolute expiry time 8 hours ahead, so later session writes cannot extend it ([ACC-1.6](product/accounts.md#acc-1-sign-in-and-out-by-role)); sign-out deletes the session row. Expired rows are not deleted automatically ([persistence decision](#data-model)).
 
 ### Rounds
 
-For [RND](product/rounds.md). Field limits, caps and messages are in its criteria. Nothing here deletes a round, build or result, and the [persistence decisions](#data-model), including shared-storage capacity, are a precondition of the first persisting code slice. A round belongs to one workspace and every other record below to one round. URL records are looked up through the workspace helper, then checked to be in the round the URL names; form-submitted IDs are checked against the round in the form's validation ([checking order](product/rounds.md#rules-for-every-round-action)).
+For [RND](product/rounds.md). Field limits, caps and messages are in its criteria. Nothing here deletes a round, build or result; retention and full storage follow the [persistence decision](#data-model). A round belongs to one workspace and every other record below to one round. URL records are looked up through the workspace helper, then checked to be in the round the URL names; form-submitted IDs are checked against the round in the form's validation ([checking order](product/rounds.md#rules-for-every-round-action)).
 
 - **Round:** a non-null workspace, a title, a state of `draft`, `open` or `closed`, and its creation, publication and closing times.
 - **Acceptance criterion** and **test case:** a round and their text fields ([RND-2.4](product/rounds.md#rnd-2-manage-acceptance-criteria-and-test-cases)), validated with Django's null-character validator and a visible-character check.
@@ -46,9 +51,9 @@ For [RND](product/rounds.md). Field limits, caps and messages are in its criteri
 
 ### Foundation route
 
-`/` is a public, stateless GET/HEAD route rendering `home.html`, with no input or role/workspace/state preconditions. Other methods return 405; unresolved paths and uncaught exceptions use Django's generic nondebug 404/500 responses. Its observable contract is [PLT-1](product/platform.md#plt-1-django-foundation-and-continuous-verification). Future routes must define authorization, validation and state contracts before implementation.
+`/` is a public, stateless GET/HEAD route rendering `home.html`, with no input or role/workspace/state preconditions. Other methods return 405; unresolved paths and uncaught exceptions use Django's generic nondebug 404/500 responses. Its observable contract is [PLT-1](product/platform.md#plt-1-django-foundation-and-continuous-verification); from ACC-1 the page also links to `/sign-in/` (PLT-1.1). Future routes must define authorization, validation and state contracts before implementation.
 
-The accounts and rounds routes below are planned for their implementation slices; the accounts start page will replace the foundation's `/` behaviour. Each route contract must name its method, role/workspace/ownership checks, input validation, state preconditions, success result and denied/failure behaviour before implementation.
+The accounts and rounds routes below are planned for their implementation slices; ACC-2 turns `/` into the accounts start page in the table below. Each route contract must name its method, role/workspace/ownership checks, input validation, state preconditions, success result and denied/failure behaviour before implementation.
 
 ### Accounts routes
 
@@ -57,13 +62,17 @@ For [ACC](product/accounts.md). Every POST uses Django's CSRF protection, which 
 | Route | Method | Access | Validation and success | Denied or failed |
 | --- | --- | --- | --- | --- |
 | `/` | GET | Signed out | Relay start page, titled "Relay", with a sign-in link and the "Create a demo workspace" button | Signed in: redirect to own role home |
-| `/sign-in/` | GET, POST | Anyone | GET shows the form, unlimited. POST locks the per-address count, then Django's authentication checks the username and password in the same transaction; success starts a new session and redirects to own role home, ignoring `next` ([ACC-1.1, 1.2, 1.7](product/accounts.md#acc-1-sign-in-and-out-by-role)) | Invalid: [ACC-1.2](product/accounts.md#acc-1-sign-in-and-out-by-role); limited: [ACC-3.1](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation) |
-| `/sign-out/` | POST | Anyone | Flushes the session and redirects to `/sign-in/` ([ACC-1.5](product/accounts.md#acc-1-sign-in-and-out-by-role)) | Other methods: 405 |
+| `/sign-in/` | GET, POST | Anyone | GET shows the form, unlimited. POST first locks the per-address count (from ACC-3), then validates the fields with a form: surrounding whitespace is removed from the username, which may have at most 150 characters, and neither field may contain a NUL character. An invalid field is a failed sign-in, counted under [ACC-3.3](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation) once ACC-3 exists, with the ACC-1.2 failure. Django's authentication then checks the username and password in the same transaction; success starts a new session and redirects to own role home, ignoring `next` ([ACC-1.1, 1.2, 1.7](product/accounts.md#acc-1-sign-in-and-out-by-role)) | Invalid: [ACC-1.2](product/accounts.md#acc-1-sign-in-and-out-by-role); limited: [ACC-3.1](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation) |
+| `/sign-out/` | POST | Anyone | Flushes the session and redirects to `/sign-in/`, which shows "You have signed out." once through Django's messages ([ACC-1.5](product/accounts.md#acc-1-sign-in-and-out-by-role)) | Other methods: 405 |
 | `/demo/` | POST | Signed out | Checks both creation limits, then creates and renders "Your demo workspace" in one transaction, with `Cache-Control: no-store` and no redirect ([ACC-2.1 to 2.3](product/accounts.md#acc-2-create-an-isolated-demo-workspace)) | Signed in: [ACC-2.6](product/accounts.md#acc-2-create-an-isolated-demo-workspace); other methods: 405; limited: [ACC-3.4](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation) |
 | `/coordinator/` | GET | Test Coordinator | "Coordinator home" | Signed out: redirect to `/sign-in/`; Beta Tester: 403 of [ACC-1.4](product/accounts.md#acc-1-sign-in-and-out-by-role) |
 | `/tester/` | GET | Beta Tester | "Tester home" | Signed out: redirect to `/sign-in/`; Test Coordinator: 403 of ACC-1.4 |
 
-The session cookie is `HttpOnly`; session and CSRF cookies are `SameSite=Lax`, and `Secure` outside local development.
+The session cookie is `HttpOnly`; session and CSRF cookies are `SameSite=Lax`, and `Secure` outside local development (shared settings set `Secure`; `relay.settings.local` turns it off). `/sign-in/`, `/coordinator/` and `/tester/` are never cached (`Cache-Control: private, no-store`).
+
+Signed-out redirects go to `/sign-in/` with no `next` parameter.
+
+Delivery order: ACC-1 builds `/sign-in/` (page title "Sign in"), `/sign-out/`, `/coordinator/` and `/tester/`, and adds the sign-in link to the foundation's `/` (PLT-1.1). ACC-2 adds `/demo/`, the start page's button and its signed-in redirect, and the 503 page; ACC-3 adds the sign-in count and its lock. Until then, a storage failure on an accounts route gives the generic 500 of PLT-1.3.
 
 ### Rounds routes
 
@@ -89,7 +98,7 @@ For [RND](product/rounds.md). Every route requires a signed-in Test Coordinator 
 
 The `.env.example` file may contain only empty placeholders and throwaway local database values. Settings never load dotenv files. `relay.settings.local` reads `DJANGO_SECRET_KEY` (required/nonblank), `DJANGO_DEBUG` (strict true/false; defaults false), `DJANGO_ALLOWED_HOSTS` (comma-separated localhost/127.0.0.1/[::1] only), and `POSTGRES_HOST/PORT/DB/USER/PASSWORD` (defaults localhost/5432/relay/relay/relay). Database host must be localhost, 127.0.0.1 or ::1. These local settings cannot configure a hosted runtime. `manage.py` and WSGI default to local settings; explicit `DJANGO_SETTINGS_MODULE` remains supported.
 
-`relay.settings.test` imports only shared settings and uses fixed non-secret values: PostgreSQL database/user/password `relay_test`, host 127.0.0.1, port 55432, test database `test_relay_test`, debug false and hosts testserver/localhost/127.0.0.1. `pytest.ini` selects these settings; tests use no provider. The test role needs database creation permission on its throwaway server. No business migrations exist.
+`relay.settings.test` imports only shared settings and uses fixed non-secret values: PostgreSQL database/user/password `relay_test`, host 127.0.0.1, port 55432, test database `test_relay_test`, debug false and hosts testserver/localhost/127.0.0.1. `pytest.ini` selects these settings; tests use no provider. The test role needs database creation permission on its throwaway server. ACC-1 adds the first business migrations.
 
 Both database configurations explicitly set libpq `hostaddr` through Django's database `OPTIONS`, preventing inherited `PGHOSTADDR` from redirecting connections. Local localhost/127.0.0.1 map to 127.0.0.1; local ::1 maps to ::1. Tests fix the address to 127.0.0.1.
 
