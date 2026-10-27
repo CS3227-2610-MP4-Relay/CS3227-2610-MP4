@@ -77,6 +77,22 @@ def build_coverage(html, label):
     return re.findall(r'<li><span dir="auto">([^<]+)</span></li>', block)
 
 
+def criteria_content(html):
+    """The acceptance-criteria section, including its stored text."""
+    start = html.index("<h2>Acceptance criteria</h2>")
+    return html[start : html.index("<h2>Test cases</h2>", start)]
+
+
+def case_fields(html, title):
+    """A case's stored fields and links, without its current build."""
+    heading = f'<h3><span dir="auto">{title}</span></h3>'
+    start = html.index(heading)
+    following = html.find("<h3>", start + len(heading))
+    section = html[start : following if following != -1 else len(html)]
+    marker = section.find("<h4>Current build</h4>")
+    return section if marker == -1 else section[:marker]
+
+
 @pytest.mark.ac(
     "ACC-2.1",
     "ACC-1.1",
@@ -119,7 +135,11 @@ def test_a_coordinator_drives_a_round_from_demo_to_closed():
         "Beta Tester",
     ]
     _, username, password = rows[0]
-    signed_in = client.post("/sign-in/", {"username": username, "password": password})
+    signed_in = client.post(
+        "/sign-in/?next=/tester/",
+        {"username": username, "password": password, "next": "/tester/"},
+        HTTP_REFERER="/tester/",
+    )
     assert_redirect(signed_in, "/coordinator/")
     home = client.get("/coordinator/")
     assert home.status_code == 200
@@ -263,6 +283,10 @@ def test_a_coordinator_drives_a_round_from_demo_to_closed():
     assert build_coverage(opened, build_label) == [first_case, second_case]
     assert "Request a retest</a>" in opened
     assert WARNING in opened and "Close round</button>" in opened
+    published_criteria = criteria_content(opened)
+    published_cases = {
+        title: case_fields(opened, title) for title in (first_case, second_case)
+    }
 
     # RND-3.6, RND-1.7 and RND-2.8: an Open round refuses edits and publishing.
     assert_conflict(client.get(f"{url}edit/"), "Open")
@@ -302,6 +326,9 @@ def test_a_coordinator_drives_a_round_from_demo_to_closed():
     builds = opened[opened.index("<h2>Builds</h2>") :]
     assert builds.index(build_label) < builds.index(retest_label)
     assert revised_first in opened and first not in opened
+    assert criteria_content(opened) == published_criteria
+    assert case_fields(opened, first_case) == published_cases[first_case]
+    assert case_fields(opened, second_case) == published_cases[second_case]
 
     # RND-5.5: retest the same case again; both earlier builds stay listed.
     second_retest_label = "Synthetic build 1.2"
@@ -319,6 +346,15 @@ def test_a_coordinator_drives_a_round_from_demo_to_closed():
     assert build_coverage(opened, retest_label) == [first_case]
     assert build_coverage(opened, second_retest_label) == [first_case]
     assert revised_first in opened and second in opened
+    assert criteria_content(opened) == published_criteria
+    assert case_fields(opened, first_case) == published_cases[first_case]
+    assert case_fields(opened, second_case) == published_cases[second_case]
+    builds = opened[opened.index("<h2>Builds</h2>") :]
+    assert (
+        builds.index(build_label)
+        < builds.index(retest_label)
+        < builds.index(second_retest_label)
+    )
 
     # RND-6.1 and RND-6.2: closing keeps the round's content and removes controls.
     assert_redirect(client.post(f"{url}close/"), url)
@@ -350,7 +386,7 @@ def test_a_coordinator_drives_a_round_from_demo_to_closed():
     ):
         assert control not in closed, control
 
-    # RND-6.3, RND-6.5, RND-2.8, RND-3.6 and RND-5.8: a Closed round is read-only.
+    # RND-6.3: a Closed round is read-only.
     closed_actions = (
         ("get", f"{url}edit/", {}),
         ("post", f"{url}edit/", {"title": "Synthetic ignored"}),
