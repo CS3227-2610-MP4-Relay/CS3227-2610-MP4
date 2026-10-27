@@ -6,20 +6,22 @@ from django import template
 from django.utils.html import conditional_escape, format_html, format_html_join
 from django.utils.safestring import mark_safe
 
+from rounds.forms import DIRECTION_CONTROLS
+
 register = template.Library()
 
 FSI, PDI = chr(0x2068), chr(0x2069)
-# U+202A to U+202E and U+2066 to U+2069, removed from page titles.
-BIDI_CONTROLS = dict.fromkeys([*range(0x202A, 0x202F), *range(0x2066, 0x206A)])
+# A str.translate table deleting the text-direction controls from page titles.
+DROP_DIRECTION_CONTROLS = dict.fromkeys(map(ord, DIRECTION_CONTROLS))
 
 
 @register.filter
 def title_isolate(text):
-    """Drop bidi controls, join lines with spaces and wrap it in FSI ... PDI.
+    """Drop text-direction controls, join lines with spaces, wrap in FSI ... PDI.
 
     A paragraph separator such as U+2029 would end the isolate, so none stays.
     """
-    lines = str(text).translate(BIDI_CONTROLS).splitlines()
+    lines = str(text).translate(DROP_DIRECTION_CONTROLS).splitlines()
     return FSI + " ".join(lines) + PDI
 
 

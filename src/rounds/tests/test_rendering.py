@@ -45,7 +45,7 @@ def test_markup_in_a_refused_title_is_escaped_in_the_form(
     assert_no_raw_markup(html)
 
 
-def test_page_title_drops_bidi_controls_and_isolates_the_title(
+def test_page_title_drops_direction_controls_and_isolates_the_title(
     coord_client, make_round
 ):
     made = make_round(

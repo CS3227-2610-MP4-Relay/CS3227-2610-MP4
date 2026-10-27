@@ -73,7 +73,7 @@ The round page shows the new title.
 
 ### Titles and limits
 
-A title has 1 to 120 characters; spaces or line breaks at either end are removed. An empty title, a title of only spaces or invisible characters, or a longer one gets "Enter 1 to 120 characters." A title containing a null character gets "Null characters are not allowed."
+A title has 1 to 120 characters; spaces or line breaks at either end are removed. An empty title, a title of only spaces or invisible characters, or a longer one gets "Enter 1 to 120 characters." A title containing a null character gets "Null characters are not allowed." A title containing a hidden character that changes text direction gets "Hidden text-direction characters are not allowed." Letters of any language, accents and emoji are fine.
 
 A workspace can have up to 20 rounds, including the sample round of a new demo workspace. Creating a 21st gets "This workspace has reached its limit of 20 rounds." Nothing deletes a round.
 
@@ -99,7 +99,7 @@ To delete, choose **Delete test case** under a case or **Delete criterion** next
 
 ### Criteria and test case limits
 
-Criterion text has 1 to 500 characters; a case's title has 1 to 120, its steps 1 to 2000 and its expected result 1 to 1000. Spaces or line breaks at either end are removed, and a line break counts as one character. A field that is empty, holds only spaces or invisible characters, or is too long gets "Enter 1 to N characters." next to it, with N its maximum, such as "Enter 1 to 500 characters." for criterion text; a null character gets "Null characters are not allowed."
+Criterion text has 1 to 500 characters; a case's title has 1 to 120, its steps 1 to 2000 and its expected result 1 to 1000. Spaces or line breaks at either end are removed, and a line break counts as one character. A field that is empty, holds only spaces or invisible characters, or is too long gets "Enter 1 to N characters." next to it, with N its maximum, such as "Enter 1 to 500 characters." for criterion text; a null character gets "Null characters are not allowed." and a hidden character that changes text direction gets "Hidden text-direction characters are not allowed."
 
 A case with no linked criterion gets "Link at least one acceptance criterion." If a criterion you ticked was deleted meanwhile, the form says "Choose criteria from this round."
 
@@ -114,7 +114,7 @@ While a round is Draft, its round page ends with a **Build label** field and a *
 
 The round page shows "Round published." and "State: Open". An Open round cannot return to Draft.
 
-A build label has 1 to 100 characters; spaces or line breaks at either end are removed. An empty label, a label of only spaces or invisible characters, or a longer one gets "Enter 1 to 100 characters." next to the field, and a label containing a null character gets "Null characters are not allowed." A round with no test cases gets "Add at least one test case before publishing." After any of these messages the round stays Draft, with your label still in the field.
+A build label has 1 to 100 characters; spaces or line breaks at either end are removed. An empty label, a label of only spaces or invisible characters, or a longer one gets "Enter 1 to 100 characters." next to the field, a label containing a null character gets "Null characters are not allowed.", and a label containing a hidden character that changes text direction gets "Hidden text-direction characters are not allowed." A round with no test cases gets "Add at least one test case before publishing." After any of these messages the round stays Draft, with your label still in the field.
 
 ### An Open round
 
@@ -135,7 +135,7 @@ The round page shows, for example, "Retest requested for 2 test cases on build 1
 If something is wrong, the page shows again with your ticks and label kept:
 
 - With no case ticked: "Select at least one test case." next to **Test cases to retest**.
-- The build label follows the same rules as when publishing: "Enter 1 to 100 characters." or "Null characters are not allowed." next to **Build label**.
+- The build label follows the same rules as when publishing: "Enter 1 to 100 characters.", "Null characters are not allowed." or "Hidden text-direction characters are not allowed." next to **Build label**.
 - A label already used for a build of this round, including the one named at publishing: "This build label is already used in this round." next to **Build label**. Upper and lower case count as different, but invisible formatting characters such as zero-width spaces are ignored, and the same accented letter typed in different ways counts as the same.
 - A round can have up to 10 builds, counting the one named at publishing. Requesting an 11th gets "This round has reached its limit of 10 builds." next to **Build label**.
 - A ticked case that is not in this round gets "Choose test cases from this round." next to **Test cases to retest**.
