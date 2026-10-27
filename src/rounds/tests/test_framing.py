@@ -101,8 +101,8 @@ def test_no_view_is_exempt_from_framing_refusal():
 def test_framing_is_refused_by_the_shared_settings(settings):
     for middleware in (base.MIDDLEWARE, settings.MIDDLEWARE):
         assert middleware[:2] == [
-            "django.middleware.security.SecurityMiddleware",
             "django.middleware.clickjacking.XFrameOptionsMiddleware",
+            "django.middleware.security.SecurityMiddleware",
         ]
     assert not hasattr(base, "X_FRAME_OPTIONS")
     assert settings.X_FRAME_OPTIONS == "DENY"
@@ -111,3 +111,15 @@ def test_framing_is_refused_by_the_shared_settings(settings):
 def test_an_anonymous_round_page_redirect_refuses_framing(make_round):
     response = Client().get(detail(make_round().pk))
     refuses_framing(response, 302)
+
+
+@pytest.mark.parametrize(
+    ("host", "status"), [("testserver", 301), ("disallowed.example", 400)]
+)
+def test_responses_made_by_the_security_middleware_refuse_framing(
+    settings, host, status
+):
+    # The HTTPS redirect and the disallowed-host 400 are made inside
+    # SecurityMiddleware, so only middleware above it sees them.
+    settings.SECURE_SSL_REDIRECT = True
+    refuses_framing(Client().get("/", HTTP_HOST=host), status)
