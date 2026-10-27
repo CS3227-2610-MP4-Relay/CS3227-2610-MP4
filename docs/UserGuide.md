@@ -22,6 +22,8 @@ Each account has one role, **Test Coordinator** or **Beta Tester**, in one works
 2. The **Your demo workspace** page shows `Workspace:` with the new workspace's name, and a table with the **Role**, **Username** and **Password** of one Test Coordinator and two Beta Testers. It says "Save these passwords now. They will not be shown again."
 3. Save the usernames and passwords, then choose **Sign in** to sign in with any of them.
 
+Each new workspace starts with one round, **Sample round**, in the **Draft** state. It has 3 acceptance criteria and 4 test cases about an example to-do app, and each test case is linked to at least one criterion. Its Test Coordinator can [publish](#publish-a-round) it straight away by entering only a build label, or change it first like any Draft round. It counts toward the workspace's [limit of 20 rounds](#titles-and-limits).
+
 Creating a workspace does not sign you in. Each workspace is separate: its accounts never see another workspace's records. Resubmitting the page, which your browser asks about first, creates another new workspace rather than showing the same passwords again, and the browser's back button may still show the earlier page. While you are signed in, choosing **Create a demo workspace** takes you to your own home page and creates nothing.
 
 If creation fails, the page says "Relay is temporarily unavailable. Try again later." and nothing is created.
@@ -51,7 +53,7 @@ You are also signed out 8 hours after signing in, whatever you do in between; op
 
 Only a Test Coordinator can prepare, publish, retest and close test rounds. A new round is in the **Draft** state; [publishing](#publish-a-round) it makes it **Open**, and [closing](#close-a-round) it makes it **Closed**. Beta Testers do not see rounds yet.
 
-**Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". With no rounds, it says "No rounds yet."
+**Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". A new demo workspace starts with its [sample round](#create-a-demo-workspace), so its list is not empty; "No rounds yet." appears only for a workspace with no rounds.
 
 Whenever creating, publishing, retesting or closing a round, or saving or deleting anything in it, fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
 
@@ -73,7 +75,7 @@ The round page shows the new title.
 
 A title has 1 to 120 characters; spaces or line breaks at either end are removed. An empty title, a title of only spaces or invisible characters, or a longer one gets "Enter 1 to 120 characters." A title containing a null character gets "Null characters are not allowed." A title containing a hidden character that changes text direction gets "Hidden text-direction characters are not allowed." Letters of any language, accents and emoji are fine.
 
-A workspace can have up to 20 rounds. Creating a 21st gets "This workspace has reached its limit of 20 rounds." Nothing deletes a round.
+A workspace can have up to 20 rounds, including the sample round of a new demo workspace. Creating a 21st gets "This workspace has reached its limit of 20 rounds." Nothing deletes a round.
 
 ### Acceptance criteria and test cases
 

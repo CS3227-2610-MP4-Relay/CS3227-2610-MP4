@@ -8,6 +8,8 @@ from django.contrib.auth.hashers import make_password
 from django.db import transaction
 from django.views.decorators.debug import sensitive_variables
 
+from rounds.sample import create_sample_round
+
 from .models import User, Workspace
 
 SUFFIX_ALPHABET = string.ascii_lowercase + string.digits
@@ -73,11 +75,12 @@ def _free_suffix():
 
 @sensitive_variables("passwords", "password", "hashed", "credentials")
 def create_demo_workspace(passwords):
-    """Write a workspace and its accounts, all or nothing.
+    """Write a workspace, its accounts and its sample round, all or nothing.
 
     `passwords` comes from `generate_passwords`. Returns the workspace and its
     credentials in display order. It runs as a savepoint inside the `/demo/`
-    view's creation transaction, and is atomic on its own as well.
+    view's creation transaction, and is atomic on its own as well. The sample
+    round (RND-7) is the workspace's only round when creation commits.
     """
     with transaction.atomic():
         suffix = _free_suffix()
@@ -90,4 +93,5 @@ def create_demo_workspace(passwords):
                 username=username, workspace=workspace, role=role, password=hashed
             )
             credentials.append(Credential(role.label, username, password))
+        create_sample_round(workspace)
     return workspace, credentials
