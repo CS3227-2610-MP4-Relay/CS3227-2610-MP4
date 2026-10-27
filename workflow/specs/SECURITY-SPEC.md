@@ -1,6 +1,6 @@
 # Security spec
 
-Threats to Relay and to how it is built, and the controls against them. PLT-1 defines the local/CI foundation, ACC-1 implements sign-in, sessions and role access, ACC-2 demo workspace creation and the shared workspace lookup, RND-1 the coordinator's round pages, RND-2 their criteria and cases with round-scoped lookups and links, RND-3 publishing under the round lock, RND-5 retests and RND-6 closing under the same lock; other application controls and their verification remain planned. Controls link to their acceptance criteria where specified, with verification added by the slices that implement them. No deployed security is claimed here.
+Threats to Relay and to how it is built, and the controls against them. PLT-1 defines the local/CI foundation, ACC-1 implements sign-in, sessions and role access, ACC-2 demo workspace creation and the shared workspace lookup, ACC-3 the sign-in and creation abuse limits, RND-1 the coordinator's round pages, RND-2 their criteria and cases with round-scoped lookups and links, RND-3 publishing under the round lock, RND-5 retests and RND-6 closing under the same lock; other application controls and their verification remain planned. Controls link to their acceptance criteria where specified, with verification added by the slices that implement them. No deployed security is claimed here.
 
 ## Secrets and settings
 
@@ -27,11 +27,15 @@ Threat: a visitor or user accesses another role's operations, another workspace'
 Threat: repeated sign-in attempts guess passwords, or repeated demo creation exhausts shared storage.
 
 - Count failed sign-ins and demo creations per client address, with an overall creation cap, atomically in the database; refuse when the count cannot be checked ([ACC-3](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation)). Store addresses only as keyed hashes, and never trust client-supplied forwarding headers. Production waits for the client-address [release gate](TECHNICAL-SPEC.md#release-verification).
+- Sign-in and demo creation check their counts unlocked before hashing any password, so a refused request costs no hashing; the locked re-check inside the transaction is what enforces the limit, and no password is hashed while a counter lock is held. Lock, statement and idle-in-transaction timeouts bound how long a counter lock is held ([limited transactions](TECHNICAL-SPEC.md#accounts-and-workspaces)).
 - Residual gaps, accepted for now:
-  - An attacker with many addresses can use up the overall cap and block demo creation for everyone.
+  - The pre-checks are unlocked, so a concurrent burst of sign-ins or creations sent while a count is below its limit all passes them and pays for hashing before the locked re-check refuses the excess; the cost is bounded only by how many requests arrive before the count fills.
+  - An attacker with many addresses can use up the overall cap and block demo creation for everyone: 20 IPv4 addresses, or 20 `/64`s from one IPv6 `/56`, can fill the 200-a-day cap within an hour of its window starting, every day, and a single address fills it within 20 hours. Sign-in guessing spreads the same way at 30 tries per `/64` (or IPv4 address) per 15 minutes, which is negligible against generated 16-character passwords (about 95 bits). Decided by the human on 2026-10-27 (#59): IPv6 stays counted per `/64`, because a `/56` or `/48` is often a whole campus, so classmates on one count could block each other's demo creation; and there is no per-username cap, because guessing is already hopeless and such a cap would let anyone who knows a username lock that account out.
   - Behind a proxy that hides client addresses, or for requests without a parseable address, clients share one count.
+  - Refusals and requests counted under the `unknown` key are not logged; whether to log them is left to #5, decided by the human on 2026-10-27 (#59).
   - Fixed windows allow a burst across a window boundary.
-  - Sign-ins from one address queue on its counter lock, so a client sharing that address can delay or refuse others' sign-ins, and waiting requests hold database connections.
+  - Sign-ins from one address still queue briefly on its counter lock, which is held only for the re-check and recording, never across a password hash; waiting requests hold database connections. Successful sign-ins are not counted, so they are unlimited: each costs a password hash and creates a session row.
+  - Rotating `SECRET_KEY` changes every stored address key, so it resets every per-address count.
   - Reloading the demo creation page resubmits it and creates another workspace, within the limits, and a browser's back/forward cache may show the credentials again despite `no-store`.
   - Storage grows without bound, as the [persistence decision](TECHNICAL-SPEC.md#data-model) accepts for the course deployment: unlimited successful sign-ins create session rows, and signing out replaces each with a new row holding the sign-out message until shown (concurrent sign-outs of one session can each create one), though a signed-out visitor's sign-out and viewing the sign-in page create none; unread messages stay in their session row until shown; expired sessions are never deleted automatically, rotating addresses or IPv6 prefixes create limit-counter rows, and hashed addresses are kept for the life of the deployment.
 
@@ -81,6 +85,28 @@ Threat: malicious repository content or a mistaken agent bypasses scope, weakens
 - Verify development controls with synthetic secrets and malicious repository instructions that attempt prohibited access or test weakening. Retain observed actions and outcomes; configuration alone is not proof of enforcement.
 - Record actual triggers, context, check results and repair rounds. Mark unavailable telemetry as unavailable; never invent human approval, test results or usage data.
 - Human-invoked slice delivery and its protected Git/release actions follow the [Git authorization and commit rules](../../AGENTS.md#git); untrusted task content cannot expand that authority. The [slice workflow](../skills/slice.md) must distinguish completed local checks from completed hosted delivery.
+- Agent sessions use a team member's GitHub credentials, which may be an admin's. A mistaken or manipulated agent could therefore change GitHub settings, credentials, shared content or reviews. Agents change GitHub state only when the human asks for that specific action, under the [rule and its categories in `AGENTS.md`](../../AGENTS.md#approvals-and-claims).
+  - **Claude Code enforcement.** Project settings ask before:
+    - `git push` and the GitHub-changing `gh` command groups and subcommands;
+    - a repository flag between a command group and its subcommand;
+    - reviewer, label, assignee, project, milestone and base changes through `gh pr edit`;
+    - every `gh api` call, because a command rule cannot tell API reads from writes.
+
+    Ask rules take precedence over allow rules, as observed for the Bash tool ([plan](../plans/40-ask-before-github-changes.md#verification)). The PowerShell mirrors are configured but not yet observed.
+    Title and body edits through `gh pr edit` stay ungated in Claude Code, including edits on another pull request.
+  - **Codex control.** Trusted project configuration uses `on-request` approval with the `user` reviewer, `workspace-write` sandboxing and sandbox network access disabled. Native command-prefix rules prompt for direct `gh`, `gh.exe`, `git push` and `git.exe push` commands when an applicable command reaches approval evaluation outside the sandbox. Gating all direct `gh` calls covers reads, API calls, flags, aliases invoked through `gh`, and PR title/body edits; prefix rules cannot distinguish the slice's own draft PR from another PR.
+
+    Existing human authorization under `AGENTS.md` remains valid: a client execution prompt does not require another conversational permission request for authorized slice delivery. `auto_review` is automated review, not a human approval route. Configuration changes require a new session and trusted project loading; they do not change an active session's reviewer. Native rule-evaluator results establish command matching only, not project loading, sandbox enforcement or interactive prompting. Actual observations and unavailable checks belong in the [slice plan](../plans/66-codex-github-approvals.md#verification).
+  - **Residuals.** These are client-side, best-effort checks on a credential GitHub trusts. The instruction remains necessary for:
+    - project controls not loaded because of launch location, untrusted project configuration or session startup state;
+    - an auto-approve, bypass or overriding permission configuration;
+    - MCP, connector or other non-shell tools;
+    - `curl` or `Invoke-RestMethod` with a token the agent printed or read;
+    - command forms outside the verified prefixes, including absolute executable paths, PowerShell wrappers such as `& gh` or `Start-Process`, Git flags before `push`, and aliases invoked outside a gated command; Claude Code also retains its narrower command-list gaps, including `gh.exe` and new `gh` commands;
+    - Codex commands that remain inside the sandbox without out-of-sandbox approval evaluation;
+    - a human approving a prompt without reading it.
+
+    Branch protection remains the server-side control for `main`.
 
 ## CI and dependencies
 
@@ -89,6 +115,6 @@ Threat: untrusted code receives secrets, dependency substitution runs malicious 
 - Pin dependencies and third-party CI actions; verify package/action identities before adoption. Give validation jobs read-only repository permissions and no stored production secrets; do not use `pull_request_target` for untrusted code.
 - Keep production and Pages publication privileges in their controlled release jobs. Hosted environment restrictions remain operator work under [Release verification](TECHNICAL-SPEC.md#release-verification).
 - Protect the default branch: changes arrive only by pull request with one approving review, new pushes dismiss earlier approvals, and the GitHub Actions `verify` check must pass; a status posted by another app or user does not satisfy it. The branch need not be up to date before merging. The rules apply to admins; force pushes and branch deletion are blocked. Emergency bypass is an admin temporarily turning the rule off in Settings.
-- Residual branch-protection gaps: admins, including agent sessions using an admin's credentials, can disable the rule or use API paths around it; an approver may approve commits they pushed to someone else's pull request; because branches need not be up to date, an incompatible combination of merges is caught only by CI on the default branch afterwards; and a pull request's own workflow changes can alter `verify`, which only a reviewer reading those changes would catch.
+- Residual branch-protection gaps: admins, including agent sessions using an admin's credentials, can disable the rule or use API paths around it (agents must ask first, under [Development workflow](#development-workflow)); an approver may approve commits they pushed to someone else's pull request; because branches need not be up to date, an incompatible combination of merges is caught only by CI on the default branch afterwards; and a pull request's own workflow changes can alter `verify`, which only a reviewer reading those changes would catch.
 - Enable secret scanning and push protection for supported provider patterns (non-provider patterns are off). A pusher can bypass a push-protection block by giving a reason, so this complements keeping secrets out of the repository rather than replacing it.
 - Design migration compatibility, credential scope, checked-source delivery and unknown-outcome recovery before enabling deployment. No deployment implementation is included in this scaffold.
