@@ -36,7 +36,7 @@ python src/manage.py runserver 127.0.0.1:8000
 
 Open <http://127.0.0.1:8000/>. Stop Django with Ctrl+C. If you started the optional database container above, stop it with `docker stop relay-local-db`; its contents are discarded, so run `migrate` again after restarting it. Run `migrate` whenever a pull request adds migrations; the first ones create workspaces, accounts and database sessions.
 
-Settings read exported environment variables, not `.env` files; [`.env.example`](../.env.example) lists local variable names. Debug defaults off; set `DJANGO_DEBUG=true` only for local debugging. Never use production credentials for development or tests. There is no production settings module or deployment workflow.
+Settings read exported environment variables, not `.env` files; [`.env.example`](../.env.example) lists local variable names. Debug defaults off; set `DJANGO_DEBUG=true` only for local debugging. Never use production credentials for development or tests. There is no production settings module or Django application deployment workflow.
 
 ### Create accounts for manual testing
 
@@ -86,12 +86,22 @@ Relay's planned AI contracts live under [`workflow/specs/ai/`](../workflow/specs
 
 ## Product website
 
-The landing page source is [`index.md`](index.md), with [`_config.yml`](_config.yml). GitHub Pages setup and hosted verification remain future work; see [Product website](../workflow/specs/TECHNICAL-SPEC.md#product-website).
+The landing page source is [`index.md`](index.md), with [`_config.yml`](_config.yml). The [CI workflow](../.github/workflows/ci.yml) builds and checks the existing Cayman site before gated static publication; its design is under [Product website](../workflow/specs/TECHNICAL-SPEC.md#product-website).
+
+To check an already generated `_site/` artifact, run from the repository root with Python:
+
+```bash
+python src/check_site.py _site --config docs/_config.yml
+```
+
+Hosted Pages setup and verification remain pending under the [operator prerequisites](../workflow/specs/TECHNICAL-SPEC.md#review-decisions-and-operator-prerequisites); a passing build does not establish publication.
 
 ## Acknowledgements
 
 Relay's development workflow, tooling and repository conventions were adapted from the [MP3 Deskmate baseline](https://github.com/CS3227-2610-MP3-Deskmate/CS3227-2610-MP3/tree/97ad99155307825a4b53925906e42f663647a70b), then streamlined for MP4.
 
 The product-site scaffold uses GitHub's [Cayman theme](https://github.com/pages-themes/cayman). Relay uses [Django](https://www.djangoproject.com/) and [PostgreSQL](https://www.postgresql.org/) and plans to use [SoC LLM](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). Local/CI container examples use the [official PostgreSQL image](https://hub.docker.com/_/postgres), whose [17.6 tag](https://hub.docker.com/layers/library/postgres/17.6/) was verified for this slice. Record any further reused external ideas, code or documentation here as they are adopted.
+
+Static-site delivery uses GitHub's official [Jekyll build](https://github.com/actions/jekyll-build-pages), [artifact upload](https://github.com/actions/upload-pages-artifact) and [Pages deployment](https://github.com/actions/deploy-pages) actions.
 
 The tool adapters follow the official [Codex agent documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents). Usage collection draws on [Codex JSONL output](https://learn.chatgpt.com/docs/non-interactive-mode), [Claude Code output](https://code.claude.com/docs/en/headless) and [Claude cache accounting](https://platform.claude.com/docs/en/build-with-claude/prompt-caching). Local session-file parsing also depends on observed runtime formats and must be rechecked when clients change.
