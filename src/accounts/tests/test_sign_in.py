@@ -9,6 +9,7 @@ from django.contrib.messages import constants
 from django.contrib.messages.storage.base import Message
 from django.contrib.messages.storage.cookie import CookieStorage
 from django.contrib.sessions.models import Session
+from django.db import OperationalError
 from django.http import HttpRequest, HttpResponse
 from django.test import Client
 from django.urls import include, path
@@ -251,6 +252,13 @@ def test_a_signed_out_visitor_signing_out_gets_no_message_and_no_session(
     assert not Session.objects.exists()
 
 
+def forge_messages_cookie(client):
+    """Set a messages cookie signed as Django's cookie storage would sign it."""
+    storage = CookieStorage(HttpRequest())
+    forged = Message(constants.INFO, "Synthetic forged notice")
+    client.cookies[MESSAGES_COOKIE] = storage._encode([forged])
+
+
 @pytest.mark.ac("ACC-1.5")
 @pytest.mark.parametrize("with_real_message", [False, True])
 def test_a_forged_messages_cookie_is_ignored_by_the_sign_in_page(
@@ -259,12 +267,39 @@ def test_a_forged_messages_cookie_is_ignored_by_the_sign_in_page(
     if with_real_message:
         sign_in(client, coordinator.username)
         client.post("/sign-out/")
-    storage = CookieStorage(HttpRequest())
-    forged = Message(constants.INFO, "Synthetic forged notice")
-    client.cookies[MESSAGES_COOKIE] = storage._encode([forged])
-    html = client.get("/sign-in/").content.decode()
+    forge_messages_cookie(client)
+    response = client.get("/sign-in/")
+    html = response.content.decode()
+    assert response.status_code == 200
+    assert "<h1>Sign in</h1>" in html
     assert "Synthetic forged notice" not in html
     assert (SIGNED_OUT in html) is with_real_message
+
+
+def test_the_forged_cookie_is_one_cookie_storage_would_show(client, db, settings):
+    # Positive control for the test above: the old storage reads this cookie.
+    settings.MESSAGE_STORAGE = (
+        "django.contrib.messages.storage.fallback.FallbackStorage"
+    )
+    forge_messages_cookie(client)
+    response = client.get("/sign-in/")
+    assert response.status_code == 200
+    assert "Synthetic forged notice" in response.content.decode()
+
+
+@pytest.mark.ac("ACC-1.5")
+def test_a_failed_new_session_at_sign_out_gives_500_with_the_old_session_ended(
+    coordinator,
+):
+    # Accepted residual (#57): the sign-out message needs a new session row.
+    client = Client(raise_request_exception=False)
+    sign_in(client, coordinator.username)
+    old_key = session_key(client)
+    with mock.patch.object(Session, "save", side_effect=OperationalError("synthetic")):
+        response = client.post("/sign-out/")
+    assert response.status_code == 500
+    assert not Session.objects.filter(session_key=old_key).exists()
+    assert client.get("/coordinator/")["Location"] == "/sign-in/"
 
 
 def test_viewing_the_sign_in_page_creates_no_session(client, db):
