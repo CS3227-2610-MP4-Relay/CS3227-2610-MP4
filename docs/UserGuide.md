@@ -49,12 +49,14 @@ Only a Test Coordinator can prepare test rounds. A new round is in the **Draft**
 
 **Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". With no rounds, it says "No rounds yet."
 
+Whenever creating a round, or saving or deleting anything in it, fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
+
 ### Create a round
 
 1. On **Coordinator home**, choose **New round**.
 2. Enter a **Title**, then choose **Create round**.
 
-The round page opens. It shows the title as its heading, "State: Draft", an **Edit round** link and a **Coordinator home** link.
+The round page opens. It shows the title as its heading, "State: Draft", an **Edit round** link, the round's [acceptance criteria and test cases](#acceptance-criteria-and-test-cases) and a **Coordinator home** link.
 
 ### Change a round's title
 
@@ -69,4 +71,28 @@ A title has 1 to 120 characters; spaces or line breaks at either end are removed
 
 A workspace can have up to 20 rounds. Creating a 21st gets "This workspace has reached its limit of 20 rounds." Nothing deletes a round.
 
-If saving fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
+### Acceptance criteria and test cases
+
+The round page has an **Acceptance criteria** heading, listing each criterion's text, and a **Test cases** heading, where each case shows its title, then **Steps**, **Expected result** and **Linked acceptance criteria** with that text. Both are listed in the order they were added. With none, they say "No acceptance criteria yet." and "No test cases yet."
+
+To add or edit a criterion:
+
+1. On the round page, choose **Add acceptance criterion**, or **Edit criterion** next to a criterion.
+2. Enter the **Text**, then choose **Add acceptance criterion** or **Save**.
+
+To add or edit a test case:
+
+1. On the round page, choose **Add test case**, or **Edit test case** under a case.
+2. Enter the **Title**, **Steps** and **Expected result**, tick one or more of the round's criteria under **Linked acceptance criteria**, then choose **Add test case** or **Save**.
+
+Saving opens the round page. Each of these pages has a **Back to round** link.
+
+To delete, choose **Delete test case** under a case or **Delete criterion** next to a criterion; there is no confirmation. Deleting a case keeps its criteria. A criterion that a case links to cannot be deleted: the round page shows "This criterion is linked to a test case. Unlink it first." under it, so edit those cases first.
+
+### Criteria and test case limits
+
+Criterion text has 1 to 500 characters; a case's title has 1 to 120, its steps 1 to 2000 and its expected result 1 to 1000. Spaces or line breaks at either end are removed, and a line break counts as one character. A field that is empty, holds only spaces or invisible characters, or is too long gets "Enter 1 to N characters." next to it, with N its maximum, such as "Enter 1 to 500 characters." for criterion text; a null character gets "Null characters are not allowed."
+
+A case with no linked criterion gets "Link at least one acceptance criterion." If a criterion you ticked was deleted meanwhile, the form says "Choose criteria from this round."
+
+A round can have up to 20 acceptance criteria and 30 test cases. Adding a 21st criterion gets "This round has reached its limit of 20 acceptance criteria." and a 31st case "This round has reached its limit of 30 test cases."

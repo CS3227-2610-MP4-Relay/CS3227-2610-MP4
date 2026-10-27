@@ -1,6 +1,6 @@
 # Test rounds
 
-Planning area `RND`. RND-1 is implemented; RND-2 to RND-7 are specified but not implemented yet. See the [roles](../PRODUCT-SPEC.md#roles) and [accounts](accounts.md); data, routes and page titles are in the [technical spec](../TECHNICAL-SPEC.md#rounds), and controls in the [security spec](../SECURITY-SPEC.md#rounds-observations-and-history).
+Planning area `RND`. RND-1 and RND-2 are implemented; RND-3 to RND-7 are specified but not implemented yet. See the [roles](../PRODUCT-SPEC.md#roles) and [accounts](accounts.md); data, routes and page titles are in the [technical spec](../TECHNICAL-SPEC.md#rounds), and controls in the [security spec](../SECURITY-SPEC.md#rounds-observations-and-history).
 
 A test round is a workspace's set of acceptance criteria and test cases, tested against named builds of the software under test. Only the workspace's Test Coordinator performs the actions below. What Beta Testers see and record, including the result format, belongs to [test results](results.md). The [test-drafting AI feature](../ai/test-drafting.md) is not part of these requirements.
 
@@ -49,6 +49,10 @@ Under a "Rounds" heading, the Coordinator home shows each round as a link to its
 ## RND-2 Manage acceptance criteria and test cases
 
 While the round is Draft, its page lists its acceptance criteria and test cases in creation order. Each case shows its title, steps, expected result and linked criteria.
+
+After its state and "Edit round" link, the round page has an "Acceptance criteria" heading, listing each criterion's text, or "No acceptance criteria yet." when there are none, then a "Test cases" heading. Under it, each case shows its title as a subheading, then the labels "Steps", "Expected result" and "Linked acceptance criteria", each followed by that text, the linked criteria listed by their text in creation order; with no cases it shows "No test cases yet." These sections appear in every state; the controls below appear only while Draft. They are an "Add acceptance criterion" link under the first heading and an "Add test case" link under the second, an "Edit criterion" link and a "Delete criterion" button for each criterion, and an "Edit test case" link and a "Delete test case" button for each case. Deleting asks for no confirmation.
+
+The "New acceptance criterion" page has a "Text" field and an "Add acceptance criterion" button. The "New test case" page has "Title", "Steps" and "Expected result" fields, then "Linked acceptance criteria" with a checkbox for each of the round's criteria, labelled with its text, in creation order, or "No acceptance criteria yet." when there are none, and an "Add test case" button. The "Edit acceptance criterion" and "Edit test case" pages have the same fields holding the current text and links, and a "Save" button. Each of these four pages links to "Back to round", the round page. Saving or deleting opens the round page, with no success message. Each message appears next to its field: the RND-2.4 messages next to the field they name, the RND-2.5 limits next to "Text" or "Title", and the RND-2.6 and RND-2.7 case messages next to "Linked acceptance criteria". A refused deletion shows the round page with the RND-2.6 message under that criterion.
 
 - **RND-2.1** (happy) Adding an acceptance criterion with its text shows it on the round page.
 - **RND-2.2** (happy) Adding a test case with a title, steps, an expected result and one or more of the round's criteria shows it on the round page with those criteria.

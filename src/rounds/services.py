@@ -4,7 +4,7 @@ from django.db import transaction
 
 from accounts.models import Workspace
 
-from .models import Round
+from .models import Case, CaseCriterion, Criterion, Round
 
 ROUND_LIMIT = 20
 
@@ -30,3 +30,93 @@ def create_round(workspace, title):
         if Round.objects.filter(workspace=workspace).count() >= ROUND_LIMIT:
             raise RoundLimitReached
         return Round.objects.create(workspace=workspace, title=title)
+
+
+CRITERION_LIMIT = 20
+CASE_LIMIT = 30
+NO_LINK = "Link at least one acceptance criterion."
+FOREIGN = "Choose criteria from this round."
+
+
+class Refused(Exception):
+    """A criterion or case write the RND-2 rules refuse.
+
+    `str()` is the user-facing message; `field` names the form field it
+    belongs next to, or is None for a refused deletion.
+    """
+
+    def __init__(self, message, field=None):
+        super().__init__(message)
+        self.field = field
+
+
+# Every function below runs inside the caller's transaction, after the caller
+# has locked the round row and re-checked that the round is Draft.
+
+
+def add_criterion(round_, text):
+    """Add a criterion to the locked `round_`, below the cap (RND-2.5)."""
+    if round_.criteria.count() >= CRITERION_LIMIT:
+        message = (
+            f"This round has reached its limit of {CRITERION_LIMIT} "
+            "acceptance criteria."
+        )
+        raise Refused(message, "text")
+    return Criterion.objects.create(round=round_, text=text)
+
+
+def save_criterion(criterion, text):
+    """Change a criterion's text; its links stay."""
+    criterion.text = text
+    criterion.save(update_fields=["text"])
+
+
+def _round_criteria(round_, criterion_ids):
+    """Return the chosen criteria, refusing none or any not in `round_`."""
+    ids = set(criterion_ids)
+    if not ids:
+        raise Refused(NO_LINK, "criteria")
+    chosen = list(round_.criteria.filter(pk__in=ids))
+    if len(chosen) != len(ids):
+        raise Refused(FOREIGN, "criteria")
+    return chosen
+
+
+def _link(case, chosen):
+    CaseCriterion.objects.bulk_create(
+        CaseCriterion(case=case, criterion=criterion) for criterion in chosen
+    )
+
+
+def add_case(round_, fields, criterion_ids):
+    """Add a case to the locked `round_`, linked to its chosen criteria."""
+    if round_.cases.count() >= CASE_LIMIT:
+        message = f"This round has reached its limit of {CASE_LIMIT} test cases."
+        raise Refused(message, "title")
+    chosen = _round_criteria(round_, criterion_ids)
+    case = Case.objects.create(round=round_, **fields)
+    _link(case, chosen)
+    return case
+
+
+def save_case(case, fields, criterion_ids):
+    """Change a case's fields and replace its links with the chosen criteria."""
+    chosen = _round_criteria(case.round, criterion_ids)
+    for name, value in fields.items():
+        setattr(case, name, value)
+    case.save(update_fields=list(fields))
+    case.links.all().delete()
+    _link(case, chosen)
+
+
+def delete_case(case):
+    """Delete a case's links, then the case; its criteria stay (RND-2.3)."""
+    case.links.all().delete()
+    case.delete()
+
+
+def delete_criterion(criterion):
+    """Delete a criterion that no case links to (RND-2.6)."""
+    if criterion.links.exists():
+        raise Refused("This criterion is linked to a test case. Unlink it first.")
+    criterion.delete()

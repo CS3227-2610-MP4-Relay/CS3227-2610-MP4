@@ -39,3 +39,53 @@ class Round(models.Model):
     def get_absolute_url(self):
         """Return the coordinator's round page."""
         return reverse("rounds:detail", args=[self.pk])
+
+
+class Criterion(models.Model):
+    """An acceptance criterion of a round (RND-2)."""
+
+    round = models.ForeignKey(Round, on_delete=models.PROTECT, related_name="criteria")
+    text = models.CharField(max_length=500)
+
+    class Meta:
+        # Creation order: a round's writes are serialised by its row lock.
+        ordering = ["id"]
+
+    def __str__(self):
+        """Return the criterion text."""
+        return self.text
+
+
+class Case(models.Model):
+    """A test case of a round, linked to one or more of its criteria (RND-2)."""
+
+    round = models.ForeignKey(Round, on_delete=models.PROTECT, related_name="cases")
+    title = models.CharField(max_length=120)
+    steps = models.CharField(max_length=2000)
+    expected_result = models.CharField(max_length=1000)
+    criteria = models.ManyToManyField(
+        Criterion, through="CaseCriterion", related_name="cases"
+    )
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        """Return the case title."""
+        return self.title
+
+
+class CaseCriterion(models.Model):
+    """A case's link to a criterion of the same round; never cascades."""
+
+    case = models.ForeignKey(Case, on_delete=models.PROTECT, related_name="links")
+    criterion = models.ForeignKey(
+        Criterion, on_delete=models.PROTECT, related_name="links"
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["case", "criterion"], name="rounds_casecriterion_unique"
+            )
+        ]

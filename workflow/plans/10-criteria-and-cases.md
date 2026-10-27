@@ -1,0 +1,102 @@
+# Slice 10: Manage a round's acceptance criteria and test cases (#10)
+
+Goal: implement [RND-2](../specs/product/rounds.md#rnd-2-manage-acceptance-criteria-and-test-cases) under the [rules for every round action](../specs/product/rounds.md#rules-for-every-round-action), the second rounds code slice.
+
+Tier: High (workspace and round isolation of nested records, form-submitted IDs, rendering of user-written text). Base: `ef3b11f`, branch `10-criteria-and-cases`, stacked on RND-1's `9-prepare-round` (which contains ACC-1 and ACC-2); the PR base is `9-prepare-round`. Owner: zheng-jj. Budget: one requirement (RND-2, 8 existing criteria, none added or changed); at most 400 changed lines under `src/` outside tests and migrations.
+
+## Decisions
+
+Made by the coordinator on 2026-10-27 under the human's (zheng-jj) delegation, "make my decisions for me":
+
+- **Scope:** RND-2 only: criterion and case models with their links and migration; the criterion and case add, edit and delete routes and forms from the [Rounds routes](../specs/TECHNICAL-SPEC.md#rounds-routes); the round page's criteria and cases sections; the caps (20 criteria, 30 cases) under the round row lock; same-round link validation in the form and again in the write transaction; the RND-2.8 rule and rendering tests.
+- **Reuse:** extend RND-1's `coordinator_view`, `own_round`, `RoundTextField`, `isolated_lines`, `title_isolate` and 409 page instead of duplicating them. Criterion and case writes lock only the round row.
+- **Not included:** publishing (RND-3), builds and retests (RND-5), closing (RND-6), the sample round (RND-7), tester views (RES). Rounds cannot reach Open or Closed yet; 409 tests set the state directly in test data.
+- **Merge:** if RND-1's repair round 2 changes shared code, the coordinator merges it before checkpoint 3. It restructures `coordinator_view` into one decorator (cache, method, sign-in, role, 503) and adds VT and FF to the Rendering separators, so checkpoint 2 stays out of `views.py`, `urls.py`, the template tags, `test_views.py`, `test_rendering.py` and that spec bullet.
+
+Builder's spec details within that scope (checkpoint 1), all confirmed by the coordinator on 2026-10-27 under the same delegation, including the ascending-ID creation order:
+
+- Page text and layout in the [RND-2 introduction](../specs/product/rounds.md#rnd-2-manage-acceptance-criteria-and-test-cases): "Acceptance criteria" and "Test cases" headings with "No acceptance criteria yet." and "No test cases yet."; each case's title as a subheading, then "Steps", "Expected result" and "Linked acceptance criteria", linked criteria shown by their text; Draft-only controls "Add acceptance criterion", "Add test case", "Edit criterion", "Delete criterion", "Edit test case", "Delete test case"; deletion without confirmation; form fields "Text", "Title", "Steps", "Expected result" and checkboxes under "Linked acceptance criteria" labelled with each criterion's text; buttons "Add acceptance criterion", "Add test case" and "Save"; a "Back to round" link; no success messages; where each message appears.
+- The sections show in every state, with controls only while Draft, because the round route already shows criteria and cases in any state and RND-3.1 and RND-6.1 rely on them. No numbering of criteria, since positions would shift on deletion.
+- [Technical details](../specs/TECHNICAL-SPEC.md#rounds): models `Criterion`, `Case` (not `TestCase`, which pytest would try to collect when imported into tests) and an explicit `CaseCriterion` link model with `PROTECT` keys and a unique pair constraint; ordering by ascending ID; choice-field messages for other-round, missing and non-integer IDs; the in-transaction re-check; a record deleted after its form opened gives 404 on save; the shared text field turns CR LF into LF before trimming, so a browser line break counts as one character and the textarea's `maxlength` agrees with the server; textareas carry `dir="auto"`. One delivery-order sentence under [Rounds routes](../specs/TECHNICAL-SPEC.md#rounds-routes). The security spec needs no change: its rounds section already covers form-submitted IDs, round membership, the lock and the caps.
+
+## Checkpoints
+
+1. **Specs and plan** (this checkpoint, `spec:`/`plan:`): `workflow/specs/product/rounds.md`, `workflow/specs/TECHNICAL-SPEC.md`, this plan. Check: `git diff --check`; read changed sections back.
+2. **Models, migration and services** (`feat:`): `src/rounds/models.py`, `src/rounds/migrations/0002_criteria_and_cases.py`, `src/rounds/services.py`, `src/rounds/forms.py` (CR LF to LF in the shared field), `src/rounds/tests/test_record_services.py` (new, to keep clear of RND-1's files), `src/rounds/tests/test_forms.py` (new). Services take an already locked round and raise one `Refused(message, field)` error, `field` being the form field the message sits next to (`None` for a refused deletion): `add_criterion(round_, text)`, `add_case(round_, fields, criterion_ids)`, `save_case(case, fields, criterion_ids)` (re-checks the IDs against the round, replaces links), `delete_case(case)` (links first), `delete_criterion(criterion)` (refuses if linked); limit and link errors carry the exact RND-2 messages. Tests, marked: RND-2.5 the 20th criterion and 30th case are created, the 21st and 31st raise with nothing created, another round's records don't count; RND-2.7 an ID of another round or a missing ID raises the message with nothing changed; RND-2.3 deleting a case removes its links and keeps its criteria; RND-2.6 deleting a linked criterion raises with nothing deleted; database limits (500, 120, 2000, 1000) and the unique link pair; `PROTECT` refuses deleting a linked criterion directly. Red first. Checks: `makemigrations --check`, `pytest src/rounds -q` through the shared test-database lock.
+3. **Routes, forms, templates and RND-2 tests** (`feat:`): `src/rounds/{forms,views,urls}.py`, `src/rounds/templates/rounds/{round,round_form}.html`, `src/rounds/tests/test_records.py` (new), `src/rounds/tests/test_record_rendering.py` (new, leaving RND-1's rendering tests as they are), `src/rounds/tests/test_routes.py` (real criterion and case IDs for the never-cached route walk), `src/rounds/tests/test_views.py` (RND-1.1 expectation, below). Shape, to stay in budget: one generic form template for all round forms (fields in order, checkbox labels through `isolated_lines`); one view helper for the four add and edit routes (URL lookups, 409 on GET and POST, locked re-check, form save) and one for the two delete routes. Tests, each marked:
+   - RND-2.1 adding a criterion redirects to the round page, which lists its text; creation order.
+   - RND-2.2 adding a case with two criteria shows its title, steps, expected result and those criteria's text; creation order.
+   - RND-2.3 editing a criterion and a case (text, fields and links, the edit forms holding current values and checked links); deleting a case keeps its criteria; deleting an unlinked criterion removes it.
+   - RND-2.4 each field at its maximum saved (also after trimming and with CR LF line breaks counted as one); each field empty, invisible-only and one over gets its own "Enter 1 to <maximum> characters." with the other fields valid and nothing changed, on add and edit; a null character gets "Null characters are not allowed.".
+   - RND-2.5 the 20th criterion and 30th case through the routes, the 21st and 31st refused with the message next to "Text" or "Title"; a threaded race (as RND-1.5) with one slot left: exactly one of 5 criterion adds succeeds.
+   - RND-2.6 a case with no criteria gets the message, on add and edit; deleting a linked criterion shows the round page, status 200, with the message under it and nothing deleted.
+   - RND-2.7 another round's criterion (same workspace), another workspace's, a missing ID and a non-integer value each get "Choose criteria from this round." with nothing saved, on add and edit; a criterion deleted between form validation and the locked write (patched) gets the same message.
+   - RND-2.8 rules: 405 (GET on both delete routes, PUT on add and edit, HEAD where only GET and POST are listed); signed-out redirect and tester 403 on every route, before any lookup (identical for existing and missing IDs); 403 for a missing CSRF token and a foreign `Origin` with nothing changed; 404 "Page not found." for another workspace's round in any state, for a missing criterion or case, and for an Open round's criterion or case under a Draft round's URL in the same workspace (record unchanged), never 409; 409 with the exact message for every add, edit (GET and POST) and delete on an Open or Closed round, nothing changed; a state change between the first check and the locked write gives 409; `DatabaseError` gives the 503 with nothing changed; never-cached responses. Rendering of criterion text, case title, steps and expected result on the round page and of criterion text in checkbox labels and linked-criteria lists: markup escaped in content and in edit-form values, line breaks as per-line `<span dir="auto">` elements, bidi and zero-width characters kept inside those elements; none of this text reaches a page title (the form pages have fixed titles).
+   Red first, recording the failures. Checks: focused `pytest src/rounds -q`, then full verification.
+4. **Guides and status** (`docs:`): `docs/UserGuide.md` (criteria and cases sections, forms, limits, messages, in the product's exact words), `docs/DeveloperGuide.md` (models, services, view helpers), the status sentence of `rounds.md`. Check: read back; `git diff --check`; builder scope check.
+
+Repairs after review are separate `fix:` commits.
+
+Test expectation change (for the verifier): RND-1.1's test asserts that a new round page contains no "criteri" or "test case" text. RND-1.1 says the page shows "no criteria or cases", which from RND-2 means the empty sections; the test will instead assert "No acceptance criteria yet." and "No test cases yet." and no list items. Its other assertions stay.
+
+## Size estimate
+
+Non-test, non-migration `src/` lines: models ~50 (criterion ~12, case ~15, link ~15, ordering), services ~60, forms ~45 (CR LF in the shared field, criterion and case forms, the criteria choice field and messages), views ~120 (two shared helpers and six thin routes), urls ~8, templates ~65 (round page sections ~45, generic form ~20 net); about 350 of 400. Checkpoint 3 is the risk; if it trends above 400, the fallback is to drop per-route view wrappers in favour of the helpers called from `urls.py`, and otherwise stop with `needs-decision`. Reported with real numbers at checkpoints 2 and 3.
+
+## Open issues
+
+- Browser check of the per-line `dir="auto"` rendering in checkbox labels and case text: open for the human (automated tests check the markup only).
+- `maxlength` in browsers counts UTF-16 units while the server counts code points (accepted in RND-1); after CR LF normalisation, line breaks agree.
+- RND-1 is still in review; human review and merge of both slices pending.
+
+## Review round 0 and repair round 1
+
+Review round 0 on candidate `3557050`: verifier 2 Medium, 5 Low, 1 nit; security-reviewer 0 High or Medium, 1 Low (the same as verifier Medium 1), 4 Info.
+
+Coordinator decisions (2026-10-27, under the human's delegation), all implemented in repair round 1:
+
+1. Verifier Medium 1 and security Low: `criterion_id or case_id` treated ID 0 as no record, so `/criteria/0/edit/` opened a new form on Draft and gave 409 on Open or Closed. The views now choose the URL's record ID by kind (`url_record_id`), so 0 is looked up like any ID and gets the 404. Tests in `test_record_ids.py`: IDs `0`, `00` and an oversized one, for criteria and cases, on Draft, Open and Closed rounds, on edit (GET and POST) and delete.
+2. Verifier Medium 2: the new-case and edit-case pages, and both forms re-shown after a refusal, list exactly the URL round's criteria when sibling-round and other-workspace criteria exist.
+3. Verifier Low 3: an Open or Closed round's URL with a missing record or another round's record gets 404, never 409.
+4. Verifier Low 4 and security Info 4: a storage failure while linking (case add and edit) or deleting a case gives 503 and leaves the case, its fields and its links unchanged.
+5. Security Info 2: `except services.Refused` now sits outside the committing `transaction.atomic()` in both record views, so a refusal leaves the transaction by its exception and can never commit a partial write. Behaviour is otherwise unchanged.
+6. Security Info 4: a case-cap race test (29 cases, 5 requests, 0.1 s pause in `add_case` under the lock) and a test that injected `round`, `round_id`, `id`, `case` and `criterion` POST fields are ignored.
+7. Verifier Low 6: the criterion edit is the `save_criterion` service, so every write lives in `rounds.services`; the views call services directly, with no lookup by name and no mixed return value.
+8. Verifier Low 5: the User Guide's storage-failure sentence now sits in the introduction of "Test rounds", covering every round action.
+9. Verifier nit: missing comma in the technical spec's opening sentence.
+
+Accepted as Info, not changed: security Info 3, model `__str__` and repr carry record text, a hardening note for RND-3 and RES to keep records out of exception messages and logs; verifier Low 7, the CR LF change was bundled into `096d86d`, and history is not rewritten.
+
+Repair round 1 evidence (Windows, test-database lock):
+
+- Red: `pytest test_record_ids.py test_record_services.py` gave 7 failed, 31 passed: the criterion ID `0` and `00` cases on Draft (200 new form), Open and Closed (409), and `save_criterion` missing. Cases with ID 0 and every oversized ID already gave 404 (`None or 0` is 0, and Django finds no row for an out-of-range ID); they stay as regression tests.
+- The test-only additions passed on the repaired code. Mutations on temporary copies, each restored and checked with `cmp`: (a) case-form choices from `Criterion.objects.all()` failed the choices test; (b) the state check before the record lookup in `record_form` failed the Open and Closed 404 test; (c) no round lock in `record_form` failed the case race in 5 of 5 runs.
+- Final: `check` and `makemigrations --check` clean, Ruff clean, 482 passed, 1 skipped, 85 subtests passed; `git diff --check` clean; scope clean against `3557050`; 338 added and 9 removed budget lines since `6f4ab10`.
+
+## Review of repair round 1 and repair round 2
+
+Re-reviews of repair round 1 (`686be05` to `0643e52`):
+
+- Security-reviewer: all findings resolved. Info, accepted: the refused-delete round page is drawn after the rollback, so it may show concurrent changes. This affects display only, because any next action is locked and re-checked.
+- Verifier: all findings resolved, no new defect; 2 nits and 1 unevidenced check (below). Low process note, accepted: `686be05` bundles the fix with its tests.
+- Both reviewers corrected the round-1 record: a case ID 0 already gave 404 before the repair, so only criterion ID 0 was affected.
+
+Repair round 2 (coordinator decisions, 2026-10-27, under the human's delegation):
+
+1. The Developer Guide lists `save_criterion` among the services.
+2. The User Guide's storage sentence reads "Whenever creating a round, or saving or deleting anything in it, fails".
+3. `test_criteria_from_elsewhere_are_refused` also submits an oversized ID (`99999999999999999999`) on add and save. It passed at once (10 passed): the choice field finds no such row and gives the RND-2.7 message, with no error and nothing changed.
+4. Security check: with `transaction.atomic()` around the writes in `record_form` and `delete_record` temporarily replaced by `if True:`, both link-failure tests (add and edit) and the case-delete failure test failed (3 failed). The file was restored and checked with `cmp`.
+
+Final: `check` and `makemigrations --check` clean, Ruff clean, 484 passed, 1 skipped, 85 subtests passed; `git diff --check` clean; scope clean against `0643e52`. No `src/` code outside tests changed in this round.
+
+## Checklist
+
+- [x] Checkpoint 1: specs and plan.
+- [x] Checkpoint 2: models, migration, services and tests. Red: `pytest test_forms.py` 1 failed (CR LF counted as two characters), 1 passed (a lone CR is kept, which guards against over-normalising); `pytest test_record_services.py` stopped at collection with `ImportError: cannot import name 'Case' from 'rounds.models'`. Mutations on a temporary copy of `services.py`, restored and checked with `cmp`: criteria looked up without the round filter, links not deleted with a case, and the linked-criterion check removed gave 4 failures (RND-2.7 sibling and foreign, RND-2.3 case deletion, RND-2.6). Green: `check`, `makemigrations --check`, Ruff clean; 331 passed, 1 skipped, 85 subtests passed.
+- [x] Checkpoint 3: routes, forms, templates and RND-2 tests. Built on RND-1's `coordinator_view(methods)`; two views, `record_form` and `delete_record`, serve the six routes with the record kind from `urls.py`, and one generic form template serves every round form. Red: `pytest src/rounds` stopped at collection with `ImportError: cannot import name 'CaseForm' from 'rounds.forms'`; `test_record_rendering.py`, `test_views.py` and `test_routes.py` gave 7 failed (6 rendering tests, the RND-1.1 empty-sections assertion), 92 passed; `test_pages_do_not_reset_unicode_bidi` passed beforehand as a guard, and `test_routes.py` passed until the new routes existed. Mutations on a temporary copy of `views.py`, restored and checked with `cmp`: no row lock in the add path failed the RND-2.5 race in only 2 of 3 runs, being timing-dependent (widened at checkpoint 4); a record lookup not scoped to the URL round failed the same-workspace 404 test for Draft, Open and Closed; no locked state re-check failed both 409 re-check tests. Green: `check`, `makemigrations --check`, Ruff clean; 455 passed, 1 skipped, 85 subtests passed; 322 added and 9 removed budget lines since `6f4ab10`.
+- [x] Checkpoint 4: guides and status. User Guide: the criteria and cases sections, adding, editing and deleting, limits, caps and messages, only for Draft rounds, which are all a coordinator can reach. Developer Guide: the models, services, shared record views and `isolated_lines` reuse. Status sentences of `rounds.md`, `TECHNICAL-SPEC.md` and `SECURITY-SPEC.md`. The RND-2.5 race test now patches `add_criterion` to pause 0.1 s before counting, inside the view's locked transaction, like ACC-3's race tests; with the round lock removed it failed 5 of 5 runs, and it passes with the lock. README.md text proposed to the coordinator.
+- [x] Full verification, size budget and builder scope check (checkpoint 4, Windows, test-database lock): `check` and `makemigrations --check` clean, Ruff clean, 455 passed, 1 skipped, 85 subtests passed; `git diff --check` clean; scope clean against `3e2d6d6`; 322 added and 9 removed budget lines since `6f4ab10` (about 331 of 400).
+- [x] Review round 0 (verifier and security-reviewer) and repair round 1.
+- [x] Review of repair round 1 and repair round 2.
+- [ ] Human review and merge.
