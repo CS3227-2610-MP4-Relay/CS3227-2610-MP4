@@ -9,6 +9,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "accounts",
+    "rounds",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

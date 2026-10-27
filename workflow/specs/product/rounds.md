@@ -1,6 +1,6 @@
 # Test rounds
 
-Planning area `RND`. The criteria below are specified but not implemented yet. See the [roles](../PRODUCT-SPEC.md#roles) and [accounts](accounts.md); data, routes and page titles are in the [technical spec](../TECHNICAL-SPEC.md#rounds), and controls in the [security spec](../SECURITY-SPEC.md#rounds-observations-and-history).
+Planning area `RND`. RND-1 is implemented; RND-2 to RND-7 are specified but not implemented yet. See the [roles](../PRODUCT-SPEC.md#roles) and [accounts](accounts.md); data, routes and page titles are in the [technical spec](../TECHNICAL-SPEC.md#rounds), and controls in the [security spec](../SECURITY-SPEC.md#rounds-observations-and-history).
 
 A test round is a workspace's set of acceptance criteria and test cases, tested against named builds of the software under test. Only the workspace's Test Coordinator performs the actions below. What Beta Testers see and record, including the result format, belongs to [test results](results.md). The [test-drafting AI feature](../ai/test-drafting.md) is not part of these requirements.
 
@@ -22,19 +22,21 @@ A build is a label naming a version of the software under test. Publishing creat
 
 These apply to every page and action in this file, checked in this order. A refused request changes nothing.
 
-1. A method the route does not accept, such as a GET to a POST-only route, gets 405.
-2. A signed-out visitor is redirected to the sign-in page. A Beta Tester gets the 403 page of [ACC-1.4](accounts.md#acc-1-sign-in-and-out-by-role), and a POST without a valid CSRF token, or whose `Origin` header names another origin, gets 403. No record is read before these checks.
+1. A request with a method that can change data (anything but GET, HEAD, OPTIONS or TRACE) without a valid CSRF token, or whose `Origin` header names another origin, gets the 403 page of [ACC-1.4](accounts.md#acc-1-sign-in-and-out-by-role) first. Otherwise, a method the route does not accept, such as a GET to a POST-only route, gets 405.
+2. A signed-out visitor is redirected to the sign-in page, and a Beta Tester gets the 403 page of ACC-1.4. No record is read before these checks.
 3. A round, criterion or case named in the URL that does not exist, belongs to another workspace, or is not in the round the URL names gets the 404 page of [ACC-2.4](accounts.md#acc-2-create-an-isolated-demo-workspace). A 404 always comes before a 409, so another workspace's round state is never revealed.
 4. An action that the round's state does not allow, including opening its form, gets a 409 page saying "This action is not available while the round is <state>.", naming Draft, Open or Closed.
-5. Invalid input shows the form again with the message next to the field; an ID submitted in a form is checked here, as in ACC-2.4. Text is trimmed before its length is checked; text with no visible character (only whitespace, control or format characters such as zero-width spaces) counts as empty, and null characters are refused.
+5. Invalid input shows the form again with the message next to the field; an ID submitted in a form is checked here, as in ACC-2.4. Text is trimmed before its length is checked; text with no visible character (only whitespace, control or format characters such as zero-width spaces) counts as empty, and text with a null character gets "Null characters are not allowed."
 
 If storage fails, the request gets the 503 page of [ACC-2.5](accounts.md#acc-2-create-an-isolated-demo-workspace) and no part of the change remains.
 
-All user-written text is shown as escaped plain text. In page content it keeps its line breaks and sits inside an element with `dir="auto"` that wraps only the user text, such as the build label inside a success message rather than the whole message, so its text direction is isolated from the page; site CSS does not reset `unicode-bidi`. In a page `<title>`, bidi control characters (U+202A to U+202E and U+2066 to U+2069) are removed from the user part, which is then wrapped in U+2068 FIRST STRONG ISOLATE and U+2069 POP DIRECTIONAL ISOLATE, so bidi controls cannot reorder the browser-tab title. Each requirement's rules criterion tests this for the user text its pages render: markup in element content and in attribute values, text used in the page title (checking its isolate characters, including a stray U+2069 followed by U+202E) or in a success message, line breaks, and bidi-control or zero-width characters, which cannot reorder or hide surrounding page text.
+All user-written text is shown as escaped plain text. In page content it keeps its line breaks, and each of its lines sits inside its own element with `dir="auto"` that wraps only that user text, such as the build label inside a success message rather than the whole message, so its text direction is isolated from the page; site CSS does not reset `unicode-bidi`. In a page `<title>`, bidi control characters (U+202A to U+202E and U+2066 to U+2069) are removed from the user part, which is then wrapped in U+2068 FIRST STRONG ISOLATE and U+2069 POP DIRECTIONAL ISOLATE, so bidi controls cannot reorder the browser-tab title. Each requirement's rules criterion tests this for the user text its pages render: markup in element content and in attribute values, text used in the page title (checking its isolate characters, including a stray U+2069 followed by U+202E) or in a success message, line breaks, and bidi-control or zero-width characters, which cannot reorder or hide surrounding page text.
 
 ## RND-1 Prepare a test round
 
 The Coordinator home lists the workspace's rounds, newest first, each with its title and state, and has a "New round" link.
+
+Under a "Rounds" heading, the Coordinator home shows each round as a link to its round page followed by its state in brackets, such as "(Draft)", or "No rounds yet." when there are none. The "New round" page has a "Title" field and a "Create round" button; the "Edit round" page has the same field holding the current title and a "Save" button. Creating or retitling a round opens its round page, with no success message. The round page shows the title as its heading, "State: <state>" and, while Draft, an "Edit round" link. The new-round, edit-round and round pages each link to "Coordinator home". Every message in RND-1, including the RND-1.4 limit, appears next to the "Title" field.
 
 - **RND-1.1** (happy) Creating a round with a title opens its round page, which shows the title, the state "Draft" and no criteria or cases. The round appears on the Coordinator home.
 - **RND-1.2** (happy) While the round is Draft, the coordinator can change its title, and the round page and Coordinator home show the new title.
