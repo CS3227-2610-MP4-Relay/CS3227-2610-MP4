@@ -88,5 +88,5 @@ Repairs after review are separate `fix:` or `test:` commits. Test expectation ch
 
 ## Checklist
 
-- [ ] Checkpoint 1: spec sentence and plan.
-- [ ] Checkpoint 2: matrix tests with mutation evidence.
+- [x] Checkpoint 1: spec sentence and plan (`0490f73`, `d53542d`). HEAD assumption confirmed by the coordinator against the code: `require_GET` gives HEAD 405.
+- [x] Checkpoint 2: `src/relay_tests/test_access_matrix.py`, 314 tests: route completeness (1), accounts routes by caller (24), the marker positive control (1), rounds routes by caller and state (144), forged IDs by route, state and variant (144). First run: `pytest -q -p no:randomly src/relay_tests/test_access_matrix.py` 314 passed, so no spec contradiction was found; also passed in random order. Mutations on temporary copies of `src/rounds/views.py` or `src/rounds/urls.py`, each restored and checked with `cmp`: (a) skipping the role check for `close_round` only failed 12 (the tester rows of `close` in every state, and its forged rows, where the tester got past 403); (b) `own_round` reading `Round.objects.all()` failed 54 (`coord_b` on every route naming a round, in every state, and every "other workspace" round variant); (c) `round_record` looking the record up without its round failed 24 (the "other workspace" and "other round" variants of the four criterion and case edit/delete routes, in every state); (d) an unlisted `rounds:extra` route failed `test_every_route_has_a_matrix_entry` with "Extra items in the left set: 'rounds:extra'". Ruff clean.
