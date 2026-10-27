@@ -158,7 +158,7 @@ def test_creation_outside_a_transaction_writes_all_or_nothing():
 
 
 @pytest.mark.django_db(transaction=True)
-@pytest.mark.ac("ACC-2.5", "RND-7.1")
+@pytest.mark.ac("ACC-2.5")
 def test_sample_round_failure_outside_a_transaction_writes_nothing():
     real_add_criterion = round_services.add_criterion
     calls = []

@@ -197,7 +197,7 @@ def test_sample_round_counts_toward_the_20_round_limit():
     for number in range(1, 19):
         services.create_round(workspace, f"Synthetic round {number}")
     assert Round.objects.filter(workspace=workspace).count() == 19
-    # The 19th more round, the workspace's 20th, is still created.
+    # With the sample round, this 19th added round is the workspace's 20th.
     assert client.post(NEW, {"title": "Synthetic round 19"}).status_code == 302
     assert Round.objects.filter(workspace=workspace).count() == 20
     response = client.post(NEW, {"title": "Synthetic round 20"})
@@ -215,8 +215,14 @@ def test_changing_one_sample_round_leaves_another_workspaces_unchanged():
     base = detail(own.pk)
     criterion = own.criteria.order_by("pk").first()
 
-    client.post(f"{base}edit/", {"title": "Synthetic edited"})
-    client.post(f"{base}criteria/{criterion.pk}/edit/", {"text": "Synthetic text"})
+    retitled = client.post(f"{base}edit/", {"title": "Synthetic edited"})
+    assert retitled.status_code == 302
+    edited = client.post(
+        f"{base}criteria/{criterion.pk}/edit/", {"text": "Synthetic text"}
+    )
+    assert edited.status_code == 302
+    criterion.refresh_from_db()
+    assert criterion.text == "Synthetic text"
     assert PUBLISHED in page(
         client.post(f"{base}publish/", {"label": "Sample 1.0"}, follow=True)
     )
