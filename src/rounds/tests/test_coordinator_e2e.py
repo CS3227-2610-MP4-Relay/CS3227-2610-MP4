@@ -41,6 +41,8 @@ def assert_redirect(response, url):
     """A successful action redirects to exactly `url`."""
     assert response.status_code == 302
     assert response["Location"] == url
+    assert "no-store" in response["Cache-Control"]
+    assert "private" in response["Cache-Control"]
 
 
 def assert_conflict(response, state):
@@ -48,6 +50,8 @@ def assert_conflict(response, state):
     assert response.status_code == 409
     heading = f"<h1>This action is not available while the round is {state}.</h1>"
     assert heading in page(response)
+    assert "no-store" in response["Cache-Control"]
+    assert "private" in response["Cache-Control"]
 
 
 def current_build(html, title):
@@ -75,37 +79,30 @@ def build_coverage(html, label):
 
 @pytest.mark.ac(
     "ACC-2.1",
-    "ACC-2.2",
+    "ACC-1.1",
     "RND-1.1",
     "RND-1.2",
-    "RND-1.7",
     "RND-2.1",
     "RND-2.2",
-    "RND-2.3",
-    "RND-2.8",
     "RND-3.1",
-    "RND-3.4",
-    "RND-3.6",
     "RND-5.1",
     "RND-5.5",
-    "RND-5.8",
     "RND-6.1",
     "RND-6.2",
     "RND-6.3",
-    "RND-6.5",
-    "RND-7.1",
 )
 def test_a_coordinator_drives_a_round_from_demo_to_closed():
     client = Client()
 
-    # ACC-2.1 and ACC-2.2: the start page creates a workspace whose displayed
-    # coordinator credentials sign in and show that workspace's own home.
+    # ACC-2.1: the start page creates a workspace whose credentials are shown
+    # once, without signing the visitor in. ACC-1.1: those credentials sign in.
     start = client.get("/")
     assert '<form method="post" action="/demo/">' in page(start)
     assert "Create a demo workspace</button>" in page(start)
     created = client.post("/demo/")
     assert created.status_code == 200
     assert "no-store" in created["Cache-Control"]
+    assert "_auth_user_id" not in client.session
     html = page(created)
     for text in (
         "<title>Your demo workspace</title>",
@@ -134,7 +131,8 @@ def test_a_coordinator_drives_a_round_from_demo_to_closed():
         and f"<p>Username: {username}</p>" in home_html
     )
 
-    # RND-7.1 is observed only as the sample round the new workspace supplies.
+    # The sample round is observed; RND-7.1's detailed structure stays with its
+    # dedicated tests.
     rounds = home_rounds(home)
     assert len(rounds) == 1
     assert rounds[0][1:] == ("Sample round", "Draft")
@@ -305,6 +303,23 @@ def test_a_coordinator_drives_a_round_from_demo_to_closed():
     assert builds.index(build_label) < builds.index(retest_label)
     assert revised_first in opened and first not in opened
 
+    # RND-5.5: retest the same case again; both earlier builds stay listed.
+    second_retest_label = "Synthetic build 1.2"
+    assert_redirect(
+        client.post(
+            f"{url}retest/",
+            {"cases": [case_ids[0]], "label": second_retest_label},
+        ),
+        url,
+    )
+    opened = page(client.get(url))
+    assert current_build(opened, first_case) == second_retest_label
+    assert current_build(opened, second_case) == build_label
+    assert build_coverage(opened, build_label) == [first_case, second_case]
+    assert build_coverage(opened, retest_label) == [first_case]
+    assert build_coverage(opened, second_retest_label) == [first_case]
+    assert revised_first in opened and second in opened
+
     # RND-6.1 and RND-6.2: closing keeps the round's content and removes controls.
     assert_redirect(client.post(f"{url}close/"), url)
     closed = page(client.get(url))
@@ -340,6 +355,7 @@ def test_a_coordinator_drives_a_round_from_demo_to_closed():
         ("get", f"{url}edit/", {}),
         ("post", f"{url}edit/", {"title": "Synthetic ignored"}),
         ("post", f"{url}publish/", {"label": "Synthetic ignored"}),
+        ("post", f"{url}close/", {}),
         ("get", f"{url}retest/", {}),
         (
             "post",
@@ -360,5 +376,8 @@ def test_a_coordinator_drives_a_round_from_demo_to_closed():
     unchanged = page(client.get(url))
     assert "<p>State: Closed</p>" in unchanged
     assert revised_first in unchanged and second in unchanged
-    assert current_build(unchanged, first_case) == retest_label
+    assert current_build(unchanged, first_case) == second_retest_label
     assert current_build(unchanged, second_case) == build_label
+    assert build_coverage(unchanged, build_label) == [first_case, second_case]
+    assert build_coverage(unchanged, retest_label) == [first_case]
+    assert build_coverage(unchanged, second_retest_label) == [first_case]
