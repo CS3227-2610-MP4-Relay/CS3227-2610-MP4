@@ -33,6 +33,13 @@ Repair round 1 (on `13e8e75`), coordinator defaults under the human's "draft wit
 - **D18 Status and residual (S-L6, V-L1):** both drafting POSTs return 200 and do not redirect (exception noted in the rounds routes preamble). Reload resubmission spending another call is recorded as a residual in SECURITY-SPEC, pending confirmation.
 - **D19 Criteria (V-L4):** RND-8.6 is split: selection of another round's or workspace's criterion becomes RND-8.8; pre-fill unchecking and re-cleaning are RND-8.9; the Draft-only round-page link joins RND-8.1. These IDs were never merged, so RND-8.6 is narrowed rather than retired.
 
+Repair round 2 (on `440de48`), coordinator defaults under the same instruction, pending human and Whimsyturtle confirmation:
+
+- **D20 In-flight caps and connections (S-R1):** gateway need 5 adds a deployment-wide in-flight cap beside the per-user one; an in-flight marker expires no sooner than the time bound and is released on every exit. Releasing the database connection before the call is a feature rule (contract Limits and TECHNICAL-SPEC), because the drafting view owns its connection. SECURITY-SPEC records, pending the human's confirmation, that demo workspaces can use up the deployment-wide allowance, making drafting unavailable to everyone while the manual workflow stays usable; its numbers wait for #6.
+- **D21 Format characters outside the table (S-R2, V-N2):** cleaning also removes U+FFF9 to U+FFFB and U+13430 to U+1343F, and keeps the visibly drawn prepended marks (U+0600 to U+0605, U+06DD, U+070F, U+0890 to U+0891, U+08E2, U+110BD, U+110CD), because they render and carry meaning in Arabic, Syriac and Kaithi text. Checked: these are exactly the Cf characters outside Default_Ignorable_Code_Point in Unicode 16.0.0.
+- **D22 Empty selection (S-R3):** criterion text is trimmed after cleaning; if every selected criterion is then empty, no call is made and the no-drafts message is shown.
+- **D23 Wording (V-N1, V-N3, V-N4, V-N5):** cleaning applies to reply fields after parsing, never the raw reply; rule 5 and limits apply to reply fields, not pre-fill text; the pre-filled form holds exactly the cleaned text after re-cleaning turns posted CR LF into LF, with a CR LF test; RND-8.4 now names a call in flight and an over-limit request, tested by lowering the limit; the 200 status is "whatever the drafting outcome", since a storage failure still gets 503.
+
 ### Builder proposals
 
 Not in the coordinator's brief; proposed by the builder in checkpoint 1, pending human and Whimsyturtle confirmation:
@@ -45,7 +52,8 @@ Not in the coordinator's brief; proposed by the builder in checkpoint 1, pending
 ## Checkpoints
 
 1. **Specs and plan** (`spec:` `d65f7df`, `plan:` `13e8e75`): `workflow/specs/ai/test-drafting.md`, `workflow/specs/product/rounds.md`, `workflow/specs/TECHNICAL-SPEC.md`, `workflow/specs/SECURITY-SPEC.md`, this plan.
-2. **Repair round 1** (`spec:` then `plan:`, on `13e8e75`): the same four spec files (findings V-M1 to V-M4, S-M1, S-M2, S-L1 to S-L6, V-L1 to V-L10 and the gateway checklist), then this plan. Checks: `git diff --check`; `python workflow/scripts/check_scope.py builder --base 13e8e75`; read back.
+2. **Repair round 1** (`spec:` `83dbc7a`, `plan:` `440de48`): the same four spec files (findings V-M1 to V-M4, S-M1, S-M2, S-L1 to S-L6, V-L1 to V-L10 and the gateway checklist), then this plan.
+3. **Repair round 2**, the last allowed (`spec:` then `plan:`, on `440de48`): the same four spec files (S-R1 to S-R3, V-N1 to V-N5), then this plan (V-N6 and the security follow-up). Checks: `git diff --check`; `python workflow/scripts/check_scope.py builder --base 440de48`; invisible-character scan of `workflow/`; read back.
 
 ## Size
 
@@ -58,18 +66,20 @@ Criteria: RND-8.1 to RND-8.9, nine, one above the guideline. It stays reviewable
   - a total time bound (30 seconds proposed) that, with request overhead, stays below the platform function limit; the [release gate](../specs/TECHNICAL-SPEC.md#release-verification) only requires that limit to be at least 30 seconds, so the bound or the gate must change (not edited here);
   - input under 8,000 characters, a reply of at least 20,000 and a raw-response byte cap;
   - quota per workspace or user and deployment-wide, reserved atomically before the call, counting failures and timeouts;
-  - at most one drafting call in flight per user;
+  - at most one drafting call in flight per user and a deployment-wide in-flight cap, with markers that expire no sooner than the time bound and are released on every exit;
   - a fixed endpoint with TLS verification and no redirects, transport-level timeouts, and a credential from the environment that is never logged;
   - no text in logs and no provider error bodies;
   - no result reuse for drafting;
   - a scriptable fake provider and a live-check run of the drafting set.
 
   Also: who validates structured output; who owns the live evaluation if #6 declines it; the provider's retention and training on submitted text.
-- **For the human:** confirm D1 to D19 and B1 to B4, in particular the RND-8 home, the 1-to-5 and 0-to-5 counts, removal rather than refusal, the pre-fill route with its rule-5 exception, nine criteria, and the reload residual.
+- **For the implementation slice:** its first checkpoint, which adds the exact instruction wording and version name to the contract, needs its own security review before any code.
+- **For the human:** confirm D1, D2, D4 to D6, D8 to D23 and B1 to B4 (D3 and D7 became B4 and B3), in particular the RND-8 home, the 1-to-5 and 0-to-5 counts, removal rather than refusal, the pre-fill route with its rule-5 exception, nine criteria, the reload residual and the deployment-wide allowance residual.
 
 ## Checklist
 
 - [x] Checkpoint 1: specs and plan (`d65f7df`, `13e8e75`).
-- [ ] Repair round 1: specs and plan (on `13e8e75`).
+- [x] Repair round 1: specs and plan (`83dbc7a`, `440de48`).
+- [ ] Repair round 2: specs and plan (on `440de48`).
 - [ ] Human and Whimsyturtle confirmation in the PR.
 - [ ] Implementation slice for RND-8, after #6 provides the gateway and its fake provider.
