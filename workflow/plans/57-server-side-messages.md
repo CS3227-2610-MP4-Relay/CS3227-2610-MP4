@@ -49,9 +49,19 @@ Verifier and security reviewer findings R1 to R7; decisions by the human on 2026
 
 Repair checkpoints, one commit each: (A) specs and plan; (B) D2 code and tests, red first; (C) D3 code and tests, red first, with the Developer Guide's `status_message` sentence; (D) test-only repairs for the R1 pin, R5 and R6. The helpers `close`, `open_with_case` and `draft_with_case` in `test_messages.py` keep their names and signatures (#58 imports them).
 
+## Re-review of repair round 1 and repair round 2
+
+Re-reviews of `c3ff0f3..7b93c0b`: no blocking findings. Repair round 2, the last (coordinator, 2026-10-27):
+
+- N1 (verifier, Low, `test:`): `test_a_failed_sign_in_shows_an_unread_message_and_keeps_the_session` (ACC-1.2) in `src/accounts/tests/test_sign_in.py`, with a test-only `note/` view leaving a message unread: a wrong password shows it once with the failure, the session key and user are unchanged, and it is gone afterwards, also from the session row. It passed on first run, pinning existing behaviour. Mutations on temporary copies, restored and checked with `cmp`: hiding messages on the failure page failed `assert html.count(UNREAD) == 1`; cycling the session key on a failed sign-in failed `assert session_key(client) == key`.
+- N2 (verifier, Low, `spec:`): the TECHNICAL-SPEC accounts routes now say, next to the "503 … changes nothing" rule, that sign-out deletes the old row and then creates a new one, so a failed creation leaves the session ended with the generic 500.
+- I1 (security, Info, `spec:`): the storage-growth residual notes that concurrent sign-outs of one session can each create one row.
+- I2 (security, Info, `test:`): the `control` case of the round-page forged-cookie test no longer carries RND-5.8; the `session-storage` case keeps it.
+- Checks: `pytest -q src/accounts src/rounds/tests/test_messages.py` 118 passed; Ruff clean.
+
 ## Open issues
 
-- ACC-3: signing out a signed-in user writes twice (deletes the old row, then creates the new one), so a failure in between leaves the user signed out with the generic 500; ACC-3's "503 and changes nothing" storage rule, when ACC-3 is built, needs a sign-out exception.
+- ACC-3: signing out a signed-in user writes twice (deletes the old row, then creates the new one), so a failure in between leaves the user signed out with the generic 500; ACC-3's "503 and changes nothing" storage rule, when ACC-3 is built, needs a sign-out exception (now stated in the [accounts routes](../specs/TECHNICAL-SPEC.md#accounts-routes); ACC-3 itself still to follow).
 
 - Planting a whole session cookie (cookie tossing from a same-site subdomain, or a network attacker before HSTS) signs a browser into the planter's account; it is noted in the security spec as not message-specific and is not addressed here.
 
