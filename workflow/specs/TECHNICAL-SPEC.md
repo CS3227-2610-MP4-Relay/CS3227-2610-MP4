@@ -1,6 +1,6 @@
 # Technical spec
 
-How Relay will be built and run. What it will do is in [`PRODUCT-SPEC.md`](PRODUCT-SPEC.md). The application runs locally and in CI only. Workspaces, accounts and sessions (ACC-1), demo workspace creation (ACC-2), abuse-limit counters (ACC-3), test rounds with their title and state (RND-1), their acceptance criteria, test cases and links (RND-2), builds with publishing (RND-3), retests as further builds (RND-5), and closing with its closing time (RND-6) exist; other business schema and hosted environments remain planned.
+How Relay will be built and run. What it will do is in [`PRODUCT-SPEC.md`](PRODUCT-SPEC.md). The application runs locally and in CI only. Workspaces, accounts and sessions (ACC-1), demo workspace creation (ACC-2), abuse-limit counters (ACC-3), test rounds with their title and state (RND-1), their acceptance criteria, test cases and links (RND-2), builds with publishing (RND-3), retests as further builds (RND-5), and closing with its closing time (RND-6) exist; other business schema and hosted application environments remain planned.
 
 ## Architecture
 
@@ -141,11 +141,13 @@ No dedicated staging environment or Docker app image is planned. Development and
 
 ## Product website
 
-The static GitHub Pages site uses `docs/index.md`, `docs/Reflections.md` and `docs/_config.yml`, with GitHub's Cayman theme. Its configured organization URL is `https://cs3227-2610-mp4-relay.github.io` and repository base path is `/CS3227-2610-MP4`; this configuration does not establish that the site is published. The guides link to their source in the [team repository](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4) and are excluded from the site build. Observable site behaviour is defined by [PLT-2](product/platform.md#plt-2-validate-and-publish-the-product-website).
+The published [product website](https://cs3227-2610-mp4-relay.github.io/CS3227-2610-MP4/) uses `docs/index.md`, `docs/Reflections.md` and `docs/_config.yml`, with GitHub's Cayman theme. Its organization URL is `https://cs3227-2610-mp4-relay.github.io` and repository base path is `/CS3227-2610-MP4`. GitHub Pages uses GitHub Actions as its source, enforces HTTPS, and restricts the `github-pages` environment to the `main` branch. The guides link to their source in the [team repository](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4) and are excluded from the site build. Observable site behaviour is defined by [PLT-2](product/platform.md#plt-2-validate-and-publish-the-product-website).
 
-The existing `.github/workflows/ci.yml` gains a site job on its pull-request and `main`-push events, using official SHA-pinned `actions/jekyll-build-pages` and `actions/upload-pages-artifact`. Build `docs/` into `_site/` using its existing configuration, without `configure-pages` or a hosted Pages API dependency, so PR validation works before Pages is enabled. A small standard-library Python checker under `src/` verifies the rendered entry pages, local page/asset targets under the configured base path, and guide exclusion before artifact upload; it does not crawl external links or execute site content.
+The existing `.github/workflows/ci.yml` runs a site job on its pull-request and `main`-push events, using official SHA-pinned `actions/jekyll-build-pages` and `actions/upload-pages-artifact`. It builds `docs/` into `_site/` using its existing configuration, without `configure-pages` or a hosted Pages API dependency. A small standard-library Python checker under `src/` verifies the rendered entry pages, local page/asset targets under the configured base path, and guide exclusion before artifact upload; it does not crawl external links or execute site content.
 
 A deployment job depends on both `verify` and the site job in the same run, runs only for a push to `refs/heads/main`, and uses SHA-pinned `actions/deploy-pages` with the `github-pages` environment and the uploaded artifact. Only that job receives `pages: write` and `id-token: write`. Serialize Pages deployments to avoid overlapping publication, without cancelling an in-progress deployment. There is no manual workflow trigger or PR preview deployment. This publishes static documentation only; Django hosting and production release remain separate.
+
+Keep the hosted environment restrictions configured independently of workflow branch gating. After publication, record the deployed commit and URL and perform [PLT-2.6](product/platform.md#plt-2-validate-and-publish-the-product-website); passing build checks alone do not establish a successful deployment. Hosted settings and release decisions remain subject to [human authorization](../../AGENTS.md#approvals-and-claims).
 
 ## Release verification
 
@@ -161,7 +163,6 @@ Future work:
 
 - Verify the [team repository](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4) is publicly accessible; confirm role ownership and initial slice issues/milestones.
 - Configure and verify hosted environment restrictions.
-- Before static-site publication, an authorized operator selects GitHub Actions as the repository's Pages source and configures/verifies the `github-pages` environment's release restrictions. Workflow branch gating does not substitute for those hosted restrictions. After an authorized merge and successful main-run publication, record the deployed commit and URL and perform [PLT-2.6](product/platform.md#plt-2-validate-and-publish-the-product-website). Until then, report build validation separately and leave hosted publication unverified; settings changes and release are human-owned.
 - Create the Vercel project and separate managed PostgreSQL database; confirm the actual provider runtime, limits, secure database connection and least-privilege deployment access.
 - Keep production credentials in protected production settings, outside development, CI validation and untrusted builds. Design and verify migrations and deployment approvals before enabling releases.
 - Verify the team's SoC LLM model availability and limits before fixing model and quota settings.
