@@ -8,6 +8,12 @@ from django.core.exceptions import ValidationError
 from . import services
 from .models import Case, Criterion
 
+# The Unicode Bidi_Control characters, which can reorder text invisibly (rule 5).
+DIRECTION_CONTROLS = frozenset(
+    "\u061c\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069"
+)
+DIRECTION_MESSAGE = "Hidden text-direction characters are not allowed."
+
 
 def has_visible_character(text):
     """Return whether any character is not whitespace, control or format."""
@@ -35,10 +41,12 @@ class RoundTextField(forms.CharField):
         return super().to_python(value)
 
     def clean(self, value):
-        """Apply Django's checks, including null characters, then visibility."""
+        """Apply Django's checks, then the visibility and direction checks."""
         value = super().clean(value)
         if not has_visible_character(value):
             raise ValidationError(self.error_messages["required"], code="required")
+        if not DIRECTION_CONTROLS.isdisjoint(value):
+            raise ValidationError(DIRECTION_MESSAGE, code="direction_control")
         return value
 
 

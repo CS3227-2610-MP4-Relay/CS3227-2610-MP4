@@ -22,6 +22,7 @@ from .conftest import (
     open_with_case,
     page,
     signed_in,
+    stored_retest,
 )
 
 pytestmark = pytest.mark.django_db
@@ -173,8 +174,8 @@ def test_an_unread_retest_label_is_isolated_and_escaped_on_the_sign_in_page(
 ):
     round_ = open_with_case(make_round)
     bidi = "abc" + RLO + "def" + ZWSP + "ghi" + LRI
-    data = {"cases": [round_.cases.get().pk], "label": MARKUP + "\n" + bidi}
-    assert coord_client.post(f"{detail(round_.pk)}retest/", data).status_code == 302
+    # Stored without the form, which refuses bidi controls (rule 5).
+    stored_retest(coord_client, round_, [round_.cases.get()], MARKUP + "\n" + bidi)
     response = coord_client.get("/sign-in/")
     html = page(response)
     lines = (

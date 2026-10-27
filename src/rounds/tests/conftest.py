@@ -4,12 +4,17 @@ from unittest import mock
 
 import pytest
 from django.conf import settings as django_settings
+from django.contrib.messages import constants
+from django.contrib.messages.storage.base import Message
+from django.contrib.messages.storage.cookie import MessageEncoder
+from django.contrib.messages.storage.session import SessionStorage
 from django.db import connection, transaction
 from django.test import Client
 
 from accounts.models import User, Workspace
 from rounds import services
 from rounds.models import Case, Round
+from rounds.templatetags.rounds_text import retest_message
 
 PASSWORD = "Synthetic16Chars"
 NEW = "/coordinator/rounds/new/"
@@ -62,6 +67,23 @@ def open_with_case(make_round):
 def close(client, round_):
     """POST the round's close action."""
     return client.post(f"{detail(round_.pk)}close/")
+
+
+def stored_retest(client, round_, cases, label):
+    """Retest `cases` of an Open round on `label` without its form.
+
+    Calls the service and leaves `client` the success message the retest view
+    would, for rendering stored text that the form refuses (rule 5).
+    """
+    with transaction.atomic():
+        locked = Round.objects.select_for_update().get(pk=round_.pk)
+        build = services.request_retest(locked, label, [case.pk for case in cases])
+    text = retest_message(len(cases), build.label)
+    session = client.session
+    session[SessionStorage.session_key] = MessageEncoder().encode(
+        [Message(constants.SUCCESS, text, extra_tags="retest")]
+    )
+    session.save()
 
 
 def page(response):

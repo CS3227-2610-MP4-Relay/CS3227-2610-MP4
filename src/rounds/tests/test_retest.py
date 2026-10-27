@@ -27,6 +27,7 @@ from .conftest import (
     page,
     race,
     signed_in,
+    stored_retest,
 )
 
 pytestmark = pytest.mark.django_db
@@ -670,7 +671,9 @@ def test_line_breaks_in_the_label_are_isolated_line_by_line(
 def test_bidi_and_zero_width_characters_stay_inside_the_label_element(
     coord_client, opened
 ):
-    html = retested_page(coord_client, opened, BIDI_AND_INVISIBLE)
+    # Stored without the form, which refuses bidi controls (rule 5).
+    stored_retest(coord_client, opened, cases_of(opened)[:1], BIDI_AND_INVISIBLE)
+    html = page(coord_client.get(detail(opened.pk)))
     isolated = f'<span dir="auto">{BIDI_AND_INVISIBLE}</span>'
     assert status(html) == message(1, BIDI_AND_INVISIBLE)
     body = html.split("</title>", 1)[1]
