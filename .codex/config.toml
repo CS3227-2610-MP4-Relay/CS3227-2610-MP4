@@ -1,0 +1,8 @@
+# GitHub approval control and limits: workflow/specs/SECURITY-SPEC.md.
+# Takes effect only when a new Codex session loads this trusted project layer.
+approval_policy = "on-request"
+approvals_reviewer = "user"
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+network_access = false

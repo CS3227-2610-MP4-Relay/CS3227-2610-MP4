@@ -1,0 +1,17 @@
+# Native argv prefixes, not shell parsing or GitHub authorization.
+# See workflow/specs/SECURITY-SPEC.md#development-workflow for coverage limits.
+prefix_rule(
+    pattern = [["gh", "gh.exe"]],
+    decision = "prompt",
+    justification = "Check this GitHub action against the human's authorized scope in AGENTS.md.",
+    match = ["gh pr ready 999999", "gh.exe api repos/example/example", "gh pr view 999999"],
+    not_match = ["git status", "github-command"],
+)
+
+prefix_rule(
+    pattern = [["git", "git.exe"], "push"],
+    decision = "prompt",
+    justification = "Check the push destination and flags against the human's authorized delivery scope.",
+    match = ["git push origin HEAD", "git.exe push --force origin main"],
+    not_match = ["git status", "git -C example push"],
+)
