@@ -435,3 +435,22 @@ def test_a_title_with_an_escaped_control_reference_is_stored_and_shown_literally
     html = page(coord_client.get(response["Location"]))
     assert '<span dir="auto">Synthetic &amp;#x202E; round</span>' in html
     assert "\u202e" not in html
+
+
+@pytest.mark.ac("RND-2.8")
+def test_direction_marks_in_a_criterion_stay_inside_its_element(
+    coord_client, make_round
+):
+    round_ = make_round("Synthetic round")
+    marks = ("\u200e", "\u200f", "\u061c")
+    text = "Synthetic" + marks[0] + " 1" + marks[1] + " 2" + marks[2] + " 3"
+    response = coord_client.post(
+        f"/coordinator/rounds/{round_.pk}/criteria/new/", {"text": text}
+    )
+    assert response.status_code == 302
+    html = page(coord_client.get(response["Location"]))
+    isolated = f'<span dir="auto">{text}</span>'
+    assert isolated in html
+    outside = html.replace(isolated, "")
+    for mark in marks:
+        assert mark not in outside, hex(ord(mark))
