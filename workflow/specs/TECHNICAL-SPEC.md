@@ -66,7 +66,7 @@ The accounts and rounds routes below are planned for their implementation slices
 
 ### Accounts routes
 
-For [ACC](product/accounts.md). Every POST uses Django's CSRF protection, which also rejects an `Origin` header naming another origin, with 403 ([ACC-1.8](product/accounts.md#acc-1-sign-in-and-out-by-role), [ACC-2.7](product/accounts.md#acc-2-create-an-isolated-demo-workspace)). A route that cannot reach storage, including its limit counts, gives the 503 page of [ACC-2.5](product/accounts.md#acc-2-create-an-isolated-demo-workspace) and changes nothing.
+For [ACC](product/accounts.md). Every POST uses Django's CSRF protection, which also rejects an `Origin` header naming another origin, with 403 ([ACC-1.8](product/accounts.md#acc-1-sign-in-and-out-by-role), [ACC-2.7](product/accounts.md#acc-2-create-an-isolated-demo-workspace)). A route that cannot reach storage, including its limit counts, gives the 503 page of [ACC-2.5](product/accounts.md#acc-2-create-an-isolated-demo-workspace) and changes nothing. Sign-out is the exception: it deletes the old session row and then creates a new one for its message, so a failure to create it leaves the session ended with the generic 500 ([persistence decision](#data-model)).
 
 | Route | Method | Access | Validation and success | Denied or failed |
 | --- | --- | --- | --- | --- |

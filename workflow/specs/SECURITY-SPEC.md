@@ -33,7 +33,7 @@ Threat: repeated sign-in attempts guess passwords, or repeated demo creation exh
   - Fixed windows allow a burst across a window boundary.
   - Sign-ins from one address queue on its counter lock, so a client sharing that address can delay or refuse others' sign-ins, and waiting requests hold database connections.
   - Reloading the demo creation page resubmits it and creates another workspace, within the limits, and a browser's back/forward cache may show the credentials again despite `no-store`.
-  - Storage grows without bound, as the [persistence decision](TECHNICAL-SPEC.md#data-model) accepts for the course deployment: unlimited successful sign-ins create session rows, and signing out replaces each with a new row holding the sign-out message until shown, though a signed-out visitor's sign-out and viewing the sign-in page create none; unread messages stay in their session row until shown; expired sessions are never deleted automatically, rotating addresses or IPv6 prefixes create limit-counter rows, and hashed addresses are kept for the life of the deployment.
+  - Storage grows without bound, as the [persistence decision](TECHNICAL-SPEC.md#data-model) accepts for the course deployment: unlimited successful sign-ins create session rows, and signing out replaces each with a new row holding the sign-out message until shown (concurrent sign-outs of one session can each create one), though a signed-out visitor's sign-out and viewing the sign-in page create none; unread messages stay in their session row until shown; expired sessions are never deleted automatically, rotating addresses or IPv6 prefixes create limit-counter rows, and hashed addresses are kept for the life of the deployment.
 
 ## Rounds, observations and history
 
