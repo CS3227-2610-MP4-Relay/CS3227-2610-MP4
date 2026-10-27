@@ -8,10 +8,9 @@ from django.core.exceptions import ValidationError
 from . import services
 from .models import Case, Criterion
 
-# The Unicode Bidi_Control characters, which can reorder text invisibly (rule 5).
-DIRECTION_CONTROLS = frozenset(
-    "\u061c\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069"
-)
+# The text-direction controls of rule 5: embeddings, overrides and their pop, and
+# isolates. They can reorder text invisibly; the direction marks cannot.
+DIRECTION_CONTROLS = frozenset("\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069")
 DIRECTION_MESSAGE = "Hidden text-direction characters are not allowed."
 
 

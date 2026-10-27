@@ -1,4 +1,4 @@
-"""Rule 5: round text refuses hidden text-direction characters, and only those.
+"""Rule 5: round text refuses text-direction controls, and only those.
 
 Each round text field is reached through every route that submits it. Characters
 and accepted texts are spread pairwise over those field routes rather than
@@ -6,6 +6,7 @@ combined exhaustively. Non-ASCII characters are written as escapes.
 """
 
 from dataclasses import dataclass
+from urllib.parse import urlencode
 
 import pytest
 from django.db import transaction
@@ -21,11 +22,8 @@ pytestmark = pytest.mark.django_db
 DIRECTION = "Hidden text-direction characters are not allowed."
 NULL_MESSAGE = "Null characters are not allowed."
 
-# The Unicode Bidi_Control characters, the set rule 5 refuses.
+# The text-direction controls, the 9 characters rule 5 refuses.
 CONTROLS = [
-    "\u061c",  # ARABIC LETTER MARK
-    "\u200e",  # LEFT-TO-RIGHT MARK
-    "\u200f",  # RIGHT-TO-LEFT MARK
     "\u202a",  # LEFT-TO-RIGHT EMBEDDING
     "\u202b",  # RIGHT-TO-LEFT EMBEDDING
     "\u202c",  # POP DIRECTIONAL FORMATTING
@@ -37,8 +35,12 @@ CONTROLS = [
     "\u2069",  # POP DIRECTIONAL ISOLATE
 ]
 
-# Text that stays allowed, including other format characters (ZWJ, ZWNJ).
+# Text that stays allowed, including other format characters: ZWJ, ZWNJ and the
+# direction marks that pasted Hebrew and Arabic text often carries.
 ACCEPTED = {
+    "lrm": "Synthetic\u200e 2.0",
+    "rlm-hebrew": "\u05e9\u05dc\u05d5\u05dd\u200f 2",
+    "alm-arabic": "\u0645\u0631\u062d\u0628\u0627\u061c 3",
     "zwj-emoji": "\U0001f469\u200d\U0001f4bb Synthetic",
     "zwnj-persian": "\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645",
     "hebrew": "\u05e9\u05dc\u05d5\u05dd 2",
@@ -184,7 +186,7 @@ def at(position, char, text="Synthetic text"):
 
 
 def refused_cases():
-    """Each character on two field routes, each field route with two characters."""
+    """Each character on two or three field routes, two per field route."""
     positions = ["start", "middle", "end"]
     for n, item in enumerate(FIELD_ROUTES):
         for step, offset in enumerate((0, 5)):
@@ -200,7 +202,7 @@ def refused_cases():
 
 
 def accepted_cases():
-    """Each accepted text on three or four field routes, two per field route."""
+    """Each accepted text on two or three field routes, two per field route."""
     names = list(ACCEPTED)
     for n, item in enumerate(FIELD_ROUTES):
         for offset in (0, 3):
@@ -314,3 +316,122 @@ def test_a_refused_value_is_shown_again_escaped_and_isolated(
         assert f'value="{escape(value)}"' in tag
     # The control appears only inside the re-shown field.
     assert html.count("\u202e") == 1
+
+
+# Code points next to the refused ranges, and the direction marks (R5). U+2029 is
+# a paragraph separator: mid-text it is kept, and pages show it as a line break.
+NEIGHBOURS = [
+    0x061B, 0x061C, 0x061D, 0x200E, 0x200F, 0x2010, 0x2029, 0x202F,
+    0x206A, 0x206B, 0x206C, 0x206D, 0x206E, 0x206F,
+]  # fmt: skip
+
+
+def neighbour_cases():
+    """Each neighbour once, round-robin over the field routes."""
+    for n, code in enumerate(NEIGHBOURS):
+        item = FIELD_ROUTES[n % len(FIELD_ROUTES)]
+        yield pytest.param(
+            item.id,
+            code,
+            id=f"{item.id}-U{code:04X}",
+            marks=pytest.mark.ac(item.criterion),
+        )
+
+
+@pytest.mark.parametrize("route_id, code", list(neighbour_cases()))
+def test_characters_next_to_the_refused_ranges_are_accepted(
+    coord_client, make_round, route_id, code
+):
+    item = BY_ID[route_id]
+    round_, linked, case = prepared(make_round, item)
+    value = at("middle", chr(code))
+    response = post(coord_client, item, round_, linked, case, value)
+    assert response.status_code == 302
+    assert saved(item, round_, linked, case) == value
+
+
+@pytest.mark.ac("RND-3.2")
+def test_a_publish_label_with_a_control_on_a_round_without_cases_gets_only_its_message(
+    coord_client, make_round
+):
+    round_ = make_round("Synthetic empty round")
+    before = everything()
+    response = coord_client.post(
+        f"/coordinator/rounds/{round_.pk}/publish/", {"label": "Synthetic\u202e 1.0"}
+    )
+    assert response.status_code == 200
+    html = page(response)
+    message_next_to(html, BY_ID["label-publish"], DIRECTION)
+    assert "Add at least one test case before publishing." not in html
+    assert everything() == before
+
+
+@pytest.mark.ac("RND-5.2")
+def test_a_retest_with_a_control_and_no_case_gets_both_messages(
+    coord_client, make_round
+):
+    item = BY_ID["label-retest"]
+    round_, _, _ = prepared(make_round, item)
+    before = everything()
+    response = coord_client.post(
+        f"/coordinator/rounds/{round_.pk}/retest/", {"label": "Synthetic\u2066 1.1"}
+    )
+    assert response.status_code == 200
+    html = page(response)
+    message_next_to(html, item, DIRECTION)
+    no_case = "Select at least one test case."
+    assert html.count(no_case) == 1
+    assert html.index("</fieldset>") < html.index(no_case) < html.index("Build label")
+    assert everything() == before
+
+
+@pytest.mark.ac("RND-2.4")
+@pytest.mark.parametrize("route_id", ["case-title-new", "case-title-edit"])
+def test_a_case_with_a_control_and_no_criterion_gets_both_messages(
+    coord_client, make_round, route_id
+):
+    item = BY_ID[route_id]
+    round_, _, case = prepared(make_round, item)
+    route = (
+        f"/coordinator/rounds/{round_.pk}/cases/new/"
+        if item.route == "case-new"
+        else f"/coordinator/rounds/{round_.pk}/cases/{case.pk}/edit/"
+    )
+    data = {
+        "title": "Synthetic\u202d case",
+        "steps": "Synthetic steps",
+        "expected_result": "Synthetic result",
+    }
+    before = everything()
+    response = coord_client.post(route, data)
+    assert response.status_code == 200
+    html = page(response)
+    message_next_to(html, item, DIRECTION)
+    no_link = "Link at least one acceptance criterion."
+    assert html.count(no_link) == 1 and html.index("<legend>") < html.index(no_link)
+    assert everything() == before
+
+
+@pytest.mark.ac("RND-1.3")
+def test_a_url_encoded_title_with_a_control_is_refused(coord_client):
+    body = urlencode({"title": "Synthetic\u202e round"})
+    response = coord_client.post(
+        NEW, body, content_type="application/x-www-form-urlencoded"
+    )
+    assert response.status_code == 200
+    message_next_to(page(response), BY_ID["round-title-create"], DIRECTION)
+    assert not Round.objects.exists()
+
+
+@pytest.mark.ac("RND-1.7")
+def test_a_title_with_an_escaped_control_reference_is_stored_and_shown_literally(
+    coord_client,
+):
+    title = "Synthetic &#x202E; round"
+    response = coord_client.post(NEW, {"title": title})
+    assert response.status_code == 302
+    made = Round.objects.get()
+    assert made.title == title
+    html = page(coord_client.get(response["Location"]))
+    assert '<span dir="auto">Synthetic &amp;#x202E; round</span>' in html
+    assert "\u202e" not in html

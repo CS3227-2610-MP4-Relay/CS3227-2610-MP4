@@ -169,13 +169,29 @@ def test_a_failed_session_save_after_a_close_gives_400_with_the_round_closed(
 
 
 @pytest.mark.ac("RND-5.8")
+@pytest.mark.parametrize(
+    "through_form, bidi, invisible",
+    [
+        pytest.param(True, "abc" + ZWSP + "ghi", (ZWSP,), id="retest-form"),
+        # Stored without the form, which refuses text-direction controls (rule 5).
+        pytest.param(
+            False,
+            "abc" + RLO + "def" + ZWSP + "ghi" + LRI,
+            (RLO, ZWSP, LRI),
+            id="stored",
+        ),
+    ],
+)
 def test_an_unread_retest_label_is_isolated_and_escaped_on_the_sign_in_page(
-    coord_client, make_round
+    coord_client, make_round, through_form, bidi, invisible
 ):
     round_ = open_with_case(make_round)
-    bidi = "abc" + RLO + "def" + ZWSP + "ghi" + LRI
-    # Stored without the form, which refuses bidi controls (rule 5).
-    stored_retest(coord_client, round_, [round_.cases.get()], MARKUP + "\n" + bidi)
+    label = MARKUP + "\n" + bidi
+    if through_form:
+        data = {"cases": [round_.cases.get().pk], "label": label}
+        assert coord_client.post(f"{detail(round_.pk)}retest/", data).status_code == 302
+    else:
+        stored_retest(coord_client, round_, [round_.cases.get()], label)
     response = coord_client.get("/sign-in/")
     html = page(response)
     lines = (
@@ -185,5 +201,5 @@ def test_an_unread_retest_label_is_isolated_and_escaped_on_the_sign_in_page(
     assert response.status_code == 200
     assert html.count(status) == 1
     assert SCRIPT_TAG not in html
-    for char in (RLO, ZWSP, LRI):
+    for char in invisible:
         assert char not in html.replace(lines, ""), hex(ord(char))

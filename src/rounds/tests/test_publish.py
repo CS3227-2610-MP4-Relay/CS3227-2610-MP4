@@ -625,7 +625,7 @@ def test_a_label_posted_with_line_breaks_is_shown_line_by_line(coord_client, dra
 
 @pytest.mark.ac("RND-3.6")
 def test_bidi_and_zero_width_characters_stay_inside_their_element(coord_client, draft):
-    # Published without the form, which refuses bidi controls (rule 5).
+    # Published without the form, which refuses text-direction controls (rule 5).
     fill(draft, 1)
     with transaction.atomic():
         locked = Round.objects.select_for_update().get(pk=draft.pk)
