@@ -1,8 +1,14 @@
+import threading
+import time
+from unittest import mock
+
 import pytest
 from django.conf import settings as django_settings
+from django.db import connection
 from django.test import Client
 
 from accounts.models import User, Workspace
+from rounds import services
 from rounds.models import Round
 
 PASSWORD = "Synthetic16Chars"
@@ -40,6 +46,53 @@ def csrf_token(client):
     """Load a page that sets the CSRF cookie and return its token."""
     client.get("/sign-in/")
     return client.cookies[django_settings.CSRF_COOKIE_NAME].value
+
+
+def race(coordinator, first, second, slow):
+    """Run `first` until it holds the round lock inside `slow`, then `second`.
+
+    `slow` names services, or (object, attribute) pairs such as Round.save,
+    whose call pauses after its work, still inside the view's locked
+    transaction, so `second` arrives while `first` holds it.
+    """
+    inside = threading.Event()
+    responses = {}
+    targets = [(services, name) if isinstance(name, str) else name for name in slow]
+    reals = {target: getattr(*target) for target in targets}
+
+    def pausing(target):
+        def run(*args, **kwargs):
+            result = reals[target](*args, **kwargs)
+            inside.set()
+            time.sleep(0.3)
+            return result
+
+        return run
+
+    def send(key, request):
+        try:
+            if key == "second":
+                inside.wait(5)
+            responses[key] = request(signed_in(coordinator))
+        finally:
+            connection.close()
+
+    patches = [mock.patch.object(*target, pausing(target)) for target in targets]
+    for patch in patches:
+        patch.start()
+    try:
+        threads = [
+            threading.Thread(target=send, args=(key, request))
+            for key, request in (("first", first), ("second", second))
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+    finally:
+        for patch in patches:
+            patch.stop()
+    return responses["first"], responses["second"]
 
 
 @pytest.fixture

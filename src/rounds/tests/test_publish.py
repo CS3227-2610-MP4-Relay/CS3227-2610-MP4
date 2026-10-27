@@ -1,15 +1,12 @@
 """RND-3: publishing a round to Beta Testers through its round page."""
 
-import threading
-import time
 from unittest import mock
 
 import pytest
-from django.db import DatabaseError, connection
+from django.db import DatabaseError
 from django.test import Client
 from django.utils.html import escape
 
-from rounds import services
 from rounds.forms import PublishForm
 from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
 
@@ -20,6 +17,7 @@ from .conftest import (
     csrf_token,
     detail,
     page,
+    race,
     signed_in,
 )
 
@@ -159,7 +157,9 @@ def test_round_page_after_publishing_shows_the_message_once_and_the_open_view(
         "Delete test case",
         "Publish round",
         "Build label",
-        "<form",
+        # RND-6 adds the "Close round" form; no RND-2 or RND-3 form remains.
+        '/delete/"',
+        '/publish/"',
     ):
         assert control not in html, control
     again = page(coord_client.get(detail(draft.pk)))
@@ -289,53 +289,6 @@ def test_the_published_round_keeps_exactly_what_was_saved(coord_client, draft):
 
 
 # RND-3.5
-
-
-def race(coordinator, first, second, slow):
-    """Run `first` until it holds the round lock inside `slow`, then `second`.
-
-    `slow` names services, or (object, attribute) pairs such as Round.save,
-    whose call pauses after its work, still inside the view's locked
-    transaction, so `second` arrives while `first` holds it.
-    """
-    inside = threading.Event()
-    responses = {}
-    targets = [(services, name) if isinstance(name, str) else name for name in slow]
-    reals = {target: getattr(*target) for target in targets}
-
-    def pausing(target):
-        def run(*args, **kwargs):
-            result = reals[target](*args, **kwargs)
-            inside.set()
-            time.sleep(0.3)
-            return result
-
-        return run
-
-    def send(key, request):
-        try:
-            if key == "second":
-                inside.wait(5)
-            responses[key] = request(signed_in(coordinator))
-        finally:
-            connection.close()
-
-    patches = [mock.patch.object(*target, pausing(target)) for target in targets]
-    for patch in patches:
-        patch.start()
-    try:
-        threads = [
-            threading.Thread(target=send, args=(key, request))
-            for key, request in (("first", first), ("second", second))
-        ]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
-    finally:
-        for patch in patches:
-            patch.stop()
-    return responses["first"], responses["second"]
 
 
 def add_case(round_, linked):

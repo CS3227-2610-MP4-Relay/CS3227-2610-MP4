@@ -1,6 +1,6 @@
 # Test rounds
 
-Planning area `RND`. RND-1 to RND-3 are implemented; RND-4 to RND-7 are specified but not implemented yet. See the [roles](../PRODUCT-SPEC.md#roles) and [accounts](accounts.md); data, routes and page titles are in the [technical spec](../TECHNICAL-SPEC.md#rounds), and controls in the [security spec](../SECURITY-SPEC.md#rounds-observations-and-history).
+Planning area `RND`. RND-1 to RND-3 and RND-6 are implemented; RND-4, RND-5 and RND-7 are specified but not implemented yet. See the [roles](../PRODUCT-SPEC.md#roles) and [accounts](accounts.md); data, routes and page titles are in the [technical spec](../TECHNICAL-SPEC.md#rounds), and controls in the [security spec](../SECURITY-SPEC.md#rounds-observations-and-history).
 
 A test round is a workspace's set of acceptance criteria and test cases, tested against named builds of the software under test. Only the workspace's Test Coordinator performs the actions below. What Beta Testers see and record, including the result format, belongs to [test results](results.md). The [test-drafting AI feature](../ai/test-drafting.md) is not part of these requirements.
 
@@ -103,6 +103,8 @@ While the round is Open, the coordinator can ask for selected cases to be tested
 ## RND-6 Close a round
 
 Closing ends testing and makes the round read-only. A closed round cannot be reopened.
+
+While the round is Open, the round page ends, after the "Builds" section and before the "Coordinator home" link, with the paragraph "Closing makes this round read-only. It cannot be reopened." directly followed by a "Close round" button. Closing asks for no further confirmation and opens the round page, which shows "Round closed." once, directly under its heading. A Closed round's page shows the same title, "State: Closed", criteria, cases with their linked criteria and current build, and "Builds" section as an Open round's page, and has no "Edit round" link, no RND-2 controls, no publish form, no warning and no "Close round" button. The closing time is recorded but not shown.
 
 - **RND-6.1** (happy) Closing an Open round shows "Round closed." Its round page shows the state "Closed", and its criteria, cases and builds stay visible there.
 - **RND-6.2** (ambiguous) Closing needs no precondition: a round with untested cases can be closed. The close button is shown with "Closing makes this round read-only. It cannot be reopened."

@@ -148,3 +148,25 @@ def publish(round_, label):
     round_.published_at = timezone.now()
     round_.save(update_fields=["state", "published_at"])
     return build
+
+
+class RoundNotOpen(Exception):
+    """A close of a round that is not Open; the view's 409 normally comes first."""
+
+    def __init__(self):
+        super().__init__("Only an Open round can be closed.")
+
+
+def close(round_):
+    """Close the locked `round_`, whose Open state the caller has re-checked.
+
+    The update itself requires the Open state, so no caller can close a Draft
+    round or move a Closed one's closing time (RND-6); nothing reopens a round.
+    """
+    now = timezone.now()
+    closed = Round.objects.filter(pk=round_.pk, state=Round.State.OPEN).update(
+        state=Round.State.CLOSED, closed_at=now
+    )
+    if not closed:
+        raise RoundNotOpen
+    round_.state, round_.closed_at = Round.State.CLOSED, now

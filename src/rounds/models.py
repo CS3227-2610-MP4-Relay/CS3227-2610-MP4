@@ -23,6 +23,7 @@ class Round(models.Model):
     state = models.CharField(max_length=8, choices=State.choices, default=State.DRAFT)
     created_at = models.DateTimeField(auto_now_add=True)
     published_at = models.DateTimeField(null=True, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at", "-id"]

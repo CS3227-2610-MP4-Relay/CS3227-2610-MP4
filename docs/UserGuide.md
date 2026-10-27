@@ -45,11 +45,11 @@ You are also signed out 8 hours after signing in, whatever you do in between; op
 
 ## Test rounds
 
-Only a Test Coordinator can prepare and publish test rounds. A new round is in the **Draft** state; [publishing](#publish-a-round) it makes it **Open**. Beta Testers do not see rounds yet.
+Only a Test Coordinator can prepare, publish and close test rounds. A new round is in the **Draft** state; [publishing](#publish-a-round) it makes it **Open**, and [closing](#close-a-round) it makes it **Closed**. Beta Testers do not see rounds yet.
 
 **Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". With no rounds, it says "No rounds yet."
 
-Whenever creating or publishing a round, or saving or deleting anything in it, fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
+Whenever creating, publishing or closing a round, or saving or deleting anything in it, fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
 
 ### Create a round
 
@@ -112,6 +112,16 @@ A build label has 1 to 100 characters; spaces or line breaks at either end are r
 
 ### An Open round
 
-An Open round's page shows "State: Open" and the criteria and cases exactly as they were when it was published. Its title, criteria and cases can no longer be changed, so the page has no **Edit round** link, no add, edit or delete links and buttons, and no **Publish round** button.
+An Open round's page shows "State: Open" and the criteria and cases exactly as they were when it was published. Its title, criteria and cases can no longer be changed, so the page has no **Edit round** link, no add, edit or delete links and buttons, and no **Publish round** button. The only action left is to [close](#close-a-round) the round.
 
 Under each case's linked criteria, **Current build** shows the label of the build the case is tested on. After the test cases, a **Builds** heading lists the round's builds, oldest first: each build's label, then **Covered test cases** with the titles of the cases it covers. A newly published round has one build, covering every case.
+
+### Close a round
+
+Closing ends testing on an Open round and makes it read-only. While a round is Open, its round page ends with "Closing makes this round read-only. It cannot be reopened." and a **Close round** button. A round can be closed at any time while it is Open, even if some cases have not been tested.
+
+1. On the Open round's page, choose **Close round**. There is no further confirmation.
+
+The round page shows "Round closed." and "State: Closed". A Closed round cannot be reopened or returned to Draft.
+
+A Closed round's page still shows its criteria, its cases with their linked criteria and **Current build**, and the **Builds** list. It has no links or buttons for changing the round, and no **Close round** button.

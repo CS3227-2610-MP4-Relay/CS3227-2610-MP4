@@ -731,7 +731,8 @@ def test_open_or_closed_round_page_lists_records_without_controls(
         "Delete criterion",
         "Edit test case",
         "Delete test case",
-        "<form",
+        # RND-6 adds the Open round's "Close round" form; no RND-2 form remains.
+        '/delete/"',
     ):
         assert control not in html
 

@@ -3,7 +3,7 @@
 from django.urls import reverse
 
 from rounds import urls as rounds_urls
-from rounds.models import Case, CaseCriterion, Criterion
+from rounds.models import Case, CaseCriterion, Criterion, Round
 
 from .conftest import csrf_token, signed_in
 
@@ -17,12 +17,16 @@ def test_every_rounds_route_is_never_cached(coordinator, make_round):
         round=made, title="Synthetic", steps="Synthetic", expected_result="Synthetic"
     )
     CaseCriterion.objects.create(case=case, criterion=linked)
+    opened = make_round("Synthetic open", Round.State.OPEN)
     ids = {"round_id": made.pk, "criterion_id": linked.pk, "case_id": case.pk}
     client = signed_in(coordinator, enforce_csrf_checks=True)
     token = csrf_token(client)
     assert rounds_urls.urlpatterns
     for pattern in rounds_urls.urlpatterns:
         kwargs = {name: ids[name] for name in pattern.pattern.converters}
+        if pattern.name == "close":
+            # Only an Open round closes (RND-6); the Draft round stays Draft.
+            kwargs["round_id"] = opened.pk
         url = reverse(f"rounds:{pattern.name}", kwargs=kwargs)
         response = client.get(url)
         if response.status_code == 405:
@@ -34,6 +38,9 @@ def test_every_rounds_route_is_never_cached(coordinator, make_round):
             # The walk posts no label, so the Draft round page comes back.
             assert response.status_code == 200, url
             assert "Enter 1 to 100 characters." in response.content.decode()
+        if pattern.name == "close":
+            assert response.status_code == 302, url
+    assert "close" in {pattern.name for pattern in rounds_urls.urlpatterns}
 
 
 def test_publishing_and_the_open_round_page_are_never_cached(coordinator, make_round):
