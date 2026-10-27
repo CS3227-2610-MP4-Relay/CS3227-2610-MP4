@@ -3,10 +3,11 @@
 from unittest import mock
 
 import pytest
-from django.db import DatabaseError
+from django.db import DatabaseError, transaction
 from django.test import Client
 from django.utils.html import escape
 
+from rounds import services
 from rounds.forms import PublishForm
 from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
 
@@ -624,7 +625,12 @@ def test_a_label_posted_with_line_breaks_is_shown_line_by_line(coord_client, dra
 
 @pytest.mark.ac("RND-3.6")
 def test_bidi_and_zero_width_characters_stay_inside_their_element(coord_client, draft):
-    html = published_page(coord_client, draft, BIDI_AND_INVISIBLE)
+    # Published without the form, which refuses text-direction controls (rule 5).
+    fill(draft, 1)
+    with transaction.atomic():
+        locked = Round.objects.select_for_update().get(pk=draft.pk)
+        services.publish(locked, BIDI_AND_INVISIBLE)
+    html = page(coord_client.get(detail(draft.pk)))
     assert html.count(f'<span dir="auto">{BIDI_AND_INVISIBLE}</span>') == 2
     outside = html.replace(f'<span dir="auto">{BIDI_AND_INVISIBLE}</span>', "")
     for char in (chr(0x202E), ZWSP, chr(0x2066)):
