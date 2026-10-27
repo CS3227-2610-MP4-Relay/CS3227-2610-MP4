@@ -5,28 +5,32 @@ technical spec's Configuration; like the "never cached" tests, it has no
 criterion ID.
 """
 
+import json
 from pathlib import Path
 from unittest import mock
 
 import pytest
-from django.contrib.sessions.backends.db import SessionStore
-from django.db import DatabaseError
+from django.contrib.sessions.models import Session
+from django.db import DatabaseError, OperationalError
 from django.test import Client
 
 from relay.settings import base
+from relay_tests.test_configuration import probe
 from rounds.models import Round
 
-from .conftest import detail, page, signed_in
-from .test_messages import close, draft_with_case, open_with_case
+from .conftest import close, detail, draft_with_case, open_with_case, page, signed_in
 
 pytestmark = pytest.mark.django_db
 
 SRC = Path(__file__).resolve().parents[2]
-EXEMPTIONS = (
-    "xframe_options_exempt",
-    "xframe_options_sameorigin",
-    "xframe_options_deny",
-)
+TEST_DIRECTORIES = {"tests", "relay_tests"}
+# Lower-case text that exempts a view or sets the header or setting directly:
+# the xframe_options_* decorators and attribute, the header, X_FRAME_OPTIONS.
+OVERRIDES = ("xframe_options_", "x-frame-options", "x_frame_options")
+FIRST_TWO = [
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+]
 
 
 def refuses_framing(response, status):
@@ -75,37 +79,51 @@ def test_a_csrf_failure_refuses_framing(coordinator, make_round):
     refuses_framing(close(client, opened), 403)
 
 
+def failing_session_save():
+    return mock.patch.object(Session, "save", side_effect=OperationalError("synthetic"))
+
+
 def test_a_failed_session_save_after_a_view_still_refuses_framing(
     coordinator, make_round
 ):
-    # The 500 is made by SessionMiddleware, so this fails if the framing
-    # middleware sits below it.
+    # SessionMiddleware makes this 400 (SessionInterrupted) after the view, so
+    # only middleware above it sees the response.
     opened = open_with_case(make_round)
     client = signed_in(coordinator, raise_request_exception=False)
-    with mock.patch.object(
-        SessionStore, "save", side_effect=DatabaseError("synthetic")
-    ):
-        refuses_framing(close(client, opened), 500)
+    with failing_session_save():
+        refuses_framing(close(client, opened), 400)
 
 
-def test_no_view_is_exempt_from_framing_refusal():
+def test_a_failed_new_session_at_sign_out_still_refuses_framing(coordinator):
+    # The sign-out message needs a new session row; SessionMiddleware makes
+    # the 500 when creating it fails.
+    client = signed_in(coordinator, raise_request_exception=False)
+    with failing_session_save():
+        refuses_framing(client.post("/sign-out/"), 500)
+
+
+def test_no_code_exempts_a_view_or_sets_framing_itself():
     named = [
         str(path.relative_to(SRC))
         for path in SRC.rglob("*.py")
-        if "tests" not in path.parts
-        and any(name in path.read_text(encoding="utf-8") for name in EXEMPTIONS)
+        if not TEST_DIRECTORIES & set(path.relative_to(SRC).parts)
+        and any(text in path.read_text(encoding="utf-8").lower() for text in OVERRIDES)
     ]
     assert named == []
 
 
 def test_framing_is_refused_by_the_shared_settings(settings):
     for middleware in (base.MIDDLEWARE, settings.MIDDLEWARE):
-        assert middleware[:2] == [
-            "django.middleware.clickjacking.XFrameOptionsMiddleware",
-            "django.middleware.security.SecurityMiddleware",
-        ]
-    assert not hasattr(base, "X_FRAME_OPTIONS")
+        assert middleware[:2] == FIRST_TWO
     assert settings.X_FRAME_OPTIONS == "DENY"
+
+
+def test_framing_is_refused_by_the_local_settings():
+    result = probe("relay.settings.local", DJANGO_SECRET_KEY="synthetic-local-key")
+    assert result.returncode == 0, result.stderr
+    framing = json.loads(result.stdout)["framing"]
+    assert framing["middleware"][:2] == FIRST_TWO
+    assert framing["x_frame_options"] == "DENY"
 
 
 def test_an_anonymous_round_page_redirect_refuses_framing(make_round):
