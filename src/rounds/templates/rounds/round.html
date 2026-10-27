@@ -2,7 +2,8 @@
 {% load rounds_text %}
 {% block title %}{{ round.title|title_isolate }}{% endblock %}
 {% block content %}
-<h1>{{ round.title|isolated_lines }}</h1>
+<h1>{{ round.title|isolated_lines }}</h1>{% for message in messages %}
+<p role="status">{{ message }}</p>{% endfor %}
 <p>State: {{ round.get_state_display }}</p>
 {% if draft %}<p><a href="{% url 'rounds:edit' round.pk %}">Edit round</a></p>{% endif %}
 <h2>Acceptance criteria</h2>
@@ -23,9 +24,21 @@
 <p>{{ case.expected_result|isolated_lines }}</p>
 <h4>Linked acceptance criteria</h4>
 <ul>{% for criterion in case.criteria.all %}<li>{{ criterion.text|isolated_lines }}</li>{% endfor %}</ul>
+{% if case.current_build %}<h4>Current build</h4>
+<p>{{ case.current_build.label|isolated_lines }}</p>{% endif %}
 {% if draft %}<p><a href="{% url 'rounds:case-edit' round.pk case.pk %}">Edit test case</a></p>
 <form method="post" action="{% url 'rounds:case-delete' round.pk case.pk %}">{% csrf_token %}<button type="submit">Delete test case</button></form>{% endif %}
 {% empty %}<p>No test cases yet.</p>
 {% endfor %}
+{% if builds %}<h2>Builds</h2>
+{% for build in builds %}<h3>{{ build.label|isolated_lines }}</h3>
+<h4>Covered test cases</h4>
+<ul>{% for case in build.cases.all %}<li>{{ case.title|isolated_lines }}</li>{% endfor %}</ul>
+{% endfor %}{% endif %}
+{% if publish_form %}{% with field=publish_form.label %}<form method="post" action="{% url 'rounds:publish' round.pk %}">{% csrf_token %}
+  <p><label for="{{ field.id_for_label }}">{{ field.label }}</label> {{ field }}</p>
+  {% for error in field.errors %}<p>{{ error }}</p>{% endfor %}
+  <button type="submit">Publish round</button>
+</form>{% endwith %}{% endif %}
 <p><a href="{% url 'accounts:coordinator' %}">Coordinator home</a></p>
 {% endblock %}

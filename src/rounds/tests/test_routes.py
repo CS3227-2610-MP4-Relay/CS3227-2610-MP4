@@ -30,3 +30,25 @@ def test_every_rounds_route_is_never_cached(coordinator, make_round):
         assert response.status_code < 400, url
         cache_control = response.get("Cache-Control", "")
         assert "no-store" in cache_control and "private" in cache_control, url
+        if pattern.name == "publish":
+            # The walk posts no label, so the Draft round page comes back.
+            assert response.status_code == 200, url
+            assert "Enter 1 to 100 characters." in response.content.decode()
+
+
+def test_publishing_and_the_open_round_page_are_never_cached(coordinator, make_round):
+    made = make_round()
+    linked = Criterion.objects.create(round=made, text="Synthetic criterion")
+    case = Case.objects.create(
+        round=made, title="Synthetic", steps="Synthetic", expected_result="Synthetic"
+    )
+    CaseCriterion.objects.create(case=case, criterion=linked)
+    client = signed_in(coordinator)
+    published = client.post(
+        reverse("rounds:publish", args=[made.pk]), {"label": "Synthetic 1.0"}
+    )
+    opened = client.get(reverse("rounds:detail", args=[made.pk]))
+    assert (published.status_code, opened.status_code) == (302, 200)
+    for response in (published, opened):
+        cache_control = response.get("Cache-Control", "")
+        assert "no-store" in cache_control and "private" in cache_control

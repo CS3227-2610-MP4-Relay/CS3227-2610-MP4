@@ -1,6 +1,6 @@
 # Test rounds
 
-Planning area `RND`. RND-1 and RND-2 are implemented; RND-3 to RND-7 are specified but not implemented yet. See the [roles](../PRODUCT-SPEC.md#roles) and [accounts](accounts.md); data, routes and page titles are in the [technical spec](../TECHNICAL-SPEC.md#rounds), and controls in the [security spec](../SECURITY-SPEC.md#rounds-observations-and-history).
+Planning area `RND`. RND-1 to RND-3 are implemented; RND-4 to RND-7 are specified but not implemented yet. See the [roles](../PRODUCT-SPEC.md#roles) and [accounts](accounts.md); data, routes and page titles are in the [technical spec](../TECHNICAL-SPEC.md#rounds), and controls in the [security spec](../SECURITY-SPEC.md#rounds-observations-and-history).
 
 A test round is a workspace's set of acceptance criteria and test cases, tested against named builds of the software under test. Only the workspace's Test Coordinator performs the actions below. What Beta Testers see and record, including the result format, belongs to [test results](results.md). The [test-drafting AI feature](../ai/test-drafting.md) is not part of these requirements.
 
@@ -66,6 +66,8 @@ The "New acceptance criterion" page has a "Text" field and an "Add acceptance cr
 ## RND-3 Publish a round to Beta Testers
 
 Publishing opens the round for testing on a named build. From then on, the round page shows each case's current build and lists the round's builds, oldest first, each with its label and the cases it covers. What Beta Testers then see belongs to [RES](results.md).
+
+While the round is Draft, the round page ends, after the "Test cases" section and before the "Coordinator home" link, with a "Build label" field and a "Publish round" button. Publishing opens the round page, which shows "Round published." once, directly under its heading. A refused publish shows the round page again with the entered label kept in the field and the RND-3.2 or RND-3.3 message next to the "Build label" field; the label is checked first, so an invalid label on a round with no test cases gets only the RND-3.2 message. From publishing, each case shows, after its linked criteria, the label "Current build" followed by its current build's label. After the "Test cases" section, a "Builds" heading lists the round's builds, oldest first, each with its label as a subheading, then the label "Covered test cases" followed by the titles of the cases it covers, in creation order. An Open round's page has no "Edit round" link, no RND-2 controls and no publish form. A build label never appears in a page title.
 
 - **RND-3.1** (happy) Publishing a Draft round with a build label shows "Round published." The round page shows the state "Open", that build as every case's current build, and the criteria and cases without edit or delete controls.
 - **RND-3.2** (boundary) A build label of 100 characters is accepted. An empty, invisible-only or 101-character label gets "Enter 1 to 100 characters." and the round stays Draft.

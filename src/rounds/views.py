@@ -1,8 +1,9 @@
-"""The coordinator's round pages (RND-1, RND-2), under the round action rules."""
+"""The coordinator's round pages (RND-1 to RND-3), under the round action rules."""
 
 import logging
 from functools import wraps
 
+from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db import DatabaseError, transaction
 from django.forms.models import model_to_dict
@@ -14,7 +15,7 @@ from accounts.models import User
 from accounts.workspaces import workspace_records
 
 from . import services
-from .forms import CaseForm, CriterionForm, RoundForm
+from .forms import CaseForm, CriterionForm, PublishForm, RoundForm
 from .models import Round
 from .services import RoundLimitReached, create_round
 
@@ -83,13 +84,25 @@ def new_round(request):
     return form_page(request, form, "New round", "Create round")
 
 
-def show_round(request, round_, refused=None):
-    """Render the round page; `refused` is a (criterion ID, message) pair."""
+def show_round(request, round_, refused=None, publish_form=None):
+    """Render the round page; `refused` is a (criterion ID, message) pair.
+
+    Builds come oldest first, so each case's current build is the last one
+    covering it (RND-3).
+    """
+    builds = list(round_.builds.prefetch_related("cases"))
+    current = {case.pk: build for build in builds for case in build.cases.all()}
+    cases = list(round_.cases.prefetch_related("criteria"))
+    for case in cases:
+        case.current_build = current.get(case.pk)
+    draft = round_.state == Round.State.DRAFT
     context = {
         "round": round_,
-        "draft": round_.state == Round.State.DRAFT,
-        "cases": round_.cases.prefetch_related("criteria"),
+        "draft": draft,
+        "cases": cases,
+        "builds": builds,
         "refused": refused,
+        "publish_form": publish_form or (PublishForm() if draft else None),
     }
     return render(request, "rounds/round.html", context)
 
@@ -204,4 +217,27 @@ def delete_record(request, round_id, kind, criterion_id=None, case_id=None):
                 services.delete_case(record)
     except services.Refused as refused:
         return show_round(request, round_, (record.pk, str(refused)))
+    return redirect(round_)
+
+
+@coordinator_view(["POST"])
+def publish_round(request, round_id):
+    """Open a Draft round on its first build, covering every case (RND-3)."""
+    round_ = own_round(request, round_id)
+    if round_.state != Round.State.DRAFT:
+        return state_conflict(request, round_)
+    form = PublishForm(request.POST)
+    if not form.is_valid():
+        return show_round(request, round_, publish_form=form)
+    # A refusal leaves the transaction by its exception, so nothing commits.
+    try:
+        with transaction.atomic():
+            round_ = own_round(request, round_id, lock=True)
+            if round_.state != Round.State.DRAFT:
+                return state_conflict(request, round_)
+            services.publish(round_, form.cleaned_data["label"])
+    except services.Refused as refused:
+        form.add_error(refused.field, str(refused))
+        return show_round(request, round_, publish_form=form)
+    messages.success(request, "Round published.")
     return redirect(round_)

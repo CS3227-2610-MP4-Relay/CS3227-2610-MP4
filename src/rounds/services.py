@@ -1,10 +1,13 @@
 """Round writes shared by the rounds routes and demo creation."""
 
+import unicodedata
+
 from django.db import transaction
+from django.utils import timezone
 
 from accounts.models import Workspace
 
-from .models import Case, CaseCriterion, Criterion, Round
+from .models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
 
 ROUND_LIMIT = 20
 
@@ -120,3 +123,28 @@ def delete_criterion(criterion):
     if criterion.links.exists():
         raise Refused("This criterion is linked to a test case. Unlink it first.")
     criterion.delete()
+
+
+NO_CASES = "Add at least one test case before publishing."
+
+
+def build_key(label):
+    """Return the label compared for uniqueness: no format characters, then NFC."""
+    kept = "".join(char for char in label if unicodedata.category(char) != "Cf")
+    return unicodedata.normalize("NFC", kept)
+
+
+def publish(round_, label):
+    """Open the locked Draft `round_` on its first build, covering every case.
+
+    A round with no cases is refused before anything is written (RND-3.3).
+    """
+    cases = list(round_.cases.all())
+    if not cases:
+        raise Refused(NO_CASES, "label")
+    build = Build.objects.create(round=round_, label=label, key=build_key(label))
+    BuildCase.objects.bulk_create(BuildCase(build=build, case=case) for case in cases)
+    round_.state = Round.State.OPEN
+    round_.published_at = timezone.now()
+    round_.save(update_fields=["state", "published_at"])
+    return build

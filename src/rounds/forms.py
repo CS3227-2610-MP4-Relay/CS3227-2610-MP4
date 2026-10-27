@@ -88,3 +88,13 @@ class CaseForm(RecordForm):
             "invalid_pk_value": services.FOREIGN,
         },
     )
+
+
+class PublishForm(forms.Form):
+    """The label of the build a Draft round is published on (RND-3)."""
+
+    label = RoundTextField(
+        max_length=100,
+        label="Build label",
+        widget=forms.TextInput(attrs={"dir": "auto"}),
+    )
