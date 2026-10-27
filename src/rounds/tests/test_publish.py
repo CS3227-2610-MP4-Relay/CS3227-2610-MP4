@@ -12,7 +12,10 @@ from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Roun
 
 from .conftest import (
     DENIED,
+    IMG_TAG,
+    MARKUP,
     NOT_FOUND,
+    SCRIPT_TAG,
     UNAVAILABLE,
     csrf_token,
     detail,
@@ -28,7 +31,6 @@ LABEL_LIMIT = "Enter 1 to 100 characters."
 NO_CASES = "Add at least one test case before publishing."
 CONFLICT = "This action is not available while the round is {}."
 LF, ZWSP = chr(10), chr(0x200B)
-MARKUP = "<script>alert(1)</script>\"'><img src=x onerror=alert(2)>&amp;"
 # Right-to-left override, zero-width space and left-to-right isolate.
 BIDI_AND_INVISIBLE = "abc" + chr(0x202E) + "def" + ZWSP + "ghi" + chr(0x2066)
 
@@ -593,7 +595,7 @@ def test_markup_in_a_build_label_is_escaped(coord_client, draft):
     isolated = f'<span dir="auto">{escape(MARKUP)}</span>'
     # The current build of the one case, and the build in the builds list.
     assert html.count(isolated) == 2
-    assert "<script>" not in html and "<img" not in html
+    assert SCRIPT_TAG not in html and IMG_TAG not in html
 
 
 @pytest.mark.ac("RND-3.6")
@@ -602,7 +604,7 @@ def test_markup_in_a_refused_label_is_escaped_in_the_field_value(coord_client, d
     fill(draft, 1)
     html = page(coord_client.post(publish_url(draft.pk), {"label": refused}))
     assert f'value="{escape(refused)}"' in html
-    assert "<script>" not in html and "<img" not in html
+    assert SCRIPT_TAG not in html and IMG_TAG not in html
 
 
 @pytest.mark.ac("RND-3.6")
@@ -610,7 +612,7 @@ def test_markup_in_a_label_refused_for_no_cases_is_escaped(coord_client, draft):
     html = page(coord_client.post(publish_url(draft.pk), {"label": MARKUP}))
     assert NO_CASES in html
     assert f'value="{escape(MARKUP)}"' in html
-    assert "<script>" not in html and "<img" not in html
+    assert SCRIPT_TAG not in html and IMG_TAG not in html
 
 
 @pytest.mark.ac("RND-3.6")
@@ -644,7 +646,7 @@ def test_case_titles_in_the_builds_list_are_escaped_and_isolated(coord_client, d
     assert html.count(lines) == 2
     assert html.index("<h2>Builds</h2>") < html.rindex(lines)
     outside = html.replace(lines, "")
-    assert "<script>" not in outside and "<img" not in outside
+    assert SCRIPT_TAG not in outside and IMG_TAG not in outside
     for char in (chr(0x202E), ZWSP, chr(0x2066)):
         assert char not in outside
 

@@ -17,7 +17,10 @@ from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Roun
 
 from .conftest import (
     DENIED,
+    IMG_TAG,
+    MARKUP,
     NOT_FOUND,
+    SCRIPT_TAG,
     UNAVAILABLE,
     csrf_token,
     detail,
@@ -33,7 +36,6 @@ WARNING = "Closing makes this round read-only. It cannot be reopened."
 BUTTON = "Close round</button>"
 CONFLICT = "This action is not available while the round is {}."
 FSI, PDI, RLO, ZWSP, LF = chr(0x2068), chr(0x2069), chr(0x202E), chr(0x200B), chr(10)
-MARKUP = "<script>alert(1)</script>\"'><img src=x onerror=alert(2)>&amp;"
 BIDI_AND_INVISIBLE = "abc" + RLO + "def" + ZWSP + "ghi" + chr(0x2066)
 RND2_AND_RND3_CONTROLS = (
     "Edit round",
@@ -396,7 +398,7 @@ def test_markup_on_the_closed_page_is_escaped(coord_client, make_round):
     html = closed_page(coord_client, everywhere(make_round, MARKUP))
     isolated = f'<span dir="auto">{escape(MARKUP)}</span>'
     assert html.count(isolated) == EVERY_PLACE
-    assert "<script>" not in html and "<img" not in html
+    assert SCRIPT_TAG not in html and IMG_TAG not in html
     title = html.split("<title>", 1)[1].split("</title>", 1)[0]
     assert title == FSI + escape(MARKUP) + PDI
 

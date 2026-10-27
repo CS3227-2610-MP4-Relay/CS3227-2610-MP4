@@ -13,7 +13,16 @@ from django.utils.html import escape
 
 from rounds.models import Round
 
-from .conftest import close, detail, draft_with_case, open_with_case, page, signed_in
+from .conftest import (
+    MARKUP,
+    SCRIPT_TAG,
+    close,
+    detail,
+    draft_with_case,
+    open_with_case,
+    page,
+    signed_in,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -23,7 +32,6 @@ FORGED_LABEL = "Synthetic forged label"
 FALLBACK = "django.contrib.messages.storage.fallback.FallbackStorage"
 HEADING = '<h1><span dir="auto">Synthetic round</span></h1>'
 RLO, ZWSP, LRI = chr(0x202E), chr(0x200B), chr(0x2066)
-MARKUP = "<script>alert(1)</script>\"'><img src=x onerror=alert(2)>&amp;"
 
 
 def forged_cookie(text, tags="retest"):
@@ -175,6 +183,6 @@ def test_an_unread_retest_label_is_isolated_and_escaped_on_the_sign_in_page(
     status = f'<p role="status">Retest requested for 1 test case on build {lines}.</p>'
     assert response.status_code == 200
     assert html.count(status) == 1
-    assert "<script>" not in html
+    assert SCRIPT_TAG not in html
     for char in (RLO, ZWSP, LRI):
         assert char not in html.replace(lines, ""), hex(ord(char))

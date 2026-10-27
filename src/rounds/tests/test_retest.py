@@ -17,7 +17,10 @@ from rounds.templatetags import rounds_text
 
 from .conftest import (
     DENIED,
+    IMG_TAG,
+    MARKUP,
     NOT_FOUND,
+    SCRIPT_TAG,
     UNAVAILABLE,
     csrf_token,
     detail,
@@ -38,7 +41,6 @@ LINK = "Request a retest</a>"
 BUTTON = "Request retest</button>"
 FSI, PDI, RLO, ZWSP, LF = chr(0x2068), chr(0x2069), chr(0x202E), chr(0x200B), chr(10)
 LINE_SEPARATOR = chr(0x2028)
-MARKUP = "<script>alert(1)</script>\"'><img src=x onerror=alert(2)>&amp;"
 BIDI_AND_INVISIBLE = "abc" + RLO + "def" + ZWSP + "ghi" + chr(0x2066)
 
 
@@ -631,7 +633,7 @@ def test_markup_in_the_label_is_escaped_in_the_message_and_page(coord_client, op
     isolated = f'<span dir="auto">{escape(MARKUP)}</span>'
     # The message, the case's current build and the builds list.
     assert html.count(isolated) == 3
-    assert "<script>" not in html and "<img" not in html
+    assert SCRIPT_TAG not in html and IMG_TAG not in html
     title = html.split("<title>", 1)[1].split("</title>", 1)[0]
     assert title == FSI + "Synthetic open round" + PDI
 
@@ -683,7 +685,7 @@ def test_a_refused_label_is_escaped_in_the_field_value(coord_client, opened):
     html = page(coord_client.post(retest_url(opened.pk), data([one], MARKUP)))
     assert DUPLICATE in html
     assert f'value="{escape(MARKUP)}"' in html
-    assert "<script>" not in html and "<img" not in html
+    assert SCRIPT_TAG not in html and IMG_TAG not in html
 
 
 @pytest.mark.ac("RND-5.8")
@@ -705,7 +707,7 @@ def test_case_titles_on_the_retest_page_are_escaped_and_isolated(
     Case.objects.filter(round=opened).update(title=title)
     html = page(coord_client.get(retest_url(opened.pk)))
     assert html.count(shown) == 3
-    assert "<script>" not in html and "<img" not in html
+    assert SCRIPT_TAG not in html and IMG_TAG not in html
     body = html.split("</title>", 1)[1]
     for char in (RLO, ZWSP, chr(0x2066)):
         assert char not in body.replace(shown, ""), hex(ord(char))

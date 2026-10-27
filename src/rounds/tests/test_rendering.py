@@ -3,11 +3,10 @@
 import pytest
 from django.utils.html import escape
 
-from .conftest import NEW, detail, edit, page
+from .conftest import IMG_TAG, MARKUP, NEW, SCRIPT_TAG, detail, edit, page
 
 pytestmark = [pytest.mark.django_db, pytest.mark.ac("RND-1.7")]
 
-MARKUP = "<script>alert(1)</script>\"'><img src=x onerror=alert(2)>&amp;"
 FSI, PDI = "\u2068", "\u2069"
 BIDI_AND_INVISIBLE = "abc\u202edef\u200bghi\u2066jkl"
 
@@ -17,8 +16,8 @@ def title_tag(html):
 
 
 def assert_no_raw_markup(html):
-    assert "<script>" not in html
-    assert "<img" not in html
+    assert SCRIPT_TAG not in html
+    assert IMG_TAG not in html
 
 
 def test_markup_is_escaped_on_round_page_home_and_edit_form(coord_client, make_round):
