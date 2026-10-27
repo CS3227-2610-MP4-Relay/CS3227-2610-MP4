@@ -22,4 +22,16 @@ Tier: High (CI/deployment boundary). Branch: `feat/34-product-website`, stacked 
 ## Open issues and next step
 
 - Coordinator reports Pages API currently returns 404 and `github-pages` exists without protection rules; these are observations supplied for planning, not independently verified by the builder. Operator prerequisites remain open under [Release verification](../specs/TECHNICAL-SPEC.md#release-verification).
-- Await coordinator's checkpoint-1 review/commit and new snapshot before implementing checkpoint 2. Record red-test evidence and actual diff sizes at that checkpoint. No hosted release or security-review completion is claimed.
+- Checkpoint 1 committed as `545bee93a44cf8dc09529d325a99f807e0f059ee`. Await coordinator's checkpoint-2 commit and new snapshot before the documentation checkpoint. No hosted release or security-review completion is claimed.
+
+## Checkpoint 2 evidence
+
+Builder trigger: coordinator assignment after checkpoint 1, using the clean `relay-34-builder-implementation.json` scope snapshot; session metadata reports `gpt-6.1-sol`, effort `medium`. Inputs: PLT-2, site/release architecture, CI security controls, existing CI/configuration and source landing page. No delegation or Git/GitHub mutations.
+
+- Red: `pytest src/relay_tests/test_site.py -q` initially could not collect because the checker module did not exist. With its API scaffold returning no errors, the meaningful red run was **19 failed, 2 passed**: absent link/asset/exclusion checks, missing CLI failure and missing workflow jobs. The two valid-artifact cases passed; no manufactured setup failures were used as feature evidence.
+- Green: `pytest src/relay_tests/test_site.py src/relay_tests/test_ci.py -q` → **24 passed**; `ruff check .` → passed; `ruff format --check src/check_site.py src/relay_tests/test_site.py` → passed; `python src/manage.py check --settings=relay.settings.test` → no issues. Import ordering and one long test decorator required formatting repairs before green.
+- Tests use synthetic artifacts for valid/invalid pages, assets, repository base paths, same-origin links, relative/encoded URLs, excluded guides and CLI status. Workflow tests inspect event/gate/permission/action structure only; they do not execute Actions conditions or deployment. Official pinned Jekyll action inputs and entrypoint were inspected: source/destination are supported and no baseurl override is applied.
+- Size: checker **139** new non-test `src/` lines (within 400); regression tests **152** new lines; workflow **42 additions, 1 deletion**; PLT-2.6 classification correction **1 addition, 1 deletion**, authorized by coordinator. No requirement was added by that correction: hosted verification can be automated after operator setup and is pending, rather than inherently manual.
+- `git diff --check` and snapshot-based builder scope check passed. Full pytest and integrated formatting verification are deferred to the final documentation candidate by coordinator instruction; no local database or real Jekyll build was attempted. Hosted workflow parsing, real Jekyll build, checked artifact upload and eventual authorized publication remain separate pending evidence.
+
+Next: coordinator commits the coherent workflow/checker/tests checkpoint, then supplies a fresh snapshot for the builder's Developer Guide update while owning the landing page/configuration/README edits. Hosted read-only CI must validate the actual site before freezing independent review.
