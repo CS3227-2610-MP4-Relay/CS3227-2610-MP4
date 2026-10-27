@@ -7,14 +7,13 @@ from django.contrib.messages import constants
 from django.contrib.messages.storage.base import Message
 from django.contrib.messages.storage.cookie import CookieStorage
 from django.contrib.sessions.models import Session
-from django.db import OperationalError, transaction
+from django.db import OperationalError
 from django.http import HttpRequest
 from django.utils.html import escape
 
-from rounds import services
-from rounds.models import Case, Round
+from rounds.models import Round
 
-from .conftest import detail, page, signed_in
+from .conftest import close, detail, draft_with_case, open_with_case, page, signed_in
 
 pytestmark = pytest.mark.django_db
 
@@ -39,28 +38,8 @@ def stored_messages(client):
     return Session.objects.get(session_key=key).get_decoded().get("_messages", "")
 
 
-def draft_with_case(make_round):
-    round_ = make_round()
-    Case.objects.create(
-        round=round_, title="Synthetic case", steps="Steps", expected_result="Result"
-    )
-    return round_
-
-
-def open_with_case(make_round):
-    round_ = draft_with_case(make_round)
-    with transaction.atomic():
-        locked = Round.objects.select_for_update().get(pk=round_.pk)
-        services.publish(locked, "Synthetic 1.0")
-    return round_
-
-
 def publish(client, round_):
     return client.post(f"{detail(round_.pk)}publish/", {"label": "Synthetic 1.0"})
-
-
-def close(client, round_):
-    return client.post(f"{detail(round_.pk)}close/")
 
 
 def retest(client, round_):

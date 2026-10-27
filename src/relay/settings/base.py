@@ -12,6 +12,8 @@ INSTALLED_APPS = [
     "rounds",
 ]
 MIDDLEWARE = [
+    # First, so responses other middleware makes refuse framing too.
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",

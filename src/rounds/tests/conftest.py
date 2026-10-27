@@ -4,12 +4,12 @@ from unittest import mock
 
 import pytest
 from django.conf import settings as django_settings
-from django.db import connection
+from django.db import connection, transaction
 from django.test import Client
 
 from accounts.models import User, Workspace
 from rounds import services
-from rounds.models import Round
+from rounds.models import Case, Round
 
 PASSWORD = "Synthetic16Chars"
 NEW = "/coordinator/rounds/new/"
@@ -28,6 +28,29 @@ def detail(round_id):
 def edit(round_id):
     """The edit-round URL."""
     return f"/coordinator/rounds/{round_id}/edit/"
+
+
+def draft_with_case(make_round):
+    """A Draft round with one test case, so it shows a delete button."""
+    round_ = make_round()
+    Case.objects.create(
+        round=round_, title="Synthetic case", steps="Steps", expected_result="Result"
+    )
+    return round_
+
+
+def open_with_case(make_round):
+    """An Open round with one test case, published on build Synthetic 1.0."""
+    round_ = draft_with_case(make_round)
+    with transaction.atomic():
+        locked = Round.objects.select_for_update().get(pk=round_.pk)
+        services.publish(locked, "Synthetic 1.0")
+    return round_
+
+
+def close(client, round_):
+    """POST the round's close action."""
+    return client.post(f"{detail(round_.pk)}close/")
 
 
 def page(response):

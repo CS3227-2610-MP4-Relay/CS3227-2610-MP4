@@ -20,6 +20,12 @@ def main():
                 "hashers": getattr(
                     settings, "PASSWORD_HASHERS", global_settings.PASSWORD_HASHERS
                 ),
+                "framing": {
+                    "middleware": settings.MIDDLEWARE,
+                    "x_frame_options": getattr(
+                        settings, "X_FRAME_OPTIONS", global_settings.X_FRAME_OPTIONS
+                    ),
+                },
                 "cookies": {
                     "session_secure": settings.SESSION_COOKIE_SECURE,
                     "csrf_secure": settings.CSRF_COOKIE_SECURE,
