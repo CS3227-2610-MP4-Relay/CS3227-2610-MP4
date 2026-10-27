@@ -14,6 +14,8 @@ from django.views.debug import ExceptionReporter
 from accounts import demo
 from accounts.models import User, Workspace
 from accounts.workspaces import workspace_records
+from rounds import services as round_services
+from rounds.models import Case, CaseCriterion, Criterion, Round
 
 SAVE = "Save these passwords now. They will not be shown again."
 UNAVAILABLE = "Relay is temporarily unavailable. Try again later."
@@ -33,7 +35,17 @@ urlpatterns = [path("record/<int:pk>/", record), path("", include("relay.urls"))
 
 
 def counts():
-    return Workspace.objects.count(), User.objects.count()
+    """Rows of every model demo creation writes, its sample round included."""
+    return tuple(
+        model.objects.count()
+        for model in (Workspace, User, Round, Criterion, Case, CaseCriterion)
+    )
+
+
+NOTHING = (0, 0, 0, 0, 0, 0)
+# One workspace, 3 accounts and the RND-7 sample round: 3 criteria, 4 cases and
+# 5 case-criterion links.
+ONE_WORKSPACE = (1, 3, 1, 3, 4, 5)
 
 
 def credentials(response):
@@ -205,6 +217,18 @@ def fail_second_account(real_create):
     return create
 
 
+def fail_third_sample_case(real_add_case):
+    calls = []
+
+    def add_case(*args, **kwargs):
+        calls.append(args)
+        if len(calls) == 3:
+            raise DatabaseError("synthetic storage failure")
+        return real_add_case(*args, **kwargs)
+
+    return add_case
+
+
 def fail_rendering(*args, **kwargs):
     raise RuntimeError("synthetic rendering failure")
 
@@ -212,6 +236,9 @@ def fail_rendering(*args, **kwargs):
 FAILURES = {
     "account write": lambda: mock.patch.object(
         User.objects, "create", fail_second_account(User.objects.create)
+    ),
+    "sample case write": lambda: mock.patch.object(
+        round_services, "add_case", fail_third_sample_case(round_services.add_case)
     ),
     "rendering": lambda: mock.patch("accounts.views.render_to_string", fail_rendering),
     "taken suffix": lambda: mock.patch.object(
@@ -222,6 +249,7 @@ FAILURES = {
 
 RAISED = {
     "account write": DatabaseError,
+    "sample case write": DatabaseError,
     "rendering": RuntimeError,
     "taken suffix": IntegrityError,
 }
@@ -303,7 +331,7 @@ def test_failure_mid_table_keeps_rendered_passwords_out_of_error_reports(caplog)
     client.raise_request_exception = False
     with spy, mock.patch.object(demo, "create_demo_workspace", create):
         response = client.post("/demo/")
-    assert_503_with_nothing_left(response, (0, 0), seen, caplog)
+    assert_503_with_nothing_left(response, NOTHING, seen, caplog)
     exc_info = failure_record(caplog)
     assert "inside the credentials table" in str(exc_info[1])
     report = error_report(exc_info)
@@ -326,7 +354,7 @@ def test_failed_commit_leaves_nothing_and_shows_503(caplog):
     ):
         response = client.post("/demo/")
     assert commit.called
-    assert_503_with_nothing_left(response, (0, 0), seen, caplog)
+    assert_503_with_nothing_left(response, NOTHING, seen, caplog)
     exc_info = failure_record(caplog)
     assert type(exc_info[1]) is DatabaseError
     for password in seen:
@@ -366,7 +394,7 @@ def test_creation_with_token_from_start_page_and_own_origin_succeeds():
         "/demo/", {"csrfmiddlewaretoken": valid}, HTTP_ORIGIN="http://testserver"
     )
     assert response.status_code == 200
-    assert counts() == (1, 3)
+    assert counts() == ONE_WORKSPACE
 
 
 @pytest.mark.django_db
@@ -381,7 +409,7 @@ def test_creation_without_valid_csrf_or_origin_is_refused(token, origin):
     response = client.post("/demo/", data, **extra)
     assert response.status_code == 403
     assert DENIED in response.content.decode()
-    assert counts() == (0, 0)
+    assert counts() == NOTHING
 
 
 @pytest.mark.django_db
@@ -389,4 +417,4 @@ def test_creation_without_valid_csrf_or_origin_is_refused(token, origin):
 def test_creation_by_get_is_refused():
     response = Client().get("/demo/")
     assert response.status_code == 405
-    assert counts() == (0, 0)
+    assert counts() == NOTHING

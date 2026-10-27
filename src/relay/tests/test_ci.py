@@ -5,7 +5,7 @@ import pytest
 
 @pytest.mark.ac("PLT-1.7")
 def test_ci_runs_isolated_application_verification():
-    workflow_path = Path(__file__).resolve().parents[2] / ".github/workflows/ci.yml"
+    workflow_path = Path(__file__).resolve().parents[3] / ".github/workflows/ci.yml"
     workflow = workflow_path.read_text()
     for required in (
         "pull_request:",
