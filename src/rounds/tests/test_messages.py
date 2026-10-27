@@ -115,9 +115,12 @@ def test_a_success_message_is_kept_in_the_session_not_a_cookie(
     assert text not in stored_messages(coord_client)
 
 
-@pytest.mark.ac("RND-5.8")
 @pytest.mark.parametrize(
-    "cookie_storage", [False, True], ids=["session-storage", "control"]
+    "cookie_storage",
+    [
+        pytest.param(False, id="session-storage", marks=pytest.mark.ac("RND-5.8")),
+        pytest.param(True, id="control"),
+    ],
 )
 def test_a_forged_messages_cookie_is_ignored_by_the_round_page(
     coord_client, make_round, settings, cookie_storage

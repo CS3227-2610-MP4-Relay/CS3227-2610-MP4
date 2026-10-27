@@ -4,6 +4,7 @@ from unittest import mock
 
 import pytest
 from django.conf import settings as django_settings
+from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.messages import constants
 from django.contrib.messages.storage.base import Message
@@ -20,6 +21,7 @@ PASSWORD = "Synthetic16Chars"
 FAILURE = "Username or password is incorrect."
 DENIED = "You do not have access to this page."
 SIGNED_OUT = "You have signed out."
+UNREAD = "Synthetic unread notice"
 COOKIE = django_settings.SESSION_COOKIE_NAME
 MESSAGES_COOKIE = CookieStorage.cookie_name
 SIGNED_IN_AT = datetime(2026, 1, 5, 9, 0, tzinfo=UTC)
@@ -31,7 +33,17 @@ def touch(request):
     return HttpResponse("touched")
 
 
-urlpatterns = [path("touch/", touch), path("", include("relay.urls"))]
+def note(request):
+    """Leave a message unread in the session, as a round action would."""
+    messages.info(request, UNREAD)
+    return HttpResponse("noted")
+
+
+urlpatterns = [
+    path("touch/", touch),
+    path("note/", note),
+    path("", include("relay.urls")),
+]
 
 
 @pytest.fixture
@@ -138,6 +150,26 @@ def test_failure_does_not_reveal_which_field_was_wrong(client, coordinator):
     assert FAILURE in wrong_password.content.decode()
     assert without_csrf_token(wrong_password) == without_csrf_token(unknown_user)
     assert coordinator.username not in wrong_password.content.decode()
+
+
+@pytest.mark.ac("ACC-1.2")
+def test_a_failed_sign_in_shows_an_unread_message_and_keeps_the_session(
+    client, coordinator, settings
+):
+    settings.ROOT_URLCONF = __name__
+    sign_in(client, coordinator.username)
+    key = session_key(client)
+    assert client.get("/note/").status_code == 200
+    failed = sign_in(client, coordinator.username, "Wrong16Characters")
+    html = failed.content.decode()
+    assert failed.status_code == 200
+    assert FAILURE in html
+    assert html.count(UNREAD) == 1
+    assert session_key(client) == key
+    assert signed_in_user_id(client) == str(coordinator.pk)
+    assert UNREAD not in client.get("/sign-in/").content.decode()
+    stored = Session.objects.get(session_key=key).get_decoded()
+    assert "_messages" not in stored
 
 
 @pytest.mark.ac("ACC-1.2")
