@@ -15,7 +15,7 @@ Builder's details within that scope (checkpoint 1):
 - **Text home:** the RND-7.1 criterion leaves the text unspecified ("fixed, synthetic"), so its one home is the `rounds.sample` constants, and TECHNICAL-SPEC points there. ASCII only, about a fictional to-do app; every case linked to at least one criterion, every criterion linked by at least one case. The User Guide quotes only the title and counts.
 - **Specs changed:** status lines in `product/accounts.md` and `product/rounds.md`; TECHNICAL-SPEC opening, Creation (no "RND-7 adds"), Round creation ("later" removed) and the Sample round bullet; SECURITY-SPEC opening and the round-creation bullet. No criterion is added or changed.
 
-Coordinator's decision for repair round 1, under the human's (zheng-jj) delegation on 2026-10-27 ("just do everything that can be done"), pending the human's confirmation in the PR:
+Coordinator's decision for repair round 1, under the human's (zheng-jj) delegation on 2026-10-27 ("just do everything that can be done"); the human then accepted F1 and the release-gate measurement when asked on 2026-10-27:
 
 - **F1:** keep writing the sample round through the shared round services inside the creation transaction (bypassing them was rejected). Accept, as a SECURITY-SPEC residual, that creations queue longer on the single `demo-total` lock, so in a burst more of them get the ACC-3.7 503. Measured on the local test database: `create_demo_workspace` issues 40 statements instead of 10 (about 15 ms instead of 3 ms). The release gate in TECHNICAL-SPEC now measures the production lock hold time.
 
