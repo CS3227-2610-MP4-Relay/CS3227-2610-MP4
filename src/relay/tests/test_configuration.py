@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-SRC = Path(__file__).resolve().parents[1]
-PROBE = SRC / "relay_tests" / "settings_probe.py"
+SRC = Path(__file__).resolve().parents[2]
+PROBE = SRC / "relay" / "tests" / "settings_probe.py"
 
 
 def probe(module, **values):
@@ -69,7 +69,7 @@ def test_pytest_startup_overrides_inherited_settings_module():
             sys.executable,
             "-m",
             "pytest",
-            str(SRC / "relay_tests" / "pytest_startup_probe.py"),
+            str(SRC / "relay" / "tests" / "pytest_startup_probe.py"),
             "-q",
         ],
         cwd=SRC.parent,
@@ -108,7 +108,7 @@ def test_driver_ignores_inherited_hostaddr(module, host):
     result = subprocess.run(
         [
             sys.executable,
-            str(SRC / "relay_tests/database_destination_probe.py"),
+            str(SRC / "relay/tests/database_destination_probe.py"),
             module,
         ],
         cwd=SRC.parent,

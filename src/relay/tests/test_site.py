@@ -10,7 +10,7 @@ from check_site import check_site
 
 @pytest.mark.ac("PLT-2.1")
 def test_landing_page_links_to_source_guides_repository_and_rendered_reflections():
-    root = Path(__file__).resolve().parents[2]
+    root = Path(__file__).resolve().parents[3]
     landing = (root / "docs/index.md").read_text(encoding="utf-8")
     targets = set(re.findall(r"\[[^]]+\]\(([^)]+)\)", landing))
     repository = "https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4"
@@ -117,7 +117,7 @@ def test_checker_command_reports_actual_artifact_status(site, tmp_path, valid):
     config.write_text("url: https://example.github.io\nbaseurl: /relay\n")
     if not valid:
         (site / "Reflections.html").unlink()
-    checker = Path(__file__).resolve().parents[1] / "check_site.py"
+    checker = Path(__file__).resolve().parents[2] / "check_site.py"
     result = subprocess.run(
         [sys.executable, str(checker), str(site), "--config", str(config)],
         capture_output=True,
@@ -134,7 +134,7 @@ def test_checker_command_reports_actual_artifact_status(site, tmp_path, valid):
 @pytest.mark.ac("PLT-2.3", "PLT-2.4", "PLT-2.5")
 def test_ci_site_publication_boundaries():
     workflow = (
-        Path(__file__).resolve().parents[2] / ".github/workflows/ci.yml"
+        Path(__file__).resolve().parents[3] / ".github/workflows/ci.yml"
     ).read_text()
     site_job = workflow.split("\n  site:\n")[1].split("\n  deploy:\n")[0]
     deploy_job = workflow.split("\n  deploy:\n")[1]
