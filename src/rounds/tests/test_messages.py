@@ -10,6 +10,7 @@ from django.contrib.sessions.backends.db import SessionStore
 from django.contrib.sessions.models import Session
 from django.db import DatabaseError, transaction
 from django.http import HttpRequest
+from django.utils.html import escape
 
 from rounds import services
 from rounds.models import Case, Round
@@ -21,6 +22,8 @@ pytestmark = pytest.mark.django_db
 COOKIE = CookieStorage.cookie_name
 SIGNED_OUT = "You have signed out."
 FORGED_LABEL = "Synthetic forged label"
+RLO, ZWSP, LRI = chr(0x202E), chr(0x200B), chr(0x2066)
+MARKUP = "<script>alert(1)</script>\"'><img src=x onerror=alert(2)>&amp;"
 
 
 def forged_cookie(text, tags="retest"):
@@ -154,3 +157,24 @@ def test_a_failed_session_save_after_a_close_gives_500_with_the_round_closed(
     round_.refresh_from_db()
     assert response.status_code == 500
     assert round_.state == Round.State.CLOSED
+
+
+@pytest.mark.ac("RND-5.8")
+def test_an_unread_retest_label_is_isolated_and_escaped_on_the_sign_in_page(
+    coord_client, make_round
+):
+    round_ = open_with_case(make_round)
+    bidi = "abc" + RLO + "def" + ZWSP + "ghi" + LRI
+    data = {"cases": [round_.cases.get().pk], "label": MARKUP + "\n" + bidi}
+    assert coord_client.post(f"{detail(round_.pk)}retest/", data).status_code == 302
+    response = coord_client.get("/sign-in/")
+    html = page(response)
+    lines = (
+        f'<span dir="auto">{escape(MARKUP)}</span><br><span dir="auto">{bidi}</span>'
+    )
+    status = f'<p role="status">Retest requested for 1 test case on build {lines}.</p>'
+    assert response.status_code == 200
+    assert html.count(status) == 1
+    assert "<script>" not in html
+    for char in (RLO, ZWSP, LRI):
+        assert char not in html.replace(lines, ""), hex(ord(char))
