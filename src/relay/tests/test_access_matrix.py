@@ -11,7 +11,9 @@ Tester, and workspace B's Test Coordinator. Every name and text of workspace A,
 including its usernames and workspace name, holds A_MARK; A's sibling round
 holds SIBLING_MARK and workspace B holds B_MARK. Marks are compared
 case-insensitively, so a page that leaks one workspace's data to the other, to
-a visitor, or another round's data to a round's page, is caught.
+a visitor, or another round's data to a round's page, is caught. Each mark has
+a hyphen, which no CSRF token or generated password contains, so a random
+token cannot match a mark by chance.
 """
 
 import re
@@ -31,7 +33,7 @@ from rounds.tests.conftest import DENIED, NOT_FOUND, PASSWORD, csrf_token, signe
 
 pytestmark = pytest.mark.django_db
 
-A_MARK, B_MARK, SIBLING_MARK = "mtxa", "mtxb", "mtxs"
+A_MARK, B_MARK, SIBLING_MARK = "mtx-a", "mtx-b", "mtx-s"
 ANON, COORD_A, TESTER_A, COORD_B = "anonymous", "coord_a", "tester_a", "coord_b"
 CALLERS = (ANON, COORD_A, TESTER_A, COORD_B)
 # The marks each caller must never see, wherever they look.
@@ -220,11 +222,19 @@ def snapshot(world):
         "a": workspace_part(rows, world.a),
         "b": workspace_part(rows, world.b),
         "sibling": part(rows, {world.sibling.round.pk}),
+        # A workspace's own row and accounts, without its rounds.
+        "a accounts": part(rows, set(), world.a.pk),
+        "b accounts": part(rows, set(), world.b.pk),
     }
 
 
 # Each caller's successful write must leave these parts of `snapshot` unchanged.
-BYSTANDERS = {ANON: ("a", "b"), COORD_A: ("b", "sibling"), COORD_B: ("a",)}
+BYSTANDERS = {
+    ANON: ("a", "b"),
+    COORD_A: ("b", "sibling", "a accounts"),
+    TESTER_A: ("b", "sibling", "a accounts"),
+    COORD_B: ("a", "b accounts"),
+}
 
 
 # ----------------------------------------------------------------- requests
@@ -323,6 +333,7 @@ def check(world, caller, response, expect, before):
     after = snapshot(world)
     if outcome in CHANGES:
         assert after["all"] != before["all"], "changed nothing"
+        assert caller in BYSTANDERS, f"no bystander rows recorded for {caller}"
         for part in BYSTANDERS[caller]:
             assert after[part] == before[part], f"changed {part}"
     else:
@@ -579,7 +590,7 @@ def own_ids(route, seeded):
     }
 
 
-# Forged URL IDs replacing the last slot; text IDs are put in the path as-is.
+# Forged IDs, in a URL (replacing its last slot, text as-is) or a form body.
 FORGED_URL_IDS = {
     "missing": MISSING,
     "overflow": HUGE,
@@ -656,12 +667,16 @@ def test_each_marker_shows_on_its_own_workspace_pages():
     # checks for it are not vacuous.
     world = build_world(DRAFT)
     pages = [
-        (COORD_A, "/coordinator/", ("Round mtxa", "Round mtxs", "coord-mtxa")),
-        (TESTER_A, "/tester/", ("tester-mtxa", "Demo workspace mtxa0001")),
-        (COORD_A, "/coordinator/", ("Demo workspace mtxa0001",)),
-        (COORD_B, "/coordinator/", ("Round mtxb", "coord-mtxb")),
-        (COORD_A, f"/coordinator/rounds/{world.target.round.pk}/", ("Case mtxa",)),
-        (COORD_A, f"/coordinator/rounds/{world.sibling.round.pk}/", ("Case mtxs",)),
+        (COORD_A, "/coordinator/", (f"Round {A_MARK}", f"Round {SIBLING_MARK}")),
+        (COORD_A, "/coordinator/", (f"coord-{A_MARK}", f"Demo workspace {A_MARK}")),
+        (TESTER_A, "/tester/", (f"tester-{A_MARK}", f"Demo workspace {A_MARK}")),
+        (COORD_B, "/coordinator/", (f"Round {B_MARK}", f"coord-{B_MARK}")),
+        (COORD_A, f"/coordinator/rounds/{world.target.round.pk}/", (f"Case {A_MARK}",)),
+        (
+            COORD_A,
+            f"/coordinator/rounds/{world.sibling.round.pk}/",
+            (f"Case {SIBLING_MARK}",),
+        ),
     ]
     for caller, path, texts in pages:
         response = world.clients[caller].get(path)
@@ -736,7 +751,7 @@ def test_missing_and_other_workspace_404s_are_identical(name, state):
     def fetch(caller, ids):
         response = send(world.clients[caller], kind, url(name, ids), route.data(world))
         headers = {k: v for k, v in response.headers.items() if k != "Date"}
-        return response.status_code, response.content, headers
+        return response.status_code, response.content, headers, sorted(response.cookies)
 
     missing = forged_ids(route, world, "missing")
     reference_a = fetch(COORD_A, missing)
@@ -746,56 +761,61 @@ def test_missing_and_other_workspace_404s_are_identical(name, state):
     assert fetch(COORD_B, own_ids(route, world.target)) == fetch(COORD_B, missing)
 
 
-# Routes whose form submits record IDs: the field, the state the route allows,
-# the field's message and the criterion.
-BODY_ID_ROUTES = {
-    "rounds:case-new": ("criteria", DRAFT, "Choose criteria from this round.", "2.7"),
-    "rounds:case-edit": ("criteria", DRAFT, "Choose criteria from this round.", "2.7"),
-    "rounds:retest": ("cases", OPEN, "Choose test cases from this round.", "5.6"),
-}
-BODY_VARIANTS = (
-    "other workspace",
-    "other round",
-    "missing",
-    "overflow",
-    "malformed",
-    "zero",
+@dataclass(frozen=True)
+class BodyIds:
+    """A form field that submits record IDs, on a route of the given state."""
+
+    field: str
+    state: str
+    message: str
+    criterion: str
+
+    def record(self, seeded):
+        """The record of `seeded` this field names: a criterion or a case."""
+        return seeded.linked if self.field == "criteria" else seeded.case
+
+
+CRITERIA_FIELD = BodyIds(
+    "criteria", DRAFT, "Choose criteria from this round.", "RND-2.7"
 )
+# Routes whose form submits record IDs.
+BODY_ID_ROUTES = {
+    "rounds:case-new": CRITERIA_FIELD,
+    "rounds:case-edit": CRITERIA_FIELD,
+    "rounds:retest": BodyIds(
+        "cases", OPEN, "Choose test cases from this round.", "RND-5.6"
+    ),
+}
+BODY_VARIANTS = (*FORGED_URL_IDS, "other workspace", "other round")
 
 
-def body_id(world, field_name, variant):
-    """A forged ID for a criteria or cases field."""
-    pick = (lambda s: s.linked) if field_name == "criteria" else (lambda s: s.case)
-    forged = {
-        "other workspace": lambda: pick(world.foreign).pk,
-        "other round": lambda: pick(world.sibling).pk,
-        "missing": lambda: MISSING,
-        "overflow": lambda: HUGE,
-        "malformed": lambda: MALFORMED,
-        "zero": lambda: "0",
-    }
-    return forged[variant]()
+def body_id(world, body, variant):
+    """A forged ID for `body`'s field: a fixed text ID or a foreign record's."""
+    if variant in FORGED_URL_IDS:
+        return FORGED_URL_IDS[variant]
+    owner = world.foreign if variant == "other workspace" else world.sibling
+    return body.record(owner).pk
 
 
 @pytest.mark.parametrize(
     ("name", "variant", "with_own"),
     [
-        marked(name, (f"RND-{BODY_ID_ROUTES[name][3]}", "ACC-2.4"), variant, alone)
+        marked(name, (BODY_ID_ROUTES[name].criterion, "ACC-2.4"), variant, alone)
         for name in BODY_ID_ROUTES
         for variant in BODY_VARIANTS
         for alone in ("alone", "with own")
     ],
 )
 def test_forged_body_ids_get_the_field_message(name, variant, with_own):
-    field_name, state, message, _ = BODY_ID_ROUTES[name]
-    world = build_world(state)
+    body = BODY_ID_ROUTES[name]
+    world = build_world(body.state)
     route = ROUNDS[name]
     data = route.data(world)
-    own = data[field_name]
-    forged = body_id(world, field_name, variant)
-    data[field_name] = [*own, forged] if with_own == "with own" else [forged]
+    forged = body_id(world, body, variant)
+    own = [body.record(world.target).pk]
+    data[body.field] = [*own, forged] if with_own == "with own" else [forged]
     target = url(name, own_ids(route, world.target))
     before = snapshot(world)
     response = send(world.clients[COORD_A], POST, target, data)
     check(world, COORD_A, response, Expect(OK, scoped=True), before)
-    assert message in response.content.decode()
+    assert body.message in response.content.decode()
