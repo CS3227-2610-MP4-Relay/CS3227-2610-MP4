@@ -1,3 +1,4 @@
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -5,6 +6,22 @@ from pathlib import Path
 import pytest
 
 from check_site import check_site
+
+
+@pytest.mark.ac("PLT-2.1")
+def test_landing_page_links_to_source_guides_repository_and_rendered_reflections():
+    root = Path(__file__).resolve().parents[2]
+    landing = (root / "docs/index.md").read_text(encoding="utf-8")
+    targets = set(re.findall(r"\[[^]]+\]\(([^)]+)\)", landing))
+    repository = "https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4"
+    assert {
+        repository,
+        f"{repository}/blob/main/docs/UserGuide.md",
+        f"{repository}/blob/main/docs/DeveloperGuide.md",
+        "Reflections.html",
+    } <= targets
+    for document in ("UserGuide.md", "DeveloperGuide.md", "Reflections.md"):
+        assert (root / "docs" / document).is_file()
 
 
 @pytest.fixture
