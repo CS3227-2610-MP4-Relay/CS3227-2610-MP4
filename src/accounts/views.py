@@ -16,9 +16,12 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from rounds.models import Round
+
 from . import demo, limits
 from .forms import SignInForm
 from .models import User
+from .workspaces import workspace_records
 
 logger = logging.getLogger(__name__)
 
@@ -80,14 +83,20 @@ def _check_sign_in(request):
 
 @require_POST
 def sign_out(request):
-    """End the session on the server and return to the sign-in page."""
+    """End the session on the server and return to the sign-in page.
+
+    Only a signed-in user gets the message, so a signed-out visitor's sign-out
+    stores no session row to carry it.
+    """
+    signed_in = request.user.is_authenticated
     logout(request)
-    messages.info(request, "You have signed out.")
+    if signed_in:
+        messages.info(request, "You have signed out.")
     return redirect("accounts:sign-in")
 
 
-def _role_home(role, title):
-    """Build a GET-only home page for one role."""
+def _role_home(role, title, template="accounts/home.html", sections=None):
+    """Build a GET-only home page for one role, with optional page sections."""
 
     @never_cache
     @require_GET
@@ -96,12 +105,18 @@ def _role_home(role, title):
             return redirect("accounts:sign-in")
         if request.user.role != role:
             raise PermissionDenied
-        return render(request, "accounts/home.html", {"title": title})
+        context = {"title": title, **(sections(request.user) if sections else {})}
+        return render(request, template, context)
 
     return home
 
 
-coordinator_home = _role_home(User.Role.COORDINATOR, "Coordinator home")
+coordinator_home = _role_home(
+    User.Role.COORDINATOR,
+    "Coordinator home",
+    "rounds/coordinator_home.html",
+    lambda user: {"rounds": workspace_records(user, Round)},
+)
 tester_home = _role_home(User.Role.TESTER, "Tester home")
 
 

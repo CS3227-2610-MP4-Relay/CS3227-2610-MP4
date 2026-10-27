@@ -46,3 +46,106 @@ Opening a home page while signed out takes you to the sign-in page. Opening the 
 Choose **Sign out** on your home page. The sign-in page shows "You have signed out."
 
 You are also signed out 8 hours after signing in, whatever you do in between; opening a home page after that takes you to the sign-in page.
+
+## Test rounds
+
+Only a Test Coordinator can prepare, publish, retest and close test rounds. A new round is in the **Draft** state; [publishing](#publish-a-round) it makes it **Open**, and [closing](#close-a-round) it makes it **Closed**. Beta Testers do not see rounds yet.
+
+**Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". With no rounds, it says "No rounds yet."
+
+Whenever creating, publishing, retesting or closing a round, or saving or deleting anything in it, fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
+
+### Create a round
+
+1. On **Coordinator home**, choose **New round**.
+2. Enter a **Title**, then choose **Create round**.
+
+The round page opens. It shows the title as its heading, "State: Draft", an **Edit round** link, the round's [acceptance criteria and test cases](#acceptance-criteria-and-test-cases), a **Build label** field with a **Publish round** button, and a **Coordinator home** link.
+
+### Change a round's title
+
+1. On the round page, choose **Edit round**.
+2. Change the **Title**, then choose **Save**.
+
+The round page shows the new title.
+
+### Titles and limits
+
+A title has 1 to 120 characters; spaces or line breaks at either end are removed. An empty title, a title of only spaces or invisible characters, or a longer one gets "Enter 1 to 120 characters." A title containing a null character gets "Null characters are not allowed."
+
+A workspace can have up to 20 rounds. Creating a 21st gets "This workspace has reached its limit of 20 rounds." Nothing deletes a round.
+
+### Acceptance criteria and test cases
+
+The round page has an **Acceptance criteria** heading, listing each criterion's text, and a **Test cases** heading, where each case shows its title, then **Steps**, **Expected result** and **Linked acceptance criteria** with that text. Both are listed in the order they were added. With none, they say "No acceptance criteria yet." and "No test cases yet."
+
+You can add, edit and delete them only while the round is Draft.
+
+To add or edit a criterion:
+
+1. On the round page, choose **Add acceptance criterion**, or **Edit criterion** next to a criterion.
+2. Enter the **Text**, then choose **Add acceptance criterion** or **Save**.
+
+To add or edit a test case:
+
+1. On the round page, choose **Add test case**, or **Edit test case** under a case.
+2. Enter the **Title**, **Steps** and **Expected result**, tick one or more of the round's criteria under **Linked acceptance criteria**, then choose **Add test case** or **Save**.
+
+Saving opens the round page. Each of these pages has a **Back to round** link.
+
+To delete, choose **Delete test case** under a case or **Delete criterion** next to a criterion; there is no confirmation. Deleting a case keeps its criteria. A criterion that a case links to cannot be deleted: the round page shows "This criterion is linked to a test case. Unlink it first." under it, so edit those cases first.
+
+### Criteria and test case limits
+
+Criterion text has 1 to 500 characters; a case's title has 1 to 120, its steps 1 to 2000 and its expected result 1 to 1000. Spaces or line breaks at either end are removed, and a line break counts as one character. A field that is empty, holds only spaces or invisible characters, or is too long gets "Enter 1 to N characters." next to it, with N its maximum, such as "Enter 1 to 500 characters." for criterion text; a null character gets "Null characters are not allowed."
+
+A case with no linked criterion gets "Link at least one acceptance criterion." If a criterion you ticked was deleted meanwhile, the form says "Choose criteria from this round."
+
+A round can have up to 20 acceptance criteria and 30 test cases. Adding a 21st criterion gets "This round has reached its limit of 20 acceptance criteria." and a 31st case "This round has reached its limit of 30 test cases."
+
+### Publish a round
+
+While a round is Draft, its round page ends with a **Build label** field and a **Publish round** button. The build label names the version of the software under test, such as "1.4.0-beta".
+
+1. On the round page, enter a **Build label**.
+2. Choose **Publish round**.
+
+The round page shows "Round published." and "State: Open". An Open round cannot return to Draft.
+
+A build label has 1 to 100 characters; spaces or line breaks at either end are removed. An empty label, a label of only spaces or invisible characters, or a longer one gets "Enter 1 to 100 characters." next to the field, and a label containing a null character gets "Null characters are not allowed." A round with no test cases gets "Add at least one test case before publishing." After any of these messages the round stays Draft, with your label still in the field.
+
+### An Open round
+
+An Open round's page shows "State: Open" and the criteria and cases exactly as they were when it was published. Its title, criteria and cases can no longer be changed, so the page has no **Edit round** link, no add, edit or delete links and buttons, and no **Publish round** button. You can still [request a retest](#request-a-retest) or [close](#close-a-round) the round.
+
+Under each case's linked criteria, **Current build** shows the label of the build the case is tested on. After the test cases, a **Builds** heading lists the round's builds, oldest first: each build's label, then **Covered test cases** with the titles of the cases it covers. A newly published round has one build, covering every case; each [retest](#request-a-retest) adds another.
+
+### Request a retest
+
+A retest asks for some of an Open round's cases to be tested again on a new build. Only an Open round can be retested: while a round is Open, its round page has a **Request a retest** link directly under the **Builds** heading.
+
+1. On the Open round's page, choose **Request a retest**.
+2. Under **Test cases to retest**, tick the cases to test again. No case is ticked at first.
+3. Enter a **Build label** for the new build, then choose **Request retest**.
+
+The round page shows, for example, "Retest requested for 2 test cases on build 1.4.1-beta.", or "Retest requested for 1 test case on build 1.4.1-beta." for one case. The cases you ticked now show the new build as their **Current build**, and the other cases keep theirs. The new build is added to the end of the **Builds** list with the cases it covers; earlier builds stay listed with theirs, and the round's criteria and cases do not change. A case can be retested again later on another build. The **Request a retest** page also has a **Back to round** link.
+
+If something is wrong, the page shows again with your ticks and label kept:
+
+- With no case ticked: "Select at least one test case." next to **Test cases to retest**.
+- The build label follows the same rules as when publishing: "Enter 1 to 100 characters." or "Null characters are not allowed." next to **Build label**.
+- A label already used for a build of this round, including the one named at publishing: "This build label is already used in this round." next to **Build label**. Upper and lower case count as different, but invisible formatting characters such as zero-width spaces are ignored, and the same accented letter typed in different ways counts as the same.
+- A round can have up to 10 builds, counting the one named at publishing. Requesting an 11th gets "This round has reached its limit of 10 builds." next to **Build label**.
+- A ticked case that is not in this round gets "Choose test cases from this round." next to **Test cases to retest**.
+
+If the round was closed in the meantime, the page says "This action is not available while the round is Closed." and no build is added.
+
+### Close a round
+
+Closing ends testing on an Open round and makes it read-only. While a round is Open, its round page ends with "Closing makes this round read-only. It cannot be reopened." and a **Close round** button. A round can be closed at any time while it is Open, even if some cases have not been tested.
+
+1. On the Open round's page, choose **Close round**. There is no further confirmation.
+
+The round page shows "Round closed." and "State: Closed". A Closed round cannot be reopened or returned to Draft.
+
+A Closed round's page still shows its criteria, its cases with their linked criteria and **Current build**, and the **Builds** list. It has no links or buttons for changing the round, no **Request a retest** link and no **Close round** button.

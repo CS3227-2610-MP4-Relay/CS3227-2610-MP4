@@ -4,6 +4,7 @@
 <h1>{{ title }}</h1>
 <p>Username: {{ user.username }}</p>
 <p>Workspace: {{ user.workspace.name }}</p>
+{% block sections %}{% endblock %}
 <form method="post" action="{% url 'accounts:sign-out' %}">
   {% csrf_token %}
   <button type="submit">Sign out</button>

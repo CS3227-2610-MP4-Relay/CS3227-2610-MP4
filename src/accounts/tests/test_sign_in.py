@@ -4,9 +4,14 @@ from unittest import mock
 
 import pytest
 from django.conf import settings as django_settings
+from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.contrib.messages import constants
+from django.contrib.messages.storage.base import Message
+from django.contrib.messages.storage.cookie import CookieStorage
 from django.contrib.sessions.models import Session
-from django.http import HttpResponse
+from django.db import OperationalError
+from django.http import HttpRequest, HttpResponse
 from django.test import Client
 from django.urls import include, path
 
@@ -16,7 +21,9 @@ PASSWORD = "Synthetic16Chars"
 FAILURE = "Username or password is incorrect."
 DENIED = "You do not have access to this page."
 SIGNED_OUT = "You have signed out."
+UNREAD = "Synthetic unread notice"
 COOKIE = django_settings.SESSION_COOKIE_NAME
+MESSAGES_COOKIE = CookieStorage.cookie_name
 SIGNED_IN_AT = datetime(2026, 1, 5, 9, 0, tzinfo=UTC)
 
 
@@ -26,7 +33,17 @@ def touch(request):
     return HttpResponse("touched")
 
 
-urlpatterns = [path("touch/", touch), path("", include("relay.urls"))]
+def note(request):
+    """Leave a message unread in the session, as a round action would."""
+    messages.info(request, UNREAD)
+    return HttpResponse("noted")
+
+
+urlpatterns = [
+    path("touch/", touch),
+    path("note/", note),
+    path("", include("relay.urls")),
+]
 
 
 @pytest.fixture
@@ -136,6 +153,26 @@ def test_failure_does_not_reveal_which_field_was_wrong(client, coordinator):
 
 
 @pytest.mark.ac("ACC-1.2")
+def test_a_failed_sign_in_shows_an_unread_message_and_keeps_the_session(
+    client, coordinator, settings
+):
+    settings.ROOT_URLCONF = __name__
+    sign_in(client, coordinator.username)
+    key = session_key(client)
+    assert client.get("/note/").status_code == 200
+    failed = sign_in(client, coordinator.username, "Wrong16Characters")
+    html = failed.content.decode()
+    assert failed.status_code == 200
+    assert FAILURE in html
+    assert html.count(UNREAD) == 1
+    assert session_key(client) == key
+    assert signed_in_user_id(client) == str(coordinator.pk)
+    assert UNREAD not in client.get("/sign-in/").content.decode()
+    stored = Session.objects.get(session_key=key).get_decoded()
+    assert "_messages" not in stored
+
+
+@pytest.mark.ac("ACC-1.2")
 def test_blank_fields_reach_the_server(client, db):
     html = client.get("/sign-in/").content.decode()
     inputs = [tag for tag in re.findall(r"<input [^>]*>", html) if "hidden" not in tag]
@@ -205,6 +242,102 @@ def test_sign_out_ends_server_session(client, coordinator):
     assert client.get("/coordinator/")["Location"] == "/sign-in/"
     client.cookies[COOKIE] = old_key
     assert client.get("/coordinator/")["Location"] == "/sign-in/"
+
+
+@pytest.mark.ac("ACC-1.5")
+def test_sign_out_message_lives_in_a_new_session_not_a_cookie(client, coordinator):
+    sign_in(client, coordinator.username)
+    old_key = session_key(client)
+    response = client.post("/sign-out/")
+    assert MESSAGES_COOKIE not in response.cookies
+    new_key = session_key(client)
+    assert new_key not in (None, old_key)
+    assert not Session.objects.filter(session_key=old_key).exists()
+    stored = Session.objects.get(session_key=new_key).get_decoded()
+    assert "_auth_user_id" not in stored
+    assert SIGNED_OUT in stored.get("_messages", "")
+    shown = client.get("/sign-in/")
+    assert MESSAGES_COOKIE not in shown.cookies
+    assert shown.content.decode().count(SIGNED_OUT) == 1
+    client.cookies[COOKIE] = old_key
+    assert client.get("/coordinator/")["Location"] == "/sign-in/"
+
+
+@pytest.mark.ac("ACC-1.5")
+@pytest.mark.parametrize("stale_cookie", [False, True])
+def test_a_signed_out_visitor_signing_out_gets_no_message_and_no_session(
+    client, coordinator, stale_cookie
+):
+    if stale_cookie:
+        sign_in(client, coordinator.username)
+        old_key = session_key(client)
+        Session.objects.filter(session_key=old_key).delete()
+    response = client.post("/sign-out/")
+    assert response.status_code == 302
+    assert response["Location"] == "/sign-in/"
+    assert not Session.objects.exists()
+    # No new session identifier is issued; a stale one may only be deleted.
+    assert COOKIE not in response.cookies or response.cookies[COOKIE].value == ""
+    shown = client.get("/sign-in/")
+    assert shown.status_code == 200
+    assert SIGNED_OUT not in shown.content.decode()
+    assert not Session.objects.exists()
+
+
+def forge_messages_cookie(client):
+    """Set a messages cookie signed as Django's cookie storage would sign it."""
+    storage = CookieStorage(HttpRequest())
+    forged = Message(constants.INFO, "Synthetic forged notice")
+    client.cookies[MESSAGES_COOKIE] = storage._encode([forged])
+
+
+@pytest.mark.ac("ACC-1.5")
+@pytest.mark.parametrize("with_real_message", [False, True])
+def test_a_forged_messages_cookie_is_ignored_by_the_sign_in_page(
+    client, coordinator, with_real_message
+):
+    if with_real_message:
+        sign_in(client, coordinator.username)
+        client.post("/sign-out/")
+    forge_messages_cookie(client)
+    response = client.get("/sign-in/")
+    html = response.content.decode()
+    assert response.status_code == 200
+    assert "<h1>Sign in</h1>" in html
+    assert "Synthetic forged notice" not in html
+    assert (SIGNED_OUT in html) is with_real_message
+
+
+def test_the_forged_cookie_is_one_cookie_storage_would_show(client, db, settings):
+    # Positive control for the test above: the old storage reads this cookie.
+    settings.MESSAGE_STORAGE = (
+        "django.contrib.messages.storage.fallback.FallbackStorage"
+    )
+    forge_messages_cookie(client)
+    response = client.get("/sign-in/")
+    assert response.status_code == 200
+    assert "Synthetic forged notice" in response.content.decode()
+
+
+@pytest.mark.ac("ACC-1.5")
+def test_a_failed_new_session_at_sign_out_gives_500_with_the_old_session_ended(
+    coordinator,
+):
+    # Accepted residual (#57): the sign-out message needs a new session row.
+    client = Client(raise_request_exception=False)
+    sign_in(client, coordinator.username)
+    old_key = session_key(client)
+    with mock.patch.object(Session, "save", side_effect=OperationalError("synthetic")):
+        response = client.post("/sign-out/")
+    assert response.status_code == 500
+    assert not Session.objects.filter(session_key=old_key).exists()
+    assert client.get("/coordinator/")["Location"] == "/sign-in/"
+
+
+def test_viewing_the_sign_in_page_creates_no_session(client, db):
+    response = client.get("/sign-in/")
+    assert COOKIE not in response.cookies
+    assert not Session.objects.exists()
 
 
 @pytest.mark.ac("ACC-1.5")

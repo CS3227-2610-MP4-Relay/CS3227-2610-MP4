@@ -19,6 +19,43 @@ CODEX_AGENT_KEYS = {
     "model_reasoning_effort",
 }
 WRITE_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit", "Bash"}
+# Ask-rule patterns for commands that change GitHub state, or can (gh api, and a
+# repository flag before the subcommand); see AGENTS.md "Approvals and claims".
+GITHUB_CHANGING_COMMANDS = (
+    *("git push", "gh api", "gh auth", "gh alias", "gh extension", "gh agent-task"),
+    *(f"gh pr {sub}" for sub in ("create", "merge", "comment", "review", "ready")),
+    *(f"gh pr {sub}" for sub in ("close", "reopen", "lock", "unlock", "revert")),
+    "gh pr update-branch",
+    *(f"gh issue {sub}" for sub in ("create", "edit", "close", "comment", "reopen")),
+    *(f"gh issue {sub}" for sub in ("delete", "transfer", "develop", "lock")),
+    *(f"gh issue {sub}" for sub in ("unlock", "pin", "unpin")),
+    *("gh label", "gh release", "gh gist", "gh project", "gh codespace"),
+    *(f"gh repo {sub}" for sub in ("create", "fork", "sync", "edit", "delete")),
+    *(f"gh repo {sub}" for sub in ("rename", "archive", "unarchive", "autolink")),
+    *("gh repo deploy-key", "gh ssh-key", "gh gpg-key"),
+    *("gh secret", "gh variable", "gh ruleset", "gh workflow"),
+    *("gh run cancel", "gh run rerun", "gh run delete", "gh cache delete"),
+)
+GITHUB_FLAG_PREFIXES = tuple(
+    f"gh {group} {flag}"
+    for group in ("pr", "issue", "run", "cache")
+    for flag in ("-R", "--repo")
+)
+PR_EDIT_FLAGS = (
+    *("--add-reviewer", "--remove-reviewer", "--add-label", "--remove-label"),
+    *("--add-assignee", "--remove-assignee", "--add-project", "--remove-project"),
+    *("--milestone", "--remove-milestone", "--base"),
+)
+
+
+def github_ask_rules(tool):
+    """The ask rules one shell tool needs for GitHub state changes (#40)."""
+    return {
+        *(f"{tool}({command} *)" for command in GITHUB_CHANGING_COMMANDS),
+        *(f"{tool}({prefix}*)" for prefix in GITHUB_FLAG_PREFIXES),
+        *(f"{tool}(gh pr edit *{flag}*)" for flag in PR_EDIT_FLAGS),
+        f"{tool}(gh pr edit * -B *)",
+    }
 
 
 def front_matter(path):
@@ -126,6 +163,24 @@ class AdapterTest(unittest.TestCase):
         commands = ("pip install", "python -m pip install", "python3 -m pip install")
         for command in commands:
             self.assertIn(f"Bash({command} *)", config["permissions"]["ask"])
+
+    def test_github_changes_ask_first_in_both_shell_tools(self):
+        """GitHub state changes need the human in Bash and PowerShell (#40)."""
+        ask = json.loads(
+            (ROOT / ".claude" / "settings.json").read_text(encoding="utf-8")
+        )["permissions"]["ask"]
+        for tool in ("Bash", "PowerShell"):
+            self.assertLessEqual(github_ask_rules(tool), set(ask), tool)
+
+    def test_pull_request_title_and_body_edits_stay_ungated(self):
+        """The slice's own delivery may update its draft pull request (#40)."""
+        ask = json.loads(
+            (ROOT / ".claude" / "settings.json").read_text(encoding="utf-8")
+        )["permissions"]["ask"]
+        self.assertFalse(
+            [rule for rule in ask if "--body" in rule or "--title" in rule]
+        )
+        self.assertNotIn("Bash(gh pr edit *)", ask)
 
     def test_slice_is_user_invoked_only_in_both_tools(self):
         self.assertEqual(
