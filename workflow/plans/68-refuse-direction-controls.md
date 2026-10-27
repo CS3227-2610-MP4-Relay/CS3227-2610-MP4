@@ -41,6 +41,6 @@ Builder's details within that scope (checkpoint 1):
 
 ## Checklist
 
-- [ ] Checkpoint 1: specs and plan.
-- [ ] Checkpoint 2: refuse the controls, with tests and existing-test adjustments.
+- [x] Checkpoint 1: specs and plan (`e6160c4`, `81c2e12`).
+- [x] Checkpoint 2: refuse the controls (on `81c2e12`). `forms.py` adds `DIRECTION_CONTROLS`, `DIRECTION_MESSAGE` and one check after visibility (src +9/-1). New `test_direction_controls.py`, 62 tests: 24 refusals (each control on two field routes, three positions), 14 acceptances, 8 order cases, 5 re-shown-value cases and one pairwise-coverage check. Red before the check: 29 failed (24 refusals saved with 302; 5 re-shown cases found no message), 33 passed. Green: 62 passed. Mutations on temporary edits with an empty `PYTHONPYCACHEPREFIX`, restored and checked with `cmp`: removing the check fails the same 29; refusing all of Cf fails the 7 ZWJ and ZWNJ acceptances; checking before visibility fails the 3 only-controls cases. Existing tests changed, assertions kept: `test_publish.py::test_bidi_and_zero_width_characters_stay_inside_their_element` publishes through `services.publish`; `test_retest.py::test_bidi_and_zero_width_characters_stay_inside_the_label_element` and `test_messages.py::test_an_unread_retest_label_is_isolated_and_escaped_on_the_sign_in_page` use the new `conftest.stored_retest`, which calls `services.request_retest` and stores the retest message in the session as the view does. Each posted a bidi label through a form that now refuses it. All three fail with `isolated_lines` losing `dir="auto"` or escaping. Every rounds test module alone: passed. Ruff check and format clean.
 - [ ] Checkpoint 3: guides.
