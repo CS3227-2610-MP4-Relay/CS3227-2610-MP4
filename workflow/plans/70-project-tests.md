@@ -23,3 +23,11 @@ Move project tests and probe helpers from `src/relay_tests/` to `src/relay/tests
 - Coordinator observed loopback PostgreSQL port 55432 unavailable and no usable existing Docker engine. Do not install/start a service within this refactor. Record the exact local full-verification result and use the existing hosted CI database job for complete database evidence; unavailable local database checks remain explicit.
 - After the plan commit and a fresh scope snapshot, resume checkpoint 2 only. Coordinator freezes the integrated candidate for independent verification, then completes authorized draft-PR delivery and latest-head CI checks. Add security review only if implementation changes control semantics or another review trigger arises.
 - Open issue: local database verification is unavailable in the observed environment. No product decision or scope expansion is required for the relocation.
+
+## Checkpoint 2 evidence
+
+- All nine files relocated; only path/depth adjustments, two shared imports and the framing test-directory exclusion changed. Assertions and markers are preserved. No active guide instruction needs updating.
+- Collection comparison: 918 before and after, with no node-ID differences after replacing only `src/relay_tests/` with `src/relay/tests/`.
+- Focused configuration, CI, site, page and accounts-model checks: 51 passed before and after; 14 deselected using `-m 'not django_db' -k 'not driver_ignores_inherited_hostaddr'`. The three driver-destination cases, database roundtrip, database-marked accounts tests and entire framing module still need PostgreSQL execution. Existing framing markers were retained.
+- `ruff check .`, `ruff format --check .` (73 files), diff whitespace check and builder snapshot scope check passed. Coordinator owns the final full-suite attempt and hosted CI evidence.
+- One mechanical edit error caused two collection errors; repaired before the successful comparison and checks. No test expectations were changed. Await coordinator commit and fixed-candidate verification.
