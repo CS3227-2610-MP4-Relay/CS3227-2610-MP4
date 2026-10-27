@@ -12,12 +12,12 @@ Builder's details within that scope (checkpoint 1):
 
 - **No criterion added.** Refusing framing is a security control ([SECURITY-SPEC](../specs/SECURITY-SPEC.md#rounds-observations-and-history)) with its setting under [Configuration](../specs/TECHNICAL-SPEC.md#configuration); the production list keeps only HSTS. Tests are unmarked with a docstring naming the control, as the existing "never cached" tests are.
 - **Placement:** right after `SecurityMiddleware`, not last as in Django's template. Middleware lower in the list sees only responses made inside it, so a 500 from a failed session save after a view (#57's accepted residual) or a 400 from `SessionInterrupted`, made by `SessionMiddleware`, would lack the header if the middleware were last.
-- **Default value:** Django's `X_FRAME_OPTIONS` default is already `DENY`; the setting is not repeated.
+- **Default value:** in the installed Django 6.1.2, `X_FRAME_OPTIONS` defaults to `DENY`; the setting is not repeated.
 
 ## Checkpoints
 
 1. **Specs and plan** (`spec:`/`plan:`): `workflow/specs/SECURITY-SPEC.md` (residual replaced by the control), `workflow/specs/TECHNICAL-SPEC.md` (Configuration), this plan. Check: `git diff --check`; read back.
-2. **Middleware** (`feat:`): `src/relay/settings/base.py`, new `src/rounds/tests/test_framing.py` (uses the rounds fixtures), `src/accounts/tests/test_models.py` (middleware order). Red first with the middleware absent. Each response has `X-Frame-Options: DENY`:
+2. **Middleware** (`feat:`): `src/relay/settings/base.py`, new `src/rounds/tests/test_framing.py` (uses the rounds fixtures and holds the middleware-order check too, so `src/accounts/tests/test_models.py` is unchanged). Red first with the middleware absent. Each response has `X-Frame-Options: DENY`:
    - public start page GET (200) and its POST (405);
    - sign-in GET (200);
    - tester home, signed in as a tester (200);
@@ -44,6 +44,6 @@ Repairs after review are separate `fix:` commits. Test expectation changes: none
 
 ## Checklist
 
-- [ ] Checkpoint 1: specs and plan.
-- [ ] Checkpoint 2: middleware and tests.
+- [x] Checkpoint 1: specs and plan (`bb22bf4`, `03b5653`).
+- [x] Checkpoint 2: middleware and tests. `XFrameOptionsMiddleware` second in `MIDDLEWARE` in `src/relay/settings/base.py` (2 lines with its comment). Tests: `src/rounds/tests/test_framing.py` (new, 9 tests; also covers the anonymous sign-in redirect, 302). Red, before the middleware (`pytest -q -p no:randomly src/rounds/tests/test_framing.py`): 8 failed, 1 passed. Header cases failed with `KeyError: 'x-frame-options'` after their status assertion passed; the settings case failed at index 1 (`SessionMiddleware`). The exemption scan passed beforehand: it fails only if an exemption decorator is added. Green, after: 9 passed; with `test_messages.py` and `test_models.py`, 31 passed. Mutation: middleware moved last on a temporary copy, restored and checked with `cmp`; the session-save 500 case and the settings case failed, 7 passed. Ruff clean.
 - [ ] Checkpoint 3: guides, if needed.
