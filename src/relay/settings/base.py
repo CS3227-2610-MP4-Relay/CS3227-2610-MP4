@@ -46,6 +46,8 @@ SESSION_ENGINE = "django.contrib.sessions.backends.db"
 SESSION_COOKIE_AGE = 8 * 60 * 60
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
+# Messages stay in the server-side session until shown, never in a cookie.
+MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 CSRF_COOKIE_SAMESITE = "Lax"
 # Secure everywhere except local development, which turns it off.
 SESSION_COOKIE_SECURE = True

@@ -114,6 +114,10 @@ def test_sessions_and_cookies_use_shared_settings():
     ) < middleware.index("django.contrib.auth.middleware.AuthenticationMiddleware")
     assert "django.middleware.csrf.CsrfViewMiddleware" in middleware
     assert "django.contrib.messages.middleware.MessageMiddleware" in middleware
+    assert (
+        settings.MESSAGE_STORAGE
+        == "django.contrib.messages.storage.session.SessionStorage"
+    )
 
 
 def test_local_settings_turn_secure_cookies_off():

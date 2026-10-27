@@ -52,9 +52,15 @@ def sign_in(request):
 
 @require_POST
 def sign_out(request):
-    """End the session on the server and return to the sign-in page."""
+    """End the session on the server and return to the sign-in page.
+
+    Only a signed-in user gets the message, so a signed-out visitor's sign-out
+    stores no session row to carry it.
+    """
+    signed_in = request.user.is_authenticated
     logout(request)
-    messages.info(request, "You have signed out.")
+    if signed_in:
+        messages.info(request, "You have signed out.")
     return redirect("accounts:sign-in")
 
 
