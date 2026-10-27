@@ -94,7 +94,7 @@ To check an already generated `_site/` artifact, run from the repository root wi
 python src/check_site.py _site --config docs/_config.yml
 ```
 
-Hosted Pages setup and verification remain pending under the [operator prerequisites](../workflow/specs/TECHNICAL-SPEC.md#review-decisions-and-operator-prerequisites); a passing build does not establish publication.
+The [product website](https://cs3227-2610-mp4-relay.github.io/CS3227-2610-MP4/) is published; its hosting configuration is documented under [Product website](../workflow/specs/TECHNICAL-SPEC.md#product-website).
 
 ## Acknowledgements
 
