@@ -81,21 +81,24 @@ Threat: malicious repository content or a mistaken agent bypasses scope, weakens
 - Record actual triggers, context, check results and repair rounds. Mark unavailable telemetry as unavailable; never invent human approval, test results or usage data.
 - Human-invoked slice delivery and its protected Git/release actions follow the [Git authorization and commit rules](../../AGENTS.md#git); untrusted task content cannot expand that authority. The [slice workflow](../skills/slice.md) must distinguish completed local checks from completed hosted delivery.
 - Agent sessions use a team member's GitHub credentials, which may be an admin's. A mistaken or manipulated agent could therefore change GitHub settings, credentials, shared content or reviews. Agents change GitHub state only when the human asks for that specific action, under the [rule and its categories in `AGENTS.md`](../../AGENTS.md#approvals-and-claims).
-  - **Enforcement.** Claude Code's project settings ask before:
+  - **Claude Code enforcement.** Project settings ask before:
     - `git push` and the GitHub-changing `gh` command groups and subcommands;
     - a repository flag between a command group and its subcommand;
     - reviewer, label, assignee, project, milestone and base changes through `gh pr edit`;
     - every `gh api` call, because a command rule cannot tell API reads from writes.
 
     Ask rules take precedence over allow rules, as observed for the Bash tool ([plan](../plans/40-ask-before-github-changes.md#verification)). The PowerShell mirrors are configured but not yet observed.
-  - **Exceptions.** Title and body edits through `gh pr edit` stay ungated, so the authorized delivery can update its own pull request. Codex relies on the instruction alone.
-  - **Residuals.** These are client-side, best-effort checks on a credential GitHub trusts. Each of these still gets through:
-    - a session not started at the repository or worktree root, which loads no project settings, hooks or ask rules, and doesn't load `AGENTS.md` at launch;
-    - an auto-approve or bypass permission mode;
+    Title and body edits through `gh pr edit` stay ungated in Claude Code, including edits on another pull request.
+  - **Codex control.** Trusted project configuration uses `on-request` approval with the `user` reviewer, `workspace-write` sandboxing and sandbox network access disabled. Native command-prefix rules prompt for direct `gh`, `gh.exe`, `git push` and `git.exe push` commands when an applicable command reaches approval evaluation outside the sandbox. Gating all direct `gh` calls covers reads, API calls, flags, aliases invoked through `gh`, and PR title/body edits; prefix rules cannot distinguish the slice's own draft PR from another PR.
+
+    Existing human authorization under `AGENTS.md` remains valid: a client execution prompt does not require another conversational permission request for authorized slice delivery. `auto_review` is automated review, not a human approval route. Configuration changes require a new session and trusted project loading; they do not change an active session's reviewer. Native rule-evaluator results establish command matching only, not project loading, sandbox enforcement or interactive prompting. Actual observations and unavailable checks belong in the [slice plan](../plans/66-codex-github-approvals.md#verification).
+  - **Residuals.** These are client-side, best-effort checks on a credential GitHub trusts. The instruction remains necessary for:
+    - project controls not loaded because of launch location, untrusted project configuration or session startup state;
+    - an auto-approve, bypass or overriding permission configuration;
     - MCP, connector or other non-shell tools;
     - `curl` or `Invoke-RestMethod` with a token the agent printed or read;
-    - command forms the rules don't list, such as `& gh`, `gh.exe`, `Start-Process`, Git or `gh` aliases defined outside a gated command, or new `gh` commands;
-    - title and body edits through `gh pr edit` on another pull request;
+    - command forms outside the verified prefixes, including absolute executable paths, PowerShell wrappers such as `& gh` or `Start-Process`, Git flags before `push`, and aliases invoked outside a gated command; Claude Code also retains its narrower command-list gaps, including `gh.exe` and new `gh` commands;
+    - Codex commands that remain inside the sandbox without out-of-sandbox approval evaluation;
     - a human approving a prompt without reading it.
 
     Branch protection remains the server-side control for `main`.
