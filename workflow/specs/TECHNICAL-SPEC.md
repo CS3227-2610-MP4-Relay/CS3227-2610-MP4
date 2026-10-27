@@ -113,13 +113,14 @@ The `.env.example` file may contain only empty placeholders and throwaway local 
 
 Both database configurations explicitly set libpq `hostaddr` through Django's database `OPTIONS`, preventing inherited `PGHOSTADDR` from redirecting connections. Local localhost/127.0.0.1 map to 127.0.0.1; local ::1 maps to ::1. Tests fix the address to 127.0.0.1.
 
-In every environment, the shared settings install Django's `XFrameOptionsMiddleware` right after `SecurityMiddleware`, so every response refuses framing (`X-Frame-Options: DENY`), error pages included, even a 500 or 400 made when another middleware fails, such as the session save after a view; no view is exempt (#58).
+In every environment, the shared settings install Django's `XFrameOptionsMiddleware` first, above `SecurityMiddleware`, so every response Django makes refuses framing (`X-Frame-Options: DENY`): pages, error pages, and responses other middleware makes, such as an HTTPS redirect, the 400 for a disallowed host or a failed session save, and the 500 when a new session row cannot be created. No view is exempt, and no code sets the header or `X_FRAME_OPTIONS` itself, so Django's default `DENY` applies (#58). Responses served outside Django, such as the platform's own error pages, are not covered.
 
 Production settings, checked before release:
 
 - `DEBUG` off; `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` list only the production host and origin, with no wildcard.
 - HTTPS is detected through `SECURE_PROXY_SSL_HEADER` only once Vercel's forwarded-protocol header is verified under the [release gate](#release-verification).
 - HSTS is on.
+- Production keeps the shared middleware, with `XFrameOptionsMiddleware` first, and its responses carry `X-Frame-Options: DENY`.
 
 ## Environments
 
