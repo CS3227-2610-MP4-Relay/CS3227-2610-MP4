@@ -231,6 +231,27 @@ def test_sign_out_message_lives_in_a_new_session_not_a_cookie(client, coordinato
 
 
 @pytest.mark.ac("ACC-1.5")
+@pytest.mark.parametrize("stale_cookie", [False, True])
+def test_a_signed_out_visitor_signing_out_gets_no_message_and_no_session(
+    client, coordinator, stale_cookie
+):
+    if stale_cookie:
+        sign_in(client, coordinator.username)
+        old_key = session_key(client)
+        Session.objects.filter(session_key=old_key).delete()
+    response = client.post("/sign-out/")
+    assert response.status_code == 302
+    assert response["Location"] == "/sign-in/"
+    assert not Session.objects.exists()
+    # No new session identifier is issued; a stale one may only be deleted.
+    assert COOKIE not in response.cookies or response.cookies[COOKIE].value == ""
+    shown = client.get("/sign-in/")
+    assert shown.status_code == 200
+    assert SIGNED_OUT not in shown.content.decode()
+    assert not Session.objects.exists()
+
+
+@pytest.mark.ac("ACC-1.5")
 @pytest.mark.parametrize("with_real_message", [False, True])
 def test_a_forged_messages_cookie_is_ignored_by_the_sign_in_page(
     client, coordinator, with_real_message
