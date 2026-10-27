@@ -2,7 +2,7 @@
 
 Slice: #34 · Tier: High · Tool: Codex · Orchestrator model: gpt-6-astra / xhigh (session metadata) · Date: 2026-10-27
 
-Tokens: 11,179,841 input, 46,368 output, 11,226,209 total across the four selected sessions; cutoff 2026-10-27 14:40:35 SGT.
+Tokens: 11,661,007 input, 50,675 output, 11,711,682 total across the four selected sessions and the separate documentation follow-up intervals; latest cutoff 2026-10-27 15:36:45 SGT.
 
 | Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
@@ -10,13 +10,17 @@ Tokens: 11,179,841 input, 46,368 output, 11,226,209 total across the four select
 | Builder — gpt-6.1-sol / medium, `codex:658a09e24962a5a1530a4874` | 2,598,950 | 2,431,616 | 19,116 | 3,730 | 2,618,066 | about 14m 11s including checkpoint waits |
 | Verifier — gpt-6.1-sol / high, `codex:3f4d0d9d502db8a95d5191d7` | 810,127 | 739,712 | 4,039 | 939 | 814,166 | about 2m 27s |
 | Security-reviewer — gpt-6.1-sol / high, `codex:b790e4ce322bff432d3bba22` | 810,528 | 761,088 | 3,744 | 1,128 | 814,272 | about 2m 55s |
+| Orchestrator follow-up — gpt-6-astra / xhigh, `codex:421d31ab732932e05357b612` | 370,870 | 366,208 | 3,355 | 1,552 | 374,225 | 8m 6s measured interval |
+| Orchestrator PR preparation — gpt-6-astra / xhigh, `codex:421d31ab732932e05357b612` | 110,296 | 102,016 | 952 | 210 | 111,248 | 49s measured interval |
 
-Three subagent sessions; the builder was reused for three checkpoints. `resource_usage.py` baseline/report selected the coordinator and these three sessions explicitly, with no telemetry warnings. Preparation before the 14:15:40 SGT baseline and work after the cutoff are excluded. An internal approval-review session had unavailable telemetry and is excluded from these measured totals; it is not treated as zero. Cache-write tokens were zero in the selected counters. No independent-review repair round was needed; builder formatting fixes occurred before the implementation and documentation handoffs. Model/effort values above were confirmed from session metadata. See [token reporting](../../workflow/README.md#token-reporting) for definitions.
+Three subagent sessions; the builder was reused for three checkpoints. `resource_usage.py` baseline/report selected the coordinator and these three sessions explicitly, with no telemetry warnings. Measured windows are 14:15:40–14:40:35, 15:16:17–15:24:23 and 15:35:56–15:36:45 SGT; work outside those disjoint intervals, including subsequent PR delivery, is excluded. No new subagent ran for the documentation follow-up. An internal approval-review session had unavailable telemetry and is excluded from these measured totals; it is not treated as zero. Cache-write tokens were zero in the selected counters. No independent-review repair round was needed; builder formatting fixes occurred before the implementation and documentation handoffs. Model/effort values above were confirmed from session metadata. See [token reporting](../../workflow/README.md#token-reporting) for definitions.
 
 ## Requests
 
 - Run `/slice 34` as a stacked PR on #69, covering the existing GitHub Pages product site.
-- No later human scope expansion, merge or publication approval was received in this session.
+- During initial slice delivery, no human scope expansion, merge or publication approval was received.
+- After reporting the PR merged and the site working, the human requested the missing README site link and related documentation updates.
+- The human then requested a draft PR for that documentation change, without an issue.
 
 ## Agent runs
 
@@ -28,14 +32,18 @@ Three subagent sessions; the builder was reused for three checkpoints. `resource
 
 ## Decisions and corrections
 
+- **Publication follow-up:** Fast lane documentation maintenance under `maintain-docs`; no behaviour, acceptance criteria or security controls changed. Added the product-site link to README and Developer Guide, clarified that application hosting remains planned, and updated the technical spec's existing hosting facts. Preserved publication verification and human-authorization rules, and left the merged slice plan frozen. Read back the changed sections; targeted `git diff --check` passed and `check_logs.py` reported zero findings. Human diff review remains pending.
+- **Follow-up delivery:** Used `create-pull-request` after the explicit draft-PR request. Isolated the four documentation/log edits in a separate worktree on `docs/link-published-product-site`, based on main `1ed0b85`; the root worktree's test-refactor commits and local edits were preserved. Inspected the staged diff, stat and numstat, then committed the documentation as `a4a06dc`. The log is a separate checkpoint. Draft creation and latest-head CI are the next steps; their final results belong in the PR validation record. No issue was created and no new specialist review is claimed.
+- Follow-up evidence: [main deployment run 40465305414, attempt 2](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/actions/runs/40465305414) succeeded for `1ed0b8546fad32549396f88a16cb550ea89c5b23`. Anonymous HTTPS GETs to the [homepage](https://cs3227-2610-mp4-relay.github.io/CS3227-2610-MP4/), `Reflections.html` and `assets/css/style.css` each returned 200. The Pages API confirmed workflow publishing and enforced HTTPS; environment policy permits only branch `main`. This supplies the hosted availability/link evidence previously pending under PLT-2.6; no new browser visual inspection is claimed. The web tool could not open the site, so direct HTTP checks supplied the evidence.
+
 - Reused the existing Cayman site and CI workflow with job-scoped publication permissions; no Python packages, app hosting, custom domain, credentials or recovery system added. Role/context boundaries and the one-requirement/source-line budget were preserved.
-- Removed PLT-2.6's initial manual-only classification: lack of release authority does not make hosted checks inherently impossible to automate. Its hosted verification remains pending.
+- Removed PLT-2.6's initial manual-only classification: lack of release authority does not make hosted checks inherently impossible to automate. Its hosted verification was pending at initial delivery; follow-up evidence is recorded above.
 - The original parent branch disappeared after #69 merged, so targeting main preserves the requested dependency without recreating the deleted branch or rewriting commits.
-- PLT-2.1–2.5 have the evidence mapped in the plan. Failure/skipped-prerequisite deployment paths were inspected structurally rather than executed against a live site. PLT-2.6, hosted restrictions, human review, merge and release remain pending; no approval is inferred. The summary is for its author to check.
+- PLT-2.1–2.5 have the evidence mapped in the plan. Failure/skipped-prerequisite deployment paths were inspected structurally rather than executed against a live site. PLT-2.6, hosted restrictions, human review, merge and release were pending at initial delivery; the later merge and publication evidence is recorded above. Human review of this follow-up remains pending. The summary is for its author to check.
 
 ## Problems
 
-- Pages API returned 404; the existing `github-pages` environment had no protection rules. No hosted settings changed. Follow the [operator prerequisites](../../workflow/specs/TECHNICAL-SPEC.md#review-decisions-and-operator-prerequisites) before publication.
+- At initial delivery, Pages API returned 404 and the existing `github-pages` environment had no protection rules. The agent changed no hosted settings. Later read-only checks confirmed publication and the environment's branch restriction, as recorded above.
 - Local Docker daemon was unavailable. Full local pytest collected 761 items but was interrupted with no results flushed after a TCP probe found `127.0.0.1:55432` actively refused connections. No failure count was invented; hosted verification later passed on the integrated candidate.
 - GitHub connector PR creation returned 403 (integration permission). CLI fallback first failed because #69's base branch had just been deleted; after base integration it created #72 successfully. Initial restricted-network reads used approved read-only escalation. No automatic approval rejection occurred.
 - Browser preview was unavailable: the in-app browser was unavailable and browser inventory was empty. HTML/artifact inspection is recorded, not a claimed visual browser test. The temporary preview server was stopped.
