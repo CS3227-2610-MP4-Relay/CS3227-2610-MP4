@@ -2,7 +2,7 @@
 
 Slice: #5 · Tier: High · Tool: Codex · Orchestrator model: gpt-6-astra / xhigh (observed session metadata) · Date: 2026-10-28
 
-Tokens: combined input, output and total unavailable because one discovered approval session has no usage events; measurement cutoff 2026-10-28 20:58:17 Singapore time. Known per-session values follow.
+Tokens: recorded subtotal across eight usage-bearing sessions: 56,850,829 input, 200,455 output, 57,051,284 total; measurement cutoff 2026-10-28 20:58:17 Singapore time. The inactive approval entry below is excluded from this subtotal; its state database records zero total tokens but provides no breakdown.
 
 | Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
@@ -12,11 +12,11 @@ Tokens: combined input, output and total unavailable because one discovered appr
 | Follow-up approval reviewer — codex-auto-review/low, `codex:d22bac4c24daf0654969bfbf` | 638,033 | 534,528 | 1,362 | 471 | 639,395 | 12:46:15–20:58:17 |
 | Verifier — gpt-6.1-sol/high, `codex:20218fe83ae5cfacdc1b50da` | 3,515,300 | 3,266,176 | 8,938 | 2,128 | 3,524,238 | 12:53:58–20:58:17 |
 | Security reviewer — gpt-6.1-sol/high, `codex:5f2a2cdc70df259ef825e838` | 2,657,617 | 2,450,560 | 9,567 | 4,100 | 2,667,184 | 12:54:15–20:58:17 |
-| Empty approval session — model/effort unavailable, `codex:892863b592de38088268a140` | unavailable | unavailable | unavailable | unavailable | unavailable | 19:37:56–20:58:17 |
+| Inactive approval entry — configured codex-auto-review/low, `codex:892863b592de38088268a140` | unavailable | unavailable | unavailable | unavailable | 0 (state database) | 19:37:56 initialization only |
 | CLI approval reviewer — codex-auto-review/low, `codex:d0eb42ff3e3b3b2eb3df1dd3` | 690,194 | 622,592 | 1,126 | 367 | 691,320 | 20:21:46–20:58:17 |
 | Delivery approval reviewer — codex-auto-review/low, `codex:31bec908187aa0f36da3c293` | 40,004 | 25,088 | 289 | 160 | 40,293 | 20:53:22–20:58:17 |
 
-Three delegated role sessions were reused across initial delivery and the CLI correction; five automatic approval sessions were discovered, one empty. Observed model/effort pairs remained unchanged. The nine-source resource report had no warnings and covered 31,104.853 seconds, including the long operator-setup pause and idle spans through cutoff. The first 62 seconds before the coordinator baseline and closeout after cutoff are excluded. Coordinator measurement covers reused roles from inception; late reviewer baselines do not replace it. Cached input is a subset of input; available cache-write counts were zero. See [token reporting](../../workflow/README.md#token-reporting).
+Three delegated role sessions were reused across initial delivery and the CLI correction; five automatic approval entries were discovered, one inactive. Executed model/effort pairs remained unchanged; the inactive entry's pair comes from configuration metadata, not an observed model turn. The nine-source collector report had no warnings but returned null aggregate counters because the inactive entry had no usage events. The subtotal above sums the eight complete rows from that same report, preserving its original cutoff. The report covers 31,104.853 seconds, including the long operator-setup pause and idle spans through cutoff. The first 62 seconds before the coordinator baseline, closeout and later telemetry audit are excluded. Coordinator measurement covers reused roles from inception; late reviewer baselines do not replace it. Cached input is a subset of input (54,702,080 tokens); available cache-write counts were zero. See [token reporting](../../workflow/README.md#token-reporting).
 
 ## Requests
 
@@ -57,5 +57,9 @@ Actual verification:
 The three existing Windows/PostgreSQL failures at `src/accounts/tests/test_limit_views.py:564` expect `idle-in-transaction timeout` in captured errors for wrong-password, correct-password and demo requests; native PostgreSQL instead reports an unexpectedly closed connection. This session reproduced them, and [log 011](011-add-playwright-browser-journeys.md) records prior baseline reproduction. They were not weakened or fixed outside scope; Linux CI passed them.
 
 The GitHub connector rejected draft-PR creation with HTTP 403 (`Resource not accessible by integration`); the authenticated CLI fallback succeeded. No automatic approval-review rejection remained. A read for a presumed orchestrator role file found no such file; orchestration followed the actual slice skill. Routine Git warnings about an inaccessible global ignore file did not prevent scoped checks or commits.
+
+On the human's request to investigate unavailable tokens, a read-only metadata audit checked the inactive entry's rollout, state database, turn-history database, log categories and alternative rollout locations. Its sole rollout contains session metadata, an inherited compaction item and settings initialization; no usage event or model turn. State metadata records `tokens_used=0`, `has_user_event=0` and configured `codex-auto-review/low`; turn history has no turns or items, and no second rollout was found. This supports treating it as an initialized but unused entry, not a completed review with missing token counts. No input/cache/output breakdown is recoverable. The original all-unavailable headline unnecessarily hid the measurable subtotal; corrected without changing the collector, assuming missing counters are zero, or reading message bodies/credentials.
+
+The follow-up audit used the coordinator only. Its separate measured interval, 21:10:15–21:14:28 Singapore time (252.95 seconds), recorded 413,841 input including 397,952 cached, 4,761 output and 418,602 total tokens. The baseline followed initial inspection; subsequent closeout is excluded. These figures are not added to the original-cutoff subtotal above. No new role agents or collector changes were needed.
 
 Untrusted content seen: escaped synthetic error/annotation payloads in tests and provider CLI/dotenv examples were treated as data, not instructions. No raw transcripts, prompts, real secrets, addresses or credentials were retained in this log.
