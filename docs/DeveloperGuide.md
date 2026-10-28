@@ -36,7 +36,7 @@ python src/manage.py runserver 127.0.0.1:8000
 
 Open <http://127.0.0.1:8000/>. Stop Django with Ctrl+C. If you started the optional database container above, stop it with `docker stop relay-local-db`; its contents are discarded, so run `migrate` again after restarting it. Run `migrate` whenever a pull request adds migrations; the first ones create workspaces, accounts and database sessions.
 
-Settings read exported environment variables, not `.env` files; [`.env.example`](../.env.example) lists local variable names. Debug defaults off; set `DJANGO_DEBUG=true` only for local debugging. Never use production credentials for development or tests. There is no production settings module or Django application deployment workflow.
+Settings read exported environment variables, not `.env` files; [`.env.example`](../.env.example) lists local variable names. Debug defaults off; set `DJANGO_DEBUG=true` only for local debugging. Never use production credentials for development or tests. Separate production setup is in the [deployment checklist](#production-deployment).
 
 ### Create accounts for manual testing
 
@@ -82,6 +82,92 @@ python -m playwright show-trace "/path/to/browser-trace.zip"
 
 In CI, download the `browser-failure-diagnostics` artifact from the failed workflow run; its files come from `${RUNNER_TEMP}/relay-pytest/`. These checks use synthetic data on loopback HTTP; their limits and diagnostic retention are in [Browser verification](../workflow/specs/TECHNICAL-SPEC.md#browser-verification).
 
+## Production deployment
+
+The repository supplies production settings and an opt-in Actions delivery job; no public application release is verified yet. An operator must create both projects and complete the [release gate](../workflow/specs/TECHNICAL-SPEC.md#release-verification). The agent does not create projects, set secrets or release production. Keep repository variable `PRODUCTION_DEPLOY_ENABLED` unset or `false` throughout setup and the protected bootstrap.
+
+### 1. Create the Neon database
+
+1. In the [Neon console](https://console.neon.tech), create a project for Relay production, choosing PostgreSQL **17** and AWS Singapore (`aws-ap-southeast-1`). Use a database and role dedicated to Relay, with the schema privileges needed for its migrations; keep local/test databases separate. [Neon project setup](https://neon.com/docs/manage/projects) and [regions](https://neon.com/docs/introduction/regions) describe the current controls.
+2. Open **Connect**, select the production branch, database and role, and privately save two URLs: with connection pooling on for Vercel, and off for migrations/GitHub. The pooled hostname contains `-pooler`; the direct hostname does not. Both URLs must point to the same database/branch. Record the provider's actual connection limit and transaction pooler mode for the release gate; [Neon pooling](https://neon.com/docs/connect/connection-pooling) explains the distinction.
+3. For this application's URL parser, remove the console's query string, or replace it with exactly `?sslmode=verify-full`. In particular, do not leave `sslmode=require` or `channel_binding` query options in the saved URL. The application enforces certificate-verified TLS with system roots itself; see the [configuration contract](../workflow/specs/TECHNICAL-SPEC.md#configuration). Keep URL-encoded user/password characters intact. Never paste either URL into repository files, issue comments or terminal commands/history.
+
+### 2. Create and protect the Vercel project
+
+1. Import the team repository into a Vercel project under the intended owning team/account. Use the repository root, native **Django** framework detection and Python **3.14**; leave custom build/output commands unset. Do this initial import **without production secrets**; an initial build may fail because configuration is missing. Once the reviewed deployment changes are on `main`, [`vercel.json`](../vercel.json) disables automatic Git deployments; keep the repository connected for exact-commit API deployment. Confirm `main` is the production branch.
+2. Before adding any credentials, open **Settings → Deployment Protection** and enable **Vercel Authentication → All Deployments**. Confirm it covers production and generated URLs. This is the protected bootstrap; do not generate an automation-bypass secret. [Vercel protection](https://vercel.com/docs/deployment-protection) describes these controls.
+3. In Functions settings, select Singapore (`sin1`) to colocate with Neon. Confirm the actual WSGI function limit from `vercel.json` is applied. [Vercel regions](https://vercel.com/docs/regions) and the [native Django guide](https://vercel.com/docs/frameworks/full-stack/django) cover region/runtime configuration; no CLI or extra static-file package is needed here.
+4. Choose the stable production hostname, normally the project's assigned `*.vercel.app` domain. Add the following **Production-only** environment values, marking the secret key/database URL sensitive where supported. Do not copy them to Preview or Development.
+
+| Vercel variable | Value to enter |
+| --- | --- |
+| `DJANGO_SETTINGS_MODULE` | `relay.settings.production` |
+| `DJANGO_SECRET_KEY` | A password-manager-generated random key of at least 50 characters; retain privately for the GitHub setting below |
+| `DJANGO_PRODUCTION_HOST` | The single production hostname, lowercase, without scheme, port, slash or wildcard |
+| `DATABASE_URL` | Normalized **pooled** Neon URL from step 1 |
+| `DJANGO_TRUST_PROXY_SSL_HEADER` | `false` for bootstrap; change to `true` only after observing the actual proxy behavior |
+
+### 3. Configure GitHub release access
+
+In repository **Settings → Environments**, create `production`: restrict deployments to selected branch `main` and add a required human reviewer. The workflow alone does not create these restrictions. Leave the existing `github-pages` environment unchanged. Add these environment entries; do not use repository-wide production secrets.
+
+| Location in GitHub | Name | Value |
+| --- | --- | --- |
+| `production` secret | `DJANGO_SECRET_KEY` | Same private key as Vercel |
+| `production` secret | `DATABASE_URL` | Normalized **direct** Neon URL |
+| `production` secret | `VERCEL_TOKEN` | Expiring Vercel API token scoped to the owning team with the narrowest available access |
+| `production` variable | `DJANGO_PRODUCTION_HOST` | Same hostname as Vercel |
+| `production` variable | `VERCEL_PROJECT_ID` | Project Settings ID, beginning `prj_` |
+| `production` variable | `VERCEL_TEAM_ID` | Owning team Settings ID, beginning `team_` |
+| Repository Actions variable | `PRODUCTION_DEPLOY_ENABLED` | Leave unset or `false` until the release gate and explicit approval are complete |
+
+Create the token through [Vercel account token settings](https://vercel.com/account/settings/tokens); [Vercel's token guidance](https://vercel.com/kb/guide/how-do-i-use-a-vercel-api-access-token) explains team scope. Store it only in GitHub's production secret, not the application runtime. The workflow derives repository and commit identities from GitHub; no GitHub token, repository-ID variable or Neon API key is needed.
+
+### 4. Migrate and create the protected bootstrap
+
+After the human authorizes the initial protected deployment, choose an exact reviewed commit with passing application/site checks on `main`. Use a separate checkout of that commit and its installed pinned requirements in a dedicated operator terminal; do not run development or test commands in this terminal. Review migration compatibility with any version already serving before applying migrations.
+
+First initialize Neon while the Actions opt-in remains off and Vercel's proxy-trust flag remains `false`. Activate the checkout's `.venv` as in [Setup](#setup). From the repository root in Git Bash, replace the example hostname and enter secrets at the hidden prompts, not as command text:
+
+```bash
+set +x
+export DJANGO_PRODUCTION_HOST='your-project.vercel.app'
+export DJANGO_TRUST_PROXY_SSL_HEADER=false
+read -r -s -p 'Production Django secret key: ' DJANGO_SECRET_KEY
+printf '\n'
+export DJANGO_SECRET_KEY
+read -r -s -p 'Direct Neon URL: ' DATABASE_URL
+printf '\n'
+export DATABASE_URL
+unset PGHOST PGHOSTADDR PGSERVICE PGSERVICEFILE PGSSLMODE PGSSLROOTCERT
+if python src/manage.py check --settings=relay.settings.production >/dev/null 2>&1 &&
+   python src/manage.py migrate --noinput --settings=relay.settings.production >/dev/null 2>&1; then
+  printf '%s\n' 'Bootstrap database ready.'
+else
+  printf '%s\n' 'Bootstrap migration failed; inspect privately before retrying.' >&2
+fi
+unset DATABASE_URL DJANGO_SECRET_KEY DJANGO_PRODUCTION_HOST DJANGO_TRUST_PROXY_SSL_HEADER
+```
+
+Use the checkout's Python environment and close this operator terminal afterwards. Output is deliberately suppressed because database errors can contain connection details; inspect any failure privately before retrying. The normal system check above permits the protected bootstrap; the stricter deployment check is reserved for verified proxy configuration below. Do not use `release.py migrate` at this stage: that command requires the proxy flag already verified and enabled.
+
+Continue only after `Bootstrap database ready.`; otherwise stop and inspect the failure privately. In Vercel **Deployments → Create Deployment**, enter the **exact verified commit SHA**, selecting the `main`/Production configuration if prompted. Confirm the result is a protected Production deployment of that SHA; do not substitute a moving branch reference. [Deployment from a Git reference](https://vercel.com/docs/git#creating-a-deployment-from-a-git-reference) documents this dashboard path. Keep All Deployments authentication and the Actions opt-in off while authorized observers collect evidence.
+
+### 5. Complete the live gate, then approve public release
+
+Follow the existing [release-verification checklist](../workflow/specs/TECHNICAL-SPEC.md#release-verification) and privately inspect the protected application/database. Record commit, URL and pass/fail observations, excluding secrets, credentials, raw addresses and stored hashes:
+
+- From two external clients, verify the actual client-address behavior under the specified forged forwarding headers and establish that requests never use the `unknown` counter key. Keep `REMOTE_ADDR` behavior unchanged; if it fails, stop release and agree the smallest needed adapter separately.
+- Observe the actual forwarded-protocol behavior before changing proxy trust. After it passes, change Vercel's flag to `true` and create another protected deployment of the same verified SHA so the new environment value takes effect. In a fresh secret-loaded operator terminal, set the corresponding flag true and run `python src/manage.py check --deploy --fail-level WARNING --settings=relay.settings.production` with output suppressed as above; require success.
+- Confirm actual function timeout, database connection limit/pooler mode and the database-side **`demo-total` lock-hold duration**, including sample-round creation. Whole HTTP request duration is not a substitute for lock-hold time. This repository supplies no measurement/diagnostics service; if the required observation cannot be established, keep release disabled and arrange a bounded measurement procedure separately.
+- Inspect actual application HTTPS responses for the [required production headers/cookies and smoke contract](../workflow/specs/TECHNICAL-SPEC.md#release-verification). [Vercel adds response headers](https://vercel.com/docs/headers/response-headers), so its platform defaults do not prove the Django response matches the contract. Authorized browser inspection is distinct from anonymous public smoke verification; do not run the local synthetic browser harness against production.
+
+Hosted observations and human approval remain pending until actually recorded. After all gates pass and the human explicitly approves release, changing protection to **Standard Protection** makes the existing production deployment public: treat that settings change as a release action. Keep generated/preview deployments protected. Then set the repository Actions variable `PRODUCTION_DEPLOY_ENABLED=true`. The next push to `main` must pass verification and receive production-environment approval before its checked commit can deploy; the bootstrap does not itself trigger this job. Record the actual public deployment and smoke outcome separately from local test evidence.
+
+### Delivery failures
+
+The [delivery helper](../src/release.py) reports a stage, commit and known deployment ID; inspect the corresponding Actions/Vercel/Neon state privately. A configuration/migration failure prevents the workflow's deployment step. After an ambiguous creation timeout, inspect Vercel for that SHA before deciding whether to retry. A ready deployment with a mismatched source/alias or failed smoke check is a failed delivery, even if it is serving. Previously committed migrations remain; there is no automatic reversal or rollback. Keep incompatible/destructive migrations out of this path until their rollout is separately agreed.
+
 ## Development workflow
 
 How we work, and what each file in `workflow/` is for, is in [`workflow/README.md`](../workflow/README.md). Product behaviour belongs in [`workflow/specs/`](../workflow/specs/PRODUCT-SPEC.md); short slice plans belong in `workflow/plans/`. Tool adapters in `.claude/`, `.codex/` and `.agents/skills/` load the shared role and skill files. Workflow scripts and their tests live in `workflow/scripts/`.
@@ -125,5 +211,7 @@ The product-site scaffold uses GitHub's [Cayman theme](https://github.com/pages-
 Static-site delivery uses GitHub's official [Jekyll build](https://github.com/actions/jekyll-build-pages), [artifact upload](https://github.com/actions/upload-pages-artifact) and [Pages deployment](https://github.com/actions/deploy-pages) actions.
 
 Browser verification uses Microsoft's [Playwright Python library](https://github.com/microsoft/playwright-python) and GitHub's official [artifact upload action](https://github.com/actions/upload-artifact).
+
+Production setup follows Vercel's [native Django deployment](https://vercel.com/docs/frameworks/full-stack/django), [deployment API](https://vercel.com/docs/rest-api/deployments/create-a-new-deployment), [alias API](https://vercel.com/docs/rest-api/aliases/get-an-alias) and [deployment protection](https://vercel.com/docs/deployment-protection) documentation, and Neon's [project](https://neon.com/docs/manage/projects) and [pooled/direct connection](https://neon.com/docs/connect/connection-pooling) guidance.
 
 The tool adapters follow the official [Codex agent documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents). Usage collection draws on [Codex JSONL output](https://learn.chatgpt.com/docs/non-interactive-mode), [Claude Code output](https://code.claude.com/docs/en/headless) and [Claude cache accounting](https://platform.claude.com/docs/en/build-with-claude/prompt-caching). Local session-file parsing also depends on observed runtime formats and must be rechecked when clients change.
