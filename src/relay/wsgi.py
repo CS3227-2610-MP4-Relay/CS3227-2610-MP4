@@ -1,4 +1,4 @@
-"""WSGI entry point for local development; no hosted settings are supplied."""
+"""WSGI entry point; hosted operators explicitly select production settings."""
 
 import os
 
