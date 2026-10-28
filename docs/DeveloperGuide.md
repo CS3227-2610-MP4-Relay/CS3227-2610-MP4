@@ -53,7 +53,13 @@ docker run --rm -d --name relay-test-db \
   -p 127.0.0.1:55432:5432 postgres:17.6
 ```
 
-Wait for PostgreSQL to accept connections. From the repository root with `.venv` active, run in Git Bash (or another POSIX shell):
+Wait for PostgreSQL to accept connections. With `.venv` active, install Chromium after installing the development dependencies, and repeat after upgrading Playwright:
+
+```bash
+python -m playwright install chromium
+```
+
+On Linux, use `python -m playwright install --with-deps chromium` to install its system prerequisites too, as CI does. From the repository root, run in Git Bash (or another POSIX shell):
 
 ```bash
 python src/manage.py check --settings=relay.settings.test
@@ -61,6 +67,20 @@ ruff check . && ruff format --check . && pytest
 ```
 
 Pytest creates and destroys `test_relay_test`, applying all migrations; it never selects the normal local database. Test settings use a fast password hasher; other settings keep Django's default. Stop the optional test container with `docker stop relay-test-db`. CI provisions its own PostgreSQL service and runs the same checks. The workflow's own tests under `workflow/scripts/` still need no database. A local pass does not establish that hosted CI has run.
+
+To run only the browser journeys against the same test database:
+
+```bash
+pytest src/e2e -q
+```
+
+Failed browser tests save `browser-failure.png` and `browser-trace.zip` in their pytest temporary directory, normally beneath the system temporary directory's `pytest-of-<user>/pytest-<run>/` folder. Open the screenshot directly; inspect the trace with its actual path:
+
+```bash
+python -m playwright show-trace "/path/to/browser-trace.zip"
+```
+
+In CI, download the `browser-failure-diagnostics` artifact from the failed workflow run; its files come from `${RUNNER_TEMP}/relay-pytest/`. These checks use synthetic data on loopback HTTP; their limits and diagnostic retention are in [Browser verification](../workflow/specs/TECHNICAL-SPEC.md#browser-verification).
 
 ## Development workflow
 
@@ -103,5 +123,7 @@ Relay's development workflow, tooling and repository conventions were adapted fr
 The product-site scaffold uses GitHub's [Cayman theme](https://github.com/pages-themes/cayman). Relay uses [Django](https://www.djangoproject.com/) and [PostgreSQL](https://www.postgresql.org/) and plans to use [SoC LLM](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). Local/CI container examples use the [official PostgreSQL image](https://hub.docker.com/_/postgres), whose [17.6 tag](https://hub.docker.com/layers/library/postgres/17.6/) was verified for this slice. Record any further reused external ideas, code or documentation here as they are adopted.
 
 Static-site delivery uses GitHub's official [Jekyll build](https://github.com/actions/jekyll-build-pages), [artifact upload](https://github.com/actions/upload-pages-artifact) and [Pages deployment](https://github.com/actions/deploy-pages) actions.
+
+Browser verification uses Microsoft's [Playwright Python library](https://github.com/microsoft/playwright-python) and GitHub's official [artifact upload action](https://github.com/actions/upload-artifact).
 
 The tool adapters follow the official [Codex agent documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents). Usage collection draws on [Codex JSONL output](https://learn.chatgpt.com/docs/non-interactive-mode), [Claude Code output](https://code.claude.com/docs/en/headless) and [Claude cache accounting](https://platform.claude.com/docs/en/build-with-claude/prompt-caching). Local session-file parsing also depends on observed runtime formats and must be rechecked when clients change.
