@@ -1,13 +1,16 @@
 """Opt-in production delivery helpers; never log credentials or remote bodies."""
 
+import io
 import json
 import os
 import re
 import subprocess
 import sys
+import tarfile
+import tempfile
 import time
 from http.cookies import SimpleCookie
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from urllib.error import HTTPError
 from urllib.parse import urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
@@ -24,18 +27,10 @@ class NoRedirect(HTTPRedirectHandler):
 OPENER = build_opener(ProxyHandler({}), NoRedirect())
 
 
-def request(
-    url, *, token=None, payload=None, timeout=30, limit=1048576, expected_404=False
-):
+def request(url, *, token=None, timeout=30, limit=1048576, expected_404=False):
     """Read one bounded HTTPS response, with no redirects or application retries."""
     headers = {"Authorization": f"Bearer {token}"} if token else {}
-    data = None
-    if payload is not None:
-        data = json.dumps(payload).encode()
-        headers["Content-Type"] = "application/json"
-    outgoing = Request(
-        url, data=data, headers=headers, method="POST" if data else "GET"
-    )
+    outgoing = Request(url, headers=headers, method="GET")
     try:
         response = OPENER.open(outgoing, timeout=timeout)
     except HTTPError as error:
@@ -56,11 +51,87 @@ def _required(name, pattern=None):
     return value
 
 
-def _api(path, token, query, payload=None, timeout=30):
+def _git(*arguments):
+    return subprocess.run(
+        ["git", "--literal-pathspecs", *arguments],
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        check=True,
+        timeout=60,
+    ).stdout
+
+
+def _source_path(name):
+    path = PurePosixPath(name)
+    if path.is_absolute() or ".." in path.parts or "\\" in name:
+        raise ValueError("Unsafe archive path")
+    return path
+
+
+def prepare(sha, destination):
+    """Extract only committed build inputs into a fresh deployment directory."""
+    required = {
+        "requirements.txt",
+        ".python-version",
+        "pyproject.toml",
+        "vercel.json",
+        "src/manage.py",
+        "src/relay/wsgi.py",
+    }
+    roots = sorted(required - {"src/relay/wsgi.py"}) + [
+        "src/relay",
+        "src/accounts",
+        "src/rounds",
+    ]
+    excluded = {
+        "tests",
+        "e2e",
+        ".git",
+        ".gitignore",
+        ".gitattributes",
+        ".gitmodules",
+        ".vercel",
+        ".venv",
+        "venv",
+        "__pycache__",
+        ".pytest_cache",
+        ".ruff_cache",
+    }
+    paths = []
+    for entry in _git("ls-tree", "-rz", "--full-tree", sha, "--", *roots).split(b"\0"):
+        if not entry:
+            continue
+        metadata, name = entry.split(b"\t", 1)
+        path = _source_path(name.decode())
+        if any(
+            part.lower() in excluded
+            or part.lower() == ".env"
+            or part.lower().startswith(".env.")
+            for part in path.parts
+        ) or path.suffix.lower() in {".pyc", ".pyo"}:
+            continue
+        if metadata.split()[0] not in {b"100644", b"100755"}:
+            raise ValueError("Non-regular build input")
+        paths.append(path.as_posix())
+    if not required <= set(paths):
+        raise ValueError("Missing build inputs")
+    archive = _git("archive", "--format=tar", sha, "--", *paths)
+    with tarfile.open(fileobj=io.BytesIO(archive)) as bundle:
+        members = bundle.getmembers()
+        for member in members:
+            _source_path(member.name)
+            if not member.isfile() and not member.isdir():
+                raise ValueError("Non-regular archive entry")
+        if {member.name for member in members if member.isfile()} != set(paths):
+            raise ValueError("Archive input mismatch")
+        destination.mkdir()
+        bundle.extractall(destination, filter="data")
+
+
+def _api(path, token, query, timeout=30):
     status, _, body = request(
         f"https://api.vercel.com{path}?{urlencode(query)}",
         token=token,
-        payload=payload,
         timeout=timeout,
     )
     if not 200 <= status < 300:
@@ -71,19 +142,18 @@ def _api(path, token, query, payload=None, timeout=30):
     return result
 
 
-def _ready(deployment, sha, project, token, query):
+def _ready(deployment, project, token, query):
     deadline = time.monotonic() + 600
     while (remaining := deadline - time.monotonic()) > 0:
         result = _api(
             f"/v13/deployments/{deployment}",
             token,
-            {**query, "withGitRepoInfo": "true"},
+            query,
             timeout=min(30, remaining),
         )
         if result.get("readyState") == "READY":
             if (
-                result.get("gitSource", {}).get("sha") != sha
-                or result.get("projectId") != project
+                result.get("projectId") != project
                 or result.get("target") != "production"
                 or time.monotonic() >= deadline
             ):
@@ -125,7 +195,7 @@ def _smoke(host):
 
 
 def main(arguments=None):
-    """Run migrations or deploy; emit fixed stages and validated identifiers only."""
+    """Prepare source, migrate or deploy; emit fixed stages and validated IDs."""
     stage, sha, deployment = "configuration", "unavailable", "unknown"
     try:
         sha = _required("GITHUB_SHA", r"[0-9a-f]{40}")
@@ -153,35 +223,50 @@ def main(arguments=None):
                     check=True,
                     timeout=300,
                 )
+        elif len(arguments) == 2 and arguments[0] == "prepare":
+            stage = "preparation"
+            prepare(sha, Path(arguments[1]))
         elif arguments == ["deploy"]:
             token = _required("VERCEL_TOKEN")
             project = _required("VERCEL_PROJECT_ID", r"prj_[A-Za-z0-9]+")
             query = {"teamId": _required("VERCEL_TEAM_ID", r"team_[A-Za-z0-9]+")}
-            org, repo = _required(
-                "GITHUB_REPOSITORY", r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"
-            ).split("/")
             host = _required(
                 "DJANGO_PRODUCTION_HOST",
                 r"[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,63}",
             )
-            stage = "creation"
-            created = _api(
-                "/v13/deployments",
-                token,
-                query,
-                {
-                    "name": "relay",
-                    "project": project,
-                    "target": "production",
-                    "gitSource": {
-                        "type": "github",
-                        "ref": "main",
-                        "org": org,
-                        "repo": repo,
-                        "sha": sha,
-                    },
-                },
-            )
+            with tempfile.TemporaryDirectory() as temporary:
+                source = Path(temporary) / "source"
+                stage = "preparation"
+                prepare(sha, source)
+                stage = "creation"
+                result = subprocess.run(
+                    [
+                        "vercel",
+                        "deploy",
+                        "--prod",
+                        "--yes",
+                        "--no-wait",
+                        "--force",
+                        "--cwd",
+                        str(source),
+                        "--global-config",
+                        str(Path(temporary) / "config"),
+                        "--token",
+                        token,
+                    ],
+                    cwd=str(source),
+                    env={**os.environ, "VERCEL_ORG_ID": query["teamId"]},
+                    capture_output=True,
+                    check=True,
+                    text=True,
+                    timeout=300,
+                )
+                url = re.fullmatch(
+                    r"https://([a-z0-9][a-z0-9-]*\.vercel\.app)", result.stdout.strip()
+                )
+                if not url:
+                    raise ValueError("Invalid deployment URL")
+                created = _api(f"/v13/deployments/{url[1]}", token, query)
             candidate_id = created.get("id", "")
             if not isinstance(candidate_id, str) or not re.fullmatch(
                 r"dpl_[A-Za-z0-9]+", candidate_id
@@ -189,7 +274,7 @@ def main(arguments=None):
                 raise ValueError("Invalid deployment identifier")
             deployment = candidate_id
             stage = "readiness"
-            _ready(deployment, sha, project, token, query)
+            _ready(deployment, project, token, query)
             stage = "alias"
             alias = _api(f"/v4/aliases/{host}", token, {**query, "projectId": project})
             if (

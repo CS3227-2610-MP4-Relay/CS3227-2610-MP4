@@ -1,6 +1,7 @@
 import io
 import json
 import subprocess
+import tarfile
 from email.message import Message
 from urllib.error import HTTPError, URLError
 
@@ -27,10 +28,14 @@ class Response(io.BytesIO):
 
 
 @pytest.fixture
-def setup(monkeypatch):
+def cli_calls():
+    return []
+
+
+@pytest.fixture
+def setup(monkeypatch, cli_calls):
     values = {
         "GITHUB_SHA": SHA,
-        "GITHUB_REPOSITORY": "example/relay",
         "VERCEL_TOKEN": "synthetic-token-never-print",
         "VERCEL_PROJECT_ID": "prj_synthetic",
         "VERCEL_TEAM_ID": "team_synthetic",
@@ -41,7 +46,17 @@ def setup(monkeypatch):
     for name, value in values.items():
         monkeypatch.setenv(name, value)
     monkeypatch.setattr(release.time, "sleep", lambda _: None)
-    monkeypatch.setattr(release.subprocess, "run", lambda *a, **k: None)
+
+    def cli(command, **options):
+        cli_calls.append((command, options))
+        return subprocess.CompletedProcess(
+            command, 0, "https://relay-test.vercel.app\n"
+        )
+
+    monkeypatch.setattr(release.subprocess, "run", cli)
+    monkeypatch.setattr(
+        release, "prepare", lambda sha, path: path.mkdir(), raising=False
+    )
     calls = []
     replies = []
 
@@ -62,7 +77,6 @@ def ready(**changes):
         "readyState": "READY",
         "projectId": "prj_synthetic",
         "target": "production",
-        "gitSource": {"sha": SHA},
         **changes,
     }
 
@@ -92,23 +106,27 @@ def success(replies):
 
 
 @pytest.mark.ac("PLT-1.10", "PLT-1.12", "PLT-1.13")
-def test_exact_verified_source_and_bounded_anonymous_smoke(setup, capsys):
+def test_cli_upload_and_bounded_anonymous_smoke(setup, capsys, cli_calls):
     calls, replies = setup
     success(replies)
     assert release.main(["deploy"]) == 0
-    creation = calls[0][0]
-    assert creation.method == "POST"
-    payload = json.loads(creation.data)
-    assert payload["target"] == "production"
-    assert payload["project"] == "prj_synthetic"
-    assert payload["gitSource"] == {
-        "type": "github",
-        "ref": "main",
-        "org": "example",
-        "repo": "relay",
-        "sha": SHA,
-    }
-    assert "withGitRepoInfo=true" in calls[1][0].full_url
+    assert len(cli_calls) == 1
+    command, options = cli_calls[0]
+    assert {
+        "deploy",
+        "--prod",
+        "--yes",
+        "--no-wait",
+        "--force",
+        "--global-config",
+    } <= set(command)
+    assert options["cwd"] == command[command.index("--cwd") + 1]
+    assert options["env"]["VERCEL_ORG_ID"] == "team_synthetic"
+    assert options["env"]["VERCEL_PROJECT_ID"] == "prj_synthetic"
+    assert options["capture_output"] is True and options["timeout"] <= 300
+    assert "relay-test.vercel.app" in calls[0][0].full_url
+    assert all(request.method == "GET" for request, _ in calls)
+    assert all("withGitRepoInfo" not in request.full_url for request, _ in calls)
     assert [request.full_url for request, _ in calls[4:]] == [
         "https://relay.example.com/",
         "https://relay.example.com/sign-in/",
@@ -174,8 +192,6 @@ def test_migration_refuses_pooled_endpoint_or_unverified_proxy(
 @pytest.mark.parametrize(
     "result",
     [
-        ready(gitSource={"sha": "b" * 40}),
-        ready(gitSource={}),
         ready(projectId="prj_other"),
         ready(target="preview"),
         ready(readyState="ERROR"),
@@ -183,7 +199,7 @@ def test_migration_refuses_pooled_endpoint_or_unverified_proxy(
         ready(readyState="UNEXPECTED"),
     ],
 )
-def test_source_failure_or_terminal_failure_never_reaches_smoke(setup, result):
+def test_identity_or_terminal_failure_never_reaches_smoke(setup, result):
     calls, replies = setup
     replies.extend([api({"id": "dpl_synthetic"}), api(result)])
     assert release.main(["deploy"]) == 1
@@ -201,26 +217,29 @@ def test_source_failure_or_terminal_failure_never_reaches_smoke(setup, result):
     ],
 )
 def test_ambiguous_creation_is_not_repeated_and_diagnostics_are_safe(
-    setup, capsys, failure
+    setup, capsys, failure, cli_calls
 ):
     calls, replies = setup
     replies.append(failure)
     assert release.main(["deploy"]) == 1
     assert len(calls) == 1
+    assert len(cli_calls) == 1
     output = capsys.readouterr()
     assert "stage=creation" in output.err
     assert "synthetic-token-never-print" not in str(output)
 
 
 @pytest.mark.ac("PLT-1.12")
-def test_polling_deadline_fails_without_smoke_or_another_creation(setup, monkeypatch):
+def test_polling_deadline_fails_without_smoke_or_another_creation(
+    setup, monkeypatch, cli_calls
+):
     calls, replies = setup
     replies.extend([api({"id": "dpl_synthetic"}), api(ready(readyState="BUILDING"))])
     ticks = iter([0, 0, 601])
     monkeypatch.setattr(release.time, "monotonic", lambda: next(ticks, 601))
     assert release.main(["deploy"]) == 1
     assert len(calls) <= 2
-    assert sum(request.method == "POST" for request, _ in calls) == 1
+    assert len(cli_calls) == 1
 
 
 @pytest.mark.ac("PLT-1.13")
@@ -348,7 +367,6 @@ def test_public_alias_must_point_at_the_new_deployment(setup, changes):
     "name,value",
     [
         ("GITHUB_SHA", "untrusted\n::error::payload"),
-        ("GITHUB_REPOSITORY", "untrusted\n::error::payload"),
         ("VERCEL_PROJECT_ID", "untrusted\n::error::payload"),
         ("VERCEL_TEAM_ID", "untrusted\n::error::payload"),
         ("DJANGO_PRODUCTION_HOST", "https://foreign.invalid/path"),
@@ -404,3 +422,171 @@ def test_ready_response_at_deadline_is_too_late(setup, monkeypatch, elapsed, val
     ticks = iter([0, 0, elapsed])
     monkeypatch.setattr(release.time, "monotonic", lambda: next(ticks, elapsed))
     assert release.main(["deploy"]) == (0 if valid else 1)
+
+
+@pytest.fixture
+def committed(monkeypatch):
+    files = dict.fromkeys(
+        [
+            "requirements.txt",
+            ".python-version",
+            "pyproject.toml",
+            "vercel.json",
+            "src/manage.py",
+            "src/relay/wsgi.py",
+            "src/accounts/models.py",
+        ],
+        ("100644", b"committed bytes"),
+    )
+    calls, extras = [], []
+
+    def git(*arguments):
+        calls.append(arguments)
+        assert SHA in arguments
+        if arguments[0] == "ls-tree":
+            return (
+                b"\0".join(
+                    f"{mode} blob {'b' * 40}\t{path}".encode()
+                    for path, (mode, _) in files.items()
+                )
+                + b"\0"
+            )
+        assert arguments[0] == "archive"
+        output = io.BytesIO()
+        with tarfile.open(fileobj=output, mode="w") as archive:
+            for path in arguments[arguments.index("--") + 1 :]:
+                assert not any(part.startswith(".env") for part in path.split("/"))
+                body = files[path][1]
+                member = tarfile.TarInfo(path)
+                member.size = len(body)
+                archive.addfile(member, io.BytesIO(body))
+            for member in extras:
+                archive.addfile(member)
+        return output.getvalue()
+
+    monkeypatch.setattr(release, "_git", git, raising=False)
+    return files, calls, extras
+
+
+@pytest.mark.ac("PLT-1.10")
+@pytest.mark.parametrize(
+    "excluded",
+    [
+        "src/relay/.env",
+        "src/relay/.env.production",
+        "src/relay/.ENV.local",
+        "src/relay/tests/test_private.py",
+        "src/relay/.git/config",
+        "src/relay/.vercel/project.json",
+        "src/relay/.venv/pyvenv.cfg",
+        "src/relay/__pycache__/local.pyc",
+        "src/relay/local.pyc",
+    ],
+)
+def test_archive_reads_only_filtered_committed_inputs(
+    committed, monkeypatch, tmp_path, excluded
+):
+    files, calls, _ = committed
+    files[excluded] = ("100644", b"excluded")
+    working = tmp_path / "work/src"
+    working.mkdir(parents=True)
+    (working / "manage.py").write_text("dirty uncommitted bytes")
+    (working / "local-artifact.txt").write_text("untracked")
+    monkeypatch.setattr(release, "__file__", str(working / "release.py"))
+    destination = tmp_path / "source"
+    release.prepare(SHA, destination)
+    assert (destination / "src/manage.py").read_bytes() == b"committed bytes"
+    assert not (destination / excluded).exists()
+    assert not (destination / "src/local-artifact.txt").exists()
+    assert excluded not in calls[1]
+
+
+@pytest.mark.ac("PLT-1.10")
+@pytest.mark.parametrize(
+    "invalid", ["symlink", "submodule", "parent", "missing", "tarlink", "tardir"]
+)
+def test_unsafe_or_incomplete_source_archive_is_refused(committed, tmp_path, invalid):
+    files, _, extras = committed
+    if invalid in {"symlink", "submodule"}:
+        files["src/relay/linked.py"] = (
+            "120000" if invalid == "symlink" else "160000",
+            b"target",
+        )
+    elif invalid == "parent":
+        files["src/relay/../../outside"] = ("100644", b"outside")
+    elif invalid == "missing":
+        files.pop("requirements.txt")
+    else:
+        member = tarfile.TarInfo(
+            "../outside" if invalid == "tardir" else "src/relay/link"
+        )
+        member.type = tarfile.DIRTYPE if invalid == "tardir" else tarfile.SYMTYPE
+        member.linkname = "../../outside"
+        extras.append(member)
+    with pytest.raises(ValueError):
+        release.prepare(SHA, tmp_path / "source")
+    assert not (tmp_path / "outside").exists()
+
+
+@pytest.mark.ac("PLT-1.10")
+def test_prepare_command_needs_no_provider_secret_and_does_not_overwrite(
+    committed, monkeypatch, tmp_path
+):
+    monkeypatch.setenv("GITHUB_SHA", SHA)
+    monkeypatch.delenv("VERCEL_TOKEN", raising=False)
+    destination = tmp_path / "source"
+    assert release.main(["prepare", str(destination)]) == 0
+    with pytest.raises(FileExistsError):
+        release.prepare(SHA, destination)
+    assert (destination / "src/manage.py").read_bytes() == b"committed bytes"
+
+
+@pytest.mark.ac("PLT-1.12")
+@pytest.mark.parametrize(
+    "outcome", ["failure", "timeout", "foreign", "userinfo", "multiple"]
+)
+def test_cli_failure_or_unsafe_url_is_private_and_never_retried(
+    setup, monkeypatch, capsys, outcome
+):
+    calls, _ = setup
+    attempts = []
+
+    def cli(command, **options):
+        attempts.append(command)
+        if outcome == "failure":
+            raise subprocess.CalledProcessError(
+                1, command, stderr="synthetic-token-never-print"
+            )
+        if outcome == "timeout":
+            raise subprocess.TimeoutExpired(
+                command, 300, stderr="synthetic-token-never-print"
+            )
+        output = {
+            "foreign": "https://foreign.invalid",
+            "userinfo": "https://token@a.vercel.app",
+            "multiple": "https://a.vercel.app\nhttps://b.vercel.app",
+        }[outcome]
+        return subprocess.CompletedProcess(command, 0, output)
+
+    monkeypatch.setattr(release.subprocess, "run", cli)
+    assert release.main(["deploy"]) == 1
+    assert len(attempts) == 1 and calls == []
+    output = capsys.readouterr()
+    assert "stage=creation" in output.err and "synthetic-token-never-print" not in str(
+        output
+    )
+
+
+@pytest.mark.ac("PLT-1.10")
+def test_git_archive_selects_literal_filenames(monkeypatch):
+    commands = []
+
+    def run(command, **options):
+        commands.append(command)
+        return subprocess.CompletedProcess(command, 0, b"archive")
+
+    monkeypatch.setattr(release.subprocess, "run", run)
+    assert release._git("archive", SHA, "--", "src/relay/*") == b"archive"
+    assert commands == [
+        ["git", "--literal-pathspecs", "archive", SHA, "--", "src/relay/*"]
+    ]

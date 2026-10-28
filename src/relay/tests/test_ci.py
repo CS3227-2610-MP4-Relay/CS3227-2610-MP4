@@ -88,6 +88,10 @@ def test_production_job_is_opt_in_verified_main_only_and_secret_scoped():
     install, migration = production.split("      - name: Check and migrate", 1)
     migration, deploy = migration.split("      - name: Deploy and smoke", 1)
     assert "secrets." not in install
+    assert "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e" in install
+    assert 'node-version: "24.18.0"' in install
+    assert "package-manager-cache: false" in install
+    assert "npm install --global vercel@64.3.1" in install
     assert "VERCEL_TOKEN" not in migration
     assert (
         "secrets.DATABASE_URL" in migration and "secrets.DJANGO_SECRET_KEY" in migration
