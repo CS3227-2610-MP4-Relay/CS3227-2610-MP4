@@ -120,7 +120,7 @@ For step 4, enter these values in the dashboard:
 
 ### 3. Configure GitHub release access
 
-In repository **Settings → Environments**, create `production`: restrict deployments to selected branch `main` and add a required human reviewer. The workflow alone does not create these restrictions. Leave the existing `github-pages` environment unchanged. Add these environment entries; do not use repository-wide production secrets.
+In repository **Settings → Environments**, create or open `production`: restrict deployments to selected branch `main` and leave **Required reviewers** unchecked. Do not add a wait timer or another manual deployment gate. The workflow alone does not create these restrictions. Keep the default branch's pull request review and verification controls; leave the existing `github-pages` environment unchanged. Add these environment entries; do not use repository-wide production secrets.
 
 | Location in GitHub | Name | Value |
 | --- | --- | --- |
@@ -130,7 +130,7 @@ In repository **Settings → Environments**, create `production`: restrict deplo
 | `production` variable | `DJANGO_PRODUCTION_HOST` | Same hostname as Vercel |
 | `production` variable | `VERCEL_PROJECT_ID` | Project Settings ID, beginning `prj_` |
 | `production` variable | `VERCEL_TEAM_ID` | Owning team Settings ID, beginning `team_` |
-| Repository Actions variable | `PRODUCTION_DEPLOY_ENABLED` | Leave unset or `false` until the release gate and explicit approval are complete |
+| Repository Actions variable | `PRODUCTION_DEPLOY_ENABLED` | Leave unset or `false` until the initial release gate and explicit public activation approval are complete |
 
 Create the token through [Vercel account token settings](https://vercel.com/account/settings/tokens); [Vercel's token guidance](https://vercel.com/kb/guide/how-do-i-use-a-vercel-api-access-token) explains team scope. Store it in GitHub's production secret, not the application runtime. Keep `VERCEL_TEAM_ID` as the external setting: the helper maps it to CLI `VERCEL_ORG_ID`. Source assurance comes from the tested commit's clean archive, not provider Git metadata. No GitHub token, repository-ID variable or Neon API key is needed.
 
@@ -199,7 +199,7 @@ Follow the existing [release-verification checklist](../workflow/specs/TECHNICAL
 - Confirm actual function timeout, database connection limit/pooler mode and the database-side **`demo-total` lock-hold duration**, including sample-round creation. Whole HTTP request duration is not a substitute for lock-hold time. This repository supplies no measurement/diagnostics service; if the required observation cannot be established, keep release disabled and arrange a bounded measurement procedure separately.
 - Inspect actual application HTTPS responses for the [required production headers/cookies and smoke contract](../workflow/specs/TECHNICAL-SPEC.md#release-verification). [Vercel adds response headers](https://vercel.com/docs/headers/response-headers), so its platform defaults do not prove the Django response matches the contract. Authorized browser inspection is distinct from anonymous public smoke verification; do not run the local synthetic browser harness against production.
 
-Hosted observations and human approval remain pending until actually recorded. After all gates pass and the human explicitly approves release, changing protection to **Standard Protection** makes the existing production deployment public: treat that settings change as a release action. Keep generated/preview deployments protected. Then set the repository Actions variable `PRODUCTION_DEPLOY_ENABLED=true`. The next push to `main` must pass verification and receive production-environment approval before its checked commit can deploy; the bootstrap does not itself trigger this job. Record the actual public deployment and smoke outcome separately from local test evidence.
+Hosted observations and initial public activation approval remain pending until actually recorded. After all gates pass and the human explicitly approves initial release, changing protection to **Standard Protection** makes the existing production deployment public: treat that settings change as a release action. Keep generated/preview deployments protected. Then set the repository Actions variable `PRODUCTION_DEPLOY_ENABLED=true`. Thereafter, approval and merge of a pull request authorize automatic deployment once application and site verification pass in that resulting main-push run; no second environment approval or manual trigger is needed. Review migration compatibility with the still-serving application in the pull request before approval and merge. The bootstrap does not itself trigger this job. Record the actual public deployment and smoke outcome separately from local test evidence.
 
 ### Delivery failures
 

@@ -30,6 +30,7 @@ The initial configuration/delivery/documentation checkpoints are recorded below.
 
 1. **Specs and plan** (`spec:` then `plan:`): clarify PLT-1.9/1.14 and technical/security contracts; read back, check whitespace/scope, yield before guide edits. No new criterion, source behavior or dependency; current YAML already supplies the automatic main-push path.
 2. **Guide correction** (`docs:`): separately update operator environment setup and later-merge instructions, preserving initial protected bootstrap/public activation and private failure inspection. Coordinator then freezes for focused independent review and exact-head CI. Final whole-slice budget remains 1,650 lines, source 400; start `25402d8ca2da0bab9fc1f9cfd242aeb98e1f2d09` (1,600 total/389 source), snapshot `%TEMP%/relay-5-automatic-spec.json`, coordinator usage `%TEMP%/relay-5-automatic-usage-before.json`.
+- Specs/plan committed `6fba884`/`f254cf69e91f9db3cda98bc4b5c24fa095d5833d`; guide correction uses `%TEMP%/relay-5-automatic-docs.json`. `pytest src/relay/tests/test_ci.py -q`: three passed; guide readback, approval-language search, whitespace and scope passed. No command fences, links, code or hosted settings changed. Coordinator's final candidate review/CI remain next; initial hosted gates remain pending.
 
 ## Evidence and next step
 
