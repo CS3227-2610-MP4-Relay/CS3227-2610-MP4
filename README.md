@@ -7,6 +7,7 @@ Relay has a local Django app with demo workspaces that start with a sample draft
 - [Product website](https://cs3227-2610-mp4-relay.github.io/CS3227-2610-MP4/)
 - [User Guide](docs/UserGuide.md)
 - [Developer Guide](docs/DeveloperGuide.md)
+- [Production setup and pending release gates](docs/DeveloperGuide.md#production-deployment)
 - [Reflections](docs/Reflections.md)
 
 ## How we build it
