@@ -2,27 +2,33 @@
 
 Slice: #80 · Tier: High · Tool: Codex · Orchestrator model: gpt-6-astra / xhigh (observed session metadata) · Date: 2026-10-28
 
-Tokens: 26,439,127 input, 77,942 output, 26,517,069 total; measurement cutoff 2026-10-28 11:47:03 Singapore time.
+Tokens: 31,501,069 input, 101,299 output, 31,602,368 total; measurement cutoff 2026-10-28 12:06:48 Singapore time.
 
 | Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Orchestrator — gpt-6-astra/xhigh, `codex:ffcd7a69cdc3e787e151a81d` | 13,945,991 | 13,718,400 | 29,647 | 11,334 | 13,975,638 | 11:14:05–11:47:03 |
-| Builder — gpt-6.1-sol/medium, `codex:56132305297ee693fa7ab007` | 6,367,845 | 6,247,808 | 30,395 | 8,154 | 6,398,240 | 11:14:58–11:47:03 |
-| Verifier — gpt-6.1-sol/high, `codex:e9e98eaa81b6cdd497d87fd6` | 2,240,288 | 2,141,440 | 8,612 | 2,240 | 2,248,900 | 11:24:26–11:47:03 |
-| Security reviewer — gpt-6.1-sol/high, `codex:46c80027c0693aac4104bb02` | 2,248,601 | 2,162,304 | 6,904 | 1,348 | 2,255,505 | 11:24:37–11:47:03 |
-| Automatic approval reviewer — codex-auto-review/low, `codex:40097aa0250115c6b81fc8c7` | 1,636,402 | 1,517,440 | 2,384 | 760 | 1,638,786 | 11:14:12–11:47:03 |
+| Orchestrator — gpt-6-astra/xhigh, `codex:ffcd7a69cdc3e787e151a81d` | 18,093,334 | 17,799,936 | 51,277 | 20,327 | 18,144,611 | 11:14:05–12:06:48 |
+| Builder — gpt-6.1-sol/medium, `codex:56132305297ee693fa7ab007` | 6,367,845 | 6,247,808 | 30,395 | 8,154 | 6,398,240 | 11:14:58–12:06:48 |
+| Verifier — gpt-6.1-sol/high, `codex:e9e98eaa81b6cdd497d87fd6` | 2,240,288 | 2,141,440 | 8,612 | 2,240 | 2,248,900 | 11:24:26–12:06:48 |
+| Security reviewer — gpt-6.1-sol/high, `codex:46c80027c0693aac4104bb02` | 2,248,601 | 2,162,304 | 6,904 | 1,348 | 2,255,505 | 11:24:37–12:06:48 |
+| Automatic approval reviewer — codex-auto-review/low, `codex:40097aa0250115c6b81fc8c7` | 2,352,240 | 1,989,120 | 2,844 | 869 | 2,355,084 | 11:14:12–12:06:48 |
+| Workflow-rule verifier — gpt-6.1-sol/high, `codex:6c93d5651caf3a639ecb3ea7` | 145,499 | 99,328 | 1,038 | 218 | 146,537 | 12:05:02–12:06:48 |
+| Follow-up approval reviewer — codex-auto-review/low, `codex:258f26963b3c2cfd189d675b` | 53,262 | 31,104 | 229 | 111 | 53,491 | 12:06:21–12:06:48 |
 
-Three delegated role sessions were reused across checkpoints; the client also ran one automatic approval-review session. Models/efforts above were observed in session metadata and matched the role settings. `resource_usage.py report` included the coordinator and discovered children, reported no warnings and a 1,978.09-second measured interval. Spans include idle time through the collector cutoff. The initial coordinator inspection before the baseline and closeout/CI work after the cutoff are excluded; child sessions began after the baseline. One harness implementation repair occurred; no independent-review repair rounds. See [token reporting](../../workflow/README.md#token-reporting).
+Three delegated role sessions were reused across implementation checkpoints; a fourth, fresh verifier reviewed the later workflow-rule change. The client also ran two automatic approval-review sessions. Models/efforts above were observed in session metadata and matched the role settings. `resource_usage.py report` included the coordinator and discovered children, reported no warnings and a 3,163.09-second measured interval. Spans include idle time through the collector cutoff. The initial coordinator inspection before the baseline and work after the cutoff are excluded; child sessions began after the baseline. The refreshed measurement includes closeout, the human's orchestration correction and the ongoing testing rule. One harness implementation repair occurred; no independent-review repair rounds. See [token reporting](../../workflow/README.md#token-reporting).
 
 ## Requests
 
 Run `/slice 80`, with a separate build/review chain per journey to keep test work focused. The selected existing behaviours and commit sequence are in the [plan](../../workflow/plans/80-playwright-journeys.md). The request authorized feature-branch commits, push, draft PR and configured verification; no merge or release was requested.
 
+The human clarified that each journey was meant to use a fresh builder, verifier and security-reviewer set, to avoid accumulated context overloading the builder and reducing test quality or completeness. After learning that the same three sessions had been reused, the human expressed dissatisfaction, asked for this mismatch to be logged and chose to leave the completed implementation in place.
+
+The human subsequently confirmed adding a standing requirement for future builders to extend Playwright coverage when UI journeys change, with verifiers checking that coverage.
+
 ## Agent runs
 
 The coordinator began on clean `main` at `a121d6e318686ff741e1c70ac6894aff79e31a2f`, verified issue #80 had `MEMBER` association and no comments, and created `test/80-playwright-journeys`. It supplied compact paths, criteria, decisions, checkpoint bounds and fresh scope snapshots to each role. Roles did not delegate or change Git state. Snapshot/scope checks passed after each run, and fixed candidates remained unchanged during reviews. Staged diffs, statistics and line counts were inspected before each incremental commit.
 
-Role definitions were unchanged from the starting commit: builder SHA256 `C67D04F35A531663B6730D18ACC1AA07A3EB1C6A5FE9029E8A0C498A819723C4`; verifier `C31A4D13342EE201EF7A7C107B8EFDE274A9EB21D28E84F402981F349CD5C966`; security reviewer `3E7EE3DA2A29FB009FCE10FDA3381E0032528C83ABA53E5BC7513AA1F1697598`.
+Role definitions used for the implementation checkpoints were unchanged from the starting commit: builder SHA256 `C67D04F35A531663B6730D18ACC1AA07A3EB1C6A5FE9029E8A0C498A819723C4`; verifier `C31A4D13342EE201EF7A7C107B8EFDE274A9EB21D28E84F402981F349CD5C966`; security reviewer `3E7EE3DA2A29FB009FCE10FDA3381E0032528C83ABA53E5BC7513AA1F1697598`.
 
 | Checkpoint / builder trigger | Fixed review candidate | Changes and actual evidence | Independent outcome / resulting commit |
 | --- | --- | --- | --- |
@@ -39,10 +45,14 @@ Manifest names above refer to temporary snapshots outside the repository. The re
 
 The coordinator ran `python src/manage.py check --settings=relay.settings.test && ruff check . && ruff format --check . && pytest` with `.venv` active in Git Bash on the final code candidate. System check and Ruff passed; 78 files were formatted. Pytest reported **934 passed, 3 failed, 1 skipped in 161.28s**, including all eight browser cases passing. Required local full verification therefore did not pass. The three failures reproduced against an extracted archive of unchanged `a121d6e` using the same environment: **3 failed, 43 deselected in 6.63s**. Details are below.
 
-The coordinator pushed reviewed checkpoints and opened [draft PR #81](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/pull/81). [CI run 121](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/actions/runs/40627015305) succeeded on the early harness/CI commit `ca4b805`, establishing Linux installation and existing-suite execution only. The final code/summary head must receive its own successful configured checks; those later results belong in the PR, not an inferred success here.
+The coordinator pushed reviewed checkpoints and opened [draft PR #81](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/pull/81). [CI run 122](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/actions/runs/40628911184) succeeded on implementation/summary head `e7119bc`: verification and site checks passed; pytest reported 935 passed and 3 skipped, including all eight browser cases passing. The subsequent workflow-rule/log head requires its own configured checks; the PR records that final result.
+
+For the confirmed ongoing-testing requirement, the coordinator changed only the [builder](../../workflow/agents/builder.md) and [verifier](../../workflow/agents/verifier.md) testing instructions, then read them back and checked both tool adapters load those shared files. Workflow unittest discovery completed 77 tests in 29.520s, OK with 1 skipped; whitespace and log checks passed. A fresh verifier received the request, these two file paths, relevant harness/adapter context, supplied check evidence and fixed candidate `e7119bc` plus `relay-80-e2e-rule-review.json`. It independently checked both added bullets, manifest hashes and whitespace, returning no findings without rerunning tests or reviewing the application. Its role SHA256 was `DC3D558E9DB40F5BFE32B476ADDBB76A7844F185580FD4284F94C176A3384388`; post-review scope and unchanged-candidate checks passed. The coordinator committed the rule as `455b138`. The earlier security report does not cover this later instruction change.
 
 ## Decisions and corrections
 
+- The coordinator acknowledged that separate checkpoints with reused sessions did not provide the fresh agent context the human intended. The human chose to leave the completed implementation in place and have the mismatch recorded.
+- The confirmed ongoing testing obligation now lives in the shared builder instructions, with the verifier checking compliance. Backend-only changes require additional browser coverage only when they affect a UI journey.
 - High tier because dependencies, CI and authentication coverage changed. Four journey cycles completed separately, with no application-source changes and no new/changed product criteria. The pre-summary diff was 11 files, 459 insertions/4 deletions; the prescribed non-test source budget count was zero.
 - Existing server tests retain detailed boundary, authorization, concurrency and failure coverage. Browser tests supplement the selected criteria; HTTP tests do not establish production TLS/Secure-cookie behaviour. Security review is limited to the exact integrated candidate above and previously reviewed unchanged checkpoints.
 - The coordinator used installed PostgreSQL 17.6 binaries to create a temporary loopback-only test cluster and synthetic test database; an existing local service was not repurposed. The cluster was stopped after verification. No service, runtime dependency or production setting was added.
@@ -50,6 +60,8 @@ The coordinator pushed reviewed checkpoints and opened [draft PR #81](https://gi
 
 ## Problems
 
+- Orchestration did not match the human's intended per-journey agent isolation: one builder, one verifier and one security reviewer accumulated context across all four journeys. The coordinator treated separate checkpoints as sufficient and failed to make the session reuse clear before proceeding. This left the human's concern about builder overload and incomplete tests unaddressed by the orchestration design.
+- The initial delivery supplied browser infrastructure and examples without an explicit future coverage obligation. The human identified this gap; the confirmed follow-up fixed it in the shared role files. The coordinator repeated workflow unittest discovery once because it had failed to retain the first command's completion handle; only the second run's complete result is claimed above.
 - Harness smoke initially exposed Django's test file-handler crash with `STATIC_URL=None` (`TypeError` from `startswith`). A fixture-only override now supplies URL prefixes and empty temporary asset roots, with restoration observed. The repaired harness passed the controlled probe and independent reviews.
 - Local full-suite failures were the `wrong password-idle`, `correct password-idle` and `demo-idle` variants of `test_timeout_inside_a_limited_transaction_gives_503`, all at `src/accounts/tests/test_limit_views.py:564`. The expected `idle-in-transaction timeout` text was absent from captured application logs; psycopg instead reported `server closed the connection unexpectedly`. Earlier 503/no-session/unchanged-state assertions passed, and the native PostgreSQL server log recorded the actual idle timeout. Reproduction on the unchanged starting commit establishes a pre-existing failure in this Windows/native-PostgreSQL environment. No tests were weakened or skipped to hide it; broader portability repair is outside this slice.
 - Sandbox Git/network/temporary-cluster setup restrictions were resolved through authorized execution approvals. The GitHub connector returned `403 Resource not accessible by integration` when creating the PR; the authenticated CLI succeeded. An initial `initdb` argument formatting error was corrected before cluster creation. No approval rejection or unresolved access blocker remained.
