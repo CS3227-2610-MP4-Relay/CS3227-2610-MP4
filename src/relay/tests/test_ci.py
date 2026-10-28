@@ -24,8 +24,10 @@ def test_ci_runs_isolated_application_verification():
         "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
     ):
         assert required in workflow
-    for forbidden in ("pull_request_target", "secrets.", "contents: write"):
+    for forbidden in ("pull_request_target", "contents: write"):
         assert forbidden not in workflow
+    validation = workflow.split("\n  production:\n", 1)[0]
+    assert "secrets." not in validation
 
 
 @pytest.mark.ac("PLT-1.7")
@@ -56,3 +58,41 @@ def test_ci_installs_chromium_and_retains_only_browser_failure_files():
     assert "          if-no-files-found: ignore\n" in artifact
     assert "          retention-days: 3\n" in artifact
     assert "continue-on-error" not in verify
+
+
+@pytest.mark.ac("PLT-1.9", "PLT-1.10", "PLT-1.11")
+def test_production_job_is_opt_in_verified_main_only_and_secret_scoped():
+    workflow = (
+        Path(__file__).resolve().parents[3] / ".github/workflows/ci.yml"
+    ).read_text()
+    production = workflow.split("\n  production:\n", 1)[1]
+    for condition in (
+        "github.event_name == 'push'",
+        "github.ref == 'refs/heads/main'",
+        "vars.PRODUCTION_DEPLOY_ENABLED == 'true'",
+    ):
+        assert condition in production.split("    needs:", 1)[0]
+    for required in (
+        "needs: [verify, site]",
+        "name: production",
+        "contents: read",
+        "group: production",
+        "cancel-in-progress: false",
+        "ref: ${{ github.sha }}",
+        "persist-credentials: false",
+    ):
+        assert required in production
+    for forbidden in ("always()", "continue-on-error", "workflow_dispatch", "secrets."):
+        assert forbidden not in workflow.split("\n  production:\n", 1)[0]
+    assert "always()" not in production and "continue-on-error" not in production
+    install, migration = production.split("      - name: Check and migrate", 1)
+    migration, deploy = migration.split("      - name: Deploy and smoke", 1)
+    assert "secrets." not in install
+    assert "VERCEL_TOKEN" not in migration
+    assert (
+        "secrets.DATABASE_URL" in migration and "secrets.DJANGO_SECRET_KEY" in migration
+    )
+    assert "python src/release.py migrate" in migration
+    assert "python src/release.py deploy" in deploy
+    assert "secrets.VERCEL_TOKEN" in deploy
+    assert "DATABASE_URL" not in deploy and "DJANGO_SECRET_KEY" not in deploy
