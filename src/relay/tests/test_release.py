@@ -444,10 +444,14 @@ def committed(monkeypatch):
         calls.append(arguments)
         assert SHA in arguments
         if arguments[0] == "ls-tree":
+            roots = arguments[arguments.index("--") + 1 :]
             return (
                 b"\0".join(
                     f"{mode} blob {'b' * 40}\t{path}".encode()
                     for path, (mode, _) in files.items()
+                    if any(
+                        path == root or path.startswith(root + "/") for root in roots
+                    )
                 )
                 + b"\0"
             )
@@ -466,6 +470,24 @@ def committed(monkeypatch):
 
     monkeypatch.setattr(release, "_git", git, raising=False)
     return files, calls, extras
+
+
+@pytest.mark.ac("PLT-1.10")
+def test_archive_keeps_runtime_requirements_without_tooling_manifest(
+    committed, tmp_path
+):
+    files, calls, _ = committed
+    requirements = b"Django==6.1.2\npsycopg[binary]==3.3.6\n"
+    files["requirements.txt"] = ("100644", requirements)
+    files["pyproject.toml"] = ("100644", b"[tool.ruff]\nline-length = 88\n")
+    destination = tmp_path / "source"
+
+    release.prepare(SHA, destination)
+
+    assert not (destination / "pyproject.toml").exists()
+    assert (destination / "requirements.txt").read_bytes() == requirements
+    assert (destination / "src/relay/wsgi.py").read_bytes() == b"committed bytes"
+    assert all("pyproject.toml" not in command for command in calls)
 
 
 @pytest.mark.ac("PLT-1.10")
