@@ -33,7 +33,9 @@ Each implementation checkpoint is built, checked, frozen and independently verif
 - These are tests of built behaviour: a passing first run is expected, so no artificial red application implementation phase. Assertions must detect wrong redirects/messages, leaked workspace text, missing persistence/links, incomplete publication and unintended writes on refusal. Record focused commands and observed outcomes at each checkpoint.
 - Planning checkpoint: repository/code and primary-source inspection only; full application checks deferred to implementation. Session usage baseline stored outside the repository as `%TEMP%/relay-80-builder-usage.json`; no raw transcripts retained in the repository.
 
-## Open items and next step
+## Delivery status and next step
 
-- Coordinator started an isolated temporary PostgreSQL 17 cluster at the fixed test address and reported `pytest src/relay/tests/test_database.py -q` passing (1 passed, 3.05s). Coordinator owns that cluster's lifecycle. Builder will verify browser visibility in checkpoint 2 without reading runtime secrets or repointing tests.
-- Next: coordinator reviews/commits this specification checkpoint, then supplies the next baseline and authorizes shared harness checkpoint 2. No implementation is included here.
+- Shared setup and all four journeys are committed through `bd105fd`; each journey had its own builder, verifier and security-review checkpoint before the next started. No application behaviour or product criteria changed.
+- Exact candidates, checks, review limits and the reproduced Windows baseline failures are recorded in the [session log](../../logs/Whimsyturtle/011-add-playwright-browser-journeys.md). The temporary PostgreSQL cluster has been stopped.
+- [Draft PR #81](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/pull/81) contains the slice. At this summary checkpoint, the coordinator must push the closeout records and inspect configured CI on the resulting exact head; the PR records that final hosted result. Local full verification did not pass, so do not substitute the focused browser results for it.
+- Human log review, manual verification, merge and release remain pending; none is inferred from agent checks.
