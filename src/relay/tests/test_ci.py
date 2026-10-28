@@ -26,3 +26,33 @@ def test_ci_runs_isolated_application_verification():
         assert required in workflow
     for forbidden in ("pull_request_target", "secrets.", "contents: write"):
         assert forbidden not in workflow
+
+
+@pytest.mark.ac("PLT-1.7")
+def test_ci_installs_chromium_and_retains_only_browser_failure_files():
+    workflow_path = Path(__file__).resolve().parents[3] / ".github/workflows/ci.yml"
+    verify = workflow_path.read_text().split("\n  site:", 1)[0]
+    install = ".venv/bin/python -m playwright install --with-deps chromium"
+    checks = (
+        "ruff check . && ruff format --check . && pytest "
+        '--basetemp="$RUNNER_TEMP/relay-pytest"'
+    )
+    upload = "      - name: Retain browser failure diagnostics\n"
+    assert verify.index(install) < verify.index(checks) < verify.index(upload)
+    artifact = verify.split(upload, 1)[1]
+    assert "        if: failure()\n" in artifact
+    assert (
+        "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9" in artifact
+    )
+    paths = {
+        line.strip()
+        for line in artifact.splitlines()
+        if line.startswith("            ")
+    }
+    assert paths == {
+        "${{ runner.temp }}/relay-pytest/**/browser-failure.png",
+        "${{ runner.temp }}/relay-pytest/**/browser-trace.zip",
+    }
+    assert "          if-no-files-found: ignore\n" in artifact
+    assert "          retention-days: 3\n" in artifact
+    assert "continue-on-error" not in verify
