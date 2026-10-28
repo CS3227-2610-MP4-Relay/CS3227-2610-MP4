@@ -84,7 +84,7 @@ For [ACC](product/accounts.md). Every POST uses Django's CSRF protection, which 
 | `/coordinator/` | GET | Test Coordinator | "Coordinator home" | Signed out: redirect to `/sign-in/`; Beta Tester: 403 of [ACC-1.4](product/accounts.md#acc-1-sign-in-and-out-by-role) |
 | `/tester/` | GET | Beta Tester | "Tester home" | Signed out: redirect to `/sign-in/`; Test Coordinator: 403 of ACC-1.4 |
 
-The session cookie is `HttpOnly`; session and CSRF cookies are `SameSite=Lax`, and `Secure` outside local development (shared settings set `Secure`; `relay.settings.local` turns it off). Django's messages use session storage (`MESSAGE_STORAGE` is `django.contrib.messages.storage.session.SessionStorage` in the shared settings), so a message is kept in the session row until shown, no response sets a `messages` cookie and one sent by a browser is ignored. `/sign-in/`, `/coordinator/` and `/tester/` are never cached (`Cache-Control: private, no-store`).
+The session cookie is `HttpOnly`; session and CSRF cookies are `SameSite=Lax`, and `Secure` outside local development and the scoped loopback browser-test fixture (shared settings set `Secure`; `relay.settings.local` and that fixture turn it off). Django's messages use session storage (`MESSAGE_STORAGE` is `django.contrib.messages.storage.session.SessionStorage` in the shared settings), so a message is kept in the session row until shown, no response sets a `messages` cookie and one sent by a browser is ignored. `/sign-in/`, `/coordinator/` and `/tester/` are never cached (`Cache-Control: private, no-store`).
 
 Signed-out redirects go to `/sign-in/` with no `next` parameter.
 
@@ -138,6 +138,14 @@ Production settings, checked before release:
 | Production | Vercel's native Django/Python runtime | Separate managed PostgreSQL | Production-only credentials; debug off |
 
 No dedicated staging environment or Docker app image is planned. Development and production use separate databases and credentials. The team manages deployment through GitHub Actions; a build-and-host environment supplied by an AI tool is not part of the delivery plan.
+
+### Browser verification
+
+`src/e2e/` contains a small pytest suite using the pinned development-only Playwright library and headless Chromium. The existing `verify` job installs Chromium and its Linux system dependencies, then includes these tests in its normal full pytest invocation; no separate application service, browser matrix or production credentials are needed. Local setup and focused commands belong in the [Developer Guide](../../docs/DeveloperGuide.md).
+
+Tests use pytest-django's loopback-only live server and transactional PostgreSQL test database, with fresh synthetic accounts and a fresh browser context per test. ORM setup completes before starting each test's synchronous Playwright lifecycle, and Playwright stops before database teardown; tests use browser navigation and reloads to check persisted outcomes. Never bypass Django's async-safety check. Only the browser fixture temporarily disables `SESSION_COOKIE_SECURE` and `CSRF_COOKIE_SECURE` for loopback HTTP; CSRF middleware, real forms and session handling remain active, and the fixture restores both settings afterwards.
+
+Browser assertions use visible headings, accessible labels, links, buttons and exact messages with Playwright's bounded waits, without fixed sleeps or retries that hide failures. Coverage supplements the existing server-side criterion tests; the four selected journeys and their incremental review checkpoints are in [slice 80's plan](../plans/80-playwright-journeys.md). Failed browser tests retain a screenshot and trace in pytest's temporary directory; passing tests discard traces. CI uploads only those browser failure files with three-day retention through a SHA-pinned official artifact action, leaving the verification result unchanged.
 
 ## Product website
 
