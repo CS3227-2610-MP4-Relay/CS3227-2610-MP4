@@ -12,6 +12,13 @@ def sign_in_coordinator(page, accounts):
     page.get_by_role("button", name="Sign in", exact=True).click()
 
 
+def create_draft_round(page, title):
+    """Submit a round title from the coordinator home."""
+    page.get_by_role("link", name="New round", exact=True).click()
+    page.get_by_label("Title", exact=True).fill(title)
+    page.get_by_role("button", name="Create round", exact=True).click()
+
+
 @pytest.mark.ac("RND-1.1", "RND-2.1", "RND-2.2", "RND-3.1")
 def test_coordinator_prepares_and_publishes_linked_case(page, browser_accounts):
     title = "Synthetic browser round"
@@ -22,9 +29,7 @@ def test_coordinator_prepares_and_publishes_linked_case(page, browser_accounts):
     build = "Synthetic build 1.0"
 
     sign_in_coordinator(page, browser_accounts)
-    page.get_by_role("link", name="New round", exact=True).click()
-    page.get_by_label("Title", exact=True).fill(title)
-    page.get_by_role("button", name="Create round", exact=True).click()
+    create_draft_round(page, title)
     expect(page.get_by_role("heading", name=title, exact=True)).to_be_visible()
     expect(page.get_by_text("State: Draft", exact=True)).to_be_visible()
     expect(page.get_by_text("No acceptance criteria yet.", exact=True)).to_be_visible()
@@ -75,3 +80,65 @@ def test_coordinator_prepares_and_publishes_linked_case(page, browser_accounts):
         expect(page.get_by_role("link", name=link, exact=True)).to_have_count(0)
     for button in ("Delete criterion", "Delete test case", "Publish round"):
         expect(page.get_by_role("button", name=button, exact=True)).to_have_count(0)
+
+
+@pytest.mark.ac("RND-2.6")
+def test_case_without_link_is_refused_without_saving(page, browser_accounts):
+    sign_in_coordinator(page, browser_accounts)
+    create_draft_round(page, "Synthetic unlinked case round")
+    criterion = "The synthetic response appears."
+    page.get_by_role("link", name="Add acceptance criterion", exact=True).click()
+    page.get_by_label("Text", exact=True).fill(criterion)
+    page.get_by_role("button", name="Add acceptance criterion", exact=True).click()
+    page.get_by_role("link", name="Add test case", exact=True).click()
+    values = {
+        "Title": "Synthetic unlinked case",
+        "Steps": "Select the synthetic confirmation.",
+        "Expected result": "The synthetic response appears.",
+    }
+    for label, value in values.items():
+        page.get_by_label(label, exact=True).fill(value)
+    expect(page.get_by_role("checkbox", name=criterion, exact=True)).not_to_be_checked()
+    page.get_by_role("button", name="Add test case", exact=True).click()
+    expect(
+        page.get_by_text("Link at least one acceptance criterion.", exact=True)
+    ).to_be_visible()
+    expect(
+        page.get_by_role("heading", name="New test case", exact=True)
+    ).to_be_visible()
+    for label, value in values.items():
+        expect(page.get_by_label(label, exact=True)).to_have_value(value)
+    expect(page.get_by_role("checkbox", name=criterion, exact=True)).not_to_be_checked()
+
+    page.get_by_role("link", name="Back to round", exact=True).click()
+    page.reload()
+    expect(page.get_by_text("State: Draft", exact=True)).to_be_visible()
+    expect(page.get_by_text(criterion, exact=True)).to_be_visible()
+    expect(page.get_by_text("No test cases yet.", exact=True)).to_be_visible()
+    expect(page.get_by_role("heading", name=values["Title"], exact=True)).to_have_count(
+        0
+    )
+    expect(page.get_by_role("heading", name="Builds", exact=True)).to_have_count(0)
+
+
+@pytest.mark.ac("RND-3.3")
+def test_empty_round_publish_is_refused_without_creating_build(page, browser_accounts):
+    sign_in_coordinator(page, browser_accounts)
+    create_draft_round(page, "Synthetic empty publish round")
+    round_url = page.url
+    label = "Synthetic refused build 1.0"
+    page.get_by_label("Build label", exact=True).fill(label)
+    page.get_by_role("button", name="Publish round", exact=True).click()
+    expect(
+        page.get_by_text("Add at least one test case before publishing.", exact=True)
+    ).to_be_visible()
+    expect(page.get_by_label("Build label", exact=True)).to_have_value(label)
+    expect(page.get_by_role("status")).to_have_count(0)
+
+    page.goto(round_url)
+    page.reload()
+    expect(page.get_by_text("State: Draft", exact=True)).to_be_visible()
+    expect(page.get_by_text("No test cases yet.", exact=True)).to_be_visible()
+    expect(page.get_by_role("heading", name="Builds", exact=True)).to_have_count(0)
+    expect(page.get_by_role("heading", name=label, exact=True)).to_have_count(0)
+    expect(page.get_by_role("button", name="Publish round", exact=True)).to_be_visible()
