@@ -251,11 +251,13 @@ def test_a_coordinator_drives_a_round_from_demo_to_closed():
         "Beta Tester",
         "Beta Tester",
     ]
-    name = re.search(r"<p>Workspace: ([^<]*)</p>", shown).group(1)
+    workspace = re.search(r"<p>Workspace: ([^<]*)</p>", shown)
+    assert workspace is not None, "no workspace name on the demo page"
+    name = workspace.group(1)
 
     # ACC-1.1: the coordinator's credentials sign in to the Coordinator home.
     _, username, password = rows[0]
-    sign_in = page(client.get("/sign-in/?next=/tester/"))
+    sign_in = page(client.get("/sign-in/"))
     signed_in = submit(
         client,
         form(sign_in, "Sign in"),
@@ -472,7 +474,7 @@ def test_a_coordinator_drives_a_round_from_demo_to_closed():
 
     # RND-6.1 and RND-6.2: the warning sits immediately before the close button;
     # closing keeps the round's content and removes every control.
-    close = '<form method="post" action="' + f'{url}close/">'
+    close = f'<form method="post" action="{url}close/">'
     assert f"{WARNING}\n{close}" in opened
     stale_close = form(opened, "Close round")
     assert_redirect(submit(client, stale_close, url), url)
