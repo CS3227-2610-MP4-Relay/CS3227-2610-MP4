@@ -154,9 +154,9 @@ A Closed round's page still shows its criteria, its cases with their linked crit
 
 ### Draft test cases with AI
 
-AI suggestions are switched off for now, so this page does not suggest test cases yet, and no criterion text is sent anywhere. Add test cases yourself with **Add test case**.
+AI suggestions are switched off for now, so this page does not suggest test cases yet. Add test cases yourself with **Add test case**.
 
-While a round is Draft, its page has a **Draft test cases with AI** link directly after **Add test case**. The drafting page says "Select 1 to 5 acceptance criteria. Only their text is sent to the AI service. Suggestions are not saved; review each one before adding it." It lists the round's criteria under **Acceptance criteria to draft from**, with a **Draft test cases** button, an **Add test case** link and a **Back to round** link.
+While a round is Draft, its page has a **Draft test cases with AI** link directly after **Add test case**. The drafting page says "Select 1 to 5 acceptance criteria. AI suggestions are switched off for now, so nothing is sent to the AI service. Suggestions are not saved; review each one before adding it." It lists the round's criteria under **Acceptance criteria to draft from**, with a **Draft test cases** button, an **Add test case** link and a **Back to round** link.
 
 Ticking one to five criteria and choosing **Draft test cases** shows, under **Suggested test cases**, "Drafting is unavailable right now. You can still add test cases yourself." If every ticked criterion is blank once hidden characters are removed, it says "No test cases were suggested for these criteria. You can still add test cases yourself." instead.
 
