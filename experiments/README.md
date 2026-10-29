@@ -1,6 +1,6 @@
 # Experiments
 
-This folder will hold experiment methods, reproducible inputs, observed results and analysis. No experiments have been run or results recorded in this scaffold.
+This folder holds experiment methods, reproducible inputs, observed results and analysis. Neither planned comparison below has been run; [development-workflow](development-workflow/README.md) records one observational run of the consolidated workflow with a weaker model.
 
 ## Planned comparisons
 
