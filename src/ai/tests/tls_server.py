@@ -7,8 +7,8 @@ import threading
 import time
 
 
-def make_certificate(directory):
-    """Write a one-day self-signed certificate for 127.0.0.1; return its paths."""
+def make_certificate(directory, name="IP:127.0.0.1"):
+    """Write a one-day self-signed certificate for `name`; return its paths."""
     cert, key = directory / "cert.pem", directory / "key.pem"
     subprocess.run(
         [
@@ -25,9 +25,9 @@ def make_certificate(directory):
             "-days",
             "1",
             "-subj",
-            "/CN=127.0.0.1",
+            "/CN=synthetic",
             "-addext",
-            "subjectAltName=IP:127.0.0.1",
+            f"subjectAltName={name}",
         ],
         check=True,
         capture_output=True,
@@ -40,6 +40,16 @@ def respond(raw):
 
     def script(conn):
         conn.sendall(raw)
+
+    return script
+
+
+def hold(raw, duration):
+    """A script that sends `raw` at once, then keeps the connection open."""
+
+    def script(conn):
+        conn.sendall(raw)
+        time.sleep(duration)
 
     return script
 

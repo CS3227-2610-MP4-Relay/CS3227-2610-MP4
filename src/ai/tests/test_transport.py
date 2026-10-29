@@ -10,7 +10,7 @@ import pytest
 from ai import gateway
 from ai.gateway import Failed, Refused, Success, complete
 
-from .tls_server import Server, make_certificate, respond, trickle
+from .tls_server import Server, hold, make_certificate, respond, trickle
 
 pytestmark = pytest.mark.llm_transport
 
@@ -106,6 +106,53 @@ def test_a_chunked_reply_is_decoded(user, serve):
     assert complete(user, "", "{}") == Success("ok")
 
 
+def chunked(body, trailer=b""):
+    return (
+        b"HTTP/1.1 200 Synthetic\r\nTransfer-Encoding: chunked\r\n\r\n"
+        + f"{len(body):x};synthetic=1\r\n".encode()
+        + body
+        + b"\r\n0\r\n"
+        + trailer
+        + b"\r\n"
+    )
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        text_reply("ok"),
+        chunked(json.dumps({"text": "ok"}).encode()),
+        chunked(json.dumps({"text": "ok"}).encode(), b"X-Synthetic: 1\r\n"),
+    ],
+    ids=["content-length", "chunked", "chunked-trailer"],
+)
+def test_a_complete_reply_on_a_held_connection_is_not_a_timeout(
+    user, serve, short_deadline, raw
+):
+    serve(hold(raw, 6))
+    result, elapsed = timed(user)
+    assert result == Success("ok")
+    assert elapsed < 1
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        http(200, json.dumps({"text": "ok"}).encode())[:-1],
+        chunked(json.dumps({"text": "ok"}).encode())[:-2],
+    ],
+    ids=["content-length", "chunked"],
+)
+@pytest.mark.ac("RND-8.4")
+def test_an_incomplete_reply_on_a_held_connection_times_out(
+    user, serve, short_deadline, raw
+):
+    serve(hold(raw, 6))
+    result, elapsed = timed(user)
+    assert result == Failed("timeout")
+    assert elapsed < 3
+
+
 @pytest.mark.parametrize(
     ("prefix", "piece"),
     [
@@ -170,6 +217,22 @@ def test_a_refused_connection_is_a_transport_failure(user, live, monkeypatch):
     assert complete(user, "", "{}") == Failed("transport")
 
 
+def test_a_name_the_resolver_cannot_encode_is_a_transport_failure(
+    user, live, monkeypatch
+):
+    monkeypatch.setenv("SOC_LLM_ENDPOINT", f"https://{'a' * 64}.invalid/llm")
+    assert complete(user, "", "{}") == Failed("transport")
+
+
+def test_any_resolver_error_is_a_transport_failure(user, live, monkeypatch):
+    def broken(*args, **kwargs):
+        raise RuntimeError("synthetic resolver failure")
+
+    monkeypatch.setattr(socket, "getaddrinfo", broken)
+    monkeypatch.setenv("SOC_LLM_ENDPOINT", "https://synthetic.invalid/llm")
+    assert complete(user, "", "{}") == Failed("transport")
+
+
 def test_an_untrusted_certificate_is_a_transport_failure(user, serve, monkeypatch):
     serve(respond(text_reply("ok")))
     monkeypatch.setenv("SSL_CERT_FILE", "/nonexistent/synthetic.pem")
@@ -188,6 +251,20 @@ def test_an_untrusted_certificate_is_a_transport_failure(user, serve, monkeypatc
 def test_a_malformed_http_response_is_a_transport_failure(user, serve, raw):
     serve(respond(raw))
     assert complete(user, "", "{}") == Failed("transport")
+
+
+def test_a_trusted_certificate_for_another_name_is_a_transport_failure(
+    user, live, tmp_path, monkeypatch
+):
+    cert, key = make_certificate(tmp_path, "DNS:synthetic.invalid")
+    server = Server(cert, key, respond(text_reply("ok")))
+    monkeypatch.setenv("SSL_CERT_FILE", str(cert))
+    monkeypatch.setenv("SOC_LLM_ENDPOINT", server.url)
+    try:
+        assert complete(user, "", "{}") == Failed("transport")
+    finally:
+        server.close()
+    assert server.requests == []
 
 
 def test_a_redirect_is_not_followed(user, serve):
@@ -245,4 +322,13 @@ def test_an_invalid_envelope_is_an_invalid_response(user, serve, body):
 
 def test_a_response_over_the_byte_cap_is_an_invalid_response(user, serve):
     serve(respond(http(200, b"x" * (gateway.RESPONSE_BYTES + 1))))
+    assert complete(user, "", "{}") == Failed("invalid-response")
+
+
+def test_a_chunked_response_over_the_byte_cap_is_an_invalid_response(user, serve):
+    """Most bytes are chunk-size lines, which http.client reads under ValueError."""
+    piece = b"1;" + b"e" * 1000 + b"\r\nx\r\n"
+    count = gateway.RESPONSE_BYTES // len(piece) + 1
+    head = b"HTTP/1.1 200 Synthetic\r\nTransfer-Encoding: chunked\r\n\r\n"
+    serve(respond(head + piece * count + b"0\r\n\r\n"))
     assert complete(user, "", "{}") == Failed("invalid-response")

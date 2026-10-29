@@ -80,22 +80,27 @@ def _quota(scope, key, limit, window, now):
     return True
 
 
-def _reserve(user, now):
+def _reserve(user):
     """Atomically reserve quota and both in-flight slots, or return None.
 
-    Returns the user slot, the deployment slot and the expiry they now hold.
+    The reservation moment is taken once the slot locks are held. Returns the
+    user slot, the deployment slot and the expiry they now hold, and the
+    monotonic time of that moment, where the call's deadline starts.
     """
     with transaction.atomic():
         user_slot, _ = CallSlot.objects.select_for_update().get_or_create(
-            scope=USER_SCOPE, key=_user_key(user), defaults={"expires_at": now}
+            scope=USER_SCOPE,
+            key=_user_key(user),
+            defaults={"expires_at": timezone.now()},
         )
-        if user_slot.expires_at > now:
-            return None
         deployment = list(
             CallSlot.objects.select_for_update()
             .filter(scope=DEPLOYMENT_SCOPE)
             .order_by("pk")
         )
+        now, started = timezone.now(), time.monotonic()
+        if user_slot.expires_at > now:
+            return None
         if len(deployment) != DEPLOYMENT_IN_FLIGHT:
             return None
         free = [slot for slot in deployment if slot.expires_at <= now]
@@ -113,7 +118,7 @@ def _reserve(user, now):
         CallSlot.objects.filter(pk__in=[user_slot.pk, free[0].pk]).update(
             expires_at=expires
         )
-        return user_slot, free[0], expires
+        return (user_slot, free[0], expires), started
 
 
 def _release(user_slot, deployment_slot, expires):
@@ -153,23 +158,26 @@ def _remaining(deadline):
 
 
 def _resolve(host, port, deadline):
-    """Resolve `host` in a helper thread, abandoned at the deadline."""
+    """Resolve `host` in a helper thread, abandoned at the deadline.
+
+    Any lookup error, such as a name the resolver cannot encode, is an OSError.
+    """
     found = {}
     done = threading.Event()
 
     def lookup():
         try:
             found["addresses"] = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
-        except OSError as error:
-            found["error"] = error
+        except Exception:  # noqa: BLE001 - any lookup error is a transport failure
+            found["failed"] = True
         finally:
             done.set()
 
     threading.Thread(target=lookup, daemon=True).start()
     if not done.wait(_remaining(deadline)):
         raise TimeoutError
-    if "error" in found:
-        raise found["error"]
+    if "addresses" not in found:
+        raise OSError("name lookup failed")
     return found["addresses"]
 
 
@@ -197,9 +205,52 @@ def _tls_context():
     return ssl.create_default_context()
 
 
-@sensitive_variables("payload", "chunks", "chunk")
+class _ResponseTooLarge(Exception):
+    """The response passed RESPONSE_BYTES.
+
+    Not a ValueError: http.client turns a ValueError while reading a chunk-size
+    line into IncompleteRead, which would hide the cap as a transport failure.
+    """
+
+
+class _DeadlineReader(io.RawIOBase):
+    """Read the response socket, each read within the deadline and the byte cap."""
+
+    def __init__(self, sock, deadline):
+        self.sock, self.deadline, self.total = sock, deadline, 0
+
+    def readable(self):
+        """Mark the stream readable for io.BufferedReader."""
+        return True
+
+    def readinto(self, buffer):
+        """Fill `buffer` from one socket read, raising at the deadline or cap."""
+        self.sock.settimeout(_remaining(self.deadline))
+        count = self.sock.recv_into(buffer)
+        _remaining(self.deadline)
+        self.total += count
+        if self.total > RESPONSE_BYTES:
+            raise _ResponseTooLarge
+        return count
+
+
+class _Stream:
+    """Present a reader as a socket so http.client parses as it reads."""
+
+    def __init__(self, reader):
+        self.reader = reader
+
+    def makefile(self, *args, **kwargs):
+        return self.reader
+
+
+@sensitive_variables("payload", "response")
 def _exchange(parts, payload, deadline):
-    """Send `payload` and return the raw response, all within the deadline."""
+    """Send `payload` and return the response's status and body.
+
+    http.client stops reading once the response is complete (Content-Length or
+    the final chunk), so a connection the server keeps open does not delay it.
+    """
     sock = _connect(parts.hostname, parts.port or 443, deadline)
     try:
         sock.settimeout(_remaining(deadline))
@@ -208,37 +259,12 @@ def _exchange(parts, payload, deadline):
         while sent < len(payload):
             sock.settimeout(_remaining(deadline))
             sent += sock.send(payload[sent : sent + 16384])
-        chunks, total = [], 0
-        while True:
-            sock.settimeout(_remaining(deadline))
-            chunk = sock.recv(65536)
-            _remaining(deadline)
-            if not chunk:
-                return b"".join(chunks)
-            chunks.append(chunk)
-            total += len(chunk)
-            if total > RESPONSE_BYTES:
-                raise ValueError
+        reader = io.BufferedReader(_DeadlineReader(sock, deadline))
+        response = http.client.HTTPResponse(_Stream(reader), method="POST")
+        response.begin()
+        return response.status, response.read()
     finally:
         sock.close()
-
-
-class _Received:
-    """Present received bytes as a socket so http.client can parse them."""
-
-    def __init__(self, raw):
-        self.raw = raw
-
-    def makefile(self, *args, **kwargs):
-        return io.BytesIO(self.raw)
-
-
-@sensitive_variables("raw", "response")
-def _parse_http(raw):
-    """Return the status and body of a complete raw HTTP response."""
-    response = http.client.HTTPResponse(_Received(raw), method="POST")
-    response.begin()
-    return response.status, response.read()
 
 
 def _no_repeated_keys(pairs):
@@ -282,9 +308,7 @@ def _envelope(body):
     return Success(text)
 
 
-@sensitive_variables(
-    "api_key", "head", "body", "payload", "instructions", "data", "raw"
-)
+@sensitive_variables("api_key", "head", "body", "payload", "instructions", "data")
 def _transport(instructions, data, deadline):
     """Send one request without redirects or retries, returning a result."""
     if not settings.SOC_LLM_LIVE:
@@ -311,13 +335,12 @@ def _transport(instructions, data, deadline):
     except UnicodeError:
         return Failed("transport")
     try:
-        raw = _exchange(parts, payload, deadline)
-        status, body = _parse_http(raw)
+        status, body = _exchange(parts, payload, deadline)
     except TimeoutError:
         return Failed("timeout")
     except (OSError, http.client.HTTPException):
         return Failed("transport")
-    except ValueError:
+    except _ResponseTooLarge:
         return Failed("invalid-response")
     if status in {400, 401, 403}:
         return Refused("provider-refused")
@@ -342,10 +365,11 @@ def complete(user, instructions, data, provider=None):
         return Refused("live-off")
     if len(instructions) + len(data) > INPUT_LIMIT:
         return Refused("input-too-large")
-    reserved = _reserve(user, timezone.now())
+    reserved = _reserve(user)
     if reserved is None:
         return Refused("busy-or-quota")
-    deadline = time.monotonic() + TOTAL_TIMEOUT
+    slots, started = reserved
+    deadline = started + TOTAL_TIMEOUT
     try:
         # No transaction or round lock is open here; do not hold a database
         # connection through a slow provider call.
@@ -368,4 +392,4 @@ def complete(user, instructions, data, provider=None):
         logger.info("LLM gateway outcome: %s", code)
         return result
     finally:
-        _release(*reserved)
+        _release(*slots)

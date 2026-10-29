@@ -9,7 +9,7 @@ import time
 import pytest
 from django.apps import apps
 from django.conf import settings as django_settings
-from django.db import DatabaseError, connection
+from django.db import DatabaseError, connection, transaction
 from django.views.debug import ExceptionReporter
 
 from accounts.models import User
@@ -233,7 +233,7 @@ def test_network_step_is_blocked_without_opt_in(block_llm_network):
 
 def test_reservation_expires_after_the_bound_plus_margin(user):
     before = gateway.timezone.now()
-    gateway._reserve(user, before)
+    gateway._reserve(user)
     slot = CallSlot.objects.get(scope=gateway.USER_SCOPE, key=str(user.pk))
     live = CallSlot.objects.filter(
         scope=gateway.DEPLOYMENT_SCOPE, expires_at__gt=before
@@ -243,7 +243,7 @@ def test_reservation_expires_after_the_bound_plus_margin(user):
 
 
 def test_a_late_release_keeps_a_later_reservation(user):
-    reserved = gateway._reserve(user, gateway.timezone.now())
+    reserved, _ = gateway._reserve(user)
     later = gateway.timezone.now() + gateway.timedelta(minutes=5)
     CallSlot.objects.filter(expires_at__gt=gateway.timezone.now()).update(
         expires_at=later
@@ -431,3 +431,54 @@ def test_no_database_connection_is_held_during_the_call(user):
     provider = SlowProvider(delay=0)
     assert complete(user, "", "{}", provider=provider) == Success("{}")
     assert provider.connections == [None]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_reservation_that_waits_for_locks_is_timed_after_the_wait(
+    user, settings, monkeypatch
+):
+    """Slot expiry and the deadline start once the locks are held, not before."""
+    settings.SOC_LLM_LIVE = True
+    held, released, seen = threading.Event(), {}, {}
+
+    def hold_locks():
+        try:
+            with transaction.atomic():
+                list(
+                    CallSlot.objects.select_for_update().filter(
+                        scope=gateway.DEPLOYMENT_SCOPE
+                    )
+                )
+                held.set()
+                time.sleep(1)
+                released["wall"] = gateway.timezone.now()
+                released["clock"] = time.monotonic()
+        finally:
+            connection.close()
+
+    def transport(instructions, data, deadline):
+        seen["deadline"] = deadline
+        return Success("{}")
+
+    real_reserve, real_release = gateway._reserve, gateway._release
+
+    def reserve(*args):
+        seen["reserved"] = real_reserve(*args)
+        return seen["reserved"]
+
+    def release(*args):
+        seen["expires"] = args[-1]
+        return real_release(*args)
+
+    monkeypatch.setattr(gateway, "_transport", transport)
+    monkeypatch.setattr(gateway, "_reserve", reserve)
+    monkeypatch.setattr(gateway, "_release", release)
+    thread = threading.Thread(target=hold_locks)
+    thread.start()
+    assert held.wait(5)
+    assert complete(user, "", "{}") == Success("{}")
+    thread.join(5)
+    bound = gateway.TOTAL_TIMEOUT + gateway.RELEASE_MARGIN
+    assert seen["expires"] >= released["wall"] + gateway.timedelta(seconds=bound)
+    assert seen["deadline"] >= released["clock"] + gateway.TOTAL_TIMEOUT
+    assert seen["deadline"] == seen["reserved"][1] + gateway.TOTAL_TIMEOUT
