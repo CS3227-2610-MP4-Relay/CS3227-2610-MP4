@@ -1,6 +1,6 @@
 # Test drafting
 
-AI feature for the Test Coordinator. Specified but not implemented: it is blocked on the [shared gateway](llm-gateway.md) (#6), and no prompt, schema code or provider call exists yet. Its pages, messages, selection count and acceptance criteria are [RND-8](../product/rounds.md#rnd-8-draft-test-cases-with-ai); this file holds what is sent to the model, what reply is accepted, and how the feature is evaluated. The contract was proposed in #22 and awaits confirmation by the human and the gateway owner.
+AI feature for the Test Coordinator. It uses the [shared gateway](llm-gateway.md) (#6) and has a scriptable fake provider for tests; a live provider call needs deployment configuration. Its pages, messages, selection count and acceptance criteria are [RND-8](../product/rounds.md#rnd-8-draft-test-cases-with-ai); this file holds what is sent to the model, what reply is accepted, and how the feature is evaluated.
 
 ## Inputs and authorship
 
