@@ -49,9 +49,20 @@ Choose **Sign out** on your home page. The sign-in page shows "You have signed o
 
 You are also signed out 8 hours after signing in, whatever you do in between; opening a home page after that takes you to the sign-in page.
 
+## View available tests
+
+1. Sign in as a **Beta Tester**. On **Tester home**, **Available tests** lists your workspace's Open and Closed rounds, newest first. Each title is a link followed by "(Open)" or "(Closed)". If there are none, it says "No tests available."
+2. Choose a round title. The page shows "State: Open" or "State: Closed" and **Test cases**. Each case shows its title, **Steps**, **Expected result**, **Linked acceptance criteria** and **Current build**.
+3. Test the software outside Relay using those instructions and the named build. If the coordinator requests a retest, reload the page: only the selected cases change to the new **Current build**; other cases keep their previous build.
+4. Choose **Tester home** to return to the list, or return there to **Sign out**.
+
+Both Beta Testers in a workspace see the same rounds. Draft rounds stay hidden. A Closed round remains available as read-only reference; after the coordinator closes it, reload to see "State: Closed" and "(Closed)" in the list. These pages show instructions only; they have no result-entry controls.
+
+If reading tests fails, the page says "Relay is temporarily unavailable. Try again later." Opening a Draft, missing or another workspace's round shows "Page not found."
+
 ## Test rounds
 
-Only a Test Coordinator can prepare, publish, retest and close test rounds. A new round is in the **Draft** state; [publishing](#publish-a-round) it makes it **Open**, and [closing](#close-a-round) it makes it **Closed**. Beta Testers do not see rounds yet.
+Only a Test Coordinator can prepare, publish, retest and close test rounds. A new round is in the **Draft** state; [publishing](#publish-a-round) it makes it **Open**, and [closing](#close-a-round) it makes it **Closed**. Beta Testers [view available tests](#view-available-tests) from their own home page.
 
 **Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". A new demo workspace starts with its [sample round](#create-a-demo-workspace), so its list is not empty; "No rounds yet." appears only for a workspace with no rounds.
 

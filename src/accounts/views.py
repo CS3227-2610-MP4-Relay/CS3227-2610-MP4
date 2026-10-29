@@ -16,6 +16,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from rounds import tester
 from rounds.models import Round
 
 from . import demo, limits
@@ -117,7 +118,7 @@ coordinator_home = _role_home(
     "rounds/coordinator_home.html",
     lambda user: {"rounds": workspace_records(user, Round)},
 )
-tester_home = _role_home(User.Role.TESTER, "Tester home")
+tester_home = tester.home
 
 
 def _demo_counts(read, key):
