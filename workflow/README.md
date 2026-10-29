@@ -69,19 +69,35 @@ Claude Code uses `model` and `effort` in [agent frontmatter](https://code.claude
 
 ### Token reporting
 
-For example, in Git Bash with `.venv` active, choose the session files explicitly and keep the numeric baseline outside the repository:
+In Git Bash with `.venv` active, select the coordinator and relevant session directories before work starts, and keep the numeric baseline outside the repository. Use the same selectors for the report:
 
 ```bash
-python workflow/scripts/resource_usage.py snapshot --codex /path/to/current-session.jsonl > /tmp/relay-usage-before.json
-python workflow/scripts/resource_usage.py report --codex /path/to/current-session.jsonl --baseline /tmp/relay-usage-before.json --retries 0 --repair-rounds 0
+python workflow/scripts/resource_usage.py snapshot --codex /path/to/current-session.jsonl \
+  --codex-children /path/to/first-session-day --project /path/to/repository \
+  > /tmp/relay-usage-before.json
+python workflow/scripts/resource_usage.py report --codex /path/to/current-session.jsonl \
+  --codex-children /path/to/first-session-day --project /path/to/repository \
+  --baseline /tmp/relay-usage-before.json --retries 0 --repair-rounds 0
 ```
 
-Use `--claude` for Claude session files; repeat the selector for delegated sessions. The collector reads numeric/identity metadata from selected transcripts and emits no message text or raw paths; raw logs remain private. It does not claim coverage of unselected agents. See `report --help` for bounded Codex child discovery and explicit Claude subagent selection. Worktree/out-of-directory children need explicit paths. Keep numeric snapshots outside version control.
+Repeat `--codex-children` for another session-day directory when work spans dates. Each explicit root is searched recursively; overlapping roots count a file once, with a combined 1,000-file limit. Discovery includes related roots, approval reviewers and descendants in the selected project using parent or session-tree metadata, including when the initial selector points to a reviewer. It does not search outside those roots. Use explicit `--codex` selectors for other locations or worktree sources; use `--claude` for Claude files and repeat it for delegated agents. Check source coverage before interpreting totals. The [accounting/privacy policy](specs/SECURITY-SPEC.md#development-workflow) defines what the collector can establish.
+
+Snapshots retain schema version 1 and add optional hashed turn/range provenance; existing snapshots remain readable. Keep new baselines for reliable cross-identity recovery: an old snapshot without provenance cannot prove that a missing source was replaced. Source logs stay unchanged; snapshots remain private and outside version control.
+
+Task-report fields:
+
+| Field | How to read it |
+| --- | --- |
+| `tokens` | Strict per-field task totals; unavailable if a required selected contribution is unknown. |
+| `available_tokens` | Sum of available contributions after supported overlap removal; unavailable when no contribution is measurable. This is not a whole-task total or a guaranteed lower bound when overlap remains unresolved. |
+| `field_coverage` | Counts of measured and unavailable contributions for each field. |
+| `source_states` and each row's `state` | Counts/labels for `measured` (all primary fields available), `unavailable` (including partial primary data), and `initialized` (no observed usage yet). |
+| `warnings` | Fixed accounting/coverage diagnostics. `session_initialized_without_usage` describes current empty sources and expires once usage appears; ambiguous related legacy overlap uses `codex_shared_history_unresolved`. |
 
 - **Totals:** input includes cache reads/writes; output includes reasoning tokens. Cached input and reasoning output are included subsets, not additions to the total. Missing or ambiguous counters are unavailable, never assumed zero. A Claude message, completed Codex export turn or usage-bearing Codex token event with incomplete counters makes affected session/report counters unavailable and emits a warning; same-message Claude fragments may supply the missing counters. Codex rate-limit-only notifications do not imply usage. Logs report tokens without monetary cost fields.
 - **Counter decreases:** a falling Codex subset makes that subset unavailable without resetting monotonic input/output/total counters. A primary-counter decrease is treated as a reset only when all three primary counters are available and non-increasing; mixed or incomplete reset evidence makes session totals unavailable. Each case emits a warning; task reports preserve unavailable values.
 - **Coverage:** a before/after report measures a task interval. Without a session-start baseline, a snapshot reports only the selected sources' recorded totals; it cannot establish an exact task delta. Record the cutoff and any material omission briefly in the log; work after that cutoff is excluded.
-- **Overlapping sources:** count each session once. Forks can repeat inherited cumulative counters with rewritten timestamps, which the collector may not flag. Check parent/fork overlap before combining sources; exclude a duplicate parent when its usage is already included in the selected continuation. Do not add collector smoke-test totals or overlapping interval reports to conversation totals.
+- **Overlapping sources and continuations:** native hashed turn/range evidence removes shared usage even when copied timestamps change, and can recover a changed source identity when it covers the baseline. Equal counters or shared session-tree metadata alone do not establish interchangeable usage. Legacy or incomplete provenance can remain unavailable; inspect warnings instead of manually adding duplicate sources. Do not add collector smoke-test totals or overlapping measurement intervals to conversation totals.
 - **Timing and operational metrics:** elapsed spans include idle/waiting time and are not active-work durations; concurrent spans are not additive. Token snapshots are not API-call counts. Record calls, retries and repair rounds only from attributable evidence, and omit routine prose about metrics that were not collected. Retain session-specific gaps that affect interpretation.
 
 ## Issues and delivery

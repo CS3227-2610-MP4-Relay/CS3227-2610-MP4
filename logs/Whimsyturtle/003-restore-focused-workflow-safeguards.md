@@ -2,14 +2,15 @@
 
 Slice: workflow-focused-safeguards · Tier: Standard · Tool: Codex · Orchestrator model: gpt-6-astra (observed session metadata) · Date: 2026-10-26
 
-Tokens: 611,962 input, 9,363 output, 621,325 total; interval cutoff 10:18:26 SGT.
+Tokens: measured subtotal: 611,962 input, 9,363 output, 621,325 total; interval cutoff 10:18:26 SGT; full aggregate unavailable.
 
 | Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | Orchestrator — gpt-6-astra/xhigh (metadata), `codex:547e073468c8b1736ed1f263` | 444,738 | 422,912 | 8,267 | 2,427 | 453,005 | 393.730 s measurement interval |
 | Verifier — gpt-6.1-sol/medium (explicit selection), `codex:a37eac3876b109f651601070` | 167,224 | 124,800 | 1,096 | 209 | 168,320 | Within shared interval; separate duration unavailable |
+| Automatic approval reviewer — codex-auto-review/low, `codex:e922cca4d7e0cb8847e1c946` | unavailable | unavailable | unavailable | unavailable | unavailable | Within original measured window |
 
-One subagent, with no conversation fork; no review repair rounds. Both sources reported zero cache-write tokens. `resource_usage.py` collected the coordinator and bounded child discovery with no warnings. Baseline was taken at 10:11:53 SGT after initial instruction/repository inspection, before implementation; that initial inspection and work after the cutoff are excluded. Numeric snapshots remain outside version control. See [accounting definitions](../../workflow/README.md#token-reporting).
+One delegated subagent, with no conversation fork; no review repair rounds. The baseline was taken at 10:11:53 SGT after initial instruction/repository inspection, before implementation; that inspection and work after the cutoff are excluded. Retrospective discovery adds an initialized automatic approval source with unavailable counters; the measured subtotal is unchanged and the aggregate is unavailable (`session_initialized_without_usage`). Available cache-write counters are zero. Numeric snapshots remain outside version control. See [the audit](018-audit-historical-token-counts.md) and [accounting definitions](../../workflow/README.md#token-reporting).
 
 ## Requests
 

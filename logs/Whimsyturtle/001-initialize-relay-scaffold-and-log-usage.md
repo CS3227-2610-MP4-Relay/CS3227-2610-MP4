@@ -2,18 +2,22 @@
 
 Slice: initialization, no issue · Tier: not formally assigned; workflow/security review performed · Tool: Codex · Orchestrator model: gpt-6-astra, xhigh (observed runtime metadata) · Date: 2026-10-25–2026-10-26 (SGT)
 
-Tokens: 20,280,430 input, 124,951 output, 20,405,381 total through 2026-10-26 08:53:50 SGT.
+Tokens: measured subtotal: 21,075,882 input, 127,570 output, 21,203,452 total through 2026-10-26 08:53:50 SGT; full aggregate unavailable.
 
 | Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Orchestrator — `gpt-6-astra/xhigh`, `codex:7f113410a284626ec3ca73a9` | 10,501,965 | 10,104,960 | 49,409 | 13,724 | 10,551,374 | About 9h55m from original session start |
-| `workflow_audit` — `gpt-6.1-sol/high`, `codex:f5ae3348c067e40a488ada2a` | 2,933,382 | 2,859,904 | 28,430 | 4,012 | 2,961,812 | 14m11s |
-| `baseline_audit` — `gpt-6.1-sol/high`, `codex:77c7cf51051657b8f31b79dc` | 1,073,701 | 1,028,736 | 10,723 | 394 | 1,084,424 | 7m00s |
-| `usage_tracking` — `gpt-6.1-sol/high`, `codex:87306c967c232723eb86dba0` | 3,376,162 | 3,316,352 | 26,732 | 5,084 | 3,402,894 | 15m22s |
-| `independent_review` — `gpt-6.1-sol/high`, `codex:0bd65d9dae4bc5af89e17f9f` | 1,533,201 | 1,435,136 | 6,749 | 3,597 | 1,539,950 | 8m19s |
-| `security_review` — `gpt-6.1-sol/high`, `codex:d1d6baa3bdce8f541a672392` | 862,019 | 815,872 | 2,908 | 878 | 864,927 | 3m56s |
+| Orchestrator — `gpt-6-astra/xhigh`, `codex:7f113410a284626ec3ca73a9` | 5,076,191 | 4,793,216 | 31,900 | 9,996 | 5,108,091 | Recorded history through original cutoff |
+| `workflow_audit` — `gpt-6.1-sol/high`, `codex:f5ae3348c067e40a488ada2a` | 2,933,382 | 2,859,904 | 28,430 | 4,012 | 2,961,812 | Recorded history through original cutoff |
+| `baseline_audit` — `gpt-6.1-sol/high`, `codex:77c7cf51051657b8f31b79dc` | 1,073,701 | 1,028,736 | 10,723 | 394 | 1,084,424 | Recorded history through original cutoff |
+| `usage_tracking` — `gpt-6.1-sol/high`, `codex:87306c967c232723eb86dba0` | 3,376,162 | 3,316,352 | 26,732 | 5,084 | 3,402,894 | Recorded history through original cutoff |
+| `independent_review` — `gpt-6.1-sol/high`, `codex:0bd65d9dae4bc5af89e17f9f` | 1,533,201 | 1,435,136 | 6,749 | 3,597 | 1,539,950 | Recorded history through original cutoff |
+| `security_review` — `gpt-6.1-sol/high`, `codex:d1d6baa3bdce8f541a672392` | 862,019 | 815,872 | 2,908 | 878 | 864,927 | Recorded history through original cutoff |
+| Earlier coordinator source — gpt-6-astra/xhigh, `codex:2a8aa83ad7649034980f0198` | 5,718,751 | 5,597,440 | 18,135 | 3,998 | 5,736,886 | Recorded history through original cutoff |
+| Automatic approval reviewer — codex-auto-review/low, `codex:3c894f97f5d081522a9b00e8` | 110,921 | 78,848 | 791 | 474 | 111,712 | Recorded history through original cutoff |
+| Automatic approval reviewer — codex-auto-review/low, `codex:1d56df65051f421448b73b4e` | 391,554 | 353,024 | 1,202 | 405 | 392,756 | Recorded history through original cutoff |
+| Automatic approval reviewer — codex-auto-review/low, `codex:4aa13f4eaa14042a32ba8a78` | unavailable | unavailable | unavailable | unavailable | unavailable | Recorded history through original cutoff |
 
-Five subagents; session envelope about 9h55m. Cache-write input: 0 for all six sources. Coverage: no session-start baseline; the coordinator continuation includes inherited usage, so the overlapping original source is excluded. [Accounting conventions](../../workflow/README.md#token-reporting).
+Five delegated subagents ran; the session envelope was about 9h55m. Retrospective discovery includes the earlier coordinator source and three automatic approval sources. Native shared ranges are counted once across the two coordinator identities, so their allocations differ from the earlier continuation-only table. This is selected recorded history without a task-start baseline. One initialized approval source has no supported usage; the aggregate remains unavailable. Available cache-write counters are zero. See [the audit](018-audit-historical-token-counts.md) and [accounting conventions](../../workflow/README.md#token-reporting).
 
 ## Requests
 
@@ -73,6 +77,6 @@ The human authorized these six local commits after each group was staged for rev
 - The Windows environment prevented creating the directory symlink used by one test; that test was skipped. The deterministic Windows reparse-point test passed. Live client role/skill discovery and hook enforcement were not established by the local script tests.
 - An intermediate integration run saw a temporary adapter-description mismatch while files were still being edited. It was repaired before final verification. Protected adapter writes required narrowly scoped sandbox escalation; those requests were approved, with no approval rejection reported.
 - The initial Python aliases were unavailable; verification used an existing Python environment without installing dependencies. Git produced global-ignore permission warnings; a source-repository ownership check was rerun with a command-local safe-directory setting, without changing global configuration.
-- During logging, the first .NET metadata read encountered active-file sharing locks; a read-only shared stream succeeded. The coordinator fork repeated 56 inherited usage snapshots; the duplicate original source was excluded as noted above.
+- During logging, the first .NET metadata read encountered active-file sharing locks; a read-only shared stream succeeded. The coordinator fork repeated 56 inherited usage snapshots. The original table excluded the earlier source; retrospective accounting now includes both coordinator sources with shared ranges counted once, as described above.
 - The log-format revision initially failed Ruff E501 on one 89-character test-fixture line; it was wrapped and full verification then passed. No dependency was installed to resolve the optional skill-validator limitation.
 - No malicious repository instruction was reported as acted upon. Native enforcement, hosted security, application behaviour and live deployment remain outside the evidence collected here.

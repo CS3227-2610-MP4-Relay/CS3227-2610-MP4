@@ -133,35 +133,70 @@ def test_invalid_membership_is_404_before_state(tester, target, make_round, inva
     assert snapshot() == before
 
 
-@pytest.mark.ac("RES-2.4")
+@pytest.mark.ac("RND-5.1", "RND-5.5", "RES-2.1", "RES-2.4", "RES-2.5")
 def test_retest_keeps_old_row_and_unselected_case_entry(tester, target):
     round_, case, original = target
-    extra = Case.objects.create(
+    overlap = Case.objects.create(
+        round=round_,
+        title="Synthetic overlapping",
+        steps="Steps",
+        expected_result="Expected",
+    )
+    unselected = Case.objects.create(
         round=round_,
         title="Synthetic unselected",
         steps="Steps",
         expected_result="Expected",
     )
-    BuildCase.objects.create(build=original, case=extra)
-    saved = save(tester, target, submit=True)
-    untouched = save(tester, (round_, extra, original))
-    with transaction.atomic():
-        locked = Round.objects.select_for_update().get(pk=round_.pk)
-        new = services.request_retest(locked, "Synthetic retest", [case.pk])
-    before = snapshot()
-    for write in (False, True):
-        with (
-            pytest.raises(results.Conflict, match="no longer current"),
-            entry(tester, target, write=write),
-        ):
-            pytest.fail("A stale entry was allowed")
-    assert snapshot() == before
-    with entry(tester, (round_, case, new)) as current:
-        assert current.result is None
-    with entry(tester, (round_, extra, original)) as current:
-        assert current.result == untouched
-    saved.refresh_from_db()
-    assert saved.build_id == original.pk and saved.submitted_at is not None
+    for additional in (overlap, unselected):
+        BuildCase.objects.create(build=original, case=additional)
+    saved = save(
+        tester, target, submit=True, outcome="fail", observation="Synthetic failure"
+    )
+    overlapping = save(tester, (round_, overlap, original))
+    untouched = save(tester, (round_, unselected, original))
+    current_rows = {case.pk: saved, overlap.pk: overlapping, unselected.pk: untouched}
+    stale_targets = []
+    for label, selected in (
+        ("Synthetic partial", [case]),
+        ("Synthetic overlap", [case, overlap]),
+        ("Synthetic repeated", [case]),
+    ):
+        old_rows = list(Result.objects.order_by("pk").values())
+        old_ids = [row["id"] for row in old_rows]
+        with transaction.atomic():
+            locked = Round.objects.select_for_update().get(pk=round_.pk)
+            new = services.request_retest(locked, label, [item.pk for item in selected])
+        assert list(Result.objects.order_by("pk").values()) == old_rows
+        before = snapshot()
+        for item in selected:
+            stale_targets.append((round_, item, current_rows[item.pk].build))
+            with entry(tester, (round_, item, new)) as current:
+                assert current.result is None
+        for stale in stale_targets:
+            for write in (False, True):
+                with (
+                    pytest.raises(results.Conflict, match="no longer current"),
+                    entry(tester, stale, write=write),
+                ):
+                    pytest.fail("A stale entry was allowed")
+        for item in (case, overlap, unselected):
+            if item not in selected:
+                previous = current_rows[item.pk]
+                with entry(tester, (round_, item, previous.build)) as current:
+                    assert current.result == previous
+        assert snapshot() == before
+        for item in selected:
+            submitted = save(tester, (round_, item, new), submit=True)
+            assert submitted.pk not in old_ids
+            assert submitted.outcome == "pass" and submitted.submitted_at is not None
+            current_rows[item.pk] = submitted
+        # Compare every original field, including observations and submission times.
+        assert (
+            list(Result.objects.filter(pk__in=old_ids).order_by("pk").values())
+            == old_rows
+        )
+    assert Result.objects.count() == 7
 
 
 @pytest.mark.ac("RES-2.4")

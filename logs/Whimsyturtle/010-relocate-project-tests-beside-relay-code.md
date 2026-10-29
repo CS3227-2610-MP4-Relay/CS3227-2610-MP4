@@ -2,15 +2,16 @@
 
 Slice: #70 · Tier: Standard · Tool: Codex · Orchestrator model: gpt-6-astra, xhigh (observed turn metadata) · Date: 2026-10-27
 
-Tokens: 5,245,427 input, 19,699 output, 5,265,126 total; measured through 15:22:27 SGT.
+Tokens: 5,577,550 input, 20,716 output, 5,598,266 total; measured through 15:22:27 SGT.
 
 | Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | Orchestrator — gpt-6-astra/xhigh, `codex:169373b44b1616aa39ec4c3e` | 3,453,211 | 3,405,312 | 10,168 | 2,576 | 3,463,379 | 13m 39.751s measurement interval |
 | Builder — gpt-6.1-sol/medium, `codex:943dbb0735776cb56e0a7dc6` | 1,346,536 | 1,289,728 | 6,375 | 670 | 1,352,911 | 6m 28.540s across two checkpoints |
 | Verifier — gpt-6.1-sol/high, `codex:1c2e2bdcfebd455ad0d57816` | 445,680 | 384,896 | 3,156 | 717 | 448,836 | 2m 25.574s |
+| Automatic approval reviewer — codex-auto-review/low, `codex:f9e93ce17aac723d08e289dd` | 332,123 | 234,752 | 1,017 | 377 | 333,140 | Within original measured window |
 
-Two delegated agents; elapsed task measurement 819.751 seconds. Model/effort values come from each session's turn metadata. `resource_usage.py report` combined the coordinator baseline with the two later-started role sessions and reported no warnings. Initial preparation before 15:08:47 SGT, delivery after the cutoff, and automatic approval-review sessions are excluded. Cache-write counters were zero. One builder correction occurred before review; no reviewer repair round. See [token reporting](../../workflow/README.md#token-reporting) for accounting definitions.
+Two delegated agents plus the automatic approval source now included by retrospective discovery; elapsed task measurement 819.751 seconds. Model/effort values come from session turn metadata. The rerun combines the original coordinator interval, the two delegated sessions and the related approval-source delta, with no warnings. Initial preparation before 15:08:47 SGT and delivery after the cutoff remain excluded. Cache-write counters were zero. One builder correction occurred before review; no reviewer repair round. See [the audit](018-audit-historical-token-counts.md) and [token reporting](../../workflow/README.md#token-reporting).
 
 ## Requests
 

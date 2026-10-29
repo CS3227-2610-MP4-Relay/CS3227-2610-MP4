@@ -2,7 +2,7 @@
 
 Slice: #12 · Tier: High · Tool: Codex · Orchestrator model: gpt-6-astra/xhigh (observed session metadata) · Date: 2026-10-29
 
-Tokens: 17,145,997 input, 65,158 output, 17,211,155 total; measurement cutoff 2026-10-29 14:11:24 Asia/Singapore.
+Tokens: 18,113,975 input, 67,168 output, 18,181,143 total; measurement cutoff 2026-10-29 14:11:24 Asia/Singapore.
 
 | Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
@@ -10,8 +10,9 @@ Tokens: 17,145,997 input, 65,158 output, 17,211,155 total; measurement cutoff 20
 | Builder — gpt-6.1-sol/medium, codex:ea4556f8e1624d0870bbb102 | 7,134,471 | 7,005,312 | 39,273 | 7,768 | 7,173,744 | Within shared window; reused across five runs |
 | Verifier — gpt-6.1-sol/high, codex:7df8e7025303f929b233f8f1 | 602,872 | 528,000 | 3,245 | 817 | 606,117 | Within shared window |
 | Security reviewer — gpt-6.1-sol/high, codex:4e169dab817045a0a5bcf19c | 737,110 | 669,696 | 3,319 | 656 | 740,429 | Within shared window |
+| Automatic approval reviewer — codex-auto-review/low, `codex:eb3f8ca97e7fb626e4e9e02f` | 967,978 | 848,640 | 2,010 | 719 | 969,988 | Within original measured window |
 
-Three subagent sessions; model/effort values were observed in their session metadata and matched the role adapters. `resource_usage.py` measured the coordinator delta and whole selected child sessions, with no telemetry warnings. The coordinator baseline followed initial preflight reads; those reads and work after the cutoff are excluded. Child run-local baselines excluded some reads, so this table uses the aggregate selected sessions instead of summing those partial reports. Cached input is part of input, and reasoning output is part of output; see [accounting rules](../../workflow/README.md#token-reporting). Zero review repair rounds; total retries unavailable. Known repeated attempts are described below.
+Three delegated subagent sessions plus the related automatic approval source now included by retrospective discovery. Observed role model/effort values matched the adapters. The rerun uses the same coordinator window and delegated sessions, adding the approval-source delta from a reconstructed start snapshot; no warnings. Initial preflight reads before the baseline and work after the cutoff remain excluded. Child run-local reports exclude some reads, so they are not added to this aggregate table. Zero review repair rounds; total retries unavailable. Known repeated attempts are described below. See [the audit](018-audit-historical-token-counts.md) and [accounting rules](../../workflow/README.md#token-reporting).
 
 ## Requests
 
