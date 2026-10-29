@@ -53,7 +53,7 @@ Builder choices in the 2026-10-29 repair, pending the same confirmation:
 
 - **B5 Pre-fill bound (S7):** a "Use this draft" text field longer than twice its RND-2 limit is ignored, as if not posted, before cleaning; twice allows every line break to come back as CR LF.
 - **B6 Remove `ai.Usage` (S7):** nothing records token metrics, and its seeded row showed a count of 0 where the contract requires "unavailable", so the model and row are removed by a migration; a slice that records metrics specifies its own table.
-- **B7 Deadline mechanics (S1):** the deadline starts at reservation; name resolution runs in a helper thread that is abandoned at the deadline; slots expire 35 seconds after reservation, the 30-second bound plus a 5-second release margin.
+- **B7 Deadline mechanics (S1):** the deadline starts at reservation; name resolution runs in a helper thread that is abandoned at the deadline (superseded by the [#6 review repair](6-llm-gateway.md#review-repair-2026-10-29): aiohttp resolves names and the deadline is its total timeout); slots expire 35 seconds after reservation, the 30-second bound plus a 5-second release margin.
 - **B8 Seeded slots in tests (repair D):** an autouse fixture in `src/ai/tests/conftest.py` recreates the two deployment slots for every database-backed AI test, because ACC-3's transactional tests and the browser tests' live server flush every table, seeded rows included. The gateway still refuses when they are missing, as the spec's fixed rows require; `serialized_rollback` was rejected because it collides with content types recreated after a flush.
 
 ## Checkpoints
@@ -69,11 +69,11 @@ Criteria: RND-8.1 to RND-8.9, nine, one above the guideline. It stays reviewable
 ## Open issues
 
 - **For #6 (Whimsyturtle) and the human:** confirm or change the gateway's [proposals](../specs/ai/llm-gateway.md), which answer drafting's nine [requirements on the gateway](../specs/ai/test-drafting.md#requirements-on-the-gateway); the time bound against the [release gate](../specs/TECHNICAL-SPEC.md#release-verification) (not edited here); who owns the live evaluation if #6 declines it; the provider's retention and training on submitted text.
-- **For the human:** confirm D1, D2, D4 to D6, D8 to D23 and B1 to B7 (D3 and D7 became B4 and B3), in particular the RND-8 home, the 1-to-5 and 0-to-5 counts, removal rather than refusal, the pre-fill route with its rule-5 exception, nine criteria, the reload residual and the deployment-wide allowance residual.
+- **For the human:** confirm D1, D2, D4 to D6, D8 to D23 and B1 to B7 (D3 and D7 became B4 and B3; B7's helper-thread resolution is superseded by the [#6 review repair](6-llm-gateway.md#review-repair-2026-10-29)), in particular the RND-8 home, the 1-to-5 and 0-to-5 counts, removal rather than refusal, the pre-fill route with its rule-5 exception, nine criteria, the reload residual and the deployment-wide allowance residual.
 - **For the human:** confirm the repair size, 534 lines against decision 2's estimate of 100 to 200 ([round 2 evidence](#evidence-and-checks)).
 - **Before turning live calls on:** the conditions of the [live switch](../specs/ai/llm-gateway.md#live-switch), then the operator's live evaluation.
   - The final security re-review of `8a27ea7` adds two items for that change.
-  - First, bound the body read independently of the Python patch level: refuse a `Content-Length` above `RESPONSE_BYTES` and read in bounded chunks, because older 3.14 `http.client` builds pre-allocate the declared length.
+  - First, bound the body read independently of the Python patch level: refuse a `Content-Length` above `RESPONSE_BYTES` and read in bounded chunks, because older 3.14 `http.client` builds pre-allocate the declared length. Superseded by the [#6 review repair](6-llm-gateway.md#review-repair-2026-10-29): aiohttp reads the body in chunks counted against the cap, and `http.client` is no longer used.
   - Second, make the off-for-now notice depend on `SOC_LLM_LIVE`, or test that it can't survive the switch.
   - Repair rounds were exhausted, so these are recorded here rather than fixed in this PR.
 - **Access matrix:** resolved; #77 is merged into this branch (`6e7b844`) and the `ai:*` rows were added in [repair round 2](#repair-round-2-2026-10-29) (`46fae22`).

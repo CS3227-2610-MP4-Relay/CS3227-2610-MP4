@@ -40,7 +40,27 @@ Checkpoints, each committed after its focused checks:
 
 Size estimate: about 400 changed lines in total, most of them removals (the hand-built networking and its tests), with the gateway about 100 lines shorter.
 
+### Outcome
+
+- **Commits:** `a59c4bb` (spec and plan), `a852c2d` (aiohttp transport, pins, tests), `96fc08d` (Developer Guide), then repair round 1: `c1ee651` (release allowlist) and `1863017` (gateway errors and tests).
+- **Size:** 410 changed lines (+223/−187) from `1079285` to `1863017`, against the ~400 estimate; `gateway.py` went from 395 to 322 lines.
+- **Coordinator decisions:** the call runs on its own event loop, closed with `loop.close()`, because `asyncio.run`, which `async_to_sync` also uses, waits for a hung lookup's thread (measured with `asyncio.run`: 6.01 s against a 1 s timeout); this runner choice is to be named to Whimsyturtle on #91. Any exception in the transport is a fixed outcome: `ValueError` and, from repair round 1, any other `Exception` are `Failed("transport")`.
+- **Dropped tests:** per-read trickle and stalled-TLS-handshake tests (per-phase guarantees the review dropped); the old resolver-thread timeout test (replaced by a hung-lookup test that guards the runner); the raw-response and chunk-size-line cap tests (the cap is now on the body; replaced by at-cap, over-cap and chunked over-cap tests).
+- **Red evidence by mutation:** each of `allow_redirects=True`, no body cap, `ssl=False`, `trust_env=True`, `auto_decompress=True`, no `Accept-Encoding`, `asyncio.run`, no `ValueError` clause, no timeout clause and `total=None` failed its targeted test. The first redirect mutant passed; that test was fixed to redirect to the same server.
+- **Repair round 1 findings and fixes:**
+  - A non-`OSError` from aiohttp or its resolver escaped `complete`. It now maps to `Failed("transport")`, and `_exchange` also marks `chunk` and `response`. Tests cover a lookup `RuntimeError` and a mid-request `RuntimeError` that leaves the key and request text out of logs. The error-report test now drives a `BaseException` through `_exchange` and a storage error through `complete`.
+  - The total timeout and the deadline from reservation were untested; added a trickle test and two direct `_transport` deadline tests.
+  - Added statuses 201 and 404. The spec notes that aiohttp may round the timeout up by under a second.
+  - The release archive omitted `src/ai`; it is now packed, with a test that every local app is.
+  - Each new test failed against its mutant or the old allowlist.
+- **Checks:** focused `src/ai` tests and Ruff at each checkpoint; the full checks (Django check, makemigrations check, Ruff, pytest) passed on `96fc08d` (1,859 tests) and again after repair round 1.
+- **Package identity:** each new package's installed metadata names its upstream repository: `aio-libs/aiohttp`, `aiohappyeyeballs`, `aiosignal`, `frozenlist`, `multidict`, `propcache` and `yarl`, `python-attrs/attrs` and `kjd/idna`. Their names match those declared by aiohttp 3.14.5 and yarl 1.25.1. This metadata is self-declared, so it does not prove where the packages were downloaded from.
+
 ## Open
 
 - Confirmation of the contract's proposals by Whimsyturtle and the human.
 - The live provider check, after the live switch's conditions are met.
+- **Pre-live:** `ssl.create_default_context()` honours `SSLKEYLOGFILE`, `SSL_CERT_FILE` and `SSL_CERT_DIR`. Before turning live calls on, check they are unset in production, or set `keylog_filename = None`.
+- **Residuals, recorded with no code change:**
+  - After a timeout on a TLS connection whose server stays silent, the socket can stay open until garbage collection, because aiohttp's graceful TLS close is still waiting when the loop closes.
+  - A hung lookup's thread keeps running after the call returns and is joined at interpreter exit, which can delay worker shutdown.
