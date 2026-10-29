@@ -227,7 +227,7 @@ def test_tests_see_no_soc_llm_variables():
 
 def test_network_step_is_blocked_without_opt_in(block_llm_network):
     with pytest.raises(RuntimeError):
-        gateway._connect("127.0.0.1", 9, gateway.time.monotonic() + 1)
+        gateway._exchange("https://127.0.0.1:9/llm", {}, b"", 0)
     block_llm_network.attempts.clear()
 
 
@@ -261,8 +261,7 @@ def test_error_reports_hide_the_key_and_request_text(user, settings, monkeypatch
     def explode(*args, **kwargs):
         raise RuntimeError("synthetic")
 
-    monkeypatch.setattr(gateway, "_exchange", explode, raising=False)
-    monkeypatch.setattr(gateway, "build_opener", explode, raising=False)
+    monkeypatch.setattr(gateway, "_exchange", explode)
     with pytest.raises(RuntimeError) as info:
         complete(user, "secret-instructions-text", '{"criteria": "secret-data-text"}')
     frames = ExceptionReporter(

@@ -14,7 +14,7 @@ class _BlockedNetwork:
         self.attempts = []
 
     def __call__(self, *args, **kwargs):
-        self.attempts.append(args[:2])
+        self.attempts.append(args[:1])
         raise RuntimeError("Tests must not open an LLM provider connection.")
 
 
@@ -33,6 +33,6 @@ def block_llm_network(request, monkeypatch):
         yield None
         return
     blocked = _BlockedNetwork()
-    monkeypatch.setattr(gateway, "_connect", blocked)
+    monkeypatch.setattr(gateway, "_exchange", blocked)
     yield blocked
     assert not blocked.attempts, "A test reached the LLM gateway's network step."
