@@ -70,8 +70,9 @@ Criteria: RND-8.1 to RND-8.9, nine, one above the guideline. It stays reviewable
 
 - **For #6 (Whimsyturtle) and the human:** confirm or change the gateway's [proposals](../specs/ai/llm-gateway.md), which answer drafting's nine [requirements on the gateway](../specs/ai/test-drafting.md#requirements-on-the-gateway); the time bound against the [release gate](../specs/TECHNICAL-SPEC.md#release-verification) (not edited here); who owns the live evaluation if #6 declines it; the provider's retention and training on submitted text.
 - **For the human:** confirm D1, D2, D4 to D6, D8 to D23 and B1 to B7 (D3 and D7 became B4 and B3), in particular the RND-8 home, the 1-to-5 and 0-to-5 counts, removal rather than refusal, the pre-fill route with its rule-5 exception, nine criteria, the reload residual and the deployment-wide allowance residual.
+- **For the human:** confirm the repair size, 534 lines against decision 2's estimate of 100 to 200 ([round 2 evidence](#evidence-and-checks)).
 - **Before turning live calls on:** the conditions of the [live switch](../specs/ai/llm-gateway.md#live-switch), then the operator's live evaluation.
-- **Access matrix:** #77 is merged into this branch (`6e7b844`), so #78 adds the `ai:*` rows in [repair round 2](#repair-round-2-2026-10-29).
+- **Access matrix:** resolved; #77 is merged into this branch (`6e7b844`) and the `ai:*` rows were added in [repair round 2](#repair-round-2-2026-10-29) (`46fae22`).
 
 ## Repair after independent review (2026-10-29)
 
@@ -139,10 +140,10 @@ From the round-1 builder handoffs (`1969298`..`712df3f`), not rerun here:
 - [x] Repair B: live switch and gateway repairs (`60b9574`).
 - [x] Repair C: test repairs and additions (`15e0611`).
 - [x] Repair D: guides and README, with a test-isolation fix and log correction (`8d2200a`, `a62f34d`, `dc77969`, `c170ff0`, `712df3f`).
-- [ ] Repair round 2 A: specs and plan.
-- [ ] Repair round 2 B: notice, transport and reservation repairs with tests.
-- [ ] Repair round 2 C: access-matrix rows.
-- [ ] Repair round 2 D: guides.
+- [x] Repair round 2 A: specs and plan (`ba9c43c`, `ce2d0dd`).
+- [x] Repair round 2 B: notice, transport and reservation repairs with tests (`816a2c4`, `26982cc`, `9a13dff`).
+- [x] Repair round 2 C: access-matrix rows (`46fae22`).
+- [ ] Repair round 2 D: guides and this plan's evidence.
 
 ## Repair round 2 (2026-10-29)
 
@@ -169,4 +170,17 @@ While live calls are off, the drafting page shows an off-for-now notice in place
 - **A. Specs and plan** (`spec:`, then `plan:`): `workflow/specs/product/rounds.md`, `workflow/specs/ai/llm-gateway.md`, `workflow/specs/TECHNICAL-SPEC.md`, this plan. Checks: `git diff --check`; `python workflow/scripts/check_scope.py builder --base 6e7b844`; read back.
 - **B. Code and tests** (`fix:` units: notice with its tests and e2e marks; transport completion; reservation time; lookup errors; `test:` hostname mismatch): `src/ai/templates/ai/draft.html`, `src/ai/gateway.py`, `src/ai/tests/`, `src/e2e/test_rounds.py`. Checks: red-first or mutation evidence per new test; focused `pytest src/ai`, the e2e drafting journey; `ruff check`, `ruff format --check`.
 - **C. Matrix rows** (`test:`): `src/relay/tests/test_access_matrix.py`. Checks: the whole matrix.
-- **D. Guides** (`docs:`): `docs/UserGuide.md` (exact notice quote), `docs/DeveloperGuide.md` (links for N7). Checks: read back against the rendered page.
+- **D. Guides** (`docs:`, then `plan:`): `docs/UserGuide.md` (exact notice quote), `docs/DeveloperGuide.md` (links for N7), this plan's evidence. Checks: read back against the rendered page.
+
+### Evidence and checks
+
+From the builder's runs on each checkpoint; full verification is the coordinator's.
+
+- **Notice (B):** on the old template, the GET and foreign-selection view tests and the e2e drafting journey failed; all pass after the change. The journey is now marked RND-8.4.
+- **N1 (B):** a complete reply on a held-open connection (`Content-Length`, chunked, chunked with a trailer) failed as `Failed("timeout")` on the old code and passes. `_exchange` now lets `http.client` read through a deadline-and-cap reader instead of reading until close; a hand-written framing parser was tried first and dropped as larger. A new chunked over-cap test caught a regression in that change (`http.client` turns a `ValueError` on a chunk-size line into `IncompleteRead`), so the cap error is no longer a `ValueError`.
+- **Low 1 (B):** with the slot locks held by another transaction for a second, expiry was before release plus 35 seconds on the old code; now it is not. Mutation: starting the deadline after `_reserve` returns fails the test.
+- **Low 2 (B):** a 64-character label and a `RuntimeError` from `getaddrinfo` raised `KeyError` on the old code; both are now `Failed("transport")`.
+- **Hostname (B):** passes as built; it fails with `check_hostname = False`.
+- **Matrix (C):** `test_every_route_has_a_matrix_entry` failed without the `ai:*` rows; with them, the whole matrix passes (501). A successful drafting POST is the new `RENDERED` outcome (200, nothing changed), and the snapshot now covers `CallRecord` and `CallSlot`. Mutations caught: `use_draft` without its Draft check, a selection from every round, the notice removed, `use_draft` saving a case. `use-draft`'s `criteria` has no body-ID row: under RND-8.9 it shows no message, and `src/ai/tests/test_views.py` covers it.
+- **Focused checks:** `pytest src/ai` 190 passed; `pytest src/relay/tests/test_access_matrix.py` 501 passed; the e2e drafting journey passed; `ruff check .` and `ruff format --check .` clean; `check_scope.py builder` clean at each checkpoint.
+- **Size, pending the human's confirmation:** by the [slice skill's metric](../skills/slice.md), round 2 changes 128 lines of non-test `src/` (76 insertions plus 52 deletions, `6e7b844..46fae22`), so the repairs total 534 (406 plus 128). That exceeds human decision 2's estimate of 100 to 200 lines for the repairs; the human has not yet confirmed it.
