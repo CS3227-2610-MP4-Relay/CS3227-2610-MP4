@@ -1,8 +1,8 @@
-# Slice 22: Test-drafting contract (spec only) (#22)
+# Slice 22: AI test drafting — contract and implementation (#22)
 
-Goal: settle the test-drafting AI feature's contract, its pages as [RND-8](../specs/product/rounds.md#rnd-8-draft-test-cases-with-ai) and its [AI contract](../specs/ai/test-drafting.md), so it can be built once the [gateway](../specs/ai/llm-gateway.md) (#6) exists.
+Goal: settle and implement the test-drafting AI feature's contract, its pages as [RND-8](../specs/product/rounds.md#rnd-8-draft-test-cases-with-ai) and its [AI contract](../specs/ai/test-drafting.md), using the [gateway](../specs/ai/llm-gateway.md) (#6) and its fake provider.
 
-Tier: High (AI feature contract), with a verifier and a security review. Base: `20f4ea7`, branch `22-test-drafting-spec`. Owner: zheng-jj. Specs only: no code, tests, dependency, prompt file or guide change; `ai/llm-gateway.md` is the gateway owner's (Whimsyturtle) and is not edited.
+Tier: High (AI feature), with a verifier and a security review. Base: `20f4ea7`, branch `22-test-drafting-spec`. Owner: zheng-jj. The contract was settled before code; the implementation adds the `ai` app and its tests and keeps the gateway contract in `ai/llm-gateway.md`.
 
 ## Decisions
 
@@ -12,7 +12,7 @@ Confirmed by the human (zheng-jj) on 2026-10-27: write the contract now with sen
 
 Each is a **coordinator default, pending human and Whimsyturtle confirmation**. Checkpoint 1's D3 (hidden characters) and D7 (adoption) are now builder proposals B4 and B3.
 
-- **D1 Home:** the pages and criteria are a new requirement, RND-8, in `product/rounds.md`, because drafting is a Draft-round coordinator action under the same rules; the model-facing contract stays in `ai/test-drafting.md`. Status: specified, not implemented, blocked on #6.
+- **D1 Home:** the pages and criteria are a new requirement, RND-8, in `product/rounds.md`, because drafting is a Draft-round coordinator action under the same rules; the model-facing contract stays in `ai/test-drafting.md`. Status: implemented; the live provider check is an operator step.
 - **D2 Source:** the coordinator selects 1 to 5 of the Draft round's own criteria; only their current text is sent, labelled `C1` onwards in creation order, as a JSON data part separate from the instructions. No tester data, cases, titles, other rounds or workspaces, database IDs or usernames.
 - **D4 Fixed instructions:** six required points in the contract (repair round 1: the exact wording and version name are added to the contract at the implementation slice's first checkpoint and reviewed before any code).
 - **D5 Schema:** one JSON object `{"drafts": [...]}` of 0 to 5 drafts with exactly `title`, `steps`, `expected_result` and `criteria`; RND-2 limits and rule 5 after cleaning; `criteria` unrepeated sent labels; no repeated keys; reply at most 20,000 characters. Any failure rejects the whole reply.
@@ -57,7 +57,7 @@ Not in the coordinator's brief; proposed by the builder in checkpoint 1, pending
 
 ## Size
 
-Criteria: RND-8.1 to RND-8.9, nine, one above the guideline. It stays reviewable: the split separates independently changeable behaviours (selection scope, pre-fill handling) rather than adding scope, every criterion is one page flow of two views, and the inherited round rules are tested with existing helpers. Implementation estimate (next slice, not confirmed): about 300 to 380 lines under `src/` outside tests (forms, two views, cleaning table, reply parser and validator, instruction constant, templates), excluding the gateway client, which #6 owns. Over 400 would need the human's budget decision; if the estimate grows, split the pre-fill route (RND-8.2, RND-8.9) into its own slice.
+Criteria: RND-8.1 to RND-8.9, nine, one above the guideline. It stays reviewable: the split separates independently changeable behaviours (selection scope, pre-fill handling) rather than adding scope, every criterion is one page flow of two views, and the inherited round rules are tested with existing helpers. Implementation size: 398 lines under `src/` outside tests (forms, two views, cleaning table, reply parser and validator, instruction constant, templates), excluding the gateway client, which #6 owns. This is within the 400-line hard budget and above the earlier 300 to 380 estimate by 18 lines after review repairs.
 
 ## Open issues
 

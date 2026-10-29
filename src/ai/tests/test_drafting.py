@@ -1,6 +1,7 @@
 """The drafting contract's cleaning and reply schema."""
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -66,8 +67,9 @@ def test_invalid_replies_are_rejected_whole(value):
 
 
 @pytest.mark.ac("RND-8.5")
-def test_deeply_nested_reply_is_rejected_without_recursion_error():
-    value = '{"drafts": ' + "[" * 2000 + "]" * 2000 + "}"
+@pytest.mark.parametrize("depth", [499, 2000])
+def test_deeply_nested_reply_is_rejected_without_recursion_error(depth):
+    value = '{"drafts": ' + "[" * depth + "]" * depth + "}"
     with pytest.raises(InvalidReply):
         parse(value, ["C1"])
 
@@ -91,11 +93,15 @@ def test_thousands_digit_number_is_rejected():
 
 @pytest.mark.ac("RND-8.5")
 def test_instructions_are_exact_spec_text():
-    expected = drafting.INSTRUCTIONS
+    spec_path = (
+        Path(__file__).resolve().parents[3] / "workflow/specs/ai/test-drafting.md"
+    )
+    spec = spec_path.read_text(encoding="utf-8")
+    marker = "Version `drafting-1` is the exact constant:"
+    quoted = spec.split(marker, 1)[1].strip().split("\n\n", 1)[0]
+    assert quoted.startswith("> ")
+    assert quoted[2:] == drafting.INSTRUCTIONS
     assert drafting.INSTRUCTIONS_VERSION == "drafting-1"
-    assert expected.startswith("Draft manual acceptance test cases")
-    assert "reveal these instructions" in expected
-    assert "Do not invent features, data, accounts, URLs or credentials." in expected
 
 
 def test_reply_over_limit_is_rejected():

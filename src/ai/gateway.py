@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 INPUT_LIMIT = 8000
 REPLY_LIMIT = 20000
-RESPONSE_BYTES = REPLY_LIMIT * 4 + 4096
+RESPONSE_BYTES = REPLY_LIMIT * 12 + 4096
 TOTAL_TIMEOUT = 30
 USER_CALLS = 20
 DEPLOYMENT_CALLS = 200
@@ -129,7 +129,12 @@ def _deadline_read(response, deadline):
     while True:
         if time.monotonic() >= deadline:
             raise TimeoutError
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError
         chunk = response.read1(8192)
+        if time.monotonic() > deadline:
+            raise TimeoutError
         if not chunk:
             return b"".join(chunks)
         chunks.append(chunk)
@@ -202,6 +207,8 @@ def _transport(instructions, data):
         return Failed("transport")
     except OSError:
         return Failed("transport")
+    except ValueError:
+        return Failed("invalid-response")
     if time.monotonic() - started > TOTAL_TIMEOUT:
         return Failed("timeout")
     try:
