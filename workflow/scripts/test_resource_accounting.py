@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from datetime import timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 import resource_usage as usage
 from test_resource_usage import START, codex, counts, meta
@@ -328,8 +329,12 @@ class AccountingTests(unittest.TestCase):
 
     def test_nested_candidate_budget_counts_unique_files_and_rejects_overflow(self):
         root = self.write("dates/root.jsonl", [meta(project=self.root)])
-        for index in range(999):
+        for index in range(998):
             self.write(f"dates/{index}.jsonl", [meta(str(index), project=self.root)])
+        self.assertEqual(
+            usage.discover_children([root], self.root, self.root), [root.resolve()]
+        )  # 999 candidates
+        self.write("dates/at-limit.jsonl", [meta("limit", project=self.root)])
         self.assertEqual(
             usage.discover_children(
                 [root], [self.root, self.root / "dates"], self.root
@@ -371,6 +376,127 @@ class AccountingTests(unittest.TestCase):
             evidence["ranges"]["input_tokens"] = invalid
             with self.assertRaises(ValueError):
                 usage.report(self.snapshot([path], 3), changed)
+
+    def test_old_extra_ranges_on_same_turn_remain_unavailable(self):
+        parent = self.write(
+            "parent.jsonl", [meta(), turn("shared"), codex(counts(100, 10), second=1)]
+        )
+        baseline = self.snapshot([parent], 5)
+        changed = self.write(
+            "changed.jsonl",
+            [
+                meta("changed"),
+                turn("shared"),
+                codex(counts(100, 10), second=1),
+                codex(counts(150, 15), counts(50, 5), second=2),
+            ],
+        )
+        for paths in ([parent, changed], [changed]):
+            result = usage.report(self.snapshot(paths, 7), baseline)
+            self.assertIsNone(result["tokens"]["total_tokens"])
+            self.assertIn(
+                "added_session_has_no_task_start_baseline", result["warnings"]
+            )
+
+    def test_copied_old_turn_can_extend_after_baseline(self):
+        parent = self.write(
+            "parent.jsonl", [meta(), turn("shared"), codex(counts(100, 10), second=1)]
+        )
+        baseline = self.snapshot([parent], 5)
+        changed = self.write(
+            "changed.jsonl",
+            [
+                meta("changed"),
+                turn("shared"),
+                codex(counts(100, 10), second=1),
+                codex(counts(150, 15), counts(50, 5), second=6),
+            ],
+        )
+        result = usage.report(self.snapshot([changed], 7), baseline)
+        self.assertEqual(result["tokens"]["total_tokens"], 55)
+
+    def test_legacy_overlap_with_changed_last_counters_is_unavailable(self):
+        parent = self.write("parent.jsonl", [meta()])
+        baseline = self.snapshot([parent], 0)
+        self.write(parent.name, [meta(), codex(counts(100, 10), second=1)])
+        child = self.write(
+            "child.jsonl",
+            [
+                meta("child", "parent", timestamp=START + timedelta(seconds=10)),
+                codex(counts(100, 10), counts(50, 5), second=10),
+            ],
+        )
+        result = usage.report(self.snapshot([parent, child], 11), baseline)
+        self.assertIsNone(result["tokens"]["total_tokens"])
+        self.assertEqual(result["available_tokens"]["total_tokens"], 110)
+        self.assertIn("codex_shared_history_unresolved", result["warnings"])
+
+    def test_inconsistent_last_counters_never_emit_negative_ranges(self):
+        path = self.write(
+            "invalid.jsonl",
+            [meta(), turn("invalid"), codex(counts(100, 10), counts(50, 20), second=1)],
+        )
+        snapshot = self.snapshot([path], 2)
+        row = next(iter(snapshot["sessions"].values()))
+        self.assertIsNone(row["tokens"]["output_tokens"])
+        self.assertIsNone(row["tokens"]["total_tokens"])
+        self.assertIn("codex_usage_range_invalid", snapshot["warnings"])
+        usage._validate_provenance(row["provenance"])
+        baseline = self.root / "baseline.json"
+        baseline.write_text(json.dumps(snapshot), encoding="utf-8")
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(
+                usage.main(
+                    ["report", "--codex", str(path), "--baseline", str(baseline)]
+                ),
+                0,
+            )
+
+    def test_timeline_must_match_ranges_and_range_only_baselines_still_work(self):
+        path = self.write(
+            "source.jsonl", [meta(), turn("shared"), codex(counts(100, 10), second=1)]
+        )
+        baseline = self.snapshot([path], 2)
+        altered = json.loads(json.dumps(baseline))
+        evidence = next(
+            iter(next(iter(altered["sessions"].values()))["provenance"].values())
+        )
+        evidence["timeline"][0]["ranges"]["input_tokens"] = [0, 200]
+        with self.assertRaisesRegex(ValueError, "inconsistent usage timeline"):
+            usage.report(self.snapshot([path], 3), altered)
+        for row in baseline["sessions"].values():
+            for evidence in row["provenance"].values():
+                evidence.pop("timeline")
+        result = usage.report(self.snapshot([path], 3), baseline)
+        self.assertEqual(result["tokens"]["total_tokens"], 0)
+
+    def test_resolved_outside_candidate_is_excluded_before_reading(self):
+        parent = self.write("selected/root.jsonl", [meta("root", project=self.root)])
+        redirected = self.write(
+            "selected/redirected.jsonl", [meta("copy", "root", self.root)]
+        )
+        outside = self.write(
+            "outside/source.jsonl", [meta("outside", "root", self.root)]
+        )
+        original_resolve, original_metadata = Path.resolve, usage._metadata
+
+        def resolved(path, *args, **kwargs):
+            return (
+                original_resolve(outside)
+                if path == redirected
+                else original_resolve(path, *args, **kwargs)
+            )
+
+        def metadata(path):
+            self.assertNotEqual(path, outside)
+            return original_metadata(path)
+
+        with (
+            patch.object(Path, "resolve", resolved),
+            patch.object(usage, "_metadata", metadata),
+        ):
+            selected = usage.discover_children([parent], parent.parent, self.root)
+        self.assertEqual(selected, [parent.resolve()])
 
 
 if __name__ == "__main__":

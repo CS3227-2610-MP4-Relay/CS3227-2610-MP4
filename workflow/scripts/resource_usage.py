@@ -43,6 +43,7 @@ WARNING_CODES = frozenset(
         "source_truncated_or_replaced_since_baseline",
         "codex_shared_history_unresolved",
         "session_initialized_without_usage",
+        "codex_usage_range_invalid",
     }
 )
 
@@ -257,7 +258,11 @@ def _validate_provenance(provenance):
     for turn, evidence in provenance.items():
         if not isinstance(turn, str) or not re.fullmatch(r"turn:[0-9a-f]{24}", turn):
             raise ValueError("invalid turn identity")
-        if not isinstance(evidence, dict) or set(evidence) != {"ranges", "first_at"}:
+        if (
+            not isinstance(evidence, dict)
+            or not {"ranges", "first_at"}.issubset(evidence)
+            or set(evidence) - {"ranges", "first_at", "timeline"}
+        ):
             raise ValueError("invalid turn evidence")
         if evidence["first_at"] is not None and _time(evidence["first_at"]) is None:
             raise ValueError("invalid turn time")
@@ -277,6 +282,67 @@ def _validate_provenance(provenance):
                     or pair[1] < pair[0]
                 ):
                     raise ValueError("invalid numeric range")
+        if "timeline" in evidence:
+            if not isinstance(evidence["timeline"], list) or not evidence["timeline"]:
+                raise ValueError("invalid usage timeline")
+            combined = {field: [] for field in METRICS}
+            for step in evidence["timeline"]:
+                if (
+                    not isinstance(step, dict)
+                    or set(step) != {"at", "ranges"}
+                    or not isinstance(step["ranges"], dict)
+                ):
+                    raise ValueError("invalid usage observation")
+                _validate_provenance(
+                    {
+                        turn: {
+                            "first_at": step["at"],
+                            "ranges": {
+                                field: None if pair is None else [pair]
+                                for field, pair in step["ranges"].items()
+                            },
+                        }
+                    }
+                )
+                for field, pair in step["ranges"].items():
+                    combined[field] = (
+                        None
+                        if pair is None or combined[field] is None
+                        else _merge_ranges(combined[field] + [pair])
+                    )
+            if any(
+                combined[field]
+                != (None if ranges[field] is None else _merge_ranges(ranges[field]))
+                for field in METRICS
+            ):
+                raise ValueError("inconsistent usage timeline")
+
+
+def _continues_after(provenance, baseline_coverage, start):
+    if not set(provenance) & set(baseline_coverage):
+        return False
+    for turn, evidence in provenance.items():
+        timeline = evidence.get("timeline")
+        if timeline is None:
+            first = _time(evidence["first_at"])
+            if (first is None or first < start) and not _covers(
+                baseline_coverage, {turn: evidence}
+            ):
+                return False
+            continue
+        for step in timeline:
+            at = _time(step["at"])
+            if at is not None and at >= start:
+                continue
+            for field, pair in step["ranges"].items():
+                covered = baseline_coverage.get(turn, {}).get(field, [])
+                if (
+                    pair is None
+                    or covered is None
+                    or _range_size(covered + [pair]) != _range_size(covered)
+                ):
+                    return False
+    return True
 
 
 def _guard_legacy_overlap(sessions, warnings):
@@ -296,8 +362,8 @@ def _guard_legacy_overlap(sessions, warnings):
                     and session["ancestor"] == other.get("ancestor")
                 )
             )
-            if related and set(session["usage_fingerprints"]) & set(
-                other["usage_fingerprints"]
+            if related and set(session["overlap_fingerprints"]) & set(
+                other["overlap_fingerprints"]
             ):
                 session["tokens"] = {field: None for field in METRICS}
                 warnings.add("codex_shared_history_unresolved")
@@ -438,6 +504,7 @@ def collect(codex_paths=(), claude_paths=(), now=None):
         observations = 0
         provenance = {}
         fingerprints = []
+        overlap_fingerprints = []
         if stream["platform"] == "claude":
             messages = {}
             for message_id, usage in events:
@@ -505,6 +572,21 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                     ).hexdigest()
                 )
                 current = _codex_usage(raw)
+                overlap_fingerprints.append(
+                    hashlib.sha256(
+                        json.dumps(
+                            {
+                                field: current[field]
+                                for field in (
+                                    "input_tokens",
+                                    "output_tokens",
+                                    "total_tokens",
+                                )
+                            },
+                            sort_keys=True,
+                        ).encode()
+                    ).hexdigest()
+                )
                 if any(
                     current[field] is None
                     for field in ("input_tokens", "output_tokens", "total_tokens")
@@ -567,6 +649,20 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                         field: value if current[field] is not None else None
                         for field, value in last.items()
                     }
+                invalid = {
+                    field
+                    for field, value in increment.items()
+                    if value is not None
+                    and current[field] is not None
+                    and not 0 <= value <= current[field]
+                }
+                if invalid:
+                    warnings.add("codex_usage_range_invalid")
+                    if invalid & {"input_tokens", "output_tokens"}:
+                        invalid.add("total_tokens")
+                    for field in invalid:
+                        increment[field] = None
+                step = {"at": stamp if _time(stamp) else None, "ranges": {}}
                 for field, value in increment.items():
                     if value is not None:
                         totals[field] = (totals[field] or 0) + value
@@ -578,6 +674,7 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                             {
                                 "first_at": stamp if _time(stamp) else None,
                                 "ranges": {metric: [] for metric in METRICS},
+                                "timeline": [],
                             },
                         )
                         if value is None or evidence["ranges"][field] is None:
@@ -587,6 +684,13 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                                 evidence["ranges"][field]
                                 + [[current[field] - value, current[field]]]
                             )
+                        step["ranges"][field] = (
+                            None
+                            if value is None
+                            else [current[field] - value, current[field]]
+                        )
+                if native:
+                    evidence["timeline"].append(step)
                 previous = current
                 observations += 1
             for field in unavailable:
@@ -607,6 +711,7 @@ def collect(codex_paths=(), claude_paths=(), now=None):
             "tokens": totals,
             "provenance": provenance or None,
             "usage_fingerprints": sorted(set(fingerprints)),
+            "overlap_fingerprints": sorted(set(overlap_fingerprints)),
         }
     _guard_legacy_overlap(sessions, warnings)
     return {
@@ -653,6 +758,7 @@ def report(current, baseline, retries=None, repair_rounds=None):
         for key in missing
     ):
         raise ValueError("baseline sessions missing; include every original source")
+    baseline_coverage = _coverage(old_sessions)
     claimed = _coverage(old_sessions)
     rows = []
     for key, session in sorted(
@@ -663,18 +769,7 @@ def report(current, baseline, retries=None, repair_rounds=None):
         started = _time(session.get("started_at"))
         historical = previous is None and (started is None or started < start)
         provenance = session.get("provenance") or {}
-        if (
-            historical
-            and set(provenance) & set(claimed)
-            and all(
-                turn in claimed
-                or (
-                    _time(evidence["first_at"]) is not None
-                    and _time(evidence["first_at"]) >= start
-                )
-                for turn, evidence in provenance.items()
-            )
-        ):
+        if historical and _continues_after(provenance, baseline_coverage, start):
             historical = False
         if historical:
             warnings.add("added_session_has_no_task_start_baseline")
