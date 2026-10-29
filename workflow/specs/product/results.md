@@ -1,6 +1,6 @@
 # Test results
 
-Planning area `RES`; RES-1 specifies read-only tester availability and is not implemented yet. See the [product spec](../PRODUCT-SPEC.md), [tester routes](../TECHNICAL-SPEC.md#tester-routes) and [access controls](../SECURITY-SPEC.md#sign-in-and-access-control).
+Planning area `RES`; RES-1 implements read-only tester availability. See the [product spec](../PRODUCT-SPEC.md), [tester routes](../TECHNICAL-SPEC.md#tester-routes) and [access controls](../SECURITY-SPEC.md#sign-in-and-access-control).
 
 ## RES-1 See the tests available to me
 
