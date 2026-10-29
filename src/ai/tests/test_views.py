@@ -1,19 +1,23 @@
 """End-to-end checks for the transient RND-8 drafting pages."""
 
 import json
+import logging
 from unittest import mock
 
 import pytest
-from django.db import DatabaseError
+from django.db import DatabaseError, connection
 from django.test import Client
 from django.urls import reverse
 from django.views.debug import ExceptionReporter
 
-from ai import drafting
+from ai import drafting, gateway
 from ai.fakes import FakeProvider
 from ai.gateway import Failed, Refused, Success
+from ai.models import CallSlot
 from rounds.models import Case, Criterion, Round
 from rounds.tests.conftest import csrf_token, signed_in
+
+from .html_forms import browser_post, forms
 
 
 @pytest.fixture
@@ -168,7 +172,7 @@ def test_gateway_failures_show_fixed_message_and_keep_selection(
     page = response.content.decode()
     assert response.status_code == 200
     assert "Drafting is unavailable right now." in page
-    assert f'value="{criteria[0].pk}" checked' in page or "checked" in page
+    assert checked(page) == [str(criteria[0].pk)]
     assert not Case.objects.exists()
 
 
@@ -409,13 +413,23 @@ def test_missing_criterion_id_is_refused_without_gateway_call(
 
 
 @pytest.mark.ac("RND-8.4")
-def test_view_over_input_limit_shows_unavailable(coord_client, round_, criteria):
-    criteria[0].text = "x" * 500
-    criteria[0].save(update_fields=["text"])
-    with mock.patch.object(drafting, "INSTRUCTIONS", "x" * 8000):
+def test_view_over_input_limit_shows_unavailable(
+    coord_client, round_, criteria, settings, monkeypatch
+):
+    settings.SOC_LLM_LIVE = True
+    monkeypatch.setattr(gateway, "INPUT_LIMIT", len(drafting.INSTRUCTIONS) + 10)
+    results = []
+    real = gateway.complete
+
+    def spy(*args, **kwargs):
+        results.append(real(*args, **kwargs))
+        return results[-1]
+
+    with mock.patch("ai.views.gateway.complete", side_effect=spy):
         response = coord_client.post(
             reverse("ai:draft", args=[round_.pk]), {"criteria": [criteria[0].pk]}
         )
+    assert results == [Refused("input-too-large")]
     assert response.status_code == 200
     assert "Drafting is unavailable right now." in response.content.decode()
 
@@ -460,3 +474,245 @@ def test_prefill_ignores_a_field_over_twice_its_limit(
     assert at_bound.context["form"][field].value() == "a" * (2 * limit)
     over = use(coord_client, round_, criteria, **{field: "a" * (2 * limit + 1)})
     assert over.context["form"][field].value() == ""
+
+
+def post_draft(client, round_, ids, result):
+    with mock.patch("ai.views.gateway.complete", return_value=result) as complete:
+        response = client.post(reverse("ai:draft", args=[round_.pk]), {"criteria": ids})
+    return response, complete
+
+
+def checked(page):
+    """The criterion IDs the selection form submits as checked."""
+    (selection,) = [form for form in forms(page) if form["action"] is None]
+    return [value for name, value in selection["fields"] if name == "criteria"]
+
+
+def draft_forms(page, round_):
+    action = reverse("ai:use-draft", args=[round_.pk])
+    return [form for form in forms(page) if form["action"] == action]
+
+
+def values(form, name):
+    return [value for field, value in form["fields"] if field == name]
+
+
+@pytest.fixture
+def foreign_round(other_workspace):
+    round_ = Round.objects.create(workspace=other_workspace, title="Synthetic foreign")
+    Criterion.objects.create(round=round_, text="Synthetic foreign criterion")
+    return round_
+
+
+@pytest.mark.ac("RND-8.1")
+def test_each_draft_covers_exactly_its_labelled_criteria(
+    coord_client, round_, criteria
+):
+    third = Criterion.objects.create(round=round_, text="Synthetic criterion three")
+    selected = [*criteria, third]
+    result = Success(
+        reply(one(criteria=["C3", "C1"]), one(title="Second", criteria=["C2"]))
+    )
+    response, _ = post_draft(coord_client, round_, [c.pk for c in selected], result)
+    page = response.content.decode()
+    first, second = draft_forms(page, round_)
+    assert values(first, "criteria") == [str(criteria[0].pk), str(third.pk)]
+    assert values(second, "criteria") == [str(criteria[1].pk)]
+    _, first_covers, second_covers = (
+        part.split("</ul>", 1)[0] for part in page.split("Covers acceptance criteria")
+    )
+    assert first_covers.index("criterion one") < first_covers.index("criterion three")
+    assert "criterion two" not in first_covers
+    assert "criterion two" in second_covers
+    assert "criterion one" not in second_covers
+
+
+@pytest.mark.ac("RND-8.2")
+def test_adopting_a_draft_and_submitting_unchanged_saves_it(
+    coord_client, round_, criteria
+):
+    draft = one(
+        title="Synthetic adopted title",
+        steps="1. Open the app.\n2. Press Save.",
+        expected_result="The item is saved.",
+        criteria=["C2"],
+    )
+    response, _ = post_draft(
+        coord_client, round_, [c.pk for c in criteria], Success(reply(draft))
+    )
+    (use_form,) = draft_forms(response.content.decode(), round_)
+    prefilled = coord_client.post(use_form["action"], browser_post(use_form["fields"]))
+    assert not Case.objects.exists()
+    new_case = reverse("rounds:case-new", args=[round_.pk])
+    (case_form,) = [
+        form for form in forms(prefilled.content.decode()) if form["action"] == new_case
+    ]
+    saved = coord_client.post(new_case, browser_post(case_form["fields"]))
+    assert saved.status_code == 302
+    case = Case.objects.get()
+    assert (case.title, case.steps, case.expected_result) == (
+        draft["title"],
+        draft["steps"],
+        draft["expected_result"],
+    )
+    assert list(case.criteria.all()) == [criteria[1]]
+
+
+@pytest.mark.ac("RND-8.7")
+def test_another_workspaces_round_is_not_found(coord_client, foreign_round):
+    foreign = foreign_round.criteria.get()
+    with mock.patch("ai.views.gateway.complete") as complete:
+        url = reverse("ai:draft", args=[foreign_round.pk])
+        assert coord_client.get(url).status_code == 404
+        assert coord_client.post(url, {"criteria": [foreign.pk]}).status_code == 404
+        assert use(coord_client, foreign_round, [foreign]).status_code == 404
+    complete.assert_not_called()
+
+
+@pytest.mark.ac("RND-8.7")
+def test_signed_out_visitors_are_sent_to_sign_in(round_, criteria):
+    client = Client()
+    draft_url = reverse("ai:draft", args=[round_.pk])
+    with mock.patch("ai.views.gateway.complete") as complete:
+        responses = [
+            client.get(draft_url),
+            client.post(draft_url, {"criteria": [criteria[0].pk]}),
+            use(client, round_, criteria),
+        ]
+    for response in responses:
+        assert response.status_code == 302
+        assert response["Location"] == reverse("accounts:sign-in")
+    complete.assert_not_called()
+
+
+@pytest.mark.ac("RND-8.7")
+def test_a_beta_tester_is_forbidden_on_both_routes(round_, criteria, tester):
+    client = signed_in(tester)
+    draft_url = reverse("ai:draft", args=[round_.pk])
+    with mock.patch("ai.views.gateway.complete") as complete:
+        assert client.get(draft_url).status_code == 403
+        assert client.post(draft_url, {"criteria": [criteria[0].pk]}).status_code == 403
+        assert use(client, round_, criteria).status_code == 403
+    complete.assert_not_called()
+
+
+@pytest.mark.parametrize("route", ["ai:draft", "ai:use-draft"])
+@pytest.mark.ac("RND-8.7")
+def test_posts_need_a_token_and_this_sites_origin(coordinator, round_, criteria, route):
+    client = signed_in(coordinator, enforce_csrf_checks=True)
+    token = csrf_token(client)
+    url = reverse(route, args=[round_.pk])
+    data = {
+        "criteria": [criteria[0].pk],
+        "title": "Synthetic title",
+        "steps": "Synthetic steps",
+        "expected_result": "Synthetic result",
+    }
+    with mock.patch(
+        "ai.views.gateway.complete", return_value=Success(reply())
+    ) as complete:
+        missing = client.post(url, data)
+        foreign = client.post(
+            url, data, HTTP_ORIGIN="https://evil.example", HTTP_X_CSRFTOKEN=token
+        )
+        assert complete.call_count == 0
+        accepted = client.post(url, data, HTTP_X_CSRFTOKEN=token)
+    assert (missing.status_code, foreign.status_code, accepted.status_code) == (
+        403,
+        403,
+        200,
+    )
+
+
+@pytest.mark.ac("RND-8.7")
+def test_hostile_reply_text_is_escaped_isolated_and_round_trips(
+    coord_client, round_, criteria
+):
+    criteria[0].text = "Synthetic " + chr(0x202E) + "reversed"
+    criteria[0].save(update_fields=["text"])
+    markup = "\x3cscript\x3ealert(1)\x3c/script\x3e"
+    breakout = (
+        "\x22\x3e\x3cinput type=\x22hidden\x22 name=\x22criteria\x22 value=\x22999"
+    )
+    steps = "\x3cb\x3ebold\x3c/b\x3e\nline two " + breakout
+    expected = "A" + chr(0x202E) + "B"
+    result = Success(reply(one(title=markup, steps=steps, expected_result=expected)))
+    response, _ = post_draft(coord_client, round_, [criteria[0].pk], result)
+    page = response.content.decode()
+    line = '<span dir="auto">{}</span>'.format
+    assert "<script" not in page
+    assert "<b>" not in page
+    assert "<h3>" + line("&lt;script&gt;alert(1)&lt;/script&gt;") + "</h3>" in page
+    second_line = '<br><span dir="auto">line two &quot;&gt;&lt;input'
+    assert line("&lt;b&gt;bold&lt;/b&gt;") + second_line in page
+    assert line("Synthetic " + chr(0x202E) + "reversed") in page
+    (draft,) = draft_forms(page, round_)
+    assert values(draft, "title") == [markup]
+    assert values(draft, "steps") == [steps]
+    assert values(draft, "expected_result") == ["AB"]
+    assert values(draft, "criteria") == [str(criteria[0].pk)]
+
+
+@pytest.mark.ac("RND-8.8")
+def test_another_workspaces_criterion_is_refused_without_a_call(
+    coord_client, round_, criteria, foreign_round
+):
+    foreign = foreign_round.criteria.get()
+    response, complete = post_draft(
+        coord_client, round_, [criteria[0].pk, foreign.pk], Success(reply())
+    )
+    assert "Choose criteria from this round." in response.content.decode()
+    complete.assert_not_called()
+
+
+@pytest.mark.ac("RND-8.6")
+def test_hidden_characters_in_criteria_reach_the_ai_cleaned(coord_client, round_):
+    hidden = [0xE0080, 0x2065, 0x17B4, 0x180B, 0xFFF9, 0x13430, 0xFE0F, 0xE0100]
+    text = "Synthetic" + "".join(map(chr, hidden)) + " criterion"
+    fillers = "".join(map(chr, [0x3164, 0x115F, 0x1160, 0xFFA0, 0x2800]))
+    item = Criterion.objects.create(round=round_, text=text + fillers + "end")
+    _, complete = post_draft(coord_client, round_, [item.pk], Success(reply()))
+    sent = json.loads(complete.call_args.args[2])
+    assert sent == {
+        "criteria": [{"label": "C1", "text": "Synthetic criterion" + " " * 5 + "end"}]
+    }
+
+
+@pytest.mark.ac("RND-8.4")
+def test_the_view_logs_only_fixed_codes(coord_client, round_, criteria, caplog):
+    caplog.set_level(logging.DEBUG, logger="ai")
+    criteria[0].text = "Secret criterion words"
+    criteria[0].save(update_fields=["text"])
+    invalid = Success(reply(one(title="Secret reply words", extra="Secret")))
+    post_draft(coord_client, round_, [criteria[0].pk], invalid)
+    post_draft(coord_client, round_, [criteria[0].pk], Failed("timeout"))
+    assert [
+        record.getMessage() for record in caplog.records if record.name.startswith("ai")
+    ] == ["Drafting reply rejected: draft-keys", "Drafting gateway Failed: timeout"]
+    assert "Secret" not in caplog.text
+
+
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+def test_the_drafting_view_holds_no_connection_during_the_call(
+    coord_client, round_, criteria
+):
+    seen = []
+
+    def provider_complete(instructions, data):
+        seen.append(connection.connection)
+        return Success(reply())
+
+    real = gateway.complete
+    fake = FakeProvider(provider_complete)
+    with mock.patch(
+        "ai.views.gateway.complete",
+        side_effect=lambda user, instructions, data: real(
+            user, instructions, data, provider=fake
+        ),
+    ):
+        response = coord_client.post(
+            reverse("ai:draft", args=[round_.pk]), {"criteria": [criteria[0].pk]}
+        )
+    assert response.status_code == 200
+    assert seen == [None]
+    assert not CallSlot.objects.filter(expires_at__gt=gateway.timezone.now()).exists()

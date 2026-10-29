@@ -1,6 +1,7 @@
 """The drafting contract's cleaning and reply schema."""
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -127,3 +128,105 @@ def test_clean_removes_null_and_surrogates():
 def test_instructions_are_fixed_text():
     assert "written by users" in drafting.INSTRUCTIONS
     assert "JSON object" in drafting.INSTRUCTIONS
+
+
+@pytest.mark.ac("RND-8.5")
+@pytest.mark.parametrize(
+    "label",
+    [
+        "C4",
+        "C0",
+        "c1",
+        "C1 ",
+        chr(0xFF23) + "1",
+        "C" + chr(0xFF11),
+        chr(0x0421) + "1",
+        "17",
+        "Synthetic criterion one",
+    ],
+    ids=[
+        "above-count",
+        "zero",
+        "lower-case",
+        "trailing-space",
+        "full-width-letter",
+        "full-width-digit",
+        "cyrillic",
+        "database-id",
+        "criterion-text",
+    ],
+)
+def test_unauthorized_labels_are_refused(label):
+    with pytest.raises(InvalidReply) as info:
+        parse(reply(draft(criteria=["C1", label])), ["C1", "C2", "C3"])
+    assert info.value.code == "label"
+
+
+@pytest.mark.ac("RND-8.5")
+@pytest.mark.parametrize(
+    ("value", "code"),
+    [
+        ('{"drafts": ["\\ud800"]}', "surrogate"),
+        ('{"drafts": NaN}', "json"),
+        ('{"drafts": [' + "9" * 5000 + "]}", "json"),
+    ],
+    ids=["surrogate", "nan", "long-number"],
+)
+def test_each_parse_guard_rejects_with_its_own_code(value, code):
+    with pytest.raises(InvalidReply) as info:
+        parse(value, ["C1"])
+    assert info.value.code == code
+
+
+@pytest.mark.ac("RND-8.5")
+def test_a_recursion_error_while_parsing_is_an_invalid_reply(monkeypatch):
+    # Python 3.14 parses the deepest nesting that fits 20,000 characters, so
+    # force the error a lower recursion limit or another runtime would raise.
+    def deep(*args, **kwargs):
+        raise RecursionError
+
+    monkeypatch.setattr(drafting.json, "loads", deep)
+    with pytest.raises(InvalidReply) as info:
+        parse('{"drafts": []}', ["C1"])
+    assert info.value.code == "json"
+
+
+def test_cleaning_table_equals_the_contract_ranges():
+    spec = (
+        Path(__file__).resolve().parents[3] / "workflow/specs/ai/test-drafting.md"
+    ).read_text(encoding="utf-8")
+    step = spec.split("3. removes every Default_Ignorable_Code_Point", 1)[1]
+    step = step.split("The remaining format characters", 1)[0]
+    listed = step.split("from this fixed table", 1)[1]
+    ranges = {
+        (int(start, 16), int(end or start, 16))
+        for start, end in re.findall(r"U\+([0-9A-F]+)(?: to U\+([0-9A-F]+))?", listed)
+    }
+    assert ranges == set(drafting.INVISIBLE)
+
+
+@pytest.mark.ac("RND-8.6")
+@pytest.mark.parametrize(
+    "code",
+    [
+        0xE0080,
+        0xE0041,
+        0x2065,
+        0x17B4,
+        0x180B,
+        0xFFF9,
+        0x13430,
+        0xFE00,
+        0xFE0F,
+        0xE0100,
+    ],
+    ids=hex,
+)
+def test_hidden_characters_are_removed(code):
+    assert clean(f"a{chr(code)}b") == "ab"
+
+
+@pytest.mark.ac("RND-8.6")
+@pytest.mark.parametrize("code", [0x3164, 0x115F, 0x1160, 0xFFA0, 0x2800], ids=hex)
+def test_each_blank_filler_becomes_a_space(code):
+    assert clean(f"a{chr(code)}b") == "a b"

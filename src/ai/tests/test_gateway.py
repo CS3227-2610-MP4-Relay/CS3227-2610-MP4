@@ -1,7 +1,10 @@
 """Focused checks for the shared gateway's bounds and outcomes."""
 
 import importlib
+import logging
 import os
+import threading
+import time
 
 import pytest
 from django.apps import apps
@@ -9,6 +12,7 @@ from django.conf import settings as django_settings
 from django.db import DatabaseError, connection
 from django.views.debug import ExceptionReporter
 
+from accounts.models import User
 from ai import gateway
 from ai.fakes import FakeProvider
 from ai.gateway import Failed, Refused, Success, complete
@@ -65,10 +69,14 @@ def test_user_quota_counts_failures(user):
             key=str(user.pk),
             created_at=gateway.timezone.now(),
         )
-        for _ in range(gateway.USER_CALLS)
+        for _ in range(gateway.USER_CALLS - 1)
     )
-    result = complete(user, "", "{}", provider=FakeProvider(Failed("failure")))
-    assert result == Refused("busy-or-quota")
+    failing = FakeProvider(Failed("transport"))
+    assert complete(user, "", "{}", provider=failing) == Failed("transport")
+    assert len(failing.calls) == 1
+    fake = FakeProvider(Success("{}"))
+    assert complete(user, "", "{}", provider=fake) == Refused("busy-or-quota")
+    assert fake.calls == []
 
 
 @pytest.mark.ac("RND-8.4")
@@ -179,9 +187,21 @@ def test_endpoint_must_be_fixed_https_without_credentials(url, monkeypatch):
     assert gateway._endpoint() is None
 
 
-def test_logging_never_contains_text_or_provider_body(user, monkeypatch, caplog):
-    fake = FakeProvider(Failed("invalid-response"))
-    complete(user, "secret instructions", '{"criteria": ["secret"]}', provider=fake)
+def test_logging_never_contains_text_or_provider_body(user, caplog):
+    caplog.set_level(logging.DEBUG, logger="ai")
+
+    def explode(instructions, data):
+        raise RuntimeError("secret provider body")
+
+    complete(
+        user,
+        "secret instructions",
+        '{"criteria": ["secret data"]}',
+        provider=FakeProvider(explode),
+    )
+    assert [
+        record.getMessage() for record in caplog.records if record.name == "ai.gateway"
+    ] == ["LLM gateway outcome: provider-error"]
     assert "secret" not in caplog.text
 
 
@@ -280,3 +300,134 @@ def test_the_transport_itself_refuses_while_live_is_off(monkeypatch):
     monkeypatch.setenv("SOC_LLM_API_KEY", "synthetic-key")
     deadline = gateway.time.monotonic() + 1
     assert gateway._transport("", "{}", deadline) == Refused("live-off")
+
+
+def deployment_records(count):
+    CallRecord.objects.bulk_create(
+        CallRecord(
+            scope=gateway.DEPLOYMENT_CALLS_SCOPE,
+            key="all",
+            created_at=gateway.timezone.now(),
+        )
+        for _ in range(count)
+    )
+
+
+@pytest.mark.ac("RND-8.4")
+def test_a_third_call_in_flight_is_refused_deployment_wide(user):
+    CallSlot.objects.filter(scope=gateway.DEPLOYMENT_SCOPE).update(
+        expires_at=gateway.timezone.now() + gateway.timedelta(minutes=1)
+    )
+    fake = FakeProvider(Success("{}"))
+    assert complete(user, "", "{}", provider=fake) == Refused("busy-or-quota")
+    assert fake.calls == []
+
+
+def test_one_free_deployment_slot_is_enough(user):
+    CallSlot.objects.filter(scope=gateway.DEPLOYMENT_SCOPE, key="0").update(
+        expires_at=gateway.timezone.now() + gateway.timedelta(minutes=1)
+    )
+    assert complete(user, "", "{}", provider=FakeProvider(Success("{}"))) == Success(
+        "{}"
+    )
+
+
+@pytest.mark.ac("RND-8.4")
+@pytest.mark.parametrize(
+    ("existing", "expected"),
+    [
+        (gateway.DEPLOYMENT_CALLS - 1, Success("{}")),
+        (gateway.DEPLOYMENT_CALLS, Refused("busy-or-quota")),
+    ],
+    ids=["just-below", "at-limit"],
+)
+def test_deployment_quota_boundary(user, existing, expected):
+    deployment_records(existing)
+    assert complete(user, "", "{}", provider=FakeProvider(Success("{}"))) == expected
+
+
+class SlowProvider:
+    """Hold each call open long enough for a competing reservation to see it."""
+
+    def __init__(self, delay=1.5):
+        self.delay = delay
+        self.connections = []
+
+    def complete(self, instructions, data):
+        self.connections.append(connection.connection)
+        time.sleep(self.delay)
+        return Success("{}")
+
+
+def gate_quota(monkeypatch, parties):
+    """Make reservations meet inside their transaction, if locking lets them."""
+    barrier = threading.Barrier(parties)
+    real = gateway._quota
+
+    def meet(scope, *args):
+        if scope == gateway.USER_CALLS_SCOPE:
+            try:
+                barrier.wait(timeout=1)
+            except threading.BrokenBarrierError:
+                pass
+        return real(scope, *args)
+
+    monkeypatch.setattr(gateway, "_quota", meet)
+
+
+def run_together(users, provider):
+    results = [None] * len(users)
+
+    def run(index, user):
+        try:
+            results[index] = complete(user, "", "{}", provider=provider)
+        finally:
+            connection.close()
+
+    threads = [threading.Thread(target=run, args=pair) for pair in enumerate(users)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=20)
+    return results
+
+
+def outcomes(results):
+    return sorted(type(result).__name__ for result in results)
+
+
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+@pytest.mark.ac("RND-8.4")
+def test_two_racing_calls_for_one_user_reserve_once(user, monkeypatch):
+    CallSlot.objects.create(
+        scope=gateway.USER_SCOPE,
+        key=str(user.pk),
+        expires_at=gateway.timezone.now() - gateway.timedelta(minutes=1),
+    )
+    gate_quota(monkeypatch, 2)
+    results = run_together([user, user], SlowProvider())
+    assert outcomes(results) == ["Refused", "Success"]
+    assert CallRecord.objects.filter(scope=gateway.USER_CALLS_SCOPE).count() == 1
+
+
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+@pytest.mark.ac("RND-8.4")
+def test_three_racing_users_share_two_deployment_slots(
+    user, tester, other_workspace, monkeypatch
+):
+    third = User.objects.create_user(
+        "coord-ai10002",
+        "Synthetic16Chars",
+        workspace=other_workspace,
+        role="coordinator",
+    )
+    gate_quota(monkeypatch, 3)
+    results = run_together([user, tester, third], SlowProvider())
+    assert outcomes(results) == ["Refused", "Success", "Success"]
+
+
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+def test_no_database_connection_is_held_during_the_call(user):
+    provider = SlowProvider(delay=0)
+    assert complete(user, "", "{}", provider=provider) == Success("{}")
+    assert provider.connections == [None]
