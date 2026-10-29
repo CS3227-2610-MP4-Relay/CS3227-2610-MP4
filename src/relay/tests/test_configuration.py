@@ -10,6 +10,46 @@ SRC = Path(__file__).resolve().parents[2]
 PROBE = SRC / "relay" / "tests" / "settings_probe.py"
 
 
+@pytest.mark.ac("PLT-1.4", "PLT-1.8", "PLT-1.12")
+@pytest.mark.parametrize("production", [True, False])
+def test_wsgi_file_import_starts_without_pythonpath(tmp_path, production):
+    environment = {
+        key: value
+        for key, value in os.environ.items()
+        if key.upper() in {"PATH", "SYSTEMROOT", "WINDIR", "TEMP", "TMP"}
+    }
+    environment["DJANGO_SECRET_KEY"] = "synthetic-startup-key-" * 4
+    if production:
+        environment.update(
+            DJANGO_SETTINGS_MODULE="relay.settings.production",
+            DJANGO_PRODUCTION_HOST="relay.example.com",
+            DATABASE_URL="postgresql://synthetic:synthetic@db.example.com/relay",
+            DJANGO_TRUST_PROXY_SSL_HEADER="false",
+        )
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            str(PROBE.with_name("wsgi_probe.py")),
+            str(SRC / "relay/wsgi.py"),
+        ],
+        cwd=tmp_path,
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    response = json.loads(result.stdout)
+    assert (
+        response["settings"]
+        == f"relay.settings.{'production' if production else 'local'}"
+    )
+    assert response["status"] == ["200 OK"]
+    assert "A beta-testing portal for small software teams." in response["body"]
+
+
 def probe(module, **values):
     """Inspect settings without inheriting any runtime configuration."""
     environment = {
