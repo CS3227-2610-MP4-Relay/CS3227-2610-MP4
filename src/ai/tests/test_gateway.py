@@ -227,7 +227,7 @@ def test_tests_see_no_soc_llm_variables():
 
 def test_network_step_is_blocked_without_opt_in(block_llm_network):
     with pytest.raises(RuntimeError):
-        gateway._connect("127.0.0.1", 9, gateway.time.monotonic() + 1)
+        gateway._exchange("https://127.0.0.1:9/llm", {}, b"", 0)
     block_llm_network.attempts.clear()
 
 
@@ -252,25 +252,48 @@ def test_a_late_release_keeps_a_later_reservation(user):
     assert CallSlot.objects.filter(expires_at=later).count() == 2
 
 
-def test_error_reports_hide_the_key_and_request_text(user, settings, monkeypatch):
+class _Escape(BaseException):
+    """Not an Exception, so it passes the transport's catch-all, as a cancel would."""
+
+
+@pytest.mark.llm_transport
+@pytest.mark.parametrize("escape", ["transport", "release"])
+def test_error_reports_hide_the_key_and_request_text(
+    user, settings, monkeypatch, escape
+):
+    """Frames that can reach an error report show no key or request text.
+
+    Any Exception in the transport becomes Failed("transport"), so a report can
+    only come from a BaseException inside it, or from a storage error in
+    `complete`. aiohttp's session is replaced, so no connection is opened.
+    """
     settings.SOC_LLM_LIVE = True
     monkeypatch.setenv("SOC_LLM_ENDPOINT", "https://127.0.0.1:9/llm")
     monkeypatch.setenv("SOC_LLM_MODEL", "synthetic")
     monkeypatch.setenv("SOC_LLM_API_KEY", "synthetic-secret-key")
+    raised = _Escape if escape == "transport" else gateway.aiohttp.ClientError
 
-    def explode(*args, **kwargs):
-        raise RuntimeError("synthetic")
+    def session(*args, **kwargs):
+        raise raised("synthetic")
 
-    monkeypatch.setattr(gateway, "_exchange", explode, raising=False)
-    monkeypatch.setattr(gateway, "build_opener", explode, raising=False)
-    with pytest.raises(RuntimeError) as info:
+    def release(*args):
+        raise DatabaseError("synthetic")
+
+    monkeypatch.setattr(gateway.aiohttp, "ClientSession", session)
+    if escape == "release":
+        monkeypatch.setattr(gateway, "_release", release)
+    expected = _Escape if escape == "transport" else DatabaseError
+    with pytest.raises(expected) as info:
         complete(user, "secret-instructions-text", '{"criteria": "secret-data-text"}')
     frames = ExceptionReporter(
         None, info.type, info.value, info.tb
     ).get_traceback_frames()
     own = [frame for frame in frames if frame["filename"].endswith("/ai/gateway.py")]
     shown = repr([frame["vars"] for frame in own])
-    assert "complete" in [frame["function"] for frame in frames]
+    functions = [frame["function"] for frame in own]
+    assert "complete" in functions
+    if escape == "transport":
+        assert {"_transport", "_exchange"} <= set(functions)
     for secret in ("synthetic-secret-key", "secret-instructions", "secret-data"):
         assert secret not in shown
 

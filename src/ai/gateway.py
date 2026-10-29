@@ -1,22 +1,21 @@
 """Bounded provider-independent access to Relay's shared SoC LLM.
 
 Every limit here is a proposal pending confirmation (workflow/specs/ai/llm-gateway.md),
-and live calls stay off while `settings.SOC_LLM_LIVE` is False.
+and live calls stay off while `settings.SOC_LLM_LIVE` is False. Relay applies its
+own rules here; aiohttp does the networking.
 """
 
-import http.client
-import io
+import asyncio
 import json
 import logging
 import os
-import socket
 import ssl
-import threading
 import time
 from dataclasses import dataclass
 from datetime import timedelta
 from urllib.parse import urlsplit
 
+import aiohttp
 from django.conf import settings
 from django.db import DatabaseError, connection, transaction
 from django.utils import timezone
@@ -129,7 +128,7 @@ def _release(user_slot, deployment_slot, expires):
 
 
 def _endpoint():
-    """Return the parsed fixed HTTPS endpoint, or None when unconfigured."""
+    """Return the fixed HTTPS endpoint URL, or None when unconfigured."""
     url = os.environ.get("SOC_LLM_ENDPOINT", "").strip()
     if not url or any(char.isspace() or not char.isprintable() for char in url):
         return None
@@ -146,7 +145,7 @@ def _endpoint():
         or parts.fragment
     ):
         return None
-    return parts
+    return url
 
 
 def _remaining(deadline):
@@ -157,114 +156,45 @@ def _remaining(deadline):
     return left
 
 
-def _resolve(host, port, deadline):
-    """Resolve `host` in a helper thread, abandoned at the deadline.
-
-    Any lookup error, such as a name the resolver cannot encode, is an OSError.
-    """
-    found = {}
-    done = threading.Event()
-
-    def lookup():
-        try:
-            found["addresses"] = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
-        except Exception:  # noqa: BLE001 - any lookup error is a transport failure
-            found["failed"] = True
-        finally:
-            done.set()
-
-    threading.Thread(target=lookup, daemon=True).start()
-    if not done.wait(_remaining(deadline)):
-        raise TimeoutError
-    if "addresses" not in found:
-        raise OSError("name lookup failed")
-    return found["addresses"]
-
-
-def _connect(host, port, deadline):
-    """Open a TCP connection to `host` within the deadline (the network step)."""
-    error = OSError("no address")
-    for family, kind, proto, _, address in _resolve(host, port, deadline):
-        sock = socket.socket(family, kind, proto)
-        try:
-            sock.settimeout(_remaining(deadline))
-            sock.connect(address)
-        except TimeoutError:
-            sock.close()
-            raise
-        except OSError as failure:
-            sock.close()
-            error = failure
-            continue
-        return sock
-    raise error
-
-
-def _tls_context():
-    """Return a verifying TLS context: certificate and hostname checks on."""
-    return ssl.create_default_context()
-
-
 class _ResponseTooLarge(Exception):
-    """The response passed RESPONSE_BYTES.
+    """The response body passed RESPONSE_BYTES."""
 
-    Not a ValueError: http.client turns a ValueError while reading a chunk-size
-    line into IncompleteRead, which would hide the cap as a transport failure.
+
+@sensitive_variables("headers", "body", "received", "chunk", "response")
+async def _exchange(url, headers, body, deadline):
+    """POST `body` with aiohttp; return the status and capped body (the network step).
+
+    The time left before `deadline` is the total timeout; certificates are
+    verified, redirects are not followed and proxy variables are ignored.
     """
+    timeout = aiohttp.ClientTimeout(total=_remaining(deadline))
+    async with (
+        aiohttp.ClientSession(
+            timeout=timeout, trust_env=False, auto_decompress=False
+        ) as session,
+        session.post(
+            url,
+            data=body,
+            headers=headers,
+            allow_redirects=False,
+            ssl=ssl.create_default_context(),
+        ) as response,
+    ):
+        received = bytearray()
+        async for chunk in response.content.iter_any():
+            received += chunk
+            if len(received) > RESPONSE_BYTES:
+                raise _ResponseTooLarge
+        return response.status, bytes(received)
 
 
-class _DeadlineReader(io.RawIOBase):
-    """Read the response socket, each read within the deadline and the byte cap."""
-
-    def __init__(self, sock, deadline):
-        self.sock, self.deadline, self.total = sock, deadline, 0
-
-    def readable(self):
-        """Mark the stream readable for io.BufferedReader."""
-        return True
-
-    def readinto(self, buffer):
-        """Fill `buffer` from one socket read, raising at the deadline or cap."""
-        self.sock.settimeout(_remaining(self.deadline))
-        count = self.sock.recv_into(buffer)
-        _remaining(self.deadline)
-        self.total += count
-        if self.total > RESPONSE_BYTES:
-            raise _ResponseTooLarge
-        return count
-
-
-class _Stream:
-    """Present a reader as a socket so http.client parses as it reads."""
-
-    def __init__(self, reader):
-        self.reader = reader
-
-    def makefile(self, *args, **kwargs):
-        return self.reader
-
-
-@sensitive_variables("payload", "response")
-def _exchange(parts, payload, deadline):
-    """Send `payload` and return the response's status and body.
-
-    http.client stops reading once the response is complete (Content-Length or
-    the final chunk), so a connection the server keeps open does not delay it.
-    """
-    sock = _connect(parts.hostname, parts.port or 443, deadline)
+def _run(awaitable):
+    """Run `awaitable` on a new loop, closed without asyncio.run's wait for threads."""
+    loop = asyncio.new_event_loop()
     try:
-        sock.settimeout(_remaining(deadline))
-        sock = _tls_context().wrap_socket(sock, server_hostname=parts.hostname)
-        sent = 0
-        while sent < len(payload):
-            sock.settimeout(_remaining(deadline))
-            sent += sock.send(payload[sent : sent + 16384])
-        reader = io.BufferedReader(_DeadlineReader(sock, deadline))
-        response = http.client.HTTPResponse(_Stream(reader), method="POST")
-        response.begin()
-        return response.status, response.read()
+        return loop.run_until_complete(awaitable)
     finally:
-        sock.close()
+        loop.close()
 
 
 def _no_repeated_keys(pairs):
@@ -308,40 +238,37 @@ def _envelope(body):
     return Success(text)
 
 
-@sensitive_variables("api_key", "head", "body", "payload", "instructions", "data")
+@sensitive_variables("api_key", "headers", "body", "instructions", "data")
 def _transport(instructions, data, deadline):
     """Send one request without redirects or retries, returning a result."""
     if not settings.SOC_LLM_LIVE:
         return Refused("live-off")
-    parts = _endpoint()
+    url = _endpoint()
     api_key = os.environ.get("SOC_LLM_API_KEY", "").strip()
     model = os.environ.get("SOC_LLM_MODEL", "").strip()
     usable_key = api_key.isascii() and api_key.isprintable()
-    if parts is None or not model or not api_key or not usable_key:
+    if url is None or not model or not api_key or not usable_key:
         return Refused("not-configured")
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Accept-Encoding": "identity",
+    }
     try:
         body = json.dumps(
             {"model": model, "instructions": instructions, "data": data},
             ensure_ascii=False,
         ).encode("utf-8")
-        target = (parts.path or "/") + (f"?{parts.query}" if parts.query else "")
-        head = (
-            f"POST {target} HTTP/1.1\r\nHost: {parts.netloc}\r\n"
-            f"Authorization: Bearer {api_key}\r\n"
-            "Content-Type: application/json\r\nAccept: application/json\r\n"
-            f"Content-Length: {len(body)}\r\nConnection: close\r\n\r\n"
-        )
-        payload = head.encode("ascii") + body
-    except UnicodeError:
-        return Failed("transport")
-    try:
-        status, body = _exchange(parts, payload, deadline)
-    except TimeoutError:
+        status, body = _run(_exchange(url, headers, body, deadline))
+    except TimeoutError:  # asyncio's and aiohttp's timeouts included
         return Failed("timeout")
-    except (OSError, http.client.HTTPException):
-        return Failed("transport")
     except _ResponseTooLarge:
         return Failed("invalid-response")
+    except (aiohttp.ClientError, OSError, ValueError):
+        return Failed("transport")
+    except Exception:  # noqa: BLE001 - any other error is a fixed code, never text
+        return Failed("transport")
     if status in {400, 401, 403}:
         return Refused("provider-refused")
     if status == 429:

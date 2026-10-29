@@ -491,6 +491,19 @@ def test_archive_keeps_runtime_requirements_without_tooling_manifest(
 
 
 @pytest.mark.ac("PLT-1.10")
+def test_archive_packs_every_local_app(committed, tmp_path, settings):
+    _, calls, _ = committed
+    release.prepare(SHA, tmp_path / "source")
+    listed = calls[0]
+    assert listed[0] == "ls-tree"
+    roots = listed[listed.index("--") + 1 :]
+    local = [app for app in settings.INSTALLED_APPS if not app.startswith("django.")]
+    assert local
+    for app in local:
+        assert f"src/{app.split('.')[0]}" in roots, app
+
+
+@pytest.mark.ac("PLT-1.10")
 @pytest.mark.parametrize(
     "excluded",
     [
