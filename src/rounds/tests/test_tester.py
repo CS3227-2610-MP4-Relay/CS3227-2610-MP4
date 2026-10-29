@@ -400,7 +400,7 @@ def test_coordinator_text_is_escaped_and_isolated_for_tester(tester, published, 
         assert f"<title>\u2068{escape(title)}\u2069</title>" in body
 
 
-@pytest.mark.ac("RES-1.1", "RES-1.8")
+@pytest.mark.ac("RES-1.1", "RES-1.5", "RES-1.8")
 def test_publish_and_close_change_next_request(tester, coordinator, make_round):
     round_ = make_round("Synthetic newly published")
     case = Case.objects.create(
@@ -427,5 +427,12 @@ def test_publish_and_close_change_next_request(tester, coordinator, make_round):
     assert round_.title in page(closed_home) and "(Closed)" in page(closed_home)
     closed_detail = client.get(detail(round_))
     assert closed_detail.status_code == 200
-    assert page(original).replace("State: Open", "State: Closed") == page(closed_detail)
+    entry_link = (
+        f'<p><a href="/tester/rounds/{round_.pk}/cases/{case.pk}/builds/'
+        f'{round_.builds.get().pk}/result/">Record result</a></p>'
+    )
+    assert entry_link in page(original) and "Record result" not in page(closed_detail)
+    assert page(original).replace(entry_link, "").replace(
+        "State: Open", "State: Closed"
+    ) == page(closed_detail)
     assert snapshot() == before
