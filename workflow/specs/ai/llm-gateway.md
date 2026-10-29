@@ -15,7 +15,7 @@ The [security spec](../SECURITY-SPEC.md#ai-features-and-prompt-injection) owns t
 - `SOC_LLM_LIVE` in the shared settings (`relay.settings.base`) is `False`. It is a code-level setting, not read from the environment, so turning it on needs a reviewed change.
 - While it is off, `gateway.complete` called without a test provider returns `Refused("live-off")` before any quota record, reservation or transport step, and the transport also refuses before reading any `SOC_LLM_*` variable. No network call is made, whatever `SOC_LLM_*` holds.
 - It may be turned on only after the real SoC LLM API (endpoint and wire format), the provider's retention and training terms and its limits are confirmed, and the proposals in this file are confirmed or changed to match.
-- `ssl.create_default_context()` honours `SSLKEYLOGFILE`, `SSL_CERT_FILE` and `SSL_CERT_DIR`, so before live calls are turned on they must be unset in production, or the transport must clear the context's `keylog_filename`.
+- `ssl.create_default_context()` honours `SSLKEYLOGFILE`, `SSL_CERT_FILE` and `SSL_CERT_DIR`. Before live calls are turned on, `SSLKEYLOGFILE` must be unset in production, or the transport clears the context's `keylog_filename`; `SSL_CERT_FILE` and `SSL_CERT_DIR`, if set, must name only trusted CA stores.
 - The transport connects directly and ignores `HTTPS_PROXY` and the other proxy variables, so whether the deployment needs a proxy to reach the provider must be confirmed before turning live calls on.
 - The change that turns it on also replaces RND-8's [off-for-now notice](../product/rounds.md#rnd-8-draft-test-cases-with-ai) with text that says what is sent.
 
