@@ -596,15 +596,19 @@ ACCOUNTS = {
 }
 
 
-# The TECHNICAL-SPEC tester routes: the detail page takes GET only and shows
-# only Open and Closed rounds of the tester's own workspace (RES-1.4, 1.5).
+# The TECHNICAL-SPEC tester routes: detail and history take GET only and show
+# only Open and Closed rounds of the tester's own workspace (RES-1/3).
 TESTER_ROUND = "accounts:tester-round"
 TESTER_MARKS = ("RES-1.4", "RES-1.5")
+TESTER_READ_ONLY = {
+    TESTER_ROUND: TESTER_MARKS,
+    "accounts:tester-results": ("RES-3.4", "RES-3.5"),
+}
 PUBLISHED = frozenset({OPEN, CLOSED})
 
 
 def expect_tester_round(caller, kind, state, *, names_a_round=True):
-    """A tester detail request's expectation, by the tester routes' order.
+    """A tester read-only request's expectation, by the tester routes' order.
 
     `names_a_round` is False when the URL's ID is missing or another
     workspace's: the same 404 as a Draft round.
@@ -882,7 +886,8 @@ def get_or_post(route):
 def test_every_route_has_a_matrix_entry():
     names = list(route_names(get_resolver().url_patterns))
     assert len(names) == len(set(names))
-    assert set(names) == set(ACCOUNTS) | set(ROUNDS) | {TESTER_ROUND, TESTER_RESULT}
+    expected = set(ACCOUNTS) | set(ROUNDS) | set(TESTER_READ_ONLY) | {TESTER_RESULT}
+    assert set(names) == expected
 
 
 @pytest.mark.parametrize(
@@ -1005,7 +1010,12 @@ def test_missing_and_other_workspace_404s_are_identical(name, state):
 
 @pytest.mark.parametrize(
     ("name", "caller", "state"),
-    [marked(TESTER_ROUND, TESTER_MARKS, c, s) for c in CALLERS for s in STATES],
+    [
+        marked(name, marks, caller, state)
+        for name, marks in TESTER_READ_ONLY.items()
+        for caller in CALLERS
+        for state in STATES
+    ],
 )
 def test_tester_round_matrix(name, caller, state):
     world = build_world(state)
@@ -1020,7 +1030,8 @@ def test_tester_round_matrix(name, caller, state):
 @pytest.mark.parametrize(
     ("name", "state", "variant"),
     [
-        marked(TESTER_ROUND, (*TESTER_MARKS, "ACC-2.4"), state, variant)
+        marked(name, (*marks, "ACC-2.4"), state, variant)
+        for name, marks in TESTER_READ_ONLY.items()
         for variant in (*FORGED_URL_IDS, "other workspace")
         for state in ((DRAFT,) if variant in STATELESS else STATES)
     ],

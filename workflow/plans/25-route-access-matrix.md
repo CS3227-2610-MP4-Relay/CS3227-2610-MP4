@@ -128,6 +128,14 @@ At the human's request this PR builds on #87, expected to merge first. The coord
 - **Not covered, pending a decision:** a Closed round's submitted or formerly current entry. RES-2.4 gives every Closed entry request the Closed 409, while RES-2.5 gives every POST after submission the submitted 409 and RES-2.4 a formerly current build the stale 409.
 - `pytest -q -p no:cacheprovider src/relay/tests/test_access_matrix.py`: 534 passed. Ruff clean.
 
+## Refresh against merged results work (2026-10-29)
+
+The human requested a repair of PR #77's diff, which still displayed the already-merged #87 result-submission work. Merge current `main` (`8c41c0a`, including #87 and #89) into this branch without rewriting history. The comparison against that base contains only this slice's matrix, plan, log and security-spec sentence.
+
+The route-completeness check initially failed because #89 added `accounts:tester-results`. Reuse the existing read-only tester matrix and forged-round-ID cases for that route, marked with RES-3.4/3.5. Expectations follow the existing RES-3 contract; application behaviour and acceptance criteria are unchanged. This is an integration repair within the test-only scope.
+
+Verification: Git Bash with the existing venv, `ruff check . && ruff format --check . && pytest`, passed Ruff and format (92 files), then returned 1777 passed, 1 skipped and 3 failed in 404.33s. All 562 matrix cases passed. The failures are the three `test_timeout_inside_a_limited_transaction_gives_503` idle variants at `src/accounts/tests/test_limit_views.py:564`: expected `idle-in-transaction timeout`, observed `server closed the connection unexpectedly`. The untouched `main` checkout (`8c41c0a`) independently reproduced exactly those failures with `pytest src/accounts/tests/test_limit_views.py -q -k idle --tb=short --show-capture=no` (3 failed, 43 deselected in 6.12s). No product or timeout-test repair is included. The one skipped test is the existing platform-dependent symlink scope check. These integration rows have not been independently reviewed; hosted checks run on the pushed head.
+
 ## Open issues
 
 - Later routes add their rows when built: RND-4's results route and the AI routes; until then #25 stays open.
