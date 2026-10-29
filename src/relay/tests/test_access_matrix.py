@@ -9,11 +9,12 @@ the root URLconf needs an entry here; later slices add rows for their routes.
 Callers are an anonymous visitor, workspace A's Test Coordinator and Beta
 Tester, and workspace B's Test Coordinator. Every name and text of workspace A,
 including its usernames and workspace name, holds A_MARK; A's sibling round
-holds SIBLING_MARK and workspace B holds B_MARK. Marks are compared
-case-insensitively, so a page that leaks one workspace's data to the other, to
-a visitor, or another round's data to a round's page, is caught. Each mark has
-a hyphen, which no CSRF token or generated password contains, so a random
-token cannot match a mark by chance.
+holds SIBLING_MARK and workspace B holds B_MARK; another tester's private
+result in workspace A holds PEER_MARK, which no other caller may see. Marks
+are compared case-insensitively, so a page that leaks one workspace's data to
+the other, to a visitor, or another round's data to a round's page, is caught.
+Each mark has a hyphen, which no CSRF token or generated password contains, so
+a random token cannot match a mark by chance.
 """
 
 import re
@@ -25,24 +26,33 @@ from django.conf import settings
 from django.db import transaction
 from django.test import Client
 from django.urls import URLResolver, get_resolver, reverse
+from django.utils import timezone
 
 from accounts.models import User, Workspace
 from ai.models import CallRecord, CallSlot
 from rounds import services
-from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
+from rounds.models import (
+    Build,
+    BuildCase,
+    Case,
+    CaseCriterion,
+    Criterion,
+    Result,
+    Round,
+)
 from rounds.tests.conftest import DENIED, NOT_FOUND, PASSWORD, csrf_token, signed_in
 
 pytestmark = pytest.mark.django_db
 
-A_MARK, B_MARK, SIBLING_MARK = "mtx-a", "mtx-b", "mtx-s"
+A_MARK, B_MARK, SIBLING_MARK, PEER_MARK = "mtx-a", "mtx-b", "mtx-s", "mtx-p"
 ANON, COORD_A, TESTER_A, COORD_B = "anonymous", "coord_a", "tester_a", "coord_b"
 CALLERS = (ANON, COORD_A, TESTER_A, COORD_B)
 # The marks each caller must never see, wherever they look.
 HIDDEN_FROM = {
-    ANON: (A_MARK, SIBLING_MARK, B_MARK),
-    COORD_A: (B_MARK,),
-    TESTER_A: (B_MARK,),
-    COORD_B: (A_MARK, SIBLING_MARK),
+    ANON: (A_MARK, SIBLING_MARK, B_MARK, PEER_MARK),
+    COORD_A: (B_MARK, PEER_MARK),
+    TESTER_A: (B_MARK, PEER_MARK),
+    COORD_B: (A_MARK, SIBLING_MARK, PEER_MARK),
 }
 DRAFT, OPEN, CLOSED = Round.State.DRAFT, Round.State.OPEN, Round.State.CLOSED
 STATES = (DRAFT, OPEN, CLOSED)
@@ -123,6 +133,8 @@ class World:
     sibling: Seeded
     foreign: Seeded
     clients: dict = field(default_factory=dict)
+    # The (case, build) of tester_a's one result a successful write may change.
+    entry: tuple = ()
 
 
 def seed(workspace, mark):
@@ -188,6 +200,7 @@ MODELS = (
     CaseCriterion,
     Build,
     BuildCase,
+    Result,
     CallRecord,
     CallSlot,
 )
@@ -201,7 +214,7 @@ def every_row():
 
 
 def part(rows, rounds, workspace_id=None):
-    """The rows of `rounds` (IDs), their records, links and builds; with
+    """The rows of `rounds` (IDs), their records, links, builds and results; with
     `workspace_id`, also that workspace's row and accounts."""
     cases = {row["id"] for row in rows["Case"] if row["round_id"] in rounds}
     builds = {row["id"] for row in rows["Build"] if row["round_id"] in rounds}
@@ -214,6 +227,7 @@ def part(rows, rounds, workspace_id=None):
         ],
         "Build": [row for row in rows["Build"] if row["id"] in builds],
         "BuildCase": [row for row in rows["BuildCase"] if row["build_id"] in builds],
+        "Result": [row for row in rows["Result"] if row["case_id"] in cases],
     }
     if workspace_id is not None:
         kept["Workspace"] = [r for r in rows["Workspace"] if r["id"] == workspace_id]
@@ -227,10 +241,25 @@ def workspace_part(rows, workspace):
     return part(rows, rounds, workspace.pk)
 
 
+def beyond_own_result(rows, world):
+    """Every row but tester_a's result for `world.entry`, the one it may write."""
+    own = (world.users[TESTER_A].pk, *world.entry)
+    return {
+        name: [
+            row
+            for row in kept
+            if name != "Result"
+            or (row["tester_id"], row["case_id"], row["build_id"]) != own
+        ]
+        for name, kept in rows.items()
+    }
+
+
 def snapshot(world):
     """Every row, and the rows a caller's successful write must leave alone."""
     rows = every_row()
     return {
+        "beyond own result": beyond_own_result(rows, world),
         "all": rows,
         "a": workspace_part(rows, world.a),
         "b": workspace_part(rows, world.b),
@@ -245,7 +274,7 @@ def snapshot(world):
 BYSTANDERS = {
     ANON: ("a", "b"),
     COORD_A: ("b", "sibling", "a accounts"),
-    TESTER_A: ("b", "sibling", "a accounts"),
+    TESTER_A: ("beyond own result",),
     COORD_B: ("a", "b accounts"),
 }
 
@@ -288,6 +317,7 @@ class Expect:
     allow: frozenset = frozenset()
     done_at: str = ""
     scoped: bool = False
+    message: str = ""
     shows: tuple = ()
 
 
@@ -296,8 +326,9 @@ def check(world, caller, response, expect, before):
 
     `done_at` is the exact redirect after a change, or empty for a new round,
     which must then be in the caller's workspace. `scoped` marks a page about
-    the target round, which must show nothing of its sibling round. `shows`
-    lists texts the page must contain.
+    the target round, which must show nothing of its sibling round. A 409's
+    `message` replaces the round state's conflict text. `shows` lists texts the
+    page must contain.
     """
     body = response.content.decode()
     status, outcome = response.status_code, expect.outcome
@@ -334,8 +365,9 @@ def check(world, caller, response, expect, before):
         assert set(response["Allow"].split(", ")) == set(expect.allow)
     elif outcome == CONFLICT:
         label = Round.State(expect.state).label
+        message = f"This action is not available while the round is {label}."
         assert status == 409
-        assert f"This action is not available while the round is {label}." in body
+        assert (expect.message or message) in body
     else:
         raise AssertionError(f"unknown outcome {outcome}")
     for text in expect.shows:
@@ -646,6 +678,179 @@ def expect_tester_round(caller, kind, state, *, names_a_round=True):
     return Expect(outcome, allow=GET_ONLY, scoped=True)
 
 
+# The TECHNICAL-SPEC tester routes and RES-2: result entry takes GET and POST,
+# and only for the tester's own row of a case's current build in an Open round.
+TESTER_RESULT = "accounts:tester-result"
+RESULT_MARKS = ("RES-2.3", "RES-2.4", "RES-2.6", "RES-2.7")
+RESULT_SLOTS = ("round_id", "case_id", "build_id")
+
+
+@dataclass(frozen=True)
+class Situation:
+    """tester_a's entry before the requests, and the methods it refuses with 409."""
+
+    label: str
+    refused: frozenset = frozenset()
+    message: str = ""
+    marks: tuple = ()
+
+
+FRESH = Situation("no result")
+SUBMITTED = Situation(
+    "submitted",
+    POST_ONLY,
+    "This result has already been submitted.",
+    ("RES-2.5",),
+)
+STALE = Situation(
+    "formerly current build",
+    BOTH,
+    "This build is no longer current. Reload the round to record a result.",
+)
+
+
+def result_data(world):
+    return {"outcome": "pass", "observation": "Synthetic observation", "action": "save"}
+
+
+def stored_build(round_, label, cases):
+    """A build written directly, as no service would: one of a Draft round."""
+    build = Build.objects.create(
+        round=round_, label=label, key=services.build_key(label)
+    )
+    for case in cases:
+        BuildCase.objects.create(build=build, case=case)
+    return build
+
+
+@dataclass
+class ResultWorld:
+    """The matrix world for result entry, and the IDs its URLs use."""
+
+    world: World
+    own: dict
+    uncovering: Build
+
+    def forged(self, slot, variant):
+        """IDs naming no own entry: `slot` replaced, or a foreign tuple."""
+        world = self.world
+        if variant in FORGED_URL_IDS:
+            return {**self.own, slot: FORGED_URL_IDS[variant]}
+        if slot == "round_id" and variant == "other workspace":
+            # A whole tuple of B's Open round, so only the workspace refuses it.
+            foreign = world.foreign
+            build = foreign.round.builds.get()
+            return dict(
+                zip(RESULT_SLOTS, (foreign.round.pk, foreign.case.pk, build.pk))
+            )
+        if slot == "build_id" and variant == "not covering the case":
+            return {**self.own, slot: self.uncovering.pk}
+        owner = world.foreign if variant == "other workspace" else world.sibling
+        record = {
+            "round_id": owner.round,
+            "case_id": owner.case,
+            "build_id": owner.round.builds.first(),
+        }[slot]
+        return {**self.own, slot: record.pk}
+
+
+def result_world(state, situation=FRESH):
+    """A matrix world whose target has two cases, a build covering both and a
+    retest build covering only the second; A's sibling and B's round are Open.
+
+    A Draft target's builds are stored directly, so only the Draft rule can
+    refuse it. The link table does not tie a covered case to its build's
+    round (SECURITY-SPEC), so links are stored across rounds and workspaces,
+    and only the round constraint on each lookup can refuse their IDs. A
+    second tester of workspace A has a draft for the own entry.
+    """
+    world = build_world(DRAFT)
+    target = world.target
+    second = Case.objects.create(
+        round=target.round,
+        title=f"Second case {A_MARK}",
+        steps=f"Steps {A_MARK}",
+        expected_result=f"Result {A_MARK}",
+    )
+    move_to(world.sibling, OPEN)
+    move_to(world.foreign, OPEN)
+    if state == DRAFT:
+        first = stored_build(target.round, "Synthetic 1.0", [target.case, second])
+        uncovering = stored_build(target.round, "Synthetic 2.0", [second])
+    else:
+        with transaction.atomic():
+            locked = Round.objects.select_for_update().get(pk=target.round.pk)
+            first = services.publish(locked, "Synthetic 1.0")
+            uncovering = services.request_retest(locked, "Synthetic 2.0", [second.pk])
+            if situation == STALE:
+                services.request_retest(locked, "Synthetic 3.0", [target.case.pk])
+            if state == CLOSED:
+                services.close(locked)
+        target.round.refresh_from_db()
+    sibling_build = world.sibling.round.builds.get()
+    foreign_build = world.foreign.round.builds.get()
+    for build, case in (
+        (first, world.sibling.case),
+        (first, world.foreign.case),
+        (sibling_build, target.case),
+        (foreign_build, target.case),
+    ):
+        BuildCase.objects.create(build=build, case=case)
+    if state != DRAFT:
+        peer = User.objects.create_user(
+            f"peer-{A_MARK}", PASSWORD, workspace=world.a, role="tester"
+        )
+        Result.objects.create(
+            tester=peer,
+            case=target.case,
+            build=first,
+            outcome="fail",
+            observation=f"Peer {PEER_MARK}",
+        )
+        world.users["peer"] = peer
+    if situation == SUBMITTED:
+        Result.objects.create(
+            tester=world.users[TESTER_A],
+            case=target.case,
+            build=first,
+            outcome="pass",
+            observation=f"Own {A_MARK}",
+            submitted_at=timezone.now(),
+        )
+    world.entry = (target.case.pk, first.pk)
+    own = dict(zip(RESULT_SLOTS, (target.round.pk, target.case.pk, first.pk)))
+    return ResultWorld(world, own, uncovering)
+
+
+def expect_tester_result(
+    caller, kind, state, done_at, situation=FRESH, *, names_own=True
+):
+    """A result entry request's expectation, by RES-2's order.
+
+    `names_own` is False when the URL's IDs do not name a case of the tester's
+    own round and a build of that round covering it: the 404 comes before
+    any state, build or submission conflict.
+    """
+    message = ""
+    if kind.fails_csrf():
+        outcome = FORBIDDEN
+    elif kind.method not in BOTH:
+        outcome = NOT_ALLOWED
+    elif caller == ANON:
+        outcome = SIGN_IN
+    elif caller != TESTER_A:
+        outcome = FORBIDDEN
+    elif not names_own or state == DRAFT:
+        outcome = NOT_FOUND_PAGE
+    elif state == CLOSED:
+        outcome = CONFLICT
+    elif kind.method in situation.refused:
+        outcome, message = CONFLICT, situation.message
+    else:
+        outcome = OK if kind.method == "GET" else DONE
+    return Expect(outcome, state, BOTH, done_at, scoped=True, message=message)
+
+
 # ------------------------------------------------------------------- URLs
 
 
@@ -731,7 +936,7 @@ def get_or_post(route):
 def test_every_route_has_a_matrix_entry():
     names = list(route_names(get_resolver().url_patterns))
     assert len(names) == len(set(names))
-    assert set(names) == set(ACCOUNTS) | set(ROUNDS) | {TESTER_ROUND}
+    assert set(names) == set(ACCOUNTS) | set(ROUNDS) | {TESTER_ROUND, TESTER_RESULT}
 
 
 @pytest.mark.parametrize(
@@ -891,6 +1096,85 @@ def test_forged_tester_round_ids_get_the_404_page(name, state, variant):
             expect = expect_tester_round(caller, GET, state, names_a_round=False)
         exchange(world, caller, GET, forged, None, expect, failures)
     failures.assert_none()
+
+
+# Submitted and formerly current entries run in Open rounds only: in a Closed
+# round, RES-2.4's Closed conflict and RES-2.5's or the stale build's both apply
+# (an open decision in the plan).
+RESULT_ROWS = [
+    *((state, FRESH) for state in STATES),
+    (OPEN, SUBMITTED),
+    (OPEN, STALE),
+]
+
+# Forged IDs in each URL position of result entry.
+RESULT_VARIANTS = {
+    "round_id": (*FORGED_URL_IDS, "other workspace", "other round"),
+    "case_id": (*FORGED_URL_IDS, "other workspace", "other round"),
+    "build_id": (
+        *FORGED_URL_IDS,
+        "other workspace",
+        "other round",
+        "not covering the case",
+    ),
+}
+
+
+@pytest.mark.parametrize(
+    ("name", "caller", "state", "situation"),
+    [
+        marked(TESTER_RESULT, (*RESULT_MARKS, *s.marks), c, state, s.label)
+        for c in CALLERS
+        for state, s in RESULT_ROWS
+    ],
+)
+def test_tester_result_matrix(name, caller, state, situation):
+    situation = next(s for _, s in RESULT_ROWS if s.label == situation)
+    entry = result_world(state, situation)
+    world = entry.world
+    target = url(name, entry.own)
+    failures = Failures()
+    for kind in KINDS:
+        expect = expect_tester_result(caller, kind, state, target, situation)
+        exchange(world, caller, kind, target, result_data(world), expect, failures)
+    failures.assert_none()
+
+
+@pytest.mark.parametrize(
+    ("name", "state", "slot", "variant"),
+    [
+        marked(TESTER_RESULT, (*RESULT_MARKS, "ACC-2.4"), state, slot, variant)
+        for slot, variants in RESULT_VARIANTS.items()
+        for variant in variants
+        for state in ((DRAFT,) if variant in STATELESS else STATES)
+    ],
+)
+def test_forged_tester_result_ids_get_the_404_page(name, state, slot, variant):
+    entry = result_world(state)
+    world = entry.world
+    forged = url(name, entry.forged(slot, variant))
+    failures = Failures()
+    for caller in (ANON, TESTER_A, COORD_A):
+        for kind in (GET, POST):
+            if variant in STATELESS:
+                expect = Expect(NOT_FOUND_PAGE, scoped=True)
+            else:
+                expect = expect_tester_result(
+                    caller, kind, state, forged, names_own=False
+                )
+            exchange(world, caller, kind, forged, result_data(world), expect, failures)
+    failures.assert_none()
+
+
+@pytest.mark.ac("RES-2.3")
+def test_peer_mark_shows_on_the_peers_own_entry_page():
+    # Positive control: the peer's draft does reach its own entry page, so
+    # the PEER_MARK leak check on tester_a's pages is not vacuous.
+    entry = result_world(OPEN)
+    peer = signed_in(entry.world.users["peer"])
+    response = peer.get(url(TESTER_RESULT, entry.own))
+    assert response.status_code == 200
+    assert f"Peer {PEER_MARK}" in response.content.decode()
 
 
 @dataclass(frozen=True)

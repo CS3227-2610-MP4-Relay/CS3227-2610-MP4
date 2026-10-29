@@ -56,9 +56,23 @@ You are also signed out 8 hours after signing in, whatever you do in between; op
 3. Test the software outside Relay using those instructions and the named build. If the coordinator requests a retest, reload the page: only the selected cases change to the new **Current build**; other cases keep their previous build.
 4. Choose **Tester home** to return to the list, or return there to **Sign out**.
 
-Both Beta Testers in a workspace see the same rounds. Draft rounds stay hidden. A Closed round remains available as read-only reference; after the coordinator closes it, reload to see "State: Closed" and "(Closed)" in the list. These pages show instructions only; they have no result-entry controls.
+Both Beta Testers in a workspace see the same rounds. Draft rounds stay hidden. An Open round has a **Record result** link beside each case. A Closed round remains available as read-only reference; after the coordinator closes it, reload to see "State: Closed" and "(Closed)" in the list, with the result-entry links removed.
 
 If reading tests fails, the page says "Relay is temporarily unavailable. Try again later." Opening a Draft, missing or another workspace's round shows "Page not found."
+
+## Save and submit a result
+
+1. In an Open round, choose **Record result** beside the case you tested. The **Record result** page shows **Test case** and **Current build**.
+2. Choose **Pass** or **Fail** under **Outcome** and enter your **Observation**. Fail requires an observation; Pass allows it to be empty.
+3. Choose **Save draft** to keep working later. The page shows "Status: Draft" and your saved fields; they remain when you reload or sign in again. Each tester has a separate private draft for each case and build.
+4. Choose **Submit** when ready. You may submit directly or after saving a draft. The page shows "Status: Submitted", your outcome and your observation as read-only text. An empty observation says "No observation." Submission is final; another attempt to save or submit it says "This result has already been submitted."
+5. Choose **Back to round** to return to the case instructions.
+
+Both buttons apply the same checks. A missing outcome says "Choose Pass or Fail." An empty or invisible-only Fail observation says "Enter an observation for Fail." Observations allow at most 2000 characters after surrounding spaces and line breaks are removed; a line break counts as one character. A longer observation says "Enter at most 2000 characters." A nonempty invisible-only Pass observation says "Enter an observation with a visible character." Null characters and hidden text-direction characters get the same messages as [round text fields](#criteria-and-test-case-limits). Invalid input leaves your previously saved result unchanged.
+
+Results belong to the build shown when you opened the entry page. If a retest changes that case's current build before you save or submit, the page says "This build is no longer current. Reload the round to record a result." Return to the round, reload, and choose **Record result** for the new build. Earlier results stay stored with their original build; previous-result browsing is unavailable. Cases omitted from the retest keep their existing result entry.
+
+You can view your submitted result through **Record result** while its build is current and the round is Open. Once the round closes, an entry page says "This action is not available while the round is Closed." and saves nothing. The round's instructions remain available. If storage fails, the page says "Relay is temporarily unavailable. Try again later." and no part of the result change is saved.
 
 ## Test rounds
 
