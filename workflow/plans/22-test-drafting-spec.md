@@ -78,6 +78,10 @@ Criteria: RND-8.1 to RND-8.9, nine, one above the guideline. It stays reviewable
   - Repair rounds were exhausted, so these are recorded here rather than fixed in this PR.
 - **Access matrix:** resolved; #77 is merged into this branch (`6e7b844`) and the `ai:*` rows were added in [repair round 2](#repair-round-2-2026-10-29) (`46fae22`).
 
+## Split (2026-10-29)
+
+At the human's request, #78 was split by layer into two PRs. The first, from branch `6-llm-gateway`, holds every spec change, this plan, the [#6 plan](6-llm-gateway.md), log 018 and the gateway (`ai` app, models, migrations, gateway, fake provider, their tests and settings). #78 keeps RND-8's drafting pages, their tests, the `ai:*` access-matrix rows, the User Guide and log 019, and merges after it. The content is unchanged apart from consistency edits in the first PR: its status sentences say RND-8 is specified but not built and the Developer Guide describes only the gateway, which #78 updates when the pages land, and the AI tests' fixtures drop the rounds fixtures only the drafting tests use. The coordinator records each PR's size.
+
 ## Repair after independent review (2026-10-29)
 
 On `5c354c3`. PR #78's implementation was produced by another model (DeepSeek) in a workflow experiment; independent reviews of `5c354c3` then found the issues below. Tier: High.

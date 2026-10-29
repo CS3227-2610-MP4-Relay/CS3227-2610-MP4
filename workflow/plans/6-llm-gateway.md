@@ -4,6 +4,8 @@ Goal: one bounded, provider-independent gateway that feature code can call witho
 
 Built in PR #78 together with #22's drafting. Every gateway design choice in the [contract](../specs/ai/llm-gateway.md) is a proposal pending confirmation by the gateway owner, Whimsyturtle, and the human (human decision 3 of 2026-10-29 in the [#22 plan](22-test-drafting-spec.md#human-decisions-2026-10-29-confirmed)).
 
+Split out of #78 into its own PR, landing before RND-8's pages: see [the split](22-test-drafting-spec.md#split-2026-10-29).
+
 ## Decisions
 
 - **Live off (human, 2026-10-29, confirmed):** `SOC_LLM_LIVE = False` in the shared settings keeps every provider call off until the real SoC LLM API, its retention and training terms and its limits are confirmed ([live switch](../specs/ai/llm-gateway.md#live-switch)).
