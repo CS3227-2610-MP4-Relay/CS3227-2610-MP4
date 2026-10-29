@@ -107,6 +107,8 @@ def test_no_code_exempts_a_view_or_sets_framing_itself():
         str(path.relative_to(SRC))
         for path in SRC.rglob("*.py")
         if not TEST_DIRECTORIES & set(path.relative_to(SRC).parts)
+        # This operational helper only reads the header in deployment smoke checks.
+        and path != SRC / "release.py"
         and any(text in path.read_text(encoding="utf-8").lower() for text in OVERRIDES)
     ]
     assert named == []

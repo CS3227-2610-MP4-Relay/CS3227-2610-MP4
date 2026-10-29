@@ -1,4 +1,4 @@
-# Verify the application and static site before main-only Pages publication.
+# Verify the application and site before separately controlled publication.
 name: CI
 
 on:
@@ -43,11 +43,23 @@ jobs:
         run: |
           python -m venv .venv
           .venv/bin/python -m pip install --requirement requirements-dev.txt
+      - name: Install Chromium and its system dependencies
+        run: .venv/bin/python -m playwright install --with-deps chromium
       - name: Verify
         run: |
           source .venv/bin/activate
           python src/manage.py check --settings=relay.settings.test
-          ruff check . && ruff format --check . && pytest
+          ruff check . && ruff format --check . && pytest --basetemp="$RUNNER_TEMP/relay-pytest"
+      - name: Retain browser failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: browser-failure-diagnostics
+          path: |
+            ${{ runner.temp }}/relay-pytest/**/browser-failure.png
+            ${{ runner.temp }}/relay-pytest/**/browser-trace.zip
+          if-no-files-found: ignore
+          retention-days: 3
 
   site:
     runs-on: ubuntu-24.04
@@ -89,3 +101,49 @@ jobs:
       - name: Publish the checked artifact from this run
         id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+
+  production:
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      vars.PRODUCTION_DEPLOY_ENABLED == 'true'
+    needs: [verify, site]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    environment:
+      name: production
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14.2"
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24.18.0"
+          package-manager-cache: false
+      - name: Install pinned deployment dependencies
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --requirement requirements.txt
+          npm install --global vercel@64.3.1
+      - name: Check and migrate
+        env:
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DJANGO_PRODUCTION_HOST: ${{ vars.DJANGO_PRODUCTION_HOST }}
+          DJANGO_TRUST_PROXY_SSL_HEADER: "true"
+        run: .venv/bin/python src/release.py migrate
+      - name: Deploy and smoke
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          VERCEL_TEAM_ID: ${{ vars.VERCEL_TEAM_ID }}
+          DJANGO_PRODUCTION_HOST: ${{ vars.DJANGO_PRODUCTION_HOST }}
+        run: .venv/bin/python src/release.py deploy
