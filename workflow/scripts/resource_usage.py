@@ -9,6 +9,7 @@ logs are never modified. Keep snapshots outside version control.
 import argparse
 import hashlib
 import json
+import re
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -40,6 +41,7 @@ WARNING_CODES = frozenset(
         "session_has_no_supported_usage",
         "added_session_has_no_task_start_baseline",
         "source_truncated_or_replaced_since_baseline",
+        "codex_shared_history_unresolved",
     }
 )
 
@@ -173,6 +175,103 @@ def _claude_usage(usage):
     return result
 
 
+def _merge_ranges(ranges):
+    merged = []
+    for lower, upper in sorted(ranges):
+        if merged and lower <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], upper)
+        else:
+            merged.append([lower, upper])
+    return merged
+
+
+def _range_size(ranges):
+    return sum(upper - lower for lower, upper in _merge_ranges(ranges))
+
+
+def _coverage(sessions):
+    coverage = {}
+    for session in sessions.values():
+        for turn, evidence in (session.get("provenance") or {}).items():
+            target = coverage.setdefault(turn, {field: [] for field in METRICS})
+            for field, ranges in evidence["ranges"].items():
+                if ranges is None or target[field] is None:
+                    target[field] = None
+                else:
+                    target[field] = _merge_ranges(target[field] + ranges)
+    return coverage
+
+
+def _covers(coverage, provenance, only_field=None):
+    if not provenance:
+        return False
+    for turn, evidence in provenance.items():
+        for field, ranges in evidence["ranges"].items():
+            if only_field is not None and field != only_field:
+                continue
+            selected = coverage.get(turn, {}).get(field)
+            if ranges is None or selected is None:
+                return False
+            if _range_size(selected + ranges) != _range_size(selected):
+                return False
+    return True
+
+
+def _validate_provenance(provenance):
+    if provenance is None:
+        return
+    if not isinstance(provenance, dict):
+        raise TypeError("invalid usage provenance")
+    for turn, evidence in provenance.items():
+        if not isinstance(turn, str) or not re.fullmatch(r"turn:[0-9a-f]{24}", turn):
+            raise ValueError("invalid turn identity")
+        if not isinstance(evidence, dict) or set(evidence) != {"ranges", "first_at"}:
+            raise ValueError("invalid turn evidence")
+        if evidence["first_at"] is not None and _time(evidence["first_at"]) is None:
+            raise ValueError("invalid turn time")
+        ranges = evidence["ranges"]
+        if not isinstance(ranges, dict) or set(ranges) != set(METRICS):
+            raise ValueError("invalid turn ranges")
+        for values in ranges.values():
+            if values is None:
+                continue
+            if not isinstance(values, list):
+                raise TypeError("invalid numeric ranges")
+            for pair in values:
+                if (
+                    not isinstance(pair, list)
+                    or len(pair) != 2
+                    or any(_count(value) is None for value in pair)
+                    or pair[1] < pair[0]
+                ):
+                    raise ValueError("invalid numeric range")
+
+
+def _guard_legacy_overlap(sessions, warnings):
+    ordered = sorted(
+        sessions.items(), key=lambda item: (item[1]["started_at"] or "", item[0])
+    )
+    for index, (key, session) in enumerate(ordered):
+        for other_key, other in ordered[:index]:
+            if session.get("provenance") and other.get("provenance"):
+                continue
+            related = (
+                session.get("ancestor") == other_key
+                or other.get("ancestor") == key
+                or session.get("tree") == other.get("tree")
+                or (
+                    session.get("ancestor")
+                    and session["ancestor"] == other.get("ancestor")
+                )
+            )
+            if related and set(session["usage_fingerprints"]) & set(
+                other["usage_fingerprints"]
+            ):
+                session["tokens"] = {field: None for field in METRICS}
+                warnings.add("codex_shared_history_unresolved")
+                break
+
+
 def collect(codex_paths=(), claude_paths=(), now=None):
     """Return aggregate-only telemetry from explicitly selected files."""
     warnings = set()
@@ -208,16 +307,33 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                     "export_sources": set(),
                     "awaiting_usage": awaiting_usage,
                     "missing_message_id": False,
+                    "ancestor": (
+                        _identity("codex", meta["parent_thread_id"])
+                        if meta.get("parent_thread_id")
+                        else None
+                    ),
+                    "tree": _identity(platform, meta.get("session_id") or identity),
                 },
             )
             if _time(meta.get("timestamp")):
                 stream["started_at"] = meta["timestamp"]
+            turn = None
             for index, record in enumerate(_records(path, warnings)):
                 stamp = record.get("timestamp")
                 if _time(stamp) and stream["started_at"] is None:
                     stream["started_at"] = stamp
                 payload = _object(record.get("payload"))
                 if platform == "codex":
+                    if (
+                        record.get("type") == "turn_context"
+                        or payload.get("type") == "task_started"
+                    ):
+                        turn_id = payload.get("turn_id")
+                        turn = (
+                            _identity("turn", turn_id)
+                            if isinstance(turn_id, str) and turn_id
+                            else None
+                        )
                     event_time = _time(stamp)
                     created = _time(meta.get("timestamp"))
                     if event_time and created and event_time < created:
@@ -240,13 +356,19 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                         and payload.get("info") is not None
                     ):
                         stream["events"].append(
-                            (stamp or "", index, "cumulative", info)
+                            (stamp or "", index, "cumulative", info, turn)
                         )
                         stream["awaiting_usage"] = False
                     elif record.get("type") == "turn.completed":
                         stream["export_sources"].add(path)
                         stream["events"].append(
-                            (stamp or "", index, "turn", _object(record.get("usage")))
+                            (
+                                stamp or "",
+                                index,
+                                "turn",
+                                _object(record.get("usage")),
+                                None,
+                            )
                         )
                 else:
                     message = _object(record.get("message"))
@@ -284,6 +406,8 @@ def collect(codex_paths=(), claude_paths=(), now=None):
         export_sources = stream.pop("export_sources")
         missing_message_id = stream.pop("missing_message_id")
         observations = 0
+        provenance = {}
+        fingerprints = []
         if stream["platform"] == "claude":
             messages = {}
             for message_id, usage in events:
@@ -320,10 +444,12 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                 warnings.add("multiple_codex_exports_are_ambiguous")
                 ambiguous = True
             chosen = cumulative or [event for event in events if event[2] == "turn"]
+            native = bool(chosen) and all(event[4] for event in chosen)
+            reset_seen = False
             previous = None
             seen = set()
             unavailable = set()
-            for stamp, index, kind, info in sorted(
+            for stamp, index, kind, info, turn in sorted(
                 chosen,
                 key=lambda item: (
                     _time(item[0]) or datetime.min.replace(tzinfo=UTC),
@@ -334,6 +460,14 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                     _object(info.get("total_token_usage"))
                     if kind == "cumulative"
                     else info
+                )
+                fingerprints.append(
+                    hashlib.sha256(
+                        json.dumps(
+                            {"total": raw, "last": info.get("last_token_usage")},
+                            sort_keys=True,
+                        ).encode()
+                    ).hexdigest()
                 )
                 current = _codex_usage(raw)
                 if any(
@@ -370,6 +504,7 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                             for field in primary
                         ):
                             warnings.add("codex_counter_reset")
+                            reset_seen = True
                         else:
                             warnings.add("codex_counter_reset_ambiguous")
                             increment = {field: None for field in METRICS}
@@ -402,15 +537,39 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                         totals[field] = (totals[field] or 0) + value
                     else:
                         unavailable.add(field)
+                    if native:
+                        evidence = provenance.setdefault(
+                            turn,
+                            {
+                                "first_at": stamp if _time(stamp) else None,
+                                "ranges": {metric: [] for metric in METRICS},
+                            },
+                        )
+                        if value is None or evidence["ranges"][field] is None:
+                            evidence["ranges"][field] = None
+                        else:
+                            evidence["ranges"][field] = _merge_ranges(
+                                evidence["ranges"][field]
+                                + [[current[field] - value, current[field]]]
+                            )
                 previous = current
                 observations += 1
             for field in unavailable:
                 totals[field] = None
             if ambiguous:
                 totals = {field: None for field in METRICS}
+            if not native or ambiguous or reset_seen:
+                provenance = {}
         if not observations and not stream["awaiting_usage"]:
             warnings.add("session_has_no_supported_usage")
-        sessions[key] = {**stream, "observations": observations, "tokens": totals}
+        sessions[key] = {
+            **stream,
+            "observations": observations,
+            "tokens": totals,
+            "provenance": provenance or None,
+            "usage_fingerprints": sorted(set(fingerprints)),
+        }
+    _guard_legacy_overlap(sessions, warnings)
     return {
         "schema_version": SCHEMA,
         "kind": "usage_snapshot",
@@ -439,20 +598,43 @@ def report(current, baseline, retries=None, repair_rounds=None):
             raise TypeError("invalid baseline session")
         if type(session.get("awaiting_usage")) is not bool:
             raise TypeError("invalid baseline session state")
+        _validate_provenance(session.get("provenance"))
         for field in METRICS:
             tokens = session["tokens"]
             if field not in tokens or (
                 tokens[field] is not None and _count(tokens[field]) is None
             ):
                 raise ValueError("invalid baseline token counter")
+    current_coverage = _coverage(current["sessions"])
     missing = set(old_sessions) - set(current["sessions"])
-    if missing:
+    if any(
+        not _covers(current_coverage, old_sessions[key].get("provenance"))
+        for key in missing
+    ):
         raise ValueError("baseline sessions missing; include every original source")
+    claimed = _coverage(old_sessions)
     rows = []
-    for key, session in current["sessions"].items():
+    for key, session in sorted(
+        current["sessions"].items(),
+        key=lambda item: (item[1]["started_at"] or "", item[0]),
+    ):
         previous = old_sessions.get(key)
         started = _time(session.get("started_at"))
         historical = previous is None and (started is None or started < start)
+        provenance = session.get("provenance") or {}
+        if (
+            historical
+            and set(provenance) & set(claimed)
+            and all(
+                turn in claimed
+                or (
+                    _time(evidence["first_at"]) is not None
+                    and _time(evidence["first_at"]) >= start
+                )
+                for turn, evidence in provenance.items()
+            )
+        ):
+            historical = False
         if historical:
             warnings.add("added_session_has_no_task_start_baseline")
         values = {}
@@ -462,7 +644,41 @@ def report(current, baseline, retries=None, repair_rounds=None):
             if previous and previous.get("awaiting_usage"):
                 before = 0
             value = None
-            if not historical and after is not None and before is not None:
+            truncated = (
+                previous
+                and previous.get("provenance")
+                and after is not None
+                and before is not None
+                and not _covers(current_coverage, previous["provenance"], field)
+            )
+            if truncated:
+                warnings.add("source_truncated_or_replaced_since_baseline")
+            elif not historical and after is not None and provenance:
+                value = 0
+                additions = []
+                for turn, evidence in provenance.items():
+                    ranges = evidence["ranges"][field]
+                    covered = claimed.get(turn, {}).get(field, [])
+                    if ranges is None or covered is None:
+                        value = None
+                        break
+                    value += _range_size(covered + ranges) - _range_size(covered)
+                    additions.append((turn, _merge_ranges(covered + ranges)))
+                if previous and not previous.get("provenance"):
+                    value = (
+                        value - before
+                        if value is not None and before is not None
+                        else None
+                    )
+                    if value is not None and value < 0:
+                        warnings.add("source_truncated_or_replaced_since_baseline")
+                        value = None
+                if value is not None:
+                    for turn, ranges in additions:
+                        claimed.setdefault(turn, {metric: [] for metric in METRICS})[
+                            field
+                        ] = ranges
+            elif not historical and after is not None and before is not None:
                 if after >= before:
                     value = after - before
                 else:
