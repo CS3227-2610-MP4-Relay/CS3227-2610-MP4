@@ -628,7 +628,11 @@ class ResourceUsageTests(unittest.TestCase):
             with self.subTest(code=code):
                 baseline = json.loads(json.dumps(snapshot))
                 baseline["warnings"] = [code]
-                self.assertIn(code, usage.report(snapshot, baseline)["warnings"])
+                reported = usage.report(snapshot, baseline)["warnings"]
+                if code == "session_initialized_without_usage":
+                    self.assertNotIn(code, reported)  # current source has usage
+                else:
+                    self.assertIn(code, reported)
 
     def test_invalid_codex_metadata_identity_returns_no_path_traceback(self):
         for identity in (123, 0, None, [], {"secret": "private"}, ""):

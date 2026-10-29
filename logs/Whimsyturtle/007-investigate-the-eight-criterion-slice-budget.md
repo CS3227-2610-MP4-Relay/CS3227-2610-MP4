@@ -2,7 +2,7 @@
 
 Slice: criterion-count-guideline · Tier: Standard for delivery; initial investigation read-only · Tool: Codex · Orchestrator model: gpt-6-astra/xhigh (observed session metadata) · Date: 2026-10-26
 
-Tokens: 5,704,541 input, 29,737 output, 5,734,278 total through 2026-10-26 23:16:48 SGT.
+Tokens: 6,042,346 input, 30,751 output, 6,073,097 total through 2026-10-26 23:16:48 SGT.
 
 | Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
@@ -10,8 +10,9 @@ Tokens: 5,704,541 input, 29,737 output, 5,734,278 total through 2026-10-26 23:16
 | `cap_history` — `gpt-6.1-sol/high`, `codex:9c960e6eb412f6d79b68c81e` | 513,831 | 449,024 | 3,465 | 155 | 517,296 | Within measurement interval; resumed once |
 | `criteria_quality` — `gpt-6.1-sol/high`, `codex:321f6a507335db4c7c1f1fd3` | 867,789 | 814,464 | 5,338 | 473 | 873,127 | Within measurement interval |
 | `guideline_verifier` — `gpt-6.1-sol/high`, `codex:92a675d63ff2423b339eb5c7` | 490,606 | 455,168 | 2,452 | 378 | 493,058 | Within measurement interval |
+| Automatic approval reviewer — codex-auto-review/low, `codex:0a079f48d59ce75997fa138d` | 337,805 | 297,344 | 1,014 | 382 | 338,819 | Within original measured window |
 
-Three subagents; approximately 3h41m20s from recorded session start to cutoff, including the idle interval before the human's delivery request. The coordinator baseline followed initial instruction/setup reads by about 3m05s; all delegated sessions began after it. The combined report selects the coordinator and three delegated sources explicitly, excluding the platform's separate approval-review source, and supersedes the agents' narrower individual reports. Final summary preparation, delivery/checks and the answer follow the cutoff. Cache-write input was zero for selected sources; one capacity-related agent retry and no code repair rounds. [Accounting conventions](../../workflow/README.md#token-reporting).
+Three delegated subagents; approximately 3h41m20s from recorded session start to cutoff, including the idle interval before the human's delivery request. The coordinator baseline followed initial instruction/setup reads by about 3m05s; all delegated sessions began after it. The retrospective rerun includes the separate automatic approval source within the same interval and supersedes the agents' narrower individual reports. Summary preparation, delivery/checks and the answer after the cutoff remain excluded. Cache-write input was zero; one capacity-related agent retry and no code repair rounds. See [the audit](018-audit-historical-token-counts.md) and [accounting conventions](../../workflow/README.md#token-reporting).
 
 ## Requests
 

@@ -2,7 +2,7 @@
 
 Slice: #5 · Tier: High · Tool: Codex · Orchestrator model: gpt-6-astra / xhigh (observed session metadata) · Dates: 2026-10-28–29
 
-Tokens: recorded subtotal across ten usage-bearing sessions: 95,571,116 input, 333,505 output, 95,904,621 total; measurement cutoff 2026-10-29 09:40:34 Singapore time. The inactive approval entry below is excluded from this subtotal; its state database records zero total tokens but provides no breakdown.
+Tokens: measured subtotal across ten usage-bearing sessions: 95,571,116 input, 333,505 output, 95,904,621 total; measurement cutoff 2026-10-29 09:40:34 Singapore time. Full aggregate unavailable because the inactive approval entry has no usage counters.
 
 | Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
@@ -12,13 +12,13 @@ Tokens: recorded subtotal across ten usage-bearing sessions: 95,571,116 input, 3
 | Follow-up approval reviewer — codex-auto-review/low, `codex:d22bac4c24daf0654969bfbf` | 638,033 | 534,528 | 1,362 | 471 | 639,395 | 28 Oct 12:46:15–29 Oct 09:40:34 |
 | Verifier — gpt-6.1-sol/high, `codex:20218fe83ae5cfacdc1b50da` | 6,536,237 | 5,892,864 | 16,154 | 4,438 | 6,552,391 | 28 Oct 12:53:58–29 Oct 09:40:34 |
 | Security reviewer — gpt-6.1-sol/high, `codex:5f2a2cdc70df259ef825e838` | 5,805,983 | 5,262,592 | 16,985 | 7,387 | 5,822,968 | 28 Oct 12:54:15–29 Oct 09:40:34 |
-| Inactive approval entry — configured codex-auto-review/low, `codex:892863b592de38088268a140` | unavailable | unavailable | unavailable | unavailable | 0 (state database) | 19:37:56 initialization only |
+| Inactive approval entry — configured codex-auto-review/low, `codex:892863b592de38088268a140` | unavailable | unavailable | unavailable | unavailable | unavailable | 19:37:56 initialization only |
 | CLI approval reviewer — codex-auto-review/low, `codex:d0eb42ff3e3b3b2eb3df1dd3` | 690,194 | 622,592 | 1,126 | 367 | 691,320 | 28 Oct 20:21:46–29 Oct 09:40:34 |
 | Delivery approval reviewer — codex-auto-review/low, `codex:31bec908187aa0f36da3c293` | 1,972,270 | 1,765,632 | 2,329 | 658 | 1,974,599 | 28 Oct 20:53:22–29 Oct 09:40:34 |
 | Bootstrap/repair approval reviewer — codex-auto-review/low, `codex:33cf589b29d8d313a60519aa` | 610,674 | 523,776 | 1,255 | 539 | 611,929 | 28 Oct 22:47:19–29 Oct 09:40:34 |
 | Repair-closeout approval reviewer — codex-auto-review/low, `codex:d82142735514ccdd1b0b2709` | 1,294,592 | 1,138,432 | 2,514 | 888 | 1,297,106 | 28 Oct 23:41:43–29 Oct 09:40:34 |
 
-Three delegated role sessions were reused through both hosted-build and WSGI corrections; seven automatic approval entries were discovered, one inactive. Executed model/effort pairs remained unchanged; the inactive entry's pair comes from configuration metadata, not an observed model turn. The eleven-source collector report had no warnings but returned null aggregate counters because the inactive entry had no usage events. The subtotal sums ten complete rows through the cutoff, covering 76,841.301 seconds including operator-setup pauses and overnight idle spans; the table shows collection windows, not active execution durations. The first 62 seconds before the coordinator baseline and subsequent closeout are excluded. Coordinator measurement covers reused roles from inception; late reviewer baselines do not replace it. Cached input is a subset of input (91,588,864 tokens); available cache-write counts were zero. See [token reporting](../../workflow/README.md#token-reporting).
+Three delegated role sessions were reused through hosted-build and WSGI corrections; seven automatic approval entries were discovered, one inactive. Executed model/effort pairs remained unchanged; the inactive entry's pair comes from configuration metadata. The repaired collector marks its counters unavailable and emits `session_initialized_without_usage`; its prior state-database zero does not supply a usage breakdown. The aggregate remains unavailable and the ten-row measured subtotal is unchanged. The 76,841.301-second interval includes operator-setup pauses and overnight idle spans; table spans are not active execution durations. The first 62 seconds before the coordinator baseline and subsequent closeout remain excluded. Late reviewer baselines do not replace the coordinator measurement. Available cache-write counters were zero. See [the audit](018-audit-historical-token-counts.md) and [token reporting](../../workflow/README.md#token-reporting).
 
 ## Requests
 
