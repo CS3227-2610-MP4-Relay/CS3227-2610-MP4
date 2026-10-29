@@ -1,11 +1,11 @@
-"""Tester availability and private current-build result entry (RES-1/2)."""
+"""Tester availability, private result entry and read-only history (RES)."""
 
 import logging
 from functools import wraps
 
 from django.core.exceptions import PermissionDenied
 from django.db import DatabaseError
-from django.db.models import Prefetch
+from django.db.models import F, Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
@@ -14,7 +14,7 @@ from accounts.models import User
 from accounts.workspaces import workspace_records
 
 from . import results
-from .models import Build, Criterion, Round
+from .models import Build, Criterion, Result, Round
 from .result_forms import ResultForm
 
 logger = logging.getLogger(__name__)
@@ -74,6 +74,28 @@ def detail(request, round_id):
         case.current_build = next(iter(case.builds.all()), None)
     return render(
         request, "rounds/tester_round.html", {"round": round_, "cases": cases}
+    )
+
+
+@tester_view
+def history(request, round_id):
+    """Read this tester's saved results with their original authorized context."""
+    round_ = get_object_or_404(available_rounds(request.user), pk=round_id)
+    saved = (
+        Result.objects.filter(
+            tester=request.user,
+            case__round=round_,
+            build__round=round_,
+            build__cases=F("case_id"),
+        )
+        .select_related("case", "build")
+        .prefetch_related(
+            Prefetch("case__criteria", queryset=Criterion.objects.filter(round=round_))
+        )
+        .order_by("-build_id", "case_id")
+    )
+    return render(
+        request, "rounds/tester_history.html", {"round": round_, "results": saved}
     )
 
 
