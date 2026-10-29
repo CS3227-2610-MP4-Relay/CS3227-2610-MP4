@@ -2,15 +2,16 @@
 
 Slice: workflow-targeted-improvements · Tier: High · Tool: Codex · Orchestrator model: gpt-6-astra, xhigh (observed runtime metadata) · Date: 2026-10-26
 
-Tokens: 2,282,852 input, 16,396 output, 2,299,248 total through 2026-10-26 11:29:04 SGT.
+Tokens: measured subtotal: 2,282,852 input, 16,396 output, 2,299,248 total through 2026-10-26 11:29:04 SGT; full aggregate unavailable.
 
 | Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | Orchestrator — `gpt-6-astra/xhigh`, `codex:b3e027020fbb7a08fb7916d1` | 1,512,698 | 1,476,736 | 12,734 | 1,784 | 1,525,432 | 9m08s measured interval |
 | `verify_improvements` — `gpt-6.1-sol/low`, `codex:6b77652042e99f23f900134c` | 395,277 | 342,272 | 1,945 | 200 | 397,222 | 3m07s |
 | `security_improvements` — `gpt-6.1-sol/low`, `codex:97ec54f3ba6e3bd8d3893d5b` | 374,877 | 337,920 | 1,717 | 86 | 376,594 | 2m53s |
+| Automatic approval reviewer — codex-auto-review/low, `codex:0ff9dabf5f9b6259e9bea07f` | unavailable | unavailable | unavailable | unavailable | unavailable | Within original measured window |
 
-Two subagents, each with an initial review and one repair follow-up in the same source; models/efforts above come from runtime metadata. Session envelope to cutoff: 11m36s. One review repair round; zero cache-write tokens for all sources. The coordinator baseline at 11:19:56 SGT excludes initial instruction/repository inspection; final delivery annotations and work after cutoff are also excluded. Bounded child discovery included both fresh, unforked descendants and emitted no warnings. Numeric snapshots remain outside version control. See [token accounting](../../workflow/README.md#token-reporting).
+Two delegated subagents, each with an initial review and one repair follow-up in the same source; models/efforts come from runtime metadata. Session envelope to cutoff: 11m36s. One review repair round. The coordinator baseline at 11:19:56 SGT excludes initial instruction/repository inspection; final delivery annotations and work after the cutoff are also excluded. Retrospective discovery adds an initialized automatic approval source with unavailable counters; the measured subtotal is unchanged and the aggregate is unavailable (`session_initialized_without_usage`). Available cache-write counters are zero. See [the audit](018-audit-historical-token-counts.md) and [token accounting](../../workflow/README.md#token-reporting).
 
 ## Requests
 
@@ -54,5 +55,5 @@ Human diff/log review remains pending. No commit, push, merge, deployment or Git
 - The verifier found one medium telemetry defect in the first candidate, repaired and re-reviewed as described above. No unresolved review findings.
 - An initial Ruff run failed on three overlong Markdown fixture literals; splitting the literals preserved test content and fixed lint.
 - Initial inspection attempted nonexistent orchestrator/initialization-log paths and a PowerShell wildcard argument rejected by `rg`; corrected by listing existing paths. MP3 read-only Git inspection initially refused dubious ownership; a one-command `safe.directory` setting permitted the specifically named source without changing global configuration. Git also warned that its user-level ignore file was inaccessible; no claim that it was read.
-- Initial inspection is outside the recorded usage interval. Child counters were collected centrally; reviewer-local numeric reports were unavailable. The final collector reported no telemetry warnings.
+- Initial inspection is outside the recorded usage interval. Child counters were collected centrally; reviewer-local numeric reports were unavailable. The original final collector report had no telemetry warnings; the retrospective coverage above includes an additional initialized source.
 - Native client hook enforcement was not exercised; the task changed review policy, not hooks or permissions. Synthetic telemetry was used; no real secrets, raw transcripts or malicious instruction attempts were retained.

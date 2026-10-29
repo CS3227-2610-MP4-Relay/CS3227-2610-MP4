@@ -2,13 +2,14 @@
 
 Slice: #25 (PR #77 clarification) · Tier: none (specification and session record only) · Tool: Codex · Orchestrator model: GPT-6 type (session instructions; effective model ID and reasoning effort unavailable) · Date: 2026-10-29
 
-Tokens: 984,550 input, 8,778 output, 993,328 total; measurement cutoff 2026-10-29 11:18:01 UTC.
+Tokens: 1,240,850 input, 9,692 output, 1,250,542 total; measurement cutoff 2026-10-29 11:18:01 UTC.
 
 | Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | Orchestrator — GPT-6 type/effort unavailable, `codex:877c393c4b3b6185b215c259` | 984,550 | 951,424 | 8,778 | 3,172 | 993,328 | 11:12:36–11:18:01 UTC (324.811 seconds) |
+| Automatic approval reviewer — codex-auto-review/low, `codex:2a1bf3c2bea6264319a6c380` | 256,300 | 190,336 | 914 | 396 | 257,214 | Within original measured window |
 
-No subagents ran. This cumulative interval includes the requirements clarification and subsequent PR-description update, superseding the earlier cutoff. The baseline follows initial inspection, so that inspection and the earlier plain-language explanation are excluded; work after the cutoff, including this log update and its delivery, is also excluded. Effective model metadata was not observable beyond the session's stated model type. See [token reporting](../../workflow/README.md#token-reporting).
+No delegated subagents ran; the client's separate automatic approval source is now included by retrospective discovery. This interval covers the requirements clarification and subsequent PR-description update. Initial inspection and the earlier plain-language explanation precede the baseline; work after the cutoff remains excluded. The orchestrator's effective model metadata remains unavailable beyond its stated model type; approval-source model/effort was observed during the audit. See [the audit](018-audit-historical-token-counts.md) and [token reporting](../../workflow/README.md#token-reporting).
 
 ## Requests
 
