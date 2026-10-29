@@ -251,6 +251,127 @@ class AccountingTests(unittest.TestCase):
         self.assertIsNone(result["tokens"]["total_tokens"])
         self.assertIn("codex_shared_history_unresolved", result["warnings"])
 
+    def test_inactive_source_keeps_subtotal_and_explicit_coverage(self):
+        active = self.write("active.jsonl", [meta("active")])
+        idle = self.write("idle.jsonl", [meta("idle")])
+        baseline = self.snapshot([active, idle], 1)
+        self.write(active.name, [meta("active"), codex(counts(100, 10), second=2)])
+        result = usage.report(self.snapshot([active, idle], 3), baseline)
+        self.assertIsNone(result["tokens"]["total_tokens"])
+        self.assertEqual(result["available_tokens"]["total_tokens"], 110)
+        self.assertEqual(
+            result["field_coverage"]["total_tokens"], {"measured": 1, "unavailable": 1}
+        )
+        self.assertEqual(
+            result["source_states"], {"measured": 1, "unavailable": 0, "initialized": 1}
+        )
+        self.assertIn("session_initialized_without_usage", result["warnings"])
+
+    def test_field_subtotals_preserve_partial_and_absent_measurements(self):
+        path = self.write("partial.jsonl", [meta()])
+        baseline = self.snapshot([path], 0)
+        partial = {**counts(100, 10), "input_tokens": None, "total_tokens": None}
+        self.write(path.name, [meta(), codex(partial, second=1)])
+        result = usage.report(self.snapshot([path], 2), baseline)
+        self.assertIsNone(result["available_tokens"]["input_tokens"])
+        self.assertEqual(result["available_tokens"]["output_tokens"], 10)
+        self.assertEqual(result["field_coverage"]["output_tokens"]["measured"], 1)
+        self.assertEqual(result["source_states"]["unavailable"], 1)
+
+    def test_initialization_warning_expires_when_usage_arrives(self):
+        path = self.write("initial.jsonl", [meta()])
+        baseline = self.snapshot([path], 0)
+        self.write(path.name, [meta(), codex(counts(100, 10), second=1)])
+        result = usage.report(self.snapshot([path], 2), baseline)
+        self.assertEqual(result["tokens"]["total_tokens"], 110)
+        self.assertNotIn("session_initialized_without_usage", result["warnings"])
+
+    def test_recursive_repeated_directories_find_root_from_guardian(self):
+        root_meta = meta("root", project=self.root)
+        root_meta["payload"]["session_id"] = "root"
+        root = self.write("one/nested/root.jsonl", [root_meta])
+        guardian_meta = meta("guardian", project=self.root)
+        guardian_meta["payload"].update(
+            session_id="root", thread_source="guardian_review"
+        )
+        guardian = self.write("two/guardian.jsonl", [guardian_meta])
+        child_meta = meta("child", project=self.root)
+        child_meta["payload"]["source"] = {
+            "subagent": {"thread_spawn": {"parent_thread_id": "root"}}
+        }
+        child = self.write("one/nested/child.jsonl", [child_meta])
+        self.write("one/unrelated.jsonl", [meta("other", project=self.root)])
+        wrong = meta("foreign", project=self.root / "elsewhere")
+        wrong["payload"]["session_id"] = "root"
+        self.write("two/foreign.jsonl", [wrong])
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            code = usage.main(
+                [
+                    "snapshot",
+                    "--codex",
+                    str(guardian),
+                    "--codex-children",
+                    str(self.root / "one"),
+                    "--codex-children",
+                    str(self.root / "two"),
+                    "--project",
+                    str(self.root),
+                ]
+            )
+        self.assertEqual(code, 0)
+        self.assertEqual(len(json.loads(output.getvalue())["sessions"]), 3)
+        selected = usage.discover_children(
+            [guardian], [self.root / "one", self.root / "two"], self.root
+        )
+        self.assertEqual(set(selected), {p.resolve() for p in (root, guardian, child)})
+
+    def test_nested_candidate_budget_counts_unique_files_and_rejects_overflow(self):
+        root = self.write("dates/root.jsonl", [meta(project=self.root)])
+        for index in range(999):
+            self.write(f"dates/{index}.jsonl", [meta(str(index), project=self.root)])
+        self.assertEqual(
+            usage.discover_children(
+                [root], [self.root, self.root / "dates"], self.root
+            ),
+            [root.resolve()],
+        )
+        self.write("dates/overflow.jsonl", [meta("overflow", project=self.root)])
+        with self.assertRaisesRegex(ValueError, "1000"):
+            usage.discover_children([root], self.root, self.root)
+
+    def test_native_counter_reset_retains_same_source_interval(self):
+        initial = [meta(), turn("native"), codex(counts(100, 10), second=1)]
+        path = self.write("reset.jsonl", initial)
+        baseline = self.snapshot([path], 2)
+        self.write(path.name, [*initial, codex(counts(20, 2), second=3)])
+        result = usage.report(self.snapshot([path], 4), baseline)
+        self.assertEqual(result["tokens"]["total_tokens"], 22)
+        self.assertIn("codex_counter_reset", result["warnings"])
+
+    def test_missing_root_identity_cannot_select_unrelated_sessions(self):
+        unknown = self.write("unknown.jsonl", [{"type": "unrecognized"}])
+        self.write("other.jsonl", [meta("other", project=self.root)])
+        self.assertEqual(
+            usage.discover_children([unknown], self.root, self.root),
+            [unknown.resolve()],
+        )
+
+    def test_numeric_provenance_validation_and_native_identity_privacy(self):
+        path = self.write(
+            "private.jsonl",
+            [meta(), turn("RAW_SECRET_TURN_ID"), codex(counts(10, 1), second=1)],
+        )
+        baseline = self.snapshot([path], 2)
+        self.assertNotIn("RAW_SECRET_TURN_ID", json.dumps(baseline))
+        for invalid in ([[-1, 5]], [[0, -1]], [[5, 4]], [[False, 5]], [[0, "SECRET"]]):
+            changed = json.loads(json.dumps(baseline))
+            row = next(iter(changed["sessions"].values()))
+            evidence = next(iter(row["provenance"].values()))
+            evidence["ranges"]["input_tokens"] = invalid
+            with self.assertRaises(ValueError):
+                usage.report(self.snapshot([path], 3), changed)
+
 
 if __name__ == "__main__":
     unittest.main()

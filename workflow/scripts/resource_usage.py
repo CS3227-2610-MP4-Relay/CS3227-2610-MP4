@@ -42,6 +42,7 @@ WARNING_CODES = frozenset(
         "added_session_has_no_task_start_baseline",
         "source_truncated_or_replaced_since_baseline",
         "codex_shared_history_unresolved",
+        "session_initialized_without_usage",
     }
 )
 
@@ -110,17 +111,37 @@ def _metadata(path):
     return metadata
 
 
+def _ancestor(metadata):
+    spawn = _object(_object(metadata.get("source")).get("subagent"))
+    return metadata.get("parent_thread_id") or _object(spawn.get("thread_spawn")).get(
+        "parent_thread_id"
+    )
+
+
 def discover_children(paths, directory, project):
-    """Select only Codex descendants in one explicit directory and project."""
-    if not directory.is_dir() or not project.is_dir():
+    """Select related Codex sources within explicit roots, project and file limit."""
+    directories = [directory] if isinstance(directory, Path) else directory
+    if (
+        not directories
+        or not project.is_dir()
+        or any(not d.is_dir() for d in directories)
+    ):
         raise ValueError("child directory and project must be existing directories")
     selected = {path.resolve() for path in paths}
     metadata = {path: _metadata(path) for path in selected}
-    candidates = sorted(directory.glob("*.jsonl"))
-    if len(candidates) > 1000:
-        raise ValueError("child directory exceeds 1000 files; select a narrower one")
+    candidates = set()
+    for root in directories:
+        boundary = root.resolve()
+        for path in root.rglob("*.jsonl"):
+            resolved = path.resolve()
+            if resolved.is_relative_to(boundary) and path.is_file():
+                candidates.add(resolved)
+            if len(candidates) > 1000:
+                raise ValueError(
+                    "child directories exceed 1000 files; select narrower roots"
+                )
     expected = project.resolve()
-    for path in candidates:
+    for path in sorted(candidates):
         resolved = path.resolve()
         if resolved in metadata:
             continue
@@ -129,14 +150,25 @@ def discover_children(paths, directory, project):
         if isinstance(cwd, str) and Path(cwd).resolve() == expected:
             metadata[resolved] = meta
     while True:
-        ids = {metadata[path].get("id") for path in selected}
+        ids = {
+            metadata[path]["id"]
+            for path in selected
+            if isinstance(metadata[path].get("id"), str) and metadata[path]["id"]
+        }
+        families = {
+            metadata[path].get("session_id")
+            for path in selected
+            if isinstance(metadata[path].get("session_id"), str)
+            and metadata[path]["session_id"]
+        }
+        ids.update(families)
         additions = set()
         for path, meta in metadata.items():
-            spawn = _object(_object(meta.get("source")).get("subagent"))
-            parent = meta.get("parent_thread_id") or _object(
-                spawn.get("thread_spawn")
-            ).get("parent_thread_id")
-            if path not in selected and parent and parent in ids:
+            if path not in selected and (
+                _ancestor(meta) in ids
+                or meta.get("session_id") in ids
+                or meta.get("id") in families
+            ):
                 additions.add(path)
         if not additions:
             return sorted(selected)
@@ -308,9 +340,7 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                     "awaiting_usage": awaiting_usage,
                     "missing_message_id": False,
                     "ancestor": (
-                        _identity("codex", meta["parent_thread_id"])
-                        if meta.get("parent_thread_id")
-                        else None
+                        _identity("codex", _ancestor(meta)) if _ancestor(meta) else None
                     ),
                     "tree": _identity(platform, meta.get("session_id") or identity),
                 },
@@ -464,7 +494,12 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                 fingerprints.append(
                     hashlib.sha256(
                         json.dumps(
-                            {"total": raw, "last": info.get("last_token_usage")},
+                            {
+                                "total": _codex_usage(raw),
+                                "last": _codex_usage(
+                                    _object(info.get("last_token_usage"))
+                                ),
+                            },
                             sort_keys=True,
                         ).encode()
                     ).hexdigest()
@@ -560,8 +595,12 @@ def collect(codex_paths=(), claude_paths=(), now=None):
                 totals = {field: None for field in METRICS}
             if not native or ambiguous or reset_seen:
                 provenance = {}
-        if not observations and not stream["awaiting_usage"]:
-            warnings.add("session_has_no_supported_usage")
+        if not observations:
+            warnings.add(
+                "session_initialized_without_usage"
+                if stream["awaiting_usage"]
+                else "session_has_no_supported_usage"
+            )
         sessions[key] = {
             **stream,
             "observations": observations,
@@ -589,7 +628,9 @@ def report(current, baseline, retries=None, repair_rounds=None):
     end = _time(current.get("captured_at"))
     if start is None or end is None or end < start:
         raise ValueError("invalid snapshot timestamps")
-    warnings = _warnings(current) | _warnings(baseline)
+    warnings = _warnings(current) | (
+        _warnings(baseline) - {"session_initialized_without_usage"}
+    )
     old_sessions = baseline.get("sessions")
     if not isinstance(old_sessions, dict):
         raise TypeError("invalid baseline sessions")
@@ -650,6 +691,12 @@ def report(current, baseline, retries=None, repair_rounds=None):
                 and after is not None
                 and before is not None
                 and not _covers(current_coverage, previous["provenance"], field)
+                and not (
+                    set(previous.get("usage_fingerprints") or [])
+                    and set(previous["usage_fingerprints"]).issubset(
+                        session.get("usage_fingerprints") or []
+                    )
+                )
             )
             if truncated:
                 warnings.add("source_truncated_or_replaced_since_baseline")
@@ -684,10 +731,35 @@ def report(current, baseline, retries=None, repair_rounds=None):
                 else:
                     warnings.add("source_truncated_or_replaced_since_baseline")
             values[field] = value
-        rows.append({"session": key, "platform": session["platform"], "tokens": values})
+        state = (
+            "initialized"
+            if session["awaiting_usage"]
+            else "measured"
+            if all(
+                values[field] is not None
+                for field in ("input_tokens", "output_tokens", "total_tokens")
+            )
+            else "unavailable"
+        )
+        rows.append(
+            {
+                "session": key,
+                "platform": session["platform"],
+                "tokens": values,
+                "state": state,
+            }
+        )
     totals = {}
+    available = {}
+    field_coverage = {}
     for field in METRICS:
         values = [row["tokens"][field] for row in rows]
+        measured = [value for value in values if value is not None]
+        available[field] = sum(measured) if measured else None
+        field_coverage[field] = {
+            "measured": len(measured),
+            "unavailable": len(rows) - len(measured),
+        }
         totals[field] = (
             sum(values)
             if values and all(value is not None for value in values)
@@ -703,6 +775,12 @@ def report(current, baseline, retries=None, repair_rounds=None):
         "repair_rounds": repair_rounds,
         "session_count": len(rows),
         "tokens": totals,
+        "available_tokens": available,
+        "field_coverage": field_coverage,
+        "source_states": {
+            state: sum(row["state"] == state for row in rows)
+            for state in ("measured", "unavailable", "initialized")
+        },
         "sessions": rows,
         "warnings": sorted(warnings),
         "coverage": "selected_sources_only; warnings may indicate incomplete telemetry",
@@ -722,7 +800,12 @@ def main(argv=None):
     parser.add_argument("command", choices=("snapshot", "report"))
     parser.add_argument("--codex", type=Path, action="append", default=[])
     parser.add_argument("--claude", type=Path, action="append", default=[])
-    parser.add_argument("--codex-children", type=Path)
+    parser.add_argument(
+        "--codex-children",
+        type=Path,
+        action="append",
+        help="Repeat explicit recursive roots; 1000 unique files total",
+    )
     parser.add_argument("--project", type=Path)
     parser.add_argument("--baseline", type=Path)
     parser.add_argument("--retries", type=_nonnegative)
