@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": false
+  },
+  "functions": {
+    "src/relay/wsgi.py": {
+      "maxDuration": 60
+    }
+  }
+}

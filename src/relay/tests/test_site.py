@@ -137,7 +137,7 @@ def test_ci_site_publication_boundaries():
         Path(__file__).resolve().parents[3] / ".github/workflows/ci.yml"
     ).read_text()
     site_job = workflow.split("\n  site:\n")[1].split("\n  deploy:\n")[0]
-    deploy_job = workflow.split("\n  deploy:\n")[1]
+    deploy_job = workflow.split("\n  deploy:\n")[1].split("\n  production:\n")[0]
     assert "\n  pull_request:\n" in workflow
     assert "\n  push:\n    branches:\n      - main\n" in workflow
     assert "workflow_dispatch" not in workflow
