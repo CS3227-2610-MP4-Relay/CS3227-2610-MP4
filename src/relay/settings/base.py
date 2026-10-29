@@ -10,6 +10,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "accounts",
     "rounds",
+    "ai",
 ]
 MIDDLEWARE = [
     # First, so responses other middleware makes refuse framing too.
