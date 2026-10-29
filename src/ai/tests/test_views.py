@@ -692,7 +692,7 @@ def test_the_view_logs_only_fixed_codes(coord_client, round_, criteria, caplog):
     assert "Secret" not in caplog.text
 
 
-@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+@pytest.mark.django_db(transaction=True)
 def test_the_drafting_view_holds_no_connection_during_the_call(
     coord_client, round_, criteria
 ):

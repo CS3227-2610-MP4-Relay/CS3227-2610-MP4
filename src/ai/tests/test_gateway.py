@@ -396,7 +396,7 @@ def outcomes(results):
     return sorted(type(result).__name__ for result in results)
 
 
-@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.ac("RND-8.4")
 def test_two_racing_calls_for_one_user_reserve_once(user, monkeypatch):
     CallSlot.objects.create(
@@ -410,7 +410,7 @@ def test_two_racing_calls_for_one_user_reserve_once(user, monkeypatch):
     assert CallRecord.objects.filter(scope=gateway.USER_CALLS_SCOPE).count() == 1
 
 
-@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.ac("RND-8.4")
 def test_three_racing_users_share_two_deployment_slots(
     user, tester, other_workspace, monkeypatch
@@ -426,7 +426,7 @@ def test_three_racing_users_share_two_deployment_slots(
     assert outcomes(results) == ["Refused", "Success", "Success"]
 
 
-@pytest.mark.django_db(transaction=True, serialized_rollback=True)
+@pytest.mark.django_db(transaction=True)
 def test_no_database_connection_is_held_during_the_call(user):
     provider = SlowProvider(delay=0)
     assert complete(user, "", "{}", provider=provider) == Success("{}")
