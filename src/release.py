@@ -73,7 +73,6 @@ def prepare(sha, destination):
     required = {
         "requirements.txt",
         ".python-version",
-        "pyproject.toml",
         "vercel.json",
         "src/manage.py",
         "src/relay/wsgi.py",
