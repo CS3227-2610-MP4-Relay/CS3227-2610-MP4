@@ -71,7 +71,7 @@ Criteria: RND-8.1 to RND-8.9, nine, one above the guideline. It stays reviewable
 - **For #6 (Whimsyturtle) and the human:** confirm or change the gateway's [proposals](../specs/ai/llm-gateway.md), which answer drafting's nine [requirements on the gateway](../specs/ai/test-drafting.md#requirements-on-the-gateway); the time bound against the [release gate](../specs/TECHNICAL-SPEC.md#release-verification) (not edited here); who owns the live evaluation if #6 declines it; the provider's retention and training on submitted text.
 - **For the human:** confirm D1, D2, D4 to D6, D8 to D23 and B1 to B7 (D3 and D7 became B4 and B3), in particular the RND-8 home, the 1-to-5 and 0-to-5 counts, removal rather than refusal, the pre-fill route with its rule-5 exception, nine criteria, the reload residual and the deployment-wide allowance residual.
 - **Before turning live calls on:** the conditions of the [live switch](../specs/ai/llm-gateway.md#live-switch), then the operator's live evaluation.
-- **Access matrix:** the `ai:*` rows are added by whichever of #77 and #78 merges second; the coordinator handles it.
+- **Access matrix:** #77 is merged into this branch (`6e7b844`), so #78 adds the `ai:*` rows in [repair round 2](#repair-round-2-2026-10-29).
 
 ## Repair after independent review (2026-10-29)
 
@@ -108,7 +108,7 @@ From independent reviews of `5c354c3`; each is checked against the code in its c
 - **V-Low:** reuse `rounds.forms.has_visible_character` and the RND-2 limits in `drafting` (B); the `_sock` access goes with S1 (B); the security spec links to the gateway's quota instead of restating it (A); the Developer Guide links instead of restating gateway controls (D).
 - **Docs (D):** the User Guide describes only what users can see with live off, the page and the unavailable message, in the product's exact words; the README qualifies AI drafting as switched off until the provider is confirmed.
 
-Out of scope here: the `ai:*` access-matrix rows (see open issues) and correcting log 019 (coordinator).
+Out of scope here: the `ai:*` access-matrix rows (added in [repair round 2](#repair-round-2-2026-10-29)) and correcting log 019 (coordinator).
 
 ### Repair checkpoints
 
@@ -118,6 +118,15 @@ The coordinator commits each unit after its focused checks.
 - **B. Live switch and gateway repairs** (`fix:` units: live switch with the test fixture; transport deadline and conditional release; envelope, exception mapping and sensitive variables; storage errors; `Usage` removal; pre-fill bound and `drafting` reuse): `src/relay/settings/base.py`, `src/conftest.py`, `pytest.ini`, `src/ai/gateway.py`, `src/ai/views.py`, `src/ai/drafting.py`, `src/ai/models.py`, a new `src/ai/migrations/0004_*.py`, `src/ai/tests/`. Checks: red-first focused `pytest src/ai`, then `ruff check` and `ruff format --check`.
 - **C. Tests** (`test:`): `src/ai/tests/`, `src/e2e/test_rounds.py` if a journey changes. Checks: failing-first or mutation evidence per test; focused `pytest src/ai`.
 - **D. Guides** (`docs:`): `docs/UserGuide.md`, `docs/DeveloperGuide.md`, `README.md`. README is outside the builder's `writes` list, so the coordinator applies that edit. Checks: read back against the rendered pages.
+
+### Repair round 1 evidence
+
+From the round-1 builder handoffs (`1969298`..`712df3f`), not rerun here:
+
+- **Red first (B):** the new and changed tests gave 20 failed and 1 error on the old code, and 26 passed after the repair.
+- **Mutations (C):** 29 mutations, all caught. Reversing `by_label` passed all 161 old tests and fails the new ones.
+- **Size:** by the [slice skill's metric](../skills/slice.md) for `5c354c3..712df3f`, 257 insertions plus 149 deletions = 406 lines (net about 108). Human decision 2 estimated the repairs at 100 to 200 lines; the net size is in that range, the insertions plus deletions are not.
+- **Commit granularity:** `60b9574` bundled six independently reviewable units (live switch with its fixture; transport deadline and conditional release; envelope, exception mapping and sensitive variables; storage errors; `Usage` removal; pre-fill bound and `drafting` reuse) that checkpoint B planned as separate commits. History was not rewritten.
 
 ## Checklist
 
@@ -129,4 +138,35 @@ The coordinator commits each unit after its focused checks.
 - [x] Repair A: specs and plans (`1969298`, `85143ac`).
 - [x] Repair B: live switch and gateway repairs (`60b9574`).
 - [x] Repair C: test repairs and additions (`15e0611`).
-- [ ] Repair D: guides and README.
+- [x] Repair D: guides and README, with a test-isolation fix and log correction (`8d2200a`, `a62f34d`, `dc77969`, `c170ff0`, `712df3f`).
+- [ ] Repair round 2 A: specs and plan.
+- [ ] Repair round 2 B: notice, transport and reservation repairs with tests.
+- [ ] Repair round 2 C: access-matrix rows.
+- [ ] Repair round 2 D: guides.
+
+## Repair round 2 (2026-10-29)
+
+On `6e7b844` (712df3f plus #77's access matrix merged, so #78 stacks on #77). Tier: High. The last repair round allowed; findings from independent re-reviews of `712df3f`, which found no High issue.
+
+### Human decision (2026-10-29), confirmed
+
+While live calls are off, the drafting page shows an off-for-now notice in place of "Only their text is sent to the AI service."; the page and its link stay. Builder's wording choice: "AI suggestions are switched off for now, so nothing is sent to the AI service." The change that turns live calls on replaces it ([live switch](../specs/ai/llm-gateway.md#live-switch)).
+
+### Findings
+
+- **Matrix (C):** `test_every_route_has_a_matrix_entry` fails without `ai:draft` and `ai:use-draft` rows. Add both with the matrix's conventions, a 200-render success expectation alongside the 302 one, a `BODY_ID_ROUTES` entry for `criteria`, and assert the off-for-now and unavailable outcome of a valid draft POST.
+- **Ver N1, Medium (B):** `_exchange` reads until close, so a provider that keeps the connection open turns a complete reply into `Failed("timeout")`. Stop at `Content-Length` or the final chunk; `llm_transport` tests for both with the connection held open.
+- **Sec Low 1 (B):** slot expiry is taken before `_reserve` waits for its locks. Take the reservation time after the `select_for_update` calls and start the monotonic deadline then.
+- **Sec Low 2, Ver N2 (B):** the lookup thread catches only `OSError`; a `UnicodeError` from `getaddrinfo` escapes as `KeyError`. Catch `Exception` and treat a missing result as `Failed("transport")`.
+- **Sec test gap (B):** a certificate trusted through `SSL_CERT_FILE` but issued for `DNS:synthetic.invalid`, served at 127.0.0.1, is `Failed("transport")`, and the test fails with `check_hostname` off.
+- **Ver N3 (A):** the live-switch conditions say the transport ignores `HTTPS_PROXY`.
+- **E2E marks (B):** the drafting journey in `src/e2e/test_rounds.py` exercises only the unavailable outcome, so it is marked RND-8.4, not RND-8.1 and RND-8.2, and checks the notice.
+- **Ver N7 (A, D):** the test fixture's home is TECHNICAL-SPEC Configuration and the live switch's is `ai/llm-gateway.md`; the other copies link to them.
+- **Ver N4, N5, N8 (A):** this plan's round-1 evidence, size, commit-granularity fact and Repair D tick, above.
+
+### Checkpoints
+
+- **A. Specs and plan** (`spec:`, then `plan:`): `workflow/specs/product/rounds.md`, `workflow/specs/ai/llm-gateway.md`, `workflow/specs/TECHNICAL-SPEC.md`, this plan. Checks: `git diff --check`; `python workflow/scripts/check_scope.py builder --base 6e7b844`; read back.
+- **B. Code and tests** (`fix:` units: notice with its tests and e2e marks; transport completion; reservation time; lookup errors; `test:` hostname mismatch): `src/ai/templates/ai/draft.html`, `src/ai/gateway.py`, `src/ai/tests/`, `src/e2e/test_rounds.py`. Checks: red-first or mutation evidence per new test; focused `pytest src/ai`, the e2e drafting journey; `ruff check`, `ruff format --check`.
+- **C. Matrix rows** (`test:`): `src/relay/tests/test_access_matrix.py`. Checks: the whole matrix.
+- **D. Guides** (`docs:`): `docs/UserGuide.md` (exact notice quote), `docs/DeveloperGuide.md` (links for N7). Checks: read back against the rendered page.
