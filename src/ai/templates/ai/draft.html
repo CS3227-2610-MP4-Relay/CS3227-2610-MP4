@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load rounds_text %}
+{% block title %}Draft test cases with AI{% endblock %}
+{% block content %}
+<h1>Draft test cases with AI</h1>
+<p>Select 1 to 5 acceptance criteria. Only their text is sent to the AI service. Suggestions are not saved; review each one before adding it.</p>
+<form method="post">{% csrf_token %}
+<fieldset>
+  <legend>{{ form.criteria.label }}</legend>
+  {% for choice in form.criteria %}<p>{{ choice.tag }} <label for="{{ choice.id_for_label }}">{{ choice.choice_label|isolated_lines }}</label></p>
+  {% empty %}<p>No acceptance criteria yet.</p>{% endfor %}
+</fieldset>
+{% if selection_error %}<p>{{ selection_error }}</p>{% endif %}{% for error in form.criteria.errors %}<p>{{ error }}</p>{% endfor %}
+<button type="submit">Draft test cases</button>
+</form>
+<p><a href="{% url 'rounds:case-new' round.pk %}">Add test case</a></p>
+<p><a href="{{ round.get_absolute_url }}">Back to round</a></p>
+{% if error %}<h2>Suggested test cases</h2><p>{{ error }}</p>{% endif %}
+{% if drafts %}<h2>Suggested test cases</h2>
+{% for draft in drafts %}<h3>{{ draft.title|isolated_lines }}</h3>
+<h4>Steps</h4><p>{{ draft.steps|isolated_lines }}</p>
+<h4>Expected result</h4><p>{{ draft.expected_result|isolated_lines }}</p>
+<h4>Covers acceptance criteria</h4>
+<ul>{% for criterion in draft.covered %}<li>{{ criterion.text|isolated_lines }}</li>{% endfor %}</ul>
+<form method="post" action="{% url 'ai:use-draft' round.pk %}">{% csrf_token %}
+<input type="hidden" name="title" value="{{ draft.title }}">
+<input type="hidden" name="steps" value="{{ draft.steps }}">
+<input type="hidden" name="expected_result" value="{{ draft.expected_result }}">
+{% for pk in draft.ids %}<input type="hidden" name="criteria" value="{{ pk }}">{% endfor %}
+<button type="submit">Use this draft</button>
+</form>
+{% endfor %}{% endif %}
+{% endblock %}
