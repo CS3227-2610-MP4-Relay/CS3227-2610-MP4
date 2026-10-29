@@ -72,6 +72,10 @@ Criteria: RND-8.1 to RND-8.9, nine, one above the guideline. It stays reviewable
 - **For the human:** confirm D1, D2, D4 to D6, D8 to D23 and B1 to B7 (D3 and D7 became B4 and B3), in particular the RND-8 home, the 1-to-5 and 0-to-5 counts, removal rather than refusal, the pre-fill route with its rule-5 exception, nine criteria, the reload residual and the deployment-wide allowance residual.
 - **For the human:** confirm the repair size, 534 lines against decision 2's estimate of 100 to 200 ([round 2 evidence](#evidence-and-checks)).
 - **Before turning live calls on:** the conditions of the [live switch](../specs/ai/llm-gateway.md#live-switch), then the operator's live evaluation.
+  - The final security re-review of `8a27ea7` adds two items for that change.
+  - First, bound the body read independently of the Python patch level: refuse a `Content-Length` above `RESPONSE_BYTES` and read in bounded chunks, because older 3.14 `http.client` builds pre-allocate the declared length.
+  - Second, make the off-for-now notice depend on `SOC_LLM_LIVE`, or test that it can't survive the switch.
+  - Repair rounds were exhausted, so these are recorded here rather than fixed in this PR.
 - **Access matrix:** resolved; #77 is merged into this branch (`6e7b844`) and the `ai:*` rows were added in [repair round 2](#repair-round-2-2026-10-29) (`46fae22`).
 
 ## Repair after independent review (2026-10-29)
@@ -143,7 +147,7 @@ From the round-1 builder handoffs (`1969298`..`712df3f`), not rerun here:
 - [x] Repair round 2 A: specs and plan (`ba9c43c`, `ce2d0dd`).
 - [x] Repair round 2 B: notice, transport and reservation repairs with tests (`816a2c4`, `26982cc`, `9a13dff`).
 - [x] Repair round 2 C: access-matrix rows (`46fae22`).
-- [ ] Repair round 2 D: guides and this plan's evidence.
+- [x] Repair round 2 D: guides and this plan's evidence (`5827cd9`, `da32d66`). The coordinator merged the updated #77 branch (`8a27ea7`). The final independent re-reviews of `8a27ea7` found nothing above Low; their two security Info items are recorded under open issues.
 
 ## Repair round 2 (2026-10-29)
 
