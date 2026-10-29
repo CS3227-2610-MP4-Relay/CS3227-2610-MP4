@@ -157,7 +157,7 @@ Production settings, checked before release:
 - HSTS is enabled for one year, without preload or extending to other subdomains. Silence only Django's deployment warnings recommending those two optional HSTS expansions; do not silence other deployment warnings. Session and CSRF cookies retain the shared Secure settings.
 - Production keeps the shared middleware, with `XFrameOptionsMiddleware` first, and its responses carry `X-Frame-Options: DENY`.
 
-The Vercel project uses the repository root, native Django detection of `src/manage.py` and `relay.wsgi.application`, Python 3.14 and a 60-second function limit on `src/relay/wsgi.py`. The project is unlinked from Git; `vercel.json` also disables automatic Git deployments. The protected delivery job installs Vercel CLI `64.3.1` on Node `24.18.0` before receiving production secrets and uploads prepared source. No additional Python runtime dependency, staging service or application container is introduced.
+The Vercel project uses the repository root, native Django detection of `src/manage.py` and `relay.wsgi.application`, Python 3.14 and a 60-second function limit on `src/relay/wsgi.py`. The project is unlinked from Git; `vercel.json` also disables automatic Git deployments. The protected delivery job installs Vercel CLI `64.3.1` on Node `24.18.0` before receiving production secrets and uploads prepared source. Hosting introduces no additional Python runtime dependency, staging service or application container.
 
 ## Environments
 

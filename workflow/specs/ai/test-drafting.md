@@ -87,7 +87,7 @@ Drafting needs the gateway to do the following. The [gateway contract](llm-gatew
 3. Accept the input size above, allow a reply of at least 20,000 characters, cap the raw response in bytes before decoding, or tell #22 its limits so the draft count or field limits can shrink.
 4. Account quota per workspace or per user and also deployment-wide, reserve it atomically before each call, count failed and timed-out calls, and report exhaustion as a refusal.
 5. Allow at most one drafting call in flight per user, and a deployment-wide number of calls in flight, refusing any other until one ends. An in-flight marker expires no sooner than the time bound of need 2 and is released on every exit, success, refusal, failure or exception.
-6. Call one fixed endpoint over TLS with certificate verification and no redirects, within the time bound in every phase, using a credential read from the environment and never logged.
+6. Call one fixed endpoint over TLS with certificate verification and no redirects, with the whole call within the time bound of need 2, using a credential read from the environment and never logged.
 7. Log no instructions, source text or reply text, and pass no provider error body to the feature.
 8. Need no result reuse for drafting; if reuse is adopted for other features, never reuse a drafting reply across workspaces or for a different instruction version or source text.
 9. Provide a fake provider that tests can script with an exact reply, refusal, failure or timeout, and run the [live evaluation](#live-evaluation) as part of its live-check procedure.
