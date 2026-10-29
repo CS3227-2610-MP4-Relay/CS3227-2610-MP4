@@ -19,6 +19,12 @@ from rounds.tests.conftest import csrf_token, signed_in
 
 from .html_forms import browser_post, forms
 
+INTRO = (
+    "Select 1 to 5 acceptance criteria. AI suggestions are switched off for now, "
+    "so nothing is sent to the AI service. Suggestions are not saved; review each "
+    "one before adding it."
+)
+
 
 @pytest.fixture
 def round_(workspace):
@@ -70,13 +76,17 @@ def test_round_page_links_to_drafting_only_while_draft(coord_client, round_, cri
     )
 
 
+@pytest.mark.ac("RND-8.1")
 def test_get_shows_selection_without_calling(
     coord_client, round_, criteria, django_capture_on_commit_callbacks
 ):
     with mock.patch("ai.views.gateway.complete") as complete:
         response = coord_client.get(reverse("ai:draft", args=[round_.pk]))
+    page = response.content.decode()
     assert response.status_code == 200
-    assert "Acceptance criteria to draft from" in response.content.decode()
+    assert f"<p>{INTRO}</p>" in page
+    assert "Only their text is sent" not in page
+    assert "Acceptance criteria to draft from" in page
     complete.assert_not_called()
 
 
@@ -240,7 +250,7 @@ def test_foreign_selection_with_five_valid_criteria_shows_only_foreign_message(
     )
     page = response.content.decode()
     assert "Choose criteria from this round." in page
-    assert "Only their text is sent" in page
+    assert f"<p>{INTRO}</p>" in page
 
 
 @pytest.mark.ac("RND-8.9")
