@@ -72,19 +72,19 @@ def published(make_round):
 
 
 @pytest.mark.ac("RES-1.1", "RES-1.4")
-def test_home_orders_only_own_open_rounds_for_both_testers(
+def test_home_orders_only_own_available_rounds_for_both_testers(
     tester, make_round, other_workspace
 ):
-    older = make_round("Synthetic older", Round.State.OPEN)
-    tied = make_round("Synthetic first tie", Round.State.OPEN)
+    older = make_round("Synthetic older", Round.State.CLOSED)
+    tied = make_round("Synthetic first tie", Round.State.CLOSED)
     latest = make_round("Synthetic second tie", Round.State.OPEN)
     now = timezone.now()
     Round.objects.filter(pk=older.pk).update(created_at=now - timedelta(days=1))
     Round.objects.filter(pk__in=[tied.pk, latest.pk]).update(created_at=now)
     unavailable = [
         make_round("Synthetic draft"),
-        make_round("Synthetic closed", Round.State.CLOSED),
         make_round("Synthetic foreign", Round.State.OPEN, other_workspace),
+        make_round("Synthetic foreign closed", Round.State.CLOSED, other_workspace),
     ]
     second = User.objects.create_user(
         "tester2-res1", PASSWORD, workspace=tester.workspace, role="tester"
@@ -99,6 +99,7 @@ def test_home_orders_only_own_open_rounds_for_both_testers(
         assert list(response.context["rounds"]) == [latest, tied, older]
         for round_ in (latest, tied, older):
             assert body.count(f'href="{detail(round_)}"') == 1
+            assert f"</a> ({round_.get_state_display()})" in body
         for round_ in unavailable:
             assert round_.title not in body
             assert f'href="{detail(round_)}"' not in body
@@ -110,14 +111,27 @@ def test_home_orders_only_own_open_rounds_for_both_testers(
 def test_empty_home(tester, make_round, has_unavailable):
     if has_unavailable:
         make_round("Synthetic hidden draft")
-        make_round("Synthetic hidden closed", Round.State.CLOSED)
     body = page(signed_in(tester).get(HOME))
     assert "No tests available." in body
     assert 'href="/tester/rounds/' not in body
 
 
+@pytest.mark.ac("RES-1.1", "RES-1.2")
+def test_only_closed_round_remains_available(tester, make_round):
+    round_ = make_round("Synthetic reference only", Round.State.CLOSED)
+    response = signed_in(tester).get(HOME)
+    assert response.status_code == 200
+    assert list(response.context["rounds"]) == [round_]
+    body = page(response)
+    assert f'href="{detail(round_)}"' in body and "(Closed)" in body
+    assert "No tests available." not in body
+
+
 @pytest.mark.ac("RES-1.3", "RES-1.5")
-def test_detail_shows_ordered_cases_links_and_latest_covering_build(tester, published):
+@pytest.mark.parametrize("closed", [False, True])
+def test_detail_shows_ordered_cases_links_and_latest_covering_build(
+    tester, published, closed
+):
     round_, cases, criteria = published
     client = signed_in(tester)
     initial = client.get(detail(round_))
@@ -131,12 +145,14 @@ def test_detail_shows_ordered_cases_links_and_latest_covering_build(tester, publ
         services.request_retest(round_, "Synthetic partial", [cases[0].pk])
         services.request_retest(round_, "Synthetic overlap", [cases[0].pk, cases[1].pk])
         services.request_retest(round_, "Synthetic repeated", [cases[0].pk])
+        if closed:
+            services.close(round_)
     before = snapshot()
     response = client.get(detail(round_))
     assert response.status_code == 200
     body = page(response)
     assert f'<h1><span dir="auto">{round_.title}</span></h1>' in body
-    assert "State: Open" in body and "Test cases" in body
+    assert f"State: {round_.get_state_display()}" in body and "Test cases" in body
     assert 'href="/tester/"' in body
     shown = list(response.context["cases"])
     assert [case.pk for case in shown] == [case.pk for case in cases]
@@ -174,8 +190,7 @@ def test_detail_shows_ordered_cases_links_and_latest_covering_build(tester, publ
 @pytest.mark.ac("RES-1.4")
 @pytest.mark.parametrize(
     ("foreign", "state"),
-    [(False, Round.State.DRAFT), (False, Round.State.CLOSED)]
-    + [(True, state) for state in Round.State],
+    [(False, Round.State.DRAFT)] + [(True, state) for state in Round.State],
 )
 def test_unavailable_detail_is_indistinguishable(
     tester, make_round, other_workspace, foreign, state
@@ -259,8 +274,14 @@ def test_malformed_related_links_do_not_disclose_other_rounds(
     "method", ["HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "TRACE"]
 )
 @pytest.mark.parametrize("detail_page", [False, True])
-def test_methods_are_read_only_and_uncached(tester, published, method, detail_page):
+@pytest.mark.parametrize("closed", [False, True])
+def test_methods_are_read_only_and_uncached(
+    tester, published, method, detail_page, closed
+):
     round_, _, _ = published
+    if closed:
+        with transaction.atomic():
+            services.close(round_)
     client = signed_in(tester, enforce_csrf_checks=True)
     token = csrf_token(client)
     before = snapshot()
@@ -396,8 +417,15 @@ def test_publish_and_close_change_next_request(tester, coordinator, make_round):
         ).status_code
         == 302
     )
-    assert round_.title in page(client.get(HOME))
-    assert client.get(detail(round_)).status_code == 200
+    opened = client.get(HOME)
+    assert round_.title in page(opened) and "(Open)" in page(opened)
+    original = client.get(detail(round_))
+    assert original.status_code == 200
     assert coord.post(f"/coordinator/rounds/{round_.pk}/close/").status_code == 302
-    assert round_.title not in page(client.get(HOME))
-    assert client.get(detail(round_)).status_code == 404
+    before = snapshot()
+    closed_home = client.get(HOME)
+    assert round_.title in page(closed_home) and "(Closed)" in page(closed_home)
+    closed_detail = client.get(detail(round_))
+    assert closed_detail.status_code == 200
+    assert page(original).replace("State: Open", "State: Closed") == page(closed_detail)
+    assert snapshot() == before

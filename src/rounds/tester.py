@@ -1,4 +1,4 @@
-"""Read-only tester availability, scoped to Open workspace rounds (RES-1)."""
+"""Read-only tester availability for Open and Closed workspace rounds (RES-1)."""
 
 import logging
 from functools import wraps
@@ -37,8 +37,10 @@ def tester_view(view):
 
 
 def available_rounds(user):
-    """Return only the tester's workspace's Open rounds, newest first."""
-    return workspace_records(user, Round).filter(state=Round.State.OPEN)
+    """Return the tester's workspace's published rounds, newest first."""
+    return workspace_records(user, Round).filter(
+        state__in=[Round.State.OPEN, Round.State.CLOSED]
+    )
 
 
 @tester_view
@@ -53,7 +55,7 @@ def home(request):
 
 @tester_view
 def detail(request, round_id):
-    """Show cases and their latest covering builds in one authorized Open round."""
+    """Show cases and latest covering builds in one authorized published round."""
     round_ = get_object_or_404(available_rounds(request.user), pk=round_id)
     cases = list(
         round_.cases.prefetch_related(
