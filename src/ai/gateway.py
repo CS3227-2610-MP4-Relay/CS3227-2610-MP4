@@ -160,7 +160,7 @@ class _ResponseTooLarge(Exception):
     """The response body passed RESPONSE_BYTES."""
 
 
-@sensitive_variables("headers", "body", "received")
+@sensitive_variables("headers", "body", "received", "chunk", "response")
 async def _exchange(url, headers, body, deadline):
     """POST `body` with aiohttp; return the status and capped body (the network step).
 
@@ -266,6 +266,8 @@ def _transport(instructions, data, deadline):
     except _ResponseTooLarge:
         return Failed("invalid-response")
     except (aiohttp.ClientError, OSError, ValueError):
+        return Failed("transport")
+    except Exception:  # noqa: BLE001 - any other error is a fixed code, never text
         return Failed("transport")
     if status in {400, 401, 403}:
         return Refused("provider-refused")

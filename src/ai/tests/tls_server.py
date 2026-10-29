@@ -54,6 +54,22 @@ def hold(raw, duration):
     return script
 
 
+def trickle(prefix, piece, interval, duration):
+    """A script that sends `prefix`, then `piece` every `interval` for `duration`."""
+
+    def script(conn):
+        conn.sendall(prefix)
+        stop = time.monotonic() + duration
+        while time.monotonic() < stop:
+            time.sleep(interval)
+            try:
+                conn.sendall(piece)
+            except OSError:
+                return
+
+    return script
+
+
 class Server:
     """Serve one scripted response per connection on 127.0.0.1 over TLS."""
 

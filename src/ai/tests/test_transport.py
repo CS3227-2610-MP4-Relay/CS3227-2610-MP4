@@ -2,6 +2,7 @@
 
 import gzip
 import json
+import logging
 import socket
 import time
 
@@ -10,7 +11,7 @@ import pytest
 from ai import gateway
 from ai.gateway import Failed, Refused, Success, complete
 
-from .tls_server import Server, hold, make_certificate, respond
+from .tls_server import Server, hold, make_certificate, respond, trickle
 
 pytestmark = pytest.mark.llm_transport
 
@@ -181,6 +182,32 @@ def test_a_hung_name_lookup_does_not_extend_the_deadline(
     assert elapsed < 3
 
 
+@pytest.mark.ac("RND-8.4")
+def test_a_trickling_body_is_cut_off_at_the_total_deadline(user, serve, short_deadline):
+    """Each byte arrives in time, so only a whole-request bound stops it."""
+    prefix = b"HTTP/1.1 200 Synthetic\r\nContent-Length: 100000\r\n\r\n"
+    serve(trickle(prefix, b" ", 0.2, 6))
+    result, elapsed = timed(user)
+    assert result == Failed("timeout")
+    assert elapsed < 3
+
+
+def test_the_deadline_passed_in_bounds_the_request(serve):
+    """The time left from reservation, not a fresh TOTAL_TIMEOUT, is the bound."""
+    serve(hold(b"", 6))
+    started = time.monotonic()
+    result = gateway._transport("", "{}", started + 0.5)
+    assert result == Failed("timeout")
+    assert time.monotonic() - started < 2
+
+
+def test_a_passed_deadline_sends_nothing(serve):
+    server = serve(respond(text_reply("ok")))
+    assert gateway._transport("", "{}", time.monotonic() - 1) == Failed("timeout")
+    time.sleep(0.2)
+    assert server.requests == []
+
+
 def test_a_refused_connection_is_a_transport_failure(user, live, monkeypatch):
     listener = socket.create_server(("127.0.0.1", 0))
     port = listener.getsockname()[1]
@@ -194,6 +221,34 @@ def test_a_name_the_resolver_cannot_encode_is_a_transport_failure(
 ):
     monkeypatch.setenv("SOC_LLM_ENDPOINT", f"https://{'a' * 64}.invalid/llm")
     assert complete(user, "", "{}") == Failed("transport")
+
+
+def test_any_name_lookup_error_is_a_transport_failure(user, serve, monkeypatch):
+    server = serve(respond(text_reply("ok")))
+    monkeypatch.setenv("SOC_LLM_ENDPOINT", f"https://localhost:{server.port}/llm")
+
+    def broken(*args, **kwargs):
+        raise RuntimeError("synthetic resolver failure")
+
+    monkeypatch.setattr(socket, "getaddrinfo", broken)
+    assert complete(user, "", "{}") == Failed("transport")
+
+
+def test_an_unexpected_client_error_is_a_transport_failure_and_not_logged(
+    user, serve, monkeypatch, caplog
+):
+    serve(respond(text_reply("ok")))
+
+    async def broken(*args, **kwargs):
+        raise RuntimeError(f"synthetic {KEY} secret-instructions secret-data")
+
+    monkeypatch.setattr(gateway.aiohttp.ClientResponse, "start", broken)
+    caplog.set_level(logging.DEBUG)
+    result = complete(user, "secret-instructions", '{"criteria": "secret-data"}')
+    assert result == Failed("transport")
+    logged = repr([(r.getMessage(), r.exc_text, r.args) for r in caplog.records])
+    for secret in (KEY, "secret-instructions", "secret-data"):
+        assert secret not in logged
 
 
 def test_an_untrusted_certificate_is_a_transport_failure(user, serve, monkeypatch):
@@ -260,6 +315,8 @@ def test_a_compressed_body_is_not_decompressed(user, serve):
         (401, Refused("provider-refused")),
         (403, Refused("provider-refused")),
         (429, Refused("quota")),
+        (201, Failed("invalid-response")),
+        (404, Failed("transport")),
         (500, Failed("transport")),
         (503, Failed("transport")),
     ],
