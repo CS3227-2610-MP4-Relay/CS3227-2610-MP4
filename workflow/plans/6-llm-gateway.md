@@ -53,14 +53,16 @@ Size estimate: about 400 changed lines in total, most of them removals (the hand
   - Added statuses 201 and 404. The spec notes that aiohttp may round the timeout up by under a second.
   - The release archive omitted `src/ai`; it is now packed, with a test that every local app is.
   - Each new test failed against its mutant or the old allowlist.
-- **Checks:** focused `src/ai` tests and Ruff at each checkpoint; the full checks (Django check, makemigrations check, Ruff, pytest) passed on `96fc08d` (1,859 tests) and again after repair round 1.
+- **Checks:** focused `src/ai` tests and Ruff at each checkpoint; the full checks (Django check, makemigrations check, Ruff, pytest) passed on `96fc08d` (1,859 tests) and after repair round 1 on `1863017` plus the plan (1,868 passed, 220 subtests).
+- **Redundant clause:** the `ValueError` clause in `_transport` is now covered by the catch-all and is kept as documentation.
+- **History deviation:** `1863017` carried two spec edits in a `fix:` commit rather than a separate `spec:` commit: the exception sentence and the timeout rounding clause. Their reason is this Outcome section; history was not rewritten.
 - **Package identity:** each new package's installed metadata names its upstream repository: `aio-libs/aiohttp`, `aiohappyeyeballs`, `aiosignal`, `frozenlist`, `multidict`, `propcache` and `yarl`, `python-attrs/attrs` and `kjd/idna`. Their names match those declared by aiohttp 3.14.5 and yarl 1.25.1. This metadata is self-declared, so it does not prove where the packages were downloaded from.
 
 ## Open
 
 - Confirmation of the contract's proposals by Whimsyturtle and the human.
 - The live provider check, after the live switch's conditions are met.
-- **Pre-live:** `ssl.create_default_context()` honours `SSLKEYLOGFILE`, `SSL_CERT_FILE` and `SSL_CERT_DIR`. Before turning live calls on, check they are unset in production, or set `keylog_filename = None`.
+- **Pre-live:** the TLS environment variables condition in the [live switch](../specs/ai/llm-gateway.md#live-switch).
 - **Residuals, recorded with no code change:**
-  - After a timeout on a TLS connection whose server stays silent, the socket can stay open until garbage collection, because aiohttp's graceful TLS close is still waiting when the loop closes.
+  - After a timeout on a TLS connection whose server stays silent, the socket can stay open until garbage collection: asyncio's cancelled connect or handshake schedules its own close callback, which `loop.close()` discards. aiohttp aborts TLS connections (`ssl_shutdown_timeout=0`) rather than closing them gracefully.
   - A hung lookup's thread keeps running after the call returns and is joined at interpreter exit, which can delay worker shutdown.
