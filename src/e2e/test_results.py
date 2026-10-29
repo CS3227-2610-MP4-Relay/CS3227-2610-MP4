@@ -293,7 +293,17 @@ def test_selected_retest_and_close_refuse_stale_forms_preserving_results(
         coordinator_context.close()
 
 
-@pytest.mark.ac("RES-3.1", "RES-3.2", "RES-3.3", "RES-3.4", "RES-3.5")
+@pytest.mark.ac(
+    "RND-5.1",
+    "RES-2.1",
+    "RES-2.4",
+    "RES-2.5",
+    "RES-3.1",
+    "RES-3.2",
+    "RES-3.3",
+    "RES-3.4",
+    "RES-3.5",
+)
 def test_private_history_preserves_drafts_submissions_after_retest_and_close(
     browser_accounts, page, live_server
 ):
@@ -329,7 +339,9 @@ def test_private_history_preserves_drafts_submissions_after_retest_and_close(
             """Assert each row's original context and status through visible text."""
             rows = page.locator("main section")
             expect(rows).to_have_count(len(expected))
-            for index, (case, build, observation, status) in enumerate(expected):
+            for index, (case, build, outcome, observation, status) in enumerate(
+                expected
+            ):
                 row = rows.nth(index)
                 for text in (
                     case,
@@ -337,7 +349,7 @@ def test_private_history_preserves_drafts_submissions_after_retest_and_close(
                     observation,
                     f"Status: {status}",
                     "Synthetic criterion",
-                    "Pass",
+                    outcome,
                 ):
                     expect(row.get_by_text(text, exact=True)).to_be_visible()
                 expect(
@@ -367,18 +379,39 @@ def test_private_history_preserves_drafts_submissions_after_retest_and_close(
             (
                 "Synthetic selected case",
                 "Synthetic original",
+                "Pass",
                 "Synthetic original private draft",
                 "Draft",
             ),
             (
                 "Synthetic unselected case",
                 "Synthetic original",
+                "Pass",
                 "Synthetic original submission",
                 "Submitted",
             ),
         ]
         check_history(original_rows)
         page.reload()
+        check_history(original_rows)
+
+        # Finish the original draft as Fail before the coordinator requests a fix.
+        page.get_by_role("link", name="Back to round", exact=True).click()
+        page.get_by_role("link", name="Record result", exact=True).first.click()
+        page.get_by_label("Outcome", exact=True).select_option("fail")
+        page.get_by_label("Observation", exact=True).fill("Synthetic original failure")
+        page.get_by_role("button", name="Submit", exact=True).click()
+        expect(page.get_by_text("Status: Submitted", exact=True)).to_be_visible()
+        expect(page.get_by_text("Fail", exact=True)).to_be_visible()
+        page.get_by_role("link", name="Back to round", exact=True).click()
+        page.get_by_role("link", name="My results", exact=True).click()
+        original_rows[0] = (
+            "Synthetic selected case",
+            "Synthetic original",
+            "Fail",
+            "Synthetic original failure",
+            "Submitted",
+        )
         check_history(original_rows)
 
         other = other_context.new_page()
@@ -409,7 +442,17 @@ def test_private_history_preserves_drafts_submissions_after_retest_and_close(
         page.reload()
         check_history(original_rows)
         page.get_by_role("link", name="Back to round", exact=True).click()
+        page.get_by_role("link", name="Record result", exact=True).nth(1).click()
+        expect(page.get_by_text("Synthetic original", exact=True)).to_be_visible()
+        expect(page.get_by_text("Status: Submitted", exact=True)).to_be_visible()
+        expect(
+            page.get_by_text("Synthetic original submission", exact=True)
+        ).to_be_visible()
+        page.get_by_role("link", name="Back to round", exact=True).click()
         page.get_by_role("link", name="Record result", exact=True).first.click()
+        expect(page.get_by_text("Synthetic next", exact=True)).to_be_visible()
+        expect(page.get_by_label("Outcome", exact=True)).to_have_value("")
+        expect(page.get_by_label("Observation", exact=True)).to_have_value("")
         page.get_by_label("Outcome", exact=True).select_option("pass")
         page.get_by_label("Observation", exact=True).fill("Synthetic next submission")
         page.get_by_role("button", name="Submit", exact=True).click()
@@ -419,6 +462,7 @@ def test_private_history_preserves_drafts_submissions_after_retest_and_close(
             (
                 "Synthetic selected case",
                 "Synthetic next",
+                "Pass",
                 "Synthetic next submission",
                 "Submitted",
             )
@@ -438,23 +482,35 @@ def test_private_history_preserves_drafts_submissions_after_retest_and_close(
         check_history(expected)
         other.reload()
         expect(other.locator("main section")).to_have_count(1)
+        for text in (
+            "Synthetic selected case",
+            "Synthetic original",
+            "Synthetic criterion",
+            "Pass",
+            "Status: Draft",
+        ):
+            expect(other.get_by_text(text, exact=True)).to_be_visible()
         expect(
             other.get_by_text("Synthetic second tester secret", exact=True)
         ).to_be_visible()
-        for _, _, observation, _ in expected:
+        for _, _, _, observation, _ in expected:
             expect(other.get_by_text(observation, exact=True)).to_have_count(0)
         browser_accounts["expected_results"] = [
             {
                 "tester__username": browser_accounts["tester"],
                 "case__title": case,
                 "build__label": build,
+                "outcome": outcome.lower(),
                 "observation": observation,
                 "submitted_at__isnull": status == "Draft",
             }
-            for case, build, observation, status in expected
+            for case, build, outcome, observation, status in expected
         ] + [
             {
                 "tester__username": browser_accounts["tester2"],
+                "case__title": "Synthetic selected case",
+                "build__label": "Synthetic original",
+                "outcome": "pass",
                 "observation": "Synthetic second tester secret",
                 "submitted_at__isnull": True,
             }
