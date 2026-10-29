@@ -1,6 +1,6 @@
 # Experiments
 
-This folder will hold experiment methods, reproducible inputs, observed results and analysis. No experiments have been run or results recorded in this scaffold.
+This folder holds experiment methods, reproducible inputs, observed results and analysis. The [Codex token accounting investigation](83-codex-token-accounting.md) records synthetic collector observations and their limits.
 
 ## Planned comparisons
 
