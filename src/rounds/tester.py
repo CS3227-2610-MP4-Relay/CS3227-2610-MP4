@@ -1,4 +1,4 @@
-"""Read-only tester availability for Open and Closed workspace rounds (RES-1)."""
+"""Tester availability and private current-build result entry (RES-1/2)."""
 
 import logging
 from functools import wraps
@@ -8,18 +8,22 @@ from django.db import DatabaseError
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_http_methods
 
 from accounts.models import User
 from accounts.workspaces import workspace_records
 
+from . import results
 from .models import Build, Criterion, Round
+from .result_forms import ResultForm
 
 logger = logging.getLogger(__name__)
 
 
-def tester_view(view):
+def tester_view(view=None, *, methods=("GET",)):
     """Check method and tester role before reads, including lazy authentication."""
+    if view is None:
+        return lambda wrapped: tester_view(wrapped, methods=methods)
 
     @wraps(view)
     def checked(request, *args, **kwargs):
@@ -30,10 +34,10 @@ def tester_view(view):
                 raise PermissionDenied
             return view(request, *args, **kwargs)
         except DatabaseError:
-            logger.exception("A tester request failed in storage.")
+            logger.error("A tester request failed in storage.")
             return render(request, "503.html", status=503)
 
-    return never_cache(require_GET(checked))
+    return never_cache(require_http_methods(methods)(checked))
 
 
 def available_rounds(user):
@@ -71,3 +75,41 @@ def detail(request, round_id):
     return render(
         request, "rounds/tester_round.html", {"round": round_, "cases": cases}
     )
+
+
+@tester_view(methods=("GET", "POST"))
+def result_entry(request, round_id, case_id, build_id):
+    """Read or write only the signed-in tester's current-build result."""
+    try:
+        with results.entry(
+            request.user, round_id, case_id, build_id, write=request.method == "POST"
+        ) as current:
+            saved = current.result
+            form = ResultForm(
+                request.POST if request.method == "POST" else None,
+                initial={"outcome": saved.outcome, "observation": saved.observation}
+                if saved
+                else None,
+            )
+            if request.method == "POST" and form.is_valid():
+                results.save(
+                    current,
+                    form.cleaned_data["outcome"],
+                    form.cleaned_data["observation"],
+                    submit=form.cleaned_data["action"] == "submit",
+                )
+                return redirect("accounts:tester-result", round_id, case_id, build_id)
+            return render(
+                request, "rounds/tester_result.html", {"entry": current, "form": form}
+            )
+    except results.Conflict as conflict:
+        if str(conflict) == "This action is not available while the round is Closed.":
+            return render(
+                request, "rounds/conflict.html", {"state": "Closed"}, status=409
+            )
+        return render(
+            request,
+            "rounds/tester_result.html",
+            {"conflict": str(conflict)},
+            status=409,
+        )
