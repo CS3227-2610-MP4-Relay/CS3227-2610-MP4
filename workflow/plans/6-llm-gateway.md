@@ -26,4 +26,4 @@ The gateway adds one app, three migrations and its tests. Drafting is tracked by
 2. `feat:` `ai` app, seeded deployment locks, gateway/fake provider, RND-8 pages and tests.
 3. `test:` AI route coverage, criterion-marked tests and documentation.
 
-The implementation uses the standard-library HTTP client, so no dependency was added. On 2026-10-29 the focused AI suite passed 82 tests, the rounds/accounts suites passed 801 tests, and the full AI branch suite passed 1106 tests plus 220 subtests. The live provider check is still pending a verified endpoint, model and credential.
+The implementation uses the standard-library HTTP client, so no dependency was added. On 2026-10-29 the focused AI suite passed 86 tests, the rounds/accounts suites passed 801 tests, and the full AI branch suite passed 1128 tests plus 220 subtests. The live provider check is still pending a verified endpoint, model and credential.

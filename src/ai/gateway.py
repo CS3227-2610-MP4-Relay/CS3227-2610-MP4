@@ -123,6 +123,14 @@ def _release(user_slot, deployment_slot):
             slot.save(update_fields=["expires_at"])
 
 
+def _response_socket(response):
+    """Return the HTTP response's socket when it exposes one, else None."""
+    try:
+        return response.fp.raw._sock
+    except AttributeError:
+        return None
+
+
 def _deadline_read(response, deadline):
     """Read a bounded response, refusing when the whole-call deadline passes."""
     chunks, total = [], 0
@@ -132,6 +140,10 @@ def _deadline_read(response, deadline):
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise TimeoutError
+        # Bound the blocking socket operation by the time left in the call.
+        sock = _response_socket(response)
+        if sock is not None:
+            sock.settimeout(remaining)
         chunk = response.read1(8192)
         if time.monotonic() > deadline:
             raise TimeoutError

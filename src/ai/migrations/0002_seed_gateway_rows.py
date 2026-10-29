@@ -7,7 +7,7 @@ from django.utils import timezone
 
 
 def seed(apps, schema_editor):
-    """Create the two deployment slots and the deployment quota row."""
+    """Create the two deployment slots and the reserved metrics row."""
     CallSlot = apps.get_model("ai", "CallSlot")
     Usage = apps.get_model("ai", "Usage")
     expired = timezone.now() - timedelta(seconds=1)

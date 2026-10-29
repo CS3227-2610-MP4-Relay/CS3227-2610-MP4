@@ -19,7 +19,7 @@ class CallSlot(models.Model):
 
 
 class Usage(models.Model):
-    """A rolling count of gateway calls for one quota scope and key."""
+    """A reserved place for future token metrics; not a quota lock."""
 
     scope = models.CharField(max_length=32)
     key = models.CharField(max_length=64)

@@ -190,6 +190,29 @@ def test_transport_accepts_a_20000_non_bmp_character_text(user, monkeypatch):
 
 
 @pytest.mark.ac("RND-8.4")
+def test_deadline_read_bounds_a_blocking_socket(monkeypatch):
+    class Socket:
+        def __init__(self):
+            self.timeout = None
+
+        def settimeout(self, value):
+            self.timeout = value
+
+    class Response:
+        def __init__(self):
+            self.fp = mock.MagicMock()
+            self.fp.raw._sock = Socket()
+
+        def read1(self, size):
+            return b""
+
+    response = Response()
+    monkeypatch.setattr(gateway.time, "monotonic", lambda: 10)
+    assert gateway._deadline_read(response, 12) == b""
+    assert 1 < response.fp.raw._sock.timeout <= 2
+
+
+@pytest.mark.ac("RND-8.4")
 def test_transport_enforces_the_whole_request_deadline(user, monkeypatch):
     monkeypatch.setenv("SOC_LLM_ENDPOINT", "https://example.com/llm")
     monkeypatch.setenv("SOC_LLM_MODEL", "synthetic")
