@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load rounds_text %}
+{% block title %}{% if conflict %}Action not available{% else %}Record result{% endif %}{% endblock %}
+{% block content %}
+{% if conflict %}<h1>{{ conflict }}</h1>
+{% else %}<h1>Record result</h1>
+<h2>Test case</h2>
+<p>{{ entry.case.title|isolated_lines }}</p>
+<h2>Current build</h2>
+<p>{{ entry.build.label|isolated_lines }}</p>
+{% if entry.result.submitted_at %}
+<p>Status: Submitted</p>
+<h2>Outcome</h2><p>{{ entry.result.get_outcome_display }}</p>
+<h2>Observation</h2>
+<p>{% if entry.result.observation %}{{ entry.result.observation|isolated_lines }}{% else %}No observation.{% endif %}</p>
+{% else %}
+{% if entry.result %}<p>Status: Draft</p>{% endif %}
+<form method="post">
+{% csrf_token %}
+{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+{% for field in form %}
+<p><label for="{{ field.id_for_label }}">{{ field.label }}</label> {{ field }}</p>
+{% for error in field.errors %}<p>{{ error }}</p>{% endfor %}
+{% endfor %}
+<button type="submit" name="action" value="save">Save draft</button>
+<button type="submit" name="action" value="submit">Submit</button>
+</form>
+{% endif %}
+<p><a href="{% url 'accounts:tester-round' entry.round.id %}">Back to round</a></p>
+{% endif %}
+{% endblock %}
