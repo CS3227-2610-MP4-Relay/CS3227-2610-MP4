@@ -2,19 +2,20 @@
 
 Slice: #34 · Tier: High · Tool: Codex · Orchestrator model: gpt-6-astra / xhigh (session metadata) · Date: 2026-10-27
 
-Tokens: 12,199,175 input, 54,664 output, 12,253,839 total across the four selected sessions and the separate documentation follow-up intervals; latest cutoff 2026-10-27 15:47:47 SGT.
+Tokens: 13,325,826 input, 57,586 output, 13,383,412 total across the related sources in four disjoint measurement windows; latest cutoff 2026-10-27 15:47:47 SGT.
 
 | Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Orchestrator — gpt-6-astra / xhigh, `codex:421d31ab732932e05357b612` | 6,960,236 | 6,887,680 | 19,469 | 7,557 | 6,979,705 | 24m 56s measured task window |
-| Builder — gpt-6.1-sol / medium, `codex:658a09e24962a5a1530a4874` | 2,598,950 | 2,431,616 | 19,116 | 3,730 | 2,618,066 | about 14m 11s including checkpoint waits |
-| Verifier — gpt-6.1-sol / high, `codex:3f4d0d9d502db8a95d5191d7` | 810,127 | 739,712 | 4,039 | 939 | 814,166 | about 2m 27s |
-| Security-reviewer — gpt-6.1-sol / high, `codex:b790e4ce322bff432d3bba22` | 810,528 | 761,088 | 3,744 | 1,128 | 814,272 | about 2m 55s |
-| Orchestrator follow-up — gpt-6-astra / xhigh, `codex:421d31ab732932e05357b612` | 370,870 | 366,208 | 3,355 | 1,552 | 374,225 | 8m 6s measured interval |
-| Orchestrator PR preparation — gpt-6-astra / xhigh, `codex:421d31ab732932e05357b612` | 110,296 | 102,016 | 952 | 210 | 111,248 | 49s measured interval |
-| Orchestrator conflict cleanup — gpt-6-astra / xhigh, `codex:421d31ab732932e05357b612` | 538,168 | 518,528 | 3,989 | 1,155 | 542,157 | 3m 18s measured interval |
+| Orchestrator — gpt-6-astra / xhigh, `codex:421d31ab732932e05357b612` | 7,979,570 | 7,874,432 | 27,765 | 10,474 | 8,007,335 | Selected disjoint windows below |
+| Builder — gpt-6.1-sol / medium, `codex:658a09e24962a5a1530a4874` | 2,598,950 | 2,431,616 | 19,116 | 3,730 | 2,618,066 | Selected disjoint windows below |
+| Verifier — gpt-6.1-sol / high, `codex:3f4d0d9d502db8a95d5191d7` | 810,127 | 739,712 | 4,039 | 939 | 814,166 | Selected disjoint windows below |
+| Security-reviewer — gpt-6.1-sol / high, `codex:b790e4ce322bff432d3bba22` | 810,528 | 761,088 | 3,744 | 1,128 | 814,272 | Selected disjoint windows below |
+| Automatic approval reviewer — codex-auto-review/low, `codex:b1caeab44f6fd6847303d375` | 853,821 | 777,728 | 1,777 | 681 | 855,598 | Selected disjoint windows below |
+| Automatic approval reviewer — codex-auto-review/low, `codex:395d5d175e882cb46596149a` | 0 | 0 | 0 | 0 | 0 | Selected disjoint windows below |
+| Automatic approval reviewer — codex-auto-review/low, `codex:deda8716b053157bdff0aa92` | 0 | 0 | 0 | 0 | 0 | Selected disjoint windows below |
+| Automatic approval reviewer — codex-auto-review/low, `codex:c6a4eeb4b04eccc4ca87a415` | 272,830 | 229,888 | 1,145 | 584 | 273,975 | Selected disjoint windows below |
 
-Three subagent sessions; the builder was reused for three checkpoints. `resource_usage.py` baseline/report selected the coordinator and these three sessions explicitly, with no telemetry warnings. Measured windows are 14:15:40–14:40:35, 15:16:17–15:24:23, 15:35:56–15:36:45 and 15:44:30–15:47:47 SGT; work outside those disjoint intervals, including delivery after the latest cutoff, is excluded. No new subagent ran for the documentation follow-up or its one merge-conflict repair round. An internal approval-review session had unavailable telemetry and is excluded from these measured totals; it is not treated as zero. Cache-write tokens were zero in the selected counters. No independent-review repair round was needed; builder formatting fixes occurred before the implementation and documentation handoffs. Model/effort values above were confirmed from session metadata. See [token reporting](../../workflow/README.md#token-reporting) for definitions.
+Three delegated subagent sessions; the builder was reused for three checkpoints. Retrospective discovery includes four related automatic approval sources, with their recorded usage before each interval subtracted using reconstructed start snapshots. The table groups each source across four disjoint windows: 14:15:40–14:40:35, 15:16:17–15:24:23, 15:35:56–15:36:45 and 15:44:30–15:47:47 SGT. Work outside these intervals remains excluded; two approval sources have measured zero deltas within them. No new delegated subagent ran for the documentation follow-up or its one merge-conflict repair round. The rerun has no warnings and zero cache-write counters. No independent-review repair round was needed; builder formatting fixes preceded handoffs. Model/effort values were confirmed from session metadata. See [the audit](018-audit-historical-token-counts.md) and [token reporting](../../workflow/README.md#token-reporting).
 
 ## Requests
 
@@ -51,4 +52,4 @@ Three subagent sessions; the builder was reused for three checkpoints. `resource
 - Local Docker daemon was unavailable. Full local pytest collected 761 items but was interrupted with no results flushed after a TCP probe found `127.0.0.1:55432` actively refused connections. No failure count was invented; hosted verification later passed on the integrated candidate.
 - GitHub connector PR creation returned 403 (integration permission). CLI fallback first failed because #69's base branch had just been deleted; after base integration it created #72 successfully. Initial restricted-network reads used approved read-only escalation. No automatic approval rejection occurred.
 - Browser preview was unavailable: the in-app browser was unavailable and browser inventory was empty. HTML/artifact inspection is recorded, not a claimed visual browser test. The temporary preview server was stopped.
-- Initial telemetry discovery selected an internal approval-review session; the usable coordinator baseline was corrected before the builder started. Final reporting explicitly selected the four task sessions. No raw transcripts, prompts or secrets were saved. No scope violations or attempted untrusted instruction overrides were observed.
+- Initial telemetry discovery selected an internal approval-review session; the usable coordinator baseline was corrected before the builder started. The original final report explicitly selected four task sessions; retrospective accounting above includes the recovered related approval-source deltas. No raw transcripts, prompts or secrets were saved. No scope violations or attempted untrusted instruction overrides were observed.
