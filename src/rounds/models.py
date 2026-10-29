@@ -1,5 +1,6 @@
 """Test rounds owned by a workspace (RND)."""
 
+from django.conf import settings
 from django.db import models
 from django.urls import reverse
 
@@ -129,4 +130,34 @@ class BuildCase(models.Model):
             models.UniqueConstraint(
                 fields=["build", "case"], name="rounds_buildcase_unique"
             )
+        ]
+
+
+class Result(models.Model):
+    """One tester's draft or immutable submission for a case/build (RES-2)."""
+
+    class Outcome(models.TextChoices):
+        """The two tester-selected outcomes."""
+
+        PASS = "pass", "Pass"
+        FAIL = "fail", "Fail"
+
+    tester = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="results"
+    )
+    case = models.ForeignKey(Case, on_delete=models.PROTECT, related_name="results")
+    build = models.ForeignKey(Build, on_delete=models.PROTECT, related_name="results")
+    outcome = models.CharField(max_length=4, choices=Outcome.choices)
+    observation = models.CharField(max_length=2000, blank=True, default="")
+    submitted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tester", "case", "build"], name="rounds_result_tuple_unique"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(outcome__in=["pass", "fail"]),
+                name="rounds_result_outcome_valid",
+            ),
         ]

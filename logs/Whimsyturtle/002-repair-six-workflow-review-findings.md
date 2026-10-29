@@ -2,15 +2,16 @@
 
 Slice: workflow-six-review-fixes, no issue · Tier: High · Tool: Codex · Orchestrator model: gpt-6-astra/xhigh (observed runtime metadata) · Date: 2026-10-26 (SGT)
 
-Tokens: 3,260,320 input, 27,397 output, 3,287,717 total measured from 09:06:00 to 09:23:39 SGT, including the local-environment and PyYAML verification follow-ups.
+Tokens: measured subtotal: 3,260,320 input, 27,397 output, 3,287,717 total measured from 09:06:00 to 09:23:39 SGT, including the local-environment and PyYAML verification follow-ups; full aggregate unavailable.
 
 | Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | Orchestrator — `gpt-6-astra/xhigh`, `codex:61da4ecb2740b89f41607c82` | 2,529,868 | 2,474,368 | 23,182 | 5,649 | 2,553,050 | 17m38s measured interval |
 | `verify_six_fixes` — `gpt-6.1-sol/high`, `codex:b1b45c227eaf86a9ff091306` | 375,356 | 314,240 | 2,294 | 698 | 377,650 | 1m28s |
 | `security_six_fixes` — `gpt-6.1-sol/high`, `codex:3763f93e6c82f0a1440f2905` | 355,096 | 311,168 | 1,921 | 462 | 357,017 | 1m14s |
+| Automatic approval reviewer — codex-auto-review/low, `codex:59185581db4fce1f10aaf0a9` | unavailable | unavailable | unavailable | unavailable | unavailable | Within original measured window |
 
-Two subagents; session envelope through the cutoff about 20m44s, including waiting time. Cache-write input: 0 for all three sources. No review repair rounds. The baseline followed initial read-only inspection, excluding the first 3m06s; log updates and the final response after the cutoff are also excluded. The collector reported no warnings. [Accounting conventions](../../workflow/README.md#token-reporting).
+Two delegated subagents; session envelope through the cutoff about 20m44s, including waiting time. No review repair rounds. The baseline followed initial read-only inspection, excluding the first 3m06s; log updates and the final response after the cutoff are also excluded. Retrospective discovery adds one initialized automatic approval source with unavailable counters; the measured subtotal is unchanged and the aggregate is unavailable (`session_initialized_without_usage`). Available cache-write counters are zero. See [the audit](018-audit-historical-token-counts.md) and [accounting conventions](../../workflow/README.md#token-reporting).
 
 ## Requests
 

@@ -49,9 +49,42 @@ Choose **Sign out** on your home page. The sign-in page shows "You have signed o
 
 You are also signed out 8 hours after signing in, whatever you do in between; opening a home page after that takes you to the sign-in page.
 
+## View available tests
+
+1. Sign in as a **Beta Tester**. On **Tester home**, **Available tests** lists your workspace's Open and Closed rounds, newest first. Each title is a link followed by "(Open)" or "(Closed)". If there are none, it says "No tests available."
+2. Choose a round title. The page shows "State: Open" or "State: Closed" and **Test cases**. Each case shows its title, **Steps**, **Expected result**, **Linked acceptance criteria** and **Current build**.
+3. Test the software outside Relay using those instructions and the named build. If the coordinator requests a retest, reload the page: only the selected cases change to the new **Current build**; other cases keep their previous build.
+4. Choose **Tester home** to return to the list, or return there to **Sign out**.
+
+Both Beta Testers in a workspace see the same rounds. Draft rounds stay hidden. An Open round has a **Record result** link beside each case. A Closed round remains available as read-only reference; after the coordinator closes it, reload to see "State: Closed" and "(Closed)" in the list, with the result-entry links removed.
+
+If reading tests fails, the page says "Relay is temporarily unavailable. Try again later." Opening a Draft, missing or another workspace's round shows "Page not found."
+
+## Save and submit a result
+
+1. In an Open round, choose **Record result** beside the case you tested. The **Record result** page shows **Test case** and **Current build**.
+2. Choose **Pass** or **Fail** under **Outcome** and enter your **Observation**. Fail requires an observation; Pass allows it to be empty.
+3. Choose **Save draft** to keep working later. The page shows "Status: Draft" and your saved fields; they remain when you reload or sign in again. Each tester has a separate private draft for each case and build.
+4. Choose **Submit** when ready. You may submit directly or after saving a draft. The page shows "Status: Submitted", your outcome and your observation as read-only text. An empty observation says "No observation." Submission is final; another attempt to save or submit it says "This result has already been submitted."
+5. Choose **Back to round** to return to the case instructions.
+
+Both buttons apply the same checks. A missing outcome says "Choose Pass or Fail." An empty or invisible-only Fail observation says "Enter an observation for Fail." Observations allow at most 2000 characters after surrounding spaces and line breaks are removed; a line break counts as one character. A longer observation says "Enter at most 2000 characters." A nonempty invisible-only Pass observation says "Enter an observation with a visible character." Null characters and hidden text-direction characters get the same messages as [round text fields](#criteria-and-test-case-limits). Invalid input leaves your previously saved result unchanged.
+
+Results belong to the build shown when you opened the entry page. After the coordinator requests a retest, reload the round and check the selected case's **Current build**. Test the fix outside Relay on that build, then choose **Record result**: the new build starts with empty **Outcome** and **Observation** fields. Choose **Pass** or **Fail** and **Submit** a separate result; earlier submissions remain available in [My results](#review-my-results). Cases omitted from the retest keep their existing build and result entry. If the build changes before you save or submit, the page says "This build is no longer current. Reload the round to record a result." Return to the round, reload, and choose **Record result** for the new build.
+
+You can view your submitted result through **Record result** while its build is current and the round is Open. Once the round closes, an entry page says "This action is not available while the round is Closed." and saves nothing. The round's instructions remain available. If storage fails, the page says "Relay is temporarily unavailable. Try again later." and no part of the result change is saved.
+
+## Review my results
+
+1. Open an Open or Closed round from **Tester home**, then choose **My results**.
+2. The **My results** page shows the **Round** and its state, followed by your saved drafts and submissions for current and earlier builds. Each entry shows **Test case**, **Linked acceptance criteria**, the original **Build**, **Outcome**, **Observation** and "Status: Draft" or "Status: Submitted". Submissions also show **Submitted at** in UTC. An empty observation says "No observation."; with no saved results, the page says "No results yet."
+3. Choose **Back to round** to return to the instructions.
+
+Only your own results appear. This page is read-only, including drafts. Reload to see later saves or submissions; retesting and closure retain earlier results with their original build and case details.
+
 ## Test rounds
 
-Only a Test Coordinator can prepare, publish, retest and close test rounds. A new round is in the **Draft** state; [publishing](#publish-a-round) it makes it **Open**, and [closing](#close-a-round) it makes it **Closed**. Beta Testers do not see rounds yet.
+Only a Test Coordinator can prepare, publish, retest and close test rounds. A new round is in the **Draft** state; [publishing](#publish-a-round) it makes it **Open**, and [closing](#close-a-round) it makes it **Closed**. Beta Testers [view available tests](#view-available-tests) from their own home page.
 
 **Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". A new demo workspace starts with its [sample round](#create-a-demo-workspace), so its list is not empty; "No rounds yet." appears only for a workspace with no rounds.
 
