@@ -70,9 +70,17 @@ If reading tests fails, the page says "Relay is temporarily unavailable. Try aga
 
 Both buttons apply the same checks. A missing outcome says "Choose Pass or Fail." An empty or invisible-only Fail observation says "Enter an observation for Fail." Observations allow at most 2000 characters after surrounding spaces and line breaks are removed; a line break counts as one character. A longer observation says "Enter at most 2000 characters." A nonempty invisible-only Pass observation says "Enter an observation with a visible character." Null characters and hidden text-direction characters get the same messages as [round text fields](#criteria-and-test-case-limits). Invalid input leaves your previously saved result unchanged.
 
-Results belong to the build shown when you opened the entry page. If a retest changes that case's current build before you save or submit, the page says "This build is no longer current. Reload the round to record a result." Return to the round, reload, and choose **Record result** for the new build. Earlier results stay stored with their original build; previous-result browsing is unavailable. Cases omitted from the retest keep their existing result entry.
+Results belong to the build shown when you opened the entry page. If a retest changes that case's current build before you save or submit, the page says "This build is no longer current. Reload the round to record a result." Return to the round, reload, and choose **Record result** for the new build. Earlier results remain available in [My results](#review-my-results). Cases omitted from the retest keep their existing result entry.
 
 You can view your submitted result through **Record result** while its build is current and the round is Open. Once the round closes, an entry page says "This action is not available while the round is Closed." and saves nothing. The round's instructions remain available. If storage fails, the page says "Relay is temporarily unavailable. Try again later." and no part of the result change is saved.
+
+## Review my results
+
+1. Open an Open or Closed round from **Tester home**, then choose **My results**.
+2. The **My results** page shows the **Round** and its state, followed by your saved drafts and submissions for current and earlier builds. Each entry shows **Test case**, **Linked acceptance criteria**, the original **Build**, **Outcome**, **Observation** and "Status: Draft" or "Status: Submitted". Submissions also show **Submitted at** in UTC. An empty observation says "No observation."; with no saved results, the page says "No results yet."
+3. Choose **Back to round** to return to the instructions.
+
+Only your own results appear. This page is read-only, including drafts. Reload to see later saves or submissions; retesting and closure retain earlier results with their original build and case details.
 
 ## Test rounds
 
