@@ -129,7 +129,7 @@ The `.env.example` file may contain only empty placeholders and throwaway local 
 
 `relay.settings.test` imports only shared settings and uses fixed non-secret values: PostgreSQL database/user/password `relay_test`, host 127.0.0.1, port 55432, test database `test_relay_test`, debug false and hosts testserver/localhost/127.0.0.1. `pytest.ini` selects these settings; tests use no provider. An autouse fixture in `src/conftest.py` removes every `SOC_LLM_*` environment variable and makes the gateway transport's network step fail, unless a test is marked `llm_transport`; those tests use only a local server. The test role needs database creation permission on its throwaway server. ACC-1 adds the first business migrations.
 
-`SOC_LLM_LIVE`, in the shared settings for every environment, is `False` and is not read from the environment, so the gateway makes no provider call until a reviewed change turns it on ([live switch](ai/llm-gateway.md#live-switch)). When it is on, the gateway reads `SOC_LLM_ENDPOINT`, `SOC_LLM_MODEL` and `SOC_LLM_API_KEY` from the environment at each call; a missing or invalid value is a refusal. `.env.example` lists them empty.
+The gateway makes no provider call while its [live switch](ai/llm-gateway.md#live-switch) is off. When it is on, the gateway reads `SOC_LLM_ENDPOINT`, `SOC_LLM_MODEL` and `SOC_LLM_API_KEY` from the environment at each call; a missing or invalid value is a refusal. `.env.example` lists them empty.
 
 Both database configurations explicitly set libpq `hostaddr` through Django's database `OPTIONS`, preventing inherited `PGHOSTADDR` from redirecting connections. Local localhost/127.0.0.1 map to 127.0.0.1; local ::1 maps to ::1. Tests fix the address to 127.0.0.1.
 
