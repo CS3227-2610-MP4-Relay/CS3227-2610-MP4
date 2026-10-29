@@ -1,5 +1,7 @@
 """Real-form result journeys, with private browser sessions and preserved rows."""
 
+import re
+
 import pytest
 from playwright.sync_api import expect
 
@@ -288,4 +290,175 @@ def test_selected_retest_and_close_refuse_stale_forms_preserving_results(
             },
         ]
     finally:
+        coordinator_context.close()
+
+
+@pytest.mark.ac("RES-3.1", "RES-3.2", "RES-3.3", "RES-3.4", "RES-3.5")
+def test_private_history_preserves_drafts_submissions_after_retest_and_close(
+    browser_accounts, page, live_server
+):
+    coordinator_context = context(page, live_server)
+    other_context = context(page, live_server)
+    try:
+        coordinator = coordinator_context.new_page()
+        publish(coordinator, browser_accounts)
+        open_round(page, browser_accounts)
+        page.get_by_role("link", name="My results", exact=True).click()
+        expect(page).to_have_title("My results")
+        expect(
+            page.get_by_role("heading", name="My results", exact=True)
+        ).to_be_visible()
+        expect(page.get_by_text("No results yet.", exact=True)).to_be_visible()
+        page.get_by_role("link", name="Back to round", exact=True).click()
+
+        for index, button, observation in (
+            (0, "Save draft", "Synthetic original private draft"),
+            (1, "Submit", "Synthetic original submission"),
+        ):
+            page.get_by_role("link", name="Record result", exact=True).nth(
+                index
+            ).click()
+            page.get_by_label("Outcome", exact=True).select_option("pass")
+            page.get_by_label("Observation", exact=True).fill(observation)
+            page.get_by_role("button", name=button, exact=True).click()
+            page.get_by_role("link", name="Back to round", exact=True).click()
+        page.get_by_role("link", name="My results", exact=True).click()
+        history_url = page.url
+
+        def check_history(expected):
+            """Assert each row's original context and status through visible text."""
+            rows = page.locator("main section")
+            expect(rows).to_have_count(len(expected))
+            for index, (case, build, observation, status) in enumerate(expected):
+                row = rows.nth(index)
+                for text in (
+                    case,
+                    build,
+                    observation,
+                    f"Status: {status}",
+                    "Synthetic criterion",
+                    "Pass",
+                ):
+                    expect(row.get_by_text(text, exact=True)).to_be_visible()
+                expect(
+                    row.get_by_role("heading", name="Build", exact=True)
+                ).to_be_visible()
+                expect(
+                    row.get_by_role(
+                        "heading", name="Linked acceptance criteria", exact=True
+                    )
+                ).to_be_visible()
+                if status == "Submitted":
+                    expect(
+                        row.get_by_text(
+                            re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC$")
+                        )
+                    ).to_be_visible()
+                else:
+                    expect(
+                        row.get_by_role("heading", name="Submitted at", exact=True)
+                    ).to_have_count(0)
+            expect(page.locator("main form, main input, main button")).to_have_count(0)
+            expect(
+                page.get_by_role("link", name="Record result", exact=True)
+            ).to_have_count(0)
+
+        original_rows = [
+            (
+                "Synthetic selected case",
+                "Synthetic original",
+                "Synthetic original private draft",
+                "Draft",
+            ),
+            (
+                "Synthetic unselected case",
+                "Synthetic original",
+                "Synthetic original submission",
+                "Submitted",
+            ),
+        ]
+        check_history(original_rows)
+        page.reload()
+        check_history(original_rows)
+
+        other = other_context.new_page()
+        open_round(other, browser_accounts, "tester2")
+        other.get_by_role("link", name="My results", exact=True).click()
+        expect(other.get_by_text("No results yet.", exact=True)).to_be_visible()
+        expect(other.locator("main section")).to_have_count(0)
+        other.get_by_role("link", name="Back to round", exact=True).click()
+        other.get_by_role("link", name="Record result", exact=True).first.click()
+        other.get_by_label("Outcome", exact=True).select_option("pass")
+        other.get_by_label("Observation", exact=True).fill(
+            "Synthetic second tester secret"
+        )
+        other.get_by_role("button", name="Save draft", exact=True).click()
+        other.get_by_role("link", name="Back to round", exact=True).click()
+        other.get_by_role("link", name="My results", exact=True).click()
+        expect(other.locator("main section")).to_have_count(1)
+        expect(
+            other.get_by_text("Synthetic second tester secret", exact=True)
+        ).to_be_visible()
+
+        coordinator.get_by_role("link", name="Request a retest", exact=True).click()
+        coordinator.get_by_role(
+            "checkbox", name="Synthetic selected case", exact=True
+        ).check()
+        coordinator.get_by_label("Build label", exact=True).fill("Synthetic next")
+        coordinator.get_by_role("button", name="Request retest", exact=True).click()
+        page.reload()
+        check_history(original_rows)
+        page.get_by_role("link", name="Back to round", exact=True).click()
+        page.get_by_role("link", name="Record result", exact=True).first.click()
+        page.get_by_label("Outcome", exact=True).select_option("pass")
+        page.get_by_label("Observation", exact=True).fill("Synthetic next submission")
+        page.get_by_role("button", name="Submit", exact=True).click()
+        page.get_by_role("link", name="Back to round", exact=True).click()
+        page.get_by_role("link", name="My results", exact=True).click()
+        expected = [
+            (
+                "Synthetic selected case",
+                "Synthetic next",
+                "Synthetic next submission",
+                "Submitted",
+            )
+        ] + original_rows
+        check_history(expected)
+        expect(
+            page.get_by_text("Synthetic second tester secret", exact=True)
+        ).to_have_count(0)
+
+        coordinator.get_by_role("button", name="Close round", exact=True).click()
+        expect(coordinator.get_by_text("State: Closed", exact=True)).to_be_visible()
+        page.get_by_role("link", name="Back to round", exact=True).click()
+        expect(page.get_by_text("State: Closed", exact=True)).to_be_visible()
+        page.get_by_role("link", name="My results", exact=True).click()
+        expect(page).to_have_url(history_url)
+        expect(page.get_by_text("State: Closed", exact=True)).to_be_visible()
+        check_history(expected)
+        other.reload()
+        expect(other.locator("main section")).to_have_count(1)
+        expect(
+            other.get_by_text("Synthetic second tester secret", exact=True)
+        ).to_be_visible()
+        for _, _, observation, _ in expected:
+            expect(other.get_by_text(observation, exact=True)).to_have_count(0)
+        browser_accounts["expected_results"] = [
+            {
+                "tester__username": browser_accounts["tester"],
+                "case__title": case,
+                "build__label": build,
+                "observation": observation,
+                "submitted_at__isnull": status == "Draft",
+            }
+            for case, build, observation, status in expected
+        ] + [
+            {
+                "tester__username": browser_accounts["tester2"],
+                "observation": "Synthetic second tester secret",
+                "submitted_at__isnull": True,
+            }
+        ]
+    finally:
+        other_context.close()
         coordinator_context.close()

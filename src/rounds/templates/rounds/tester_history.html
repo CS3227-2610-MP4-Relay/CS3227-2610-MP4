@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load rounds_text tz %}
+{% block title %}My results{% endblock %}
+{% block content %}
+<h1>My results</h1>
+<h2>Round</h2>
+<p>{{ round.title|isolated_lines }}</p>
+<p>State: {{ round.get_state_display }}</p>
+{% for result in results %}
+<section>
+<h2>Test case</h2>
+<p>{{ result.case.title|isolated_lines }}</p>
+<h3>Linked acceptance criteria</h3>
+<ul>{% for criterion in result.case.criteria.all %}<li>{{ criterion.text|isolated_lines }}</li>{% endfor %}</ul>
+<h3>Build</h3>
+<p>{{ result.build.label|isolated_lines }}</p>
+<p>Status: {% if result.submitted_at %}Submitted{% else %}Draft{% endif %}</p>
+<h3>Outcome</h3><p>{{ result.get_outcome_display }}</p>
+<h3>Observation</h3>
+<p>{% if result.observation %}{{ result.observation|isolated_lines }}{% else %}No observation.{% endif %}</p>
+{% if result.submitted_at %}<h3>Submitted at</h3>
+<p>{{ result.submitted_at|utc|date:"Y-m-d H:i:s" }} UTC</p>{% endif %}
+</section>
+{% empty %}<p>No results yet.</p>{% endfor %}
+<p><a href="{% url 'accounts:tester-round' round.id %}">Back to round</a></p>
+{% endblock %}

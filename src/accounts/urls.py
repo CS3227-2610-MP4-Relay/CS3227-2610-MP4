@@ -14,6 +14,11 @@ urlpatterns = [
     path("tester/", views.tester_home, name="tester"),
     path("tester/rounds/<int:round_id>/", tester.detail, name="tester-round"),
     path(
+        "tester/rounds/<int:round_id>/results/",
+        tester.history,
+        name="tester-results",
+    ),
+    path(
         "tester/rounds/<int:round_id>/cases/<int:case_id>/builds/<int:build_id>/result/",
         tester.result_entry,
         name="tester-result",
