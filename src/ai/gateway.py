@@ -14,12 +14,13 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 from django.db import connection, transaction
 from django.utils import timezone
 
-from .models import CallSlot, Usage
+from .models import CallRecord, CallSlot
 
 logger = logging.getLogger(__name__)
 
 INPUT_LIMIT = 8000
 REPLY_LIMIT = 20000
+RESPONSE_BYTES = REPLY_LIMIT * 4 + 4096
 TOTAL_TIMEOUT = 30
 USER_CALLS = 20
 DEPLOYMENT_CALLS = 200
@@ -67,6 +68,17 @@ def _user_key(user):
     return str(user.pk)
 
 
+def _quota(scope, key, limit, window, now):
+    """Count a call in the rolling window, removing expired records."""
+    CallRecord.objects.filter(
+        scope=scope, key=key, created_at__lte=now - window
+    ).delete()
+    if CallRecord.objects.filter(scope=scope, key=key).count() >= limit:
+        return False
+    CallRecord.objects.create(scope=scope, key=key, created_at=now)
+    return True
+
+
 def _reserve(user, now):
     """Atomically reserve quota and both in-flight slots, or refuse."""
     with transaction.atomic():
@@ -85,26 +97,14 @@ def _reserve(user, now):
         live = [slot for slot in deployment if slot.expires_at > now]
         if len(live) >= DEPLOYMENT_IN_FLIGHT:
             return None
-        user_usage, _ = Usage.objects.select_for_update().get_or_create(
-            scope=USER_CALLS_SCOPE,
-            key=_user_key(user),
-            defaults={"window_start": now, "count": 0},
-        )
-        deployment_usage, _ = Usage.objects.select_for_update().get_or_create(
-            scope=DEPLOYMENT_CALLS_SCOPE,
-            key="all",
-            defaults={"window_start": now, "count": 0},
-        )
-        if now >= user_usage.window_start + USER_WINDOW:
-            user_usage.window_start, user_usage.count = now, 0
-        if now >= deployment_usage.window_start + DEPLOYMENT_WINDOW:
-            deployment_usage.window_start, deployment_usage.count = now, 0
-        if user_usage.count >= USER_CALLS or deployment_usage.count >= DEPLOYMENT_CALLS:
+        if not _quota(USER_CALLS_SCOPE, _user_key(user), USER_CALLS, USER_WINDOW, now):
+            transaction.set_rollback(True)
             return None
-        user_usage.count += 1
-        deployment_usage.count += 1
-        user_usage.save(update_fields=["window_start", "count"])
-        deployment_usage.save(update_fields=["window_start", "count"])
+        if not _quota(
+            DEPLOYMENT_CALLS_SCOPE, "all", DEPLOYMENT_CALLS, DEPLOYMENT_WINDOW, now
+        ):
+            transaction.set_rollback(True)
+            return None
         expires = now + timedelta(seconds=TOTAL_TIMEOUT)
         user_slot.expires_at = expires
         user_slot.save(update_fields=["expires_at"])
@@ -116,13 +116,26 @@ def _reserve(user, now):
 
 def _release(user_slot, deployment_slot):
     """Release the two slots reserved by one call after every exit."""
-    if user_slot is None:
-        return
     now = timezone.now()
     for slot in (user_slot, deployment_slot):
-        if slot.expires_at > now:
+        if slot is not None and slot.expires_at > now:
             slot.expires_at = now
             slot.save(update_fields=["expires_at"])
+
+
+def _deadline_read(response, deadline):
+    """Read a bounded response, refusing when the whole-call deadline passes."""
+    chunks, total = [], 0
+    while True:
+        if time.monotonic() >= deadline:
+            raise TimeoutError
+        chunk = response.read1(8192)
+        if not chunk:
+            return b"".join(chunks)
+        chunks.append(chunk)
+        total += len(chunk)
+        if total > RESPONSE_BYTES:
+            raise ValueError
 
 
 def _endpoint():
@@ -176,7 +189,7 @@ def _transport(instructions, data):
     started = time.monotonic()
     try:
         with opener.open(request, timeout=TOTAL_TIMEOUT) as response:
-            raw = response.read(REPLY_LIMIT * 4 + 1)
+            raw = _deadline_read(response, started + TOTAL_TIMEOUT)
     except HTTPError as error:
         if error.code in {400, 401, 403, 429}:
             return Refused("quota" if error.code == 429 else "provider-refused")
@@ -191,8 +204,6 @@ def _transport(instructions, data):
         return Failed("transport")
     if time.monotonic() - started > TOTAL_TIMEOUT:
         return Failed("timeout")
-    if len(raw) > REPLY_LIMIT * 4:
-        return Failed("invalid-response")
     try:
         decoded = raw.decode("utf-8")
         value = json.loads(
@@ -244,5 +255,3 @@ def complete(user, instructions, data, provider=None):
         return result
     finally:
         _release(*reserved)
-        reserved[0].expires_at = timezone.now()
-        reserved[0].save(update_fields=["expires_at"])

@@ -51,6 +51,7 @@ def use(coord_client, round_, criteria=None, **fields):
     return coord_client.post(reverse("ai:use-draft", args=[round_.pk]), data)
 
 
+@pytest.mark.ac("RND-8.1")
 def test_round_page_links_to_drafting_only_while_draft(coord_client, round_, criteria):
     page = coord_client.get(round_.get_absolute_url()).content.decode()
     assert "Draft test cases with AI" in page
@@ -72,6 +73,7 @@ def test_get_shows_selection_without_calling(
     complete.assert_not_called()
 
 
+@pytest.mark.ac("RND-8.1, RND-8.6")
 def test_success_renders_cleaned_drafts_and_sends_only_selected(
     coord_client, round_, criteria
 ):
@@ -92,6 +94,7 @@ def test_success_renders_cleaned_drafts_and_sends_only_selected(
     assert second.text not in sent
 
 
+@pytest.mark.ac("RND-8.8")
 def test_selection_is_validated_and_foreign_ids_are_refused(coord_client, workspace):
     other = Round.objects.create(workspace=workspace, title="Synthetic other")
     foreign = Criterion.objects.create(round=other, text="Synthetic foreign")
@@ -105,6 +108,7 @@ def test_selection_is_validated_and_foreign_ids_are_refused(coord_client, worksp
 
 
 @pytest.mark.parametrize("count", [0, 6])
+@pytest.mark.ac("RND-8.3")
 def test_selection_count_is_one_to_five(coord_client, round_, count):
     ids = [
         Criterion.objects.create(round=round_, text=f"Synthetic {index}").pk
@@ -118,6 +122,7 @@ def test_selection_count_is_one_to_five(coord_client, round_, count):
     complete.assert_not_called()
 
 
+@pytest.mark.ac("RND-8.3")
 def test_case_cap_is_checked_before_ai(coord_client, round_, criteria):
     Case.objects.bulk_create(
         [
@@ -149,6 +154,7 @@ def test_case_cap_is_checked_before_ai(coord_client, round_, criteria):
         Failed("invalid-response"),
     ],
 )
+@pytest.mark.ac("RND-8.4")
 def test_gateway_failures_show_fixed_message_and_keep_selection(
     coord_client, round_, criteria, result
 ):
@@ -163,6 +169,7 @@ def test_gateway_failures_show_fixed_message_and_keep_selection(
     assert not Case.objects.exists()
 
 
+@pytest.mark.ac("RND-8.5")
 def test_invalid_reply_is_rejected_whole(coord_client, round_, criteria):
     fake = FakeProvider(Success(reply(one(extra="state"))))
     with mock.patch("ai.views.gateway.complete", return_value=fake.result):
@@ -173,6 +180,7 @@ def test_invalid_reply_is_rejected_whole(coord_client, round_, criteria):
     assert "Synthetic draft title" not in response.content.decode()
 
 
+@pytest.mark.ac("RND-8.4")
 def test_empty_reply_shows_no_drafts_message(coord_client, round_, criteria):
     with mock.patch("ai.views.gateway.complete", return_value=Success(reply())):
         response = coord_client.post(
@@ -183,6 +191,7 @@ def test_empty_reply_shows_no_drafts_message(coord_client, round_, criteria):
     )
 
 
+@pytest.mark.ac("RND-8.4")
 def test_all_empty_criteria_make_no_call(coord_client, round_):
     blank = Criterion.objects.create(round=round_, text="\u3164")
     with mock.patch("ai.views.gateway.complete") as complete:
@@ -195,6 +204,7 @@ def test_all_empty_criteria_make_no_call(coord_client, round_):
     complete.assert_not_called()
 
 
+@pytest.mark.ac("RND-8.2")
 def test_use_draft_prefills_without_saving(coord_client, round_, criteria):
     response = use(coord_client, round_, criteria)
     page = response.content.decode()
@@ -204,6 +214,7 @@ def test_use_draft_prefills_without_saving(coord_client, round_, criteria):
     assert not Case.objects.exists()
 
 
+@pytest.mark.ac("RND-8.2")
 def test_use_draft_submits_to_the_normal_case_route(coord_client, round_, criteria):
     page = use(coord_client, round_, criteria).content.decode()
     assert f'action="{reverse("rounds:case-new", args=[round_.pk])}"' in page
@@ -225,6 +236,7 @@ def test_foreign_selection_with_five_valid_criteria_shows_only_foreign_message(
     assert "Only their text is sent" in page
 
 
+@pytest.mark.ac("RND-8.9")
 def test_use_draft_cleans_text_and_ignores_foreign_ids(
     coord_client, workspace, round_, criteria
 ):
@@ -244,6 +256,7 @@ def test_use_draft_cleans_text_and_ignores_foreign_ids(
     assert not Case.objects.filter(criteria=foreign).exists()
 
 
+@pytest.mark.ac("RND-8.7")
 def test_use_draft_requires_coordinator(round_, criteria, tester):
     response = signed_in(tester).post(
         reverse("ai:use-draft", args=[round_.pk]),
@@ -258,6 +271,7 @@ def test_use_draft_requires_coordinator(round_, criteria, tester):
 
 
 @pytest.mark.parametrize("state", [Round.State.OPEN, Round.State.CLOSED])
+@pytest.mark.ac("RND-8.7")
 def test_drafting_pages_get_409_outside_draft(coord_client, round_, criteria, state):
     round_.state = state
     round_.save(update_fields=["state"])
@@ -265,6 +279,7 @@ def test_drafting_pages_get_409_outside_draft(coord_client, round_, criteria, st
     assert use(coord_client, round_, criteria).status_code == 409
 
 
+@pytest.mark.ac("RND-8.7")
 def test_foreign_origin_and_missing_token_are_refused(coord_client, round_, criteria):
     client = Client(enforce_csrf_checks=True)
     client.force_login(criteria[0].round.workspace.accounts.get(role="coordinator"))
@@ -275,3 +290,80 @@ def test_foreign_origin_and_missing_token_are_refused(coord_client, round_, crit
         HTTP_X_CSRFTOKEN=csrf_token(coord_client),
     )
     assert response.status_code == 403
+
+
+@pytest.mark.ac("RND-8.3")
+def test_five_selected_criteria_are_all_sent(coord_client, round_):
+    criteria = [
+        Criterion.objects.create(round=round_, text=f"Synthetic criterion {i}")
+        for i in range(5)
+    ]
+    with mock.patch(
+        "ai.views.gateway.complete", return_value=Success(reply())
+    ) as complete:
+        response = coord_client.post(
+            reverse("ai:draft", args=[round_.pk]),
+            {"criteria": [item.pk for item in criteria]},
+        )
+    assert response.status_code == 200
+    sent = json.loads(complete.call_args.args[2])
+    assert [item["label"] for item in sent["criteria"]] == [
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+    ]
+    assert [item["text"] for item in sent["criteria"]] == [
+        item.text for item in criteria
+    ]
+
+
+@pytest.mark.ac("RND-8.5")
+def test_deeply_nested_reply_is_unavailable_not_500(coord_client, round_, criteria):
+    nested = '{"drafts": ' + "[" * 2000 + "]" * 2000 + "}"
+    with mock.patch("ai.views.gateway.complete", return_value=Success(nested)):
+        response = coord_client.post(
+            reverse("ai:draft", args=[round_.pk]), {"criteria": [criteria[0].pk]}
+        )
+    assert response.status_code == 200
+    assert "Drafting is unavailable right now." in response.content.decode()
+
+
+@pytest.mark.ac("RND-8.9")
+def test_prefill_ignores_non_integer_huge_and_foreign_ids(
+    coord_client, round_, criteria
+):
+    response = coord_client.post(
+        reverse("ai:use-draft", args=[round_.pk]),
+        {
+            "title": "Synthetic title",
+            "steps": "Synthetic steps",
+            "expected_result": "Synthetic result",
+            "criteria": ["abc", "9" * 100, "0", str(criteria[1].pk)],
+        },
+    )
+    assert response.status_code == 200
+    form = response.context["form"]
+    assert form.initial["criteria"] == [criteria[1].pk]
+
+
+@pytest.mark.ac("RND-8.7")
+def test_html_and_line_breaks_in_draft_text_are_escaped(coord_client, round_, criteria):
+    markup = "\x3cscript\x3ealert(1)\x3c/script\x3e"
+    response = use(
+        coord_client, round_, criteria, title=markup, steps="line one\nline two"
+    )
+    page = response.content.decode()
+    assert "\x3cscript\x3e" not in page
+    assert "&lt;script&gt;" in page
+
+
+@pytest.mark.ac("RND-8.4")
+def test_quota_refusal_shows_fixed_message(coord_client, round_, criteria):
+    with mock.patch("ai.views.gateway.complete", return_value=Refused("busy-or-quota")):
+        response = coord_client.post(
+            reverse("ai:draft", args=[round_.pk]), {"criteria": [criteria[0].pk]}
+        )
+    assert response.status_code == 200
+    assert "Drafting is unavailable right now." in response.content.decode()

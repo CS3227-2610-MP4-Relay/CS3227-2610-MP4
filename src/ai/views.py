@@ -6,7 +6,7 @@ import logging
 from django.shortcuts import render
 from django.urls import reverse
 from django.views.decorators.cache import never_cache
-from django.views.decorators.debug import sensitive_post_parameters
+from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 
 from rounds.forms import CaseForm
 from rounds.models import Round
@@ -30,6 +30,7 @@ def _form(round_, data=None):
 @never_cache
 @coordinator_view(["GET", "POST"])
 @sensitive_post_parameters("criteria")
+@sensitive_variables("selected", "text", "data", "result", "parsed", "drafts", "error")
 def draft_page(request, round_id):
     """Show the drafting selection, then transient suggestions (RND-8.1-8.8)."""
     round_ = own_round(request, round_id)
@@ -112,6 +113,7 @@ def draft_page(request, round_id):
 @never_cache
 @coordinator_view(["POST"])
 @sensitive_post_parameters("title", "steps", "expected_result", "criteria")
+@sensitive_variables("posted", "own", "chosen", "initial", "form")
 def use_draft(request, round_id):
     """Pre-fill the normal New test case form from posted draft text (RND-8.2)."""
     round_ = own_round(request, round_id)

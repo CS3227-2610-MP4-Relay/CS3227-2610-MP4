@@ -14,16 +14,16 @@ Goal: one bounded, provider-independent gateway that feature code can call witho
 
 1. `spec:` gateway contract, technical/security links and this plan.
 2. `feat:` `ai` app with models, gateway, fake provider and tests; migrations.
-3. `test:` drafting wiring, route-matrix rows and documentation.
+3. `test:` AI route coverage, criterion-marked tests and documentation.
 
 ## Size
 
-The gateway adds one app, one migration and its tests. Drafting is tracked by #22 and must stay within its confirmed 300–380 non-test-line estimate.
+The gateway adds one app, three migrations and its tests. Drafting is tracked by #22; its 398 non-test source lines are within the 400-line hard budget, above the earlier 300–380 estimate by 18 lines after review repairs.
 
 ## Built checkpoints
 
 1. `spec:` the gateway contract, plan and the RND-8 implementation notice.
 2. `feat:` `ai` app, seeded deployment locks, gateway/fake provider, RND-8 pages and tests.
-3. `test:` access-matrix rows and documentation.
+3. `test:` AI route coverage, criterion-marked tests and documentation.
 
-The implementation uses the standard-library HTTP client, so no dependency was added. On 2026-10-29 the focused AI suite passed 68 tests, the rounds/accounts suites passed 801 tests, and the full AI branch suite passed 1106 tests plus 220 subtests. The live provider check is still pending a verified endpoint, model and credential.
+The implementation uses the standard-library HTTP client, so no dependency was added. On 2026-10-29 the focused AI suite passed 82 tests, the rounds/accounts suites passed 801 tests, and the full AI branch suite passed 1106 tests plus 220 subtests. The live provider check is still pending a verified endpoint, model and credential.

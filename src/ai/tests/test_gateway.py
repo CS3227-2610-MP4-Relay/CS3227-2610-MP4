@@ -8,7 +8,7 @@ import pytest
 from ai import gateway
 from ai.fakes import FakeProvider
 from ai.gateway import Failed, Refused, Success, complete
-from ai.models import CallSlot, Usage
+from ai.models import CallRecord, CallSlot
 
 
 @pytest.fixture
@@ -52,27 +52,37 @@ def test_expired_slot_does_not_block(user):
     assert complete(user, "", "{}", provider=FakeProvider(Success("{}"))).text == "{}"
 
 
+@pytest.mark.ac("RND-8.4")
 def test_user_quota_counts_failures(user):
-    Usage.objects.create(
-        scope=gateway.USER_CALLS_SCOPE,
-        key=str(user.pk),
-        window_start=gateway.timezone.now(),
-        count=gateway.USER_CALLS,
+    CallRecord.objects.bulk_create(
+        CallRecord(
+            scope=gateway.USER_CALLS_SCOPE,
+            key=str(user.pk),
+            created_at=gateway.timezone.now(),
+        )
+        for _ in range(gateway.USER_CALLS)
     )
     result = complete(user, "", "{}", provider=FakeProvider(Failed("failure")))
     assert result == Refused("busy-or-quota")
 
 
-def test_quota_window_resets(user):
-    Usage.objects.create(
-        scope=gateway.USER_CALLS_SCOPE,
-        key=str(user.pk),
-        window_start=gateway.timezone.now() - gateway.USER_WINDOW * 2,
-        count=gateway.USER_CALLS,
+@pytest.mark.ac("RND-8.4")
+def test_rolling_quota_expires_individual_calls(user):
+    now = gateway.timezone.now()
+    CallRecord.objects.bulk_create(
+        [
+            CallRecord(
+                scope=gateway.USER_CALLS_SCOPE,
+                key=str(user.pk),
+                created_at=now - gateway.USER_WINDOW * 2,
+            )
+            for _ in range(gateway.USER_CALLS)
+        ]
     )
     assert isinstance(
         complete(user, "", "{}", provider=FakeProvider(Success("{}"))), Success
     )
+    assert CallRecord.objects.filter(scope=gateway.USER_CALLS_SCOPE).count() == 1
 
 
 @pytest.mark.parametrize(
@@ -157,7 +167,38 @@ def test_transport_decodes_one_text_object(user, monkeypatch):
     monkeypatch.setenv("SOC_LLM_API_KEY", "secret")
     response = mock.MagicMock()
     response.__enter__.return_value = response
-    response.read.return_value = json.dumps({"text": "ok"}).encode()
+    response.read1.side_effect = [json.dumps({"text": "ok"}).encode(), b""]
     with mock.patch.object(gateway, "build_opener") as opener:
         opener.return_value.open.return_value = response
         assert complete(user, "", "{}") == Success("ok")
+
+
+@pytest.mark.ac("RND-8.5")
+def test_transport_accepts_a_20000_non_bmp_character_text(user, monkeypatch):
+    monkeypatch.setenv("SOC_LLM_ENDPOINT", "https://example.com/llm")
+    monkeypatch.setenv("SOC_LLM_MODEL", "synthetic")
+    monkeypatch.setenv("SOC_LLM_API_KEY", "secret")
+    response = mock.MagicMock()
+    response.__enter__.return_value = response
+    body = json.dumps({"text": "\U0001f600" * 20000}, ensure_ascii=False).encode()
+    response.read1.side_effect = [
+        body[index : index + 8192] for index in range(0, len(body), 8192)
+    ] + [b""]
+    with mock.patch.object(gateway, "build_opener") as opener:
+        opener.return_value.open.return_value = response
+        assert complete(user, "", "{}") == Success("\U0001f600" * 20000)
+
+
+@pytest.mark.ac("RND-8.4")
+def test_transport_enforces_the_whole_request_deadline(user, monkeypatch):
+    monkeypatch.setenv("SOC_LLM_ENDPOINT", "https://example.com/llm")
+    monkeypatch.setenv("SOC_LLM_MODEL", "synthetic")
+    monkeypatch.setenv("SOC_LLM_API_KEY", "secret")
+    response = mock.MagicMock()
+    response.__enter__.return_value = response
+    response.read1.return_value = b"x"
+    deadline = mock.patch.object(gateway.time, "monotonic", side_effect=[0, 31])
+    with mock.patch.object(gateway, "build_opener") as opener:
+        opener.return_value.open.return_value = response
+        with deadline:
+            assert complete(user, "", "{}") == Failed("timeout")

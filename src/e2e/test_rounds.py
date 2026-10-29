@@ -142,3 +142,35 @@ def test_empty_round_publish_is_refused_without_creating_build(page, browser_acc
     expect(page.get_by_role("heading", name="Builds", exact=True)).to_have_count(0)
     expect(page.get_by_role("heading", name=label, exact=True)).to_have_count(0)
     expect(page.get_by_role("button", name="Publish round", exact=True)).to_be_visible()
+
+
+@pytest.mark.ac("RND-8.1", "RND-8.2")
+def test_drafting_page_keeps_manual_workflow_when_unavailable(page, browser_accounts):
+    """Exercise the drafting page and its fallback without a provider call."""
+    sign_in_coordinator(page, browser_accounts)
+    create_draft_round(page, "Synthetic drafting browser round")
+    criterion = "The synthetic drafting criterion is visible."
+    page.get_by_role("link", name="Add acceptance criterion", exact=True).click()
+    page.get_by_label("Text", exact=True).fill(criterion)
+    page.get_by_role("button", name="Add acceptance criterion", exact=True).click()
+    page.get_by_role("link", name="Draft test cases with AI", exact=True).click()
+    expect(
+        page.get_by_text(
+            "Select 1 to 5 acceptance criteria. Only their text is sent to the "
+            "AI service. Suggestions are not saved; review each one before adding it.",
+            exact=True,
+        )
+    ).to_be_visible()
+    page.get_by_role("checkbox", name=criterion, exact=True).check()
+    page.get_by_role("button", name="Draft test cases", exact=True).click()
+    expect(
+        page.get_by_text(
+            "Drafting is unavailable right now. You can still add test cases yourself.",
+            exact=True,
+        )
+    ).to_be_visible()
+    expect(page.get_by_role("checkbox", name=criterion, exact=True)).to_be_checked()
+    page.get_by_role("link", name="Add test case", exact=True).click()
+    expect(
+        page.get_by_role("heading", name="New test case", exact=True)
+    ).to_be_visible()

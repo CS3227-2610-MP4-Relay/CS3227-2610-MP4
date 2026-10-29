@@ -2,6 +2,7 @@
 
 from django.urls import reverse
 
+from ai import urls as ai_urls
 from rounds import urls as rounds_urls
 from rounds.models import Case, CaseCriterion, Criterion, Round
 
@@ -48,6 +49,32 @@ def test_every_rounds_route_is_never_cached(coordinator, make_round):
             assert response.status_code == 200, url
     names = {pattern.name for pattern in rounds_urls.urlpatterns}
     assert {"close", "retest"} <= names
+
+
+def test_every_ai_route_is_never_cached(coordinator, make_round):
+    made = make_round()
+    criterion = Criterion.objects.create(round=made, text="Synthetic criterion")
+    ids = {"round_id": made.pk, "criterion_id": criterion.pk}
+    client = signed_in(coordinator, enforce_csrf_checks=True)
+    token = csrf_token(client)
+    for pattern in ai_urls.urlpatterns:
+        kwargs = {name: ids[name] for name in pattern.pattern.converters}
+        url = reverse(f"ai:{pattern.name}", kwargs=kwargs)
+        response = client.get(url)
+        if response.status_code == 405:
+            response = client.post(
+                url,
+                {
+                    "criteria": [criterion.pk],
+                    "title": "x",
+                    "steps": "y",
+                    "expected_result": "z",
+                },
+                HTTP_X_CSRFTOKEN=token,
+            )
+        assert response.status_code < 400, url
+        cache_control = response.get("Cache-Control", "")
+        assert "no-store" in cache_control and "private" in cache_control, url
 
 
 def test_publishing_and_the_open_round_page_are_never_cached(coordinator, make_round):

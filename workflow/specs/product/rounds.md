@@ -1,6 +1,6 @@
 # Test rounds
 
-Planning area `RND`. RND-1, RND-2, RND-3, RND-5, RND-6 and RND-7 are implemented; RND-4 and RND-8 are specified but not implemented yet, and RND-8 is blocked on the [shared LLM gateway](../ai/llm-gateway.md) (#6). See the [roles](../PRODUCT-SPEC.md#roles) and [accounts](accounts.md); data, routes and page titles are in the [technical spec](../TECHNICAL-SPEC.md#rounds), and controls in the [security spec](../SECURITY-SPEC.md#rounds-observations-and-history).
+Planning area `RND`. RND-1, RND-2, RND-3, RND-5, RND-6, RND-7 and RND-8 are implemented; RND-4 is specified but not implemented yet. See the [roles](../PRODUCT-SPEC.md#roles) and [accounts](accounts.md); data, routes and page titles are in the [technical spec](../TECHNICAL-SPEC.md#rounds), and controls in the [security spec](../SECURITY-SPEC.md#rounds-observations-and-history).
 
 A test round is a workspace's set of acceptance criteria and test cases, tested against named builds of the software under test. Only the workspace's Test Coordinator performs the actions below. What Beta Testers see and record, including the result format, belongs to [test results](results.md). RND-8 holds the pages of the [test-drafting AI feature](../ai/test-drafting.md); that contract holds what is sent to the model, the reply it accepts and its evaluation.
 

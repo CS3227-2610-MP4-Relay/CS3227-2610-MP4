@@ -21,9 +21,8 @@ The [security spec](../SECURITY-SPEC.md#ai-features-and-prompt-injection) owns t
 
 - A request whose serialized instructions plus data exceeds 8,000 characters is `Refused("input-too-large")` before any call.
 - Each user has at most one call in flight and the deployment has at most two. A row lock on `ai.CallSlot` reserves a slot before the call and releases it on every exit.
-- Quota is 20 calls per user per rolling hour and 200 per deployment per rolling hour, reserved atomically before the call. Failed, refused and timed-out calls count.
-- Reservation rows are `ai.CallSlot` (one row per user scope and one deployment row), holding an expiry timestamp. An expired slot is reusable; a live one refuses another call.
-- Usage rows are `ai.Usage` (scope, key, window start, count). Missing provider token metrics are recorded as unavailable, never zero. No prompt, source or reply text is stored.
+- Quota is 20 calls per user per rolling hour and 200 per deployment per rolling hour, reserved atomically before the call. Failed, refused and timed-out calls count. `ai.CallRecord` keeps one timestamp per counted call; rows older than the window are removed while the quota lock is held.
+- Reservation rows are `ai.CallSlot`: one row per user scope and two fixed deployment rows, holding an expiry timestamp. An expired slot is reusable; a live one refuses another call. `ai.Usage` rows are the per-user and deployment quota locks. Missing provider token metrics are recorded as unavailable, never zero. No prompt, source or reply text is stored.
 - There is no result cache. A future feature that adds one must isolate it by access scope and source version.
 
 ## Fake provider and verification

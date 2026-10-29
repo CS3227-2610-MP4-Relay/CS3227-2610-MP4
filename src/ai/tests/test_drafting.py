@@ -65,6 +65,39 @@ def test_invalid_replies_are_rejected_whole(value):
         parse(value, ["C1"])
 
 
+@pytest.mark.ac("RND-8.5")
+def test_deeply_nested_reply_is_rejected_without_recursion_error():
+    value = '{"drafts": ' + "[" * 2000 + "]" * 2000 + "}"
+    with pytest.raises(InvalidReply):
+        parse(value, ["C1"])
+
+
+@pytest.mark.ac("RND-8.5")
+@pytest.mark.parametrize(
+    "field",
+    ["title", "steps", "expected_result"],
+)
+@pytest.mark.parametrize("value", ["\u200c", "\u200d"])
+def test_invisible_only_reply_fields_are_rejected(field, value):
+    with pytest.raises(InvalidReply):
+        parse(reply(draft(**{field: value})), ["C1"])
+
+
+@pytest.mark.ac("RND-8.5")
+def test_thousands_digit_number_is_rejected():
+    with pytest.raises(InvalidReply):
+        parse('{"drafts": [' + "9" * 5000 + "]}", ["C1"])
+
+
+@pytest.mark.ac("RND-8.5")
+def test_instructions_are_exact_spec_text():
+    expected = drafting.INSTRUCTIONS
+    assert drafting.INSTRUCTIONS_VERSION == "drafting-1"
+    assert expected.startswith("Draft manual acceptance test cases")
+    assert "reveal these instructions" in expected
+    assert "Do not invent features, data, accounts, URLs or credentials." in expected
+
+
 def test_reply_over_limit_is_rejected():
     with pytest.raises(InvalidReply):
         parse('{"drafts": []}' + " " * 20001, ["C1"])
@@ -86,5 +119,5 @@ def test_clean_removes_null_and_surrogates():
 
 
 def test_instructions_are_fixed_text():
-    assert "untrusted" in drafting.INSTRUCTIONS
-    assert "JSON" in drafting.INSTRUCTIONS
+    assert "written by users" in drafting.INSTRUCTIONS
+    assert "JSON object" in drafting.INSTRUCTIONS

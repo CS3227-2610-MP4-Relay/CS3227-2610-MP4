@@ -80,6 +80,6 @@ Criteria: RND-8.1 to RND-8.9, nine, one above the guideline. It stays reviewable
 
 - [x] Checkpoint 1: specs and plan (`d65f7df`, `13e8e75`).
 - [x] Repair round 1: specs and plan (`83dbc7a`, `440de48`).
-- [ ] Repair round 2: specs and plan (on `440de48`).
+- [x] Repair round 2: specs and plan (on `440de48`).
 - [ ] Human and Whimsyturtle confirmation in the PR.
-- [ ] Implementation slice for RND-8, after #6 provides the gateway and its fake provider.
+- [x] Implementation slice for RND-8, using the fake provider; live evaluation remains an operator step.

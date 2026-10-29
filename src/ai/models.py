@@ -30,3 +30,16 @@ class Usage(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["scope", "key"], name="ai_usage_scope_key")
         ]
+
+
+class CallRecord(models.Model):
+    """One counted gateway call, for the rolling quota window."""
+
+    scope = models.CharField(max_length=32)
+    key = models.CharField(max_length=64)
+    created_at = models.DateTimeField()
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["scope", "key", "created_at"]),
+        ]
