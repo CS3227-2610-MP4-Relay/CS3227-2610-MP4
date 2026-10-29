@@ -285,6 +285,9 @@ def test_error_reports_hide_the_key_and_request_text(
     expected = _Escape if escape == "transport" else DatabaseError
     with pytest.raises(expected) as info:
         complete(user, "secret-instructions-text", '{"criteria": "secret-data-text"}')
+    if escape == "transport":
+        now = gateway.timezone.now()
+        assert not CallSlot.objects.filter(expires_at__gt=now).exists()
     frames = ExceptionReporter(
         None, info.type, info.value, info.tb
     ).get_traceback_frames()
