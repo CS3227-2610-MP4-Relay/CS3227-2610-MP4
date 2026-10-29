@@ -42,7 +42,7 @@ Size estimate: about 400 changed lines in total, most of them removals (the hand
 
 ### Outcome
 
-- **Commits:** `a59c4bb` (spec and plan), `a852c2d` (aiohttp transport, pins, tests), `96fc08d` (Developer Guide), then repair round 1: `c1ee651` (release allowlist) and `1863017` (gateway errors and tests).
+- **Commits:** `a59c4bb` (spec and plan), `a852c2d` (aiohttp transport, pins, tests), `96fc08d` (Developer Guide), then repair round 1: `c1ee651` (release allowlist), `1863017` (gateway errors and tests) and `0e9d7f6` (plan); repair round 2: `33db58f` (spec) and `2158659` (plan); repair round 3: `668de0a` (test), `4168172` (spec) and `8262023` (plan).
 - **Size:** 410 changed lines (+223/−187) from `1079285` to `1863017`, against the ~400 estimate; `gateway.py` went from 395 to 322 lines.
 - **Coordinator decisions:** the call runs on its own event loop, closed with `loop.close()`, because `asyncio.run`, which `async_to_sync` also uses, waits for a hung lookup's thread (measured with `asyncio.run`: 6.01 s against a 1 s timeout); this runner choice is to be named to Whimsyturtle on #91. Any `Exception` in the transport is a fixed outcome (`ValueError` and, from repair round 1, any other `Exception` are `Failed("transport")`); a `BaseException` propagates after the slots are released.
 - **Dropped tests:** per-read trickle and stalled-TLS-handshake tests (per-phase guarantees the review dropped); the old resolver-thread timeout test (replaced by a hung-lookup test that guards the runner); the raw-response and chunk-size-line cap tests (the cap is now on the body; replaced by at-cap, over-cap and chunked over-cap tests).
@@ -53,7 +53,7 @@ Size estimate: about 400 changed lines in total, most of them removals (the hand
   - Added statuses 201 and 404. The spec notes that aiohttp may round the timeout up by under a second.
   - The release archive omitted `src/ai`; it is now packed, with a test that every local app is.
   - Each new test failed against its mutant or the old allowlist.
-- **Checks:** focused `src/ai` tests and Ruff at each checkpoint; the full checks (Django check, makemigrations check, Ruff, pytest) passed on `96fc08d` (1,859 tests) and after repair round 1 on `1863017` plus the plan (1,868 passed, 220 subtests).
+- **Checks:** focused `src/ai` tests and Ruff at each checkpoint; the full checks (Django check, makemigrations check, Ruff, pytest) passed on `96fc08d` (1,859 tests) after repair round 1 on `1863017` plus the plan (1,868 passed, 220 subtests), and again on `2158659` and `8262023` (1,868 passed, 220 subtests each, run by the coordinator).
 - **Redundant clause:** the `ValueError` clause in `_transport` is now covered by the catch-all and is kept as documentation.
 - **History deviation:** `1863017` carried two spec edits in a `fix:` commit rather than a separate `spec:` commit: the exception sentence and the timeout rounding clause. Their reason is this Outcome section; history was not rewritten.
 - **Repair round 3 (approved by the human, 2026-10-30):** the error-report test now also checks that the slots are released when a `BaseException` escapes; the live-switch TLS bullet separates `SSLKEYLOGFILE` from the CA-store variables; the socket residual states both causes; and the decisions line distinguishes `Exception` from `BaseException`.
