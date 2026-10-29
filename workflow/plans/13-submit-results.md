@@ -23,8 +23,12 @@ Only the coordinator changes Git state. Builder yields after each unit for scope
 
 ## Current checkpoint and evidence
 
-Checkpoint 1: specifications and plan prepared; no implementation or test files changed. Scope snapshot supplied by coordinator: `%TEMP%/relay-13-builder-plan.json`. Spec-before-code evidence is this checkpoint's reviewed diff and subsequent coordinator commit.
+Checkpoint 1 committed as `fceea25da4929d73dfd94737b357ac4e131700ac`; its specs precede implementation. Checkpoint 2 scope snapshot: `%TEMP%/relay-13-builder-persistence.json`.
+
+Checkpoint 2 adds `rounds.Result`, migration `0005_result`, `rounds.results` and focused service tests. Red: `pytest src/rounds/tests/test_result_services.py -q` failed collection because the new service did not exist. Initial implementation run: 21 passed, one constraint-test fixture failed by hitting varchar length before its intended outcome CHECK; changed the invalid fixture from seven characters to four to isolate that CHECK. Final focused run: 23 passed, including nine actual PostgreSQL lock-wait races; targeted Ruff check/format passed and `makemigrations --check --dry-run --settings=relay.settings.test` reported no changes. Domain snapshots cover unchanged round/case/criterion/link/build data and storage rollback. No existing test was weakened or removed.
+
+Source budget after checkpoint 2: 109 added non-test source lines excluding the 31-line migration; form/view/template/route work is forecast to bring the total to approximately 270–330, within the confirmed estimate. `results.entry(..., write=True)` owns authorization and the atomic lock; form validation and `results.save` run inside that context in checkpoint 3.
 
 Discovery reused existing workspace helpers, serialized round writes, text filters and browser harness. PostgreSQL is available at `127.0.0.1:55432` under the existing test settings; no installation is authorized or needed. Agent trigger/context, actual checks, resource deltas and handoffs are recorded by the coordinator; unavailable telemetry must remain unavailable.
 
-Next: coordinator reviews/commits checkpoint 1, captures a fresh scope snapshot, and assigns checkpoint 2. No open product decision remains for the confirmed scope.
+Next: coordinator reviews/commits checkpoint 2, captures a fresh scope snapshot, and assigns checkpoint 3. No open product decision remains for the confirmed scope.
