@@ -1,6 +1,6 @@
 # Test results
 
-Planning area `RES`; RES-1 implements tester availability and RES-2 implements private draft saving and immutable submission. See the [product spec](../PRODUCT-SPEC.md), [tester routes](../TECHNICAL-SPEC.md#tester-routes) and [access controls](../SECURITY-SPEC.md#sign-in-and-access-control).
+Planning area `RES`; RES-1 implements tester availability, RES-2 implements private draft saving and immutable submission, and RES-3 implements private read-only history. See the [product spec](../PRODUCT-SPEC.md), [tester routes](../TECHNICAL-SPEC.md#tester-routes) and [access controls](../SECURITY-SPEC.md#sign-in-and-access-control).
 
 ## RES-1 See the tests available to me
 
