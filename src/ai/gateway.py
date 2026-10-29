@@ -1,18 +1,26 @@
-"""Bounded provider-independent access to Relay's shared SoC LLM."""
+"""Bounded provider-independent access to Relay's shared SoC LLM.
 
+Every limit here is a proposal pending confirmation (workflow/specs/ai/llm-gateway.md),
+and live calls stay off while `settings.SOC_LLM_LIVE` is False.
+"""
+
+import http.client
+import io
 import json
 import logging
 import os
+import socket
+import ssl
+import threading
 import time
 from dataclasses import dataclass
 from datetime import timedelta
-from json import JSONDecodeError
-from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-from django.db import connection, transaction
+from django.conf import settings
+from django.db import DatabaseError, connection, transaction
 from django.utils import timezone
+from django.views.decorators.debug import sensitive_variables
 
 from .models import CallRecord, CallSlot
 
@@ -22,6 +30,7 @@ INPUT_LIMIT = 8000
 REPLY_LIMIT = 20000
 RESPONSE_BYTES = REPLY_LIMIT * 12 + 4096
 TOTAL_TIMEOUT = 30
+RELEASE_MARGIN = 5
 USER_CALLS = 20
 DEPLOYMENT_CALLS = 200
 USER_WINDOW = timedelta(hours=1)
@@ -56,14 +65,6 @@ class Failed:
     code: str
 
 
-class _NoRedirect(HTTPRedirectHandler):
-    """Never follow a provider redirect."""
-
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        """Refuse the redirect by raising its HTTP error."""
-        raise HTTPError(newurl, code, msg, headers, fp)
-
-
 def _user_key(user):
     return str(user.pk)
 
@@ -80,7 +81,10 @@ def _quota(scope, key, limit, window, now):
 
 
 def _reserve(user, now):
-    """Atomically reserve quota and both in-flight slots, or refuse."""
+    """Atomically reserve quota and both in-flight slots, or return None.
+
+    Returns the user slot, the deployment slot and the expiry they now hold.
+    """
     with transaction.atomic():
         user_slot, _ = CallSlot.objects.select_for_update().get_or_create(
             scope=USER_SCOPE, key=_user_key(user), defaults={"expires_at": now}
@@ -94,8 +98,8 @@ def _reserve(user, now):
         )
         if len(deployment) != DEPLOYMENT_IN_FLIGHT:
             return None
-        live = [slot for slot in deployment if slot.expires_at > now]
-        if len(live) >= DEPLOYMENT_IN_FLIGHT:
+        free = [slot for slot in deployment if slot.expires_at <= now]
+        if not free:
             return None
         if not _quota(USER_CALLS_SCOPE, _user_key(user), USER_CALLS, USER_WINDOW, now):
             transaction.set_rollback(True)
@@ -105,62 +109,30 @@ def _reserve(user, now):
         ):
             transaction.set_rollback(True)
             return None
-        expires = now + timedelta(seconds=TOTAL_TIMEOUT)
-        user_slot.expires_at = expires
-        user_slot.save(update_fields=["expires_at"])
-        reusable = next(slot for slot in deployment if slot.expires_at <= now)
-        reusable.expires_at = expires
-        reusable.save(update_fields=["expires_at"])
-        return user_slot, reusable
+        expires = now + timedelta(seconds=TOTAL_TIMEOUT + RELEASE_MARGIN)
+        CallSlot.objects.filter(pk__in=[user_slot.pk, free[0].pk]).update(
+            expires_at=expires
+        )
+        return user_slot, free[0], expires
 
 
-def _release(user_slot, deployment_slot):
-    """Release the two slots reserved by one call after every exit."""
-    now = timezone.now()
-    for slot in (user_slot, deployment_slot):
-        if slot is not None and slot.expires_at > now:
-            slot.expires_at = now
-            slot.save(update_fields=["expires_at"])
-
-
-def _response_socket(response):
-    """Return the HTTP response's socket when it exposes one, else None."""
-    try:
-        return response.fp.raw._sock
-    except AttributeError:
-        return None
-
-
-def _deadline_read(response, deadline):
-    """Read a bounded response, refusing when the whole-call deadline passes."""
-    chunks, total = [], 0
-    while True:
-        if time.monotonic() >= deadline:
-            raise TimeoutError
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            raise TimeoutError
-        # Bound the blocking socket operation by the time left in the call.
-        sock = _response_socket(response)
-        if sock is not None:
-            sock.settimeout(remaining)
-        chunk = response.read1(8192)
-        if time.monotonic() > deadline:
-            raise TimeoutError
-        if not chunk:
-            return b"".join(chunks)
-        chunks.append(chunk)
-        total += len(chunk)
-        if total > RESPONSE_BYTES:
-            raise ValueError
+def _release(user_slot, deployment_slot, expires):
+    """Free this call's two slots, unless a later call already holds them."""
+    CallSlot.objects.filter(
+        pk__in=[user_slot.pk, deployment_slot.pk], expires_at=expires
+    ).update(expires_at=timezone.now())
 
 
 def _endpoint():
-    """Return the verified HTTPS endpoint, or None when unconfigured."""
+    """Return the parsed fixed HTTPS endpoint, or None when unconfigured."""
     url = os.environ.get("SOC_LLM_ENDPOINT", "").strip()
-    if not url:
+    if not url or any(char.isspace() or not char.isprintable() for char in url):
         return None
     parts = urlsplit(url)
+    try:
+        parts.port  # noqa: B018 - raises ValueError for an invalid port
+    except ValueError:
+        return None
     if (
         parts.scheme != "https"
         or not parts.hostname
@@ -169,90 +141,211 @@ def _endpoint():
         or parts.fragment
     ):
         return None
-    return url
+    return parts
 
 
-def _valid_text_object(value):
-    """Accept exactly one JSON object with one string `text` field."""
-    if type(value) is not dict or set(value) != {"text"}:
-        return None
-    text = value["text"]
-    if type(text) is not str or len(text) > REPLY_LIMIT:
-        return None
-    return text
+def _remaining(deadline):
+    """Return the seconds left before `deadline`, or raise TimeoutError."""
+    left = deadline - time.monotonic()
+    if left <= 0:
+        raise TimeoutError
+    return left
 
 
-def _transport(instructions, data):
-    """Send one request without redirects or retries, returning a result."""
-    endpoint = _endpoint()
-    api_key = os.environ.get("SOC_LLM_API_KEY", "").strip()
-    model = os.environ.get("SOC_LLM_MODEL", "").strip()
-    if endpoint is None or not api_key or not model:
-        return Refused("not-configured")
-    body = json.dumps(
-        {"model": model, "instructions": instructions, "data": data},
-        ensure_ascii=False,
-    ).encode("utf-8")
-    request = Request(
-        endpoint,
-        data=body,
-        method="POST",
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-    )
-    opener = build_opener(_NoRedirect)
-    started = time.monotonic()
+def _resolve(host, port, deadline):
+    """Resolve `host` in a helper thread, abandoned at the deadline."""
+    found = {}
+    done = threading.Event()
+
+    def lookup():
+        try:
+            found["addresses"] = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+        except OSError as error:
+            found["error"] = error
+        finally:
+            done.set()
+
+    threading.Thread(target=lookup, daemon=True).start()
+    if not done.wait(_remaining(deadline)):
+        raise TimeoutError
+    if "error" in found:
+        raise found["error"]
+    return found["addresses"]
+
+
+def _connect(host, port, deadline):
+    """Open a TCP connection to `host` within the deadline (the network step)."""
+    error = OSError("no address")
+    for family, kind, proto, _, address in _resolve(host, port, deadline):
+        sock = socket.socket(family, kind, proto)
+        try:
+            sock.settimeout(_remaining(deadline))
+            sock.connect(address)
+        except TimeoutError:
+            sock.close()
+            raise
+        except OSError as failure:
+            sock.close()
+            error = failure
+            continue
+        return sock
+    raise error
+
+
+def _tls_context():
+    """Return a verifying TLS context: certificate and hostname checks on."""
+    return ssl.create_default_context()
+
+
+@sensitive_variables("payload", "chunks", "chunk")
+def _exchange(parts, payload, deadline):
+    """Send `payload` and return the raw response, all within the deadline."""
+    sock = _connect(parts.hostname, parts.port or 443, deadline)
     try:
-        with opener.open(request, timeout=TOTAL_TIMEOUT) as response:
-            raw = _deadline_read(response, started + TOTAL_TIMEOUT)
-    except HTTPError as error:
-        if error.code in {400, 401, 403, 429}:
-            return Refused("quota" if error.code == 429 else "provider-refused")
-        return Failed("transport")
-    except TimeoutError:
-        return Failed("timeout")
-    except URLError as error:
-        if isinstance(error.reason, TimeoutError):
-            return Failed("timeout")
-        return Failed("transport")
-    except OSError:
-        return Failed("transport")
-    except ValueError:
-        return Failed("invalid-response")
-    if time.monotonic() - started > TOTAL_TIMEOUT:
-        return Failed("timeout")
+        sock.settimeout(_remaining(deadline))
+        sock = _tls_context().wrap_socket(sock, server_hostname=parts.hostname)
+        sent = 0
+        while sent < len(payload):
+            sock.settimeout(_remaining(deadline))
+            sent += sock.send(payload[sent : sent + 16384])
+        chunks, total = [], 0
+        while True:
+            sock.settimeout(_remaining(deadline))
+            chunk = sock.recv(65536)
+            _remaining(deadline)
+            if not chunk:
+                return b"".join(chunks)
+            chunks.append(chunk)
+            total += len(chunk)
+            if total > RESPONSE_BYTES:
+                raise ValueError
+    finally:
+        sock.close()
+
+
+class _Received:
+    """Present received bytes as a socket so http.client can parse them."""
+
+    def __init__(self, raw):
+        self.raw = raw
+
+    def makefile(self, *args, **kwargs):
+        return io.BytesIO(self.raw)
+
+
+@sensitive_variables("raw", "response")
+def _parse_http(raw):
+    """Return the status and body of a complete raw HTTP response."""
+    response = http.client.HTTPResponse(_Received(raw), method="POST")
+    response.begin()
+    return response.status, response.read()
+
+
+def _no_repeated_keys(pairs):
+    """Build a dict, refusing a repeated key."""
+    value = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError
+        value[key] = item
+    return value
+
+
+def _reject_constant(value):
+    raise ValueError(value)
+
+
+@sensitive_variables("body", "value", "text")
+def _envelope(body):
+    """Map a 2xx body to Success, a refusal or an invalid-response failure."""
     try:
-        decoded = raw.decode("utf-8")
         value = json.loads(
-            decoded,
-            parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)),
+            body.decode("utf-8"),
+            object_pairs_hook=_no_repeated_keys,
+            parse_constant=_reject_constant,
         )
-    except (UnicodeDecodeError, JSONDecodeError, ValueError, RecursionError):
+    except (ValueError, RecursionError):
         return Failed("invalid-response")
     if type(value) is dict and set(value) == {"refusal"}:
         if type(value["refusal"]) is str:
             return Refused("provider-refused")
         return Failed("invalid-response")
-    text = _valid_text_object(value)
-    if text is None:
+    if type(value) is not dict or set(value) != {"text"}:
+        return Failed("invalid-response")
+    text = value["text"]
+    if (
+        type(text) is not str
+        or len(text) > REPLY_LIMIT
+        or any(0xD800 <= ord(char) <= 0xDFFF for char in text)
+    ):
         return Failed("invalid-response")
     return Success(text)
 
 
+@sensitive_variables(
+    "api_key", "head", "body", "payload", "instructions", "data", "raw"
+)
+def _transport(instructions, data, deadline):
+    """Send one request without redirects or retries, returning a result."""
+    if not settings.SOC_LLM_LIVE:
+        return Refused("live-off")
+    parts = _endpoint()
+    api_key = os.environ.get("SOC_LLM_API_KEY", "").strip()
+    model = os.environ.get("SOC_LLM_MODEL", "").strip()
+    usable_key = api_key.isascii() and api_key.isprintable()
+    if parts is None or not model or not api_key or not usable_key:
+        return Refused("not-configured")
+    try:
+        body = json.dumps(
+            {"model": model, "instructions": instructions, "data": data},
+            ensure_ascii=False,
+        ).encode("utf-8")
+        target = (parts.path or "/") + (f"?{parts.query}" if parts.query else "")
+        head = (
+            f"POST {target} HTTP/1.1\r\nHost: {parts.netloc}\r\n"
+            f"Authorization: Bearer {api_key}\r\n"
+            "Content-Type: application/json\r\nAccept: application/json\r\n"
+            f"Content-Length: {len(body)}\r\nConnection: close\r\n\r\n"
+        )
+        payload = head.encode("ascii") + body
+    except UnicodeError:
+        return Failed("transport")
+    try:
+        raw = _exchange(parts, payload, deadline)
+        status, body = _parse_http(raw)
+    except TimeoutError:
+        return Failed("timeout")
+    except (OSError, http.client.HTTPException):
+        return Failed("transport")
+    except ValueError:
+        return Failed("invalid-response")
+    if status in {400, 401, 403}:
+        return Refused("provider-refused")
+    if status == 429:
+        return Refused("quota")
+    if not 200 <= status < 300:
+        return Failed("transport")
+    return _envelope(body)
+
+
+@sensitive_variables("instructions", "data", "result")
 def complete(user, instructions, data, provider=None):
     """Run one bounded call for `user`, or return a refusal/failure.
 
-    `provider` is a test/fake seam; it must expose `complete(instructions, data)`
-    returning Success, Refused or Failed. The real provider is the HTTP transport.
+    `provider` is a test seam exposing `complete(instructions, data)` that
+    returns Success, Refused or Failed; without it the call uses the HTTPS
+    transport, which refuses while live calls are off. A storage error while
+    reserving or releasing is raised for the feature's own error handling.
     """
+    if provider is None and not settings.SOC_LLM_LIVE:
+        logger.info("LLM gateway outcome: %s", "live-off")
+        return Refused("live-off")
     if len(instructions) + len(data) > INPUT_LIMIT:
         return Refused("input-too-large")
-    now = timezone.now()
-    reserved = _reserve(user, now)
+    reserved = _reserve(user, timezone.now())
     if reserved is None:
         return Refused("busy-or-quota")
+    deadline = time.monotonic() + TOTAL_TIMEOUT
     try:
         # No transaction or round lock is open here; do not hold a database
         # connection through a slow provider call.
@@ -263,10 +356,12 @@ def complete(user, instructions, data, provider=None):
                 result = provider.complete(instructions, data)
             except TimeoutError:
                 result = Failed("timeout")
+            except DatabaseError:
+                raise
             except Exception:  # noqa: BLE001 - provider errors map to a fixed code
                 result = Failed("provider-error")
         else:
-            result = _transport(instructions, data)
+            result = _transport(instructions, data, deadline)
         if not isinstance(result, (Success, Refused, Failed)):
             result = Failed("provider-error")
         code = "success" if isinstance(result, Success) else result.code

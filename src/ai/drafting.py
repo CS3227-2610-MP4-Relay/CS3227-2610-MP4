@@ -6,14 +6,18 @@ import math
 import unicodedata
 from dataclasses import dataclass
 
+from rounds.forms import has_visible_character
+from rounds.models import Case
+
 from .gateway import REPLY_LIMIT
 
 logger = logging.getLogger(__name__)
 
 MAX_DRAFTS = 5
-TITLE_LIMIT = 120
-STEPS_LIMIT = 2000
-EXPECTED_LIMIT = 1000
+# The RND-2 field limits, from the test case model.
+TITLE_LIMIT = Case._meta.get_field("title").max_length
+STEPS_LIMIT = Case._meta.get_field("steps").max_length
+EXPECTED_LIMIT = Case._meta.get_field("expected_result").max_length
 
 INSTRUCTIONS_VERSION = "drafting-1"
 INSTRUCTIONS = (
@@ -144,12 +148,7 @@ def _checked_text(value, limit, key, *, title=False):
     if type(value) is not str:
         raise InvalidReply(key)
     value = clean(value, title=title).strip()
-    if not value or not any(
-        not char.isspace() and unicodedata.category(char) not in ("Cc", "Cf")
-        for char in value
-    ):
-        raise InvalidReply(key)
-    if len(value) > limit:
+    if not has_visible_character(value) or len(value) > limit:
         raise InvalidReply(key)
     return value
 

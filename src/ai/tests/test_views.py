@@ -4,8 +4,10 @@ import json
 from unittest import mock
 
 import pytest
+from django.db import DatabaseError
 from django.test import Client
 from django.urls import reverse
+from django.views.debug import ExceptionReporter
 
 from ai import drafting
 from ai.fakes import FakeProvider
@@ -416,3 +418,45 @@ def test_view_over_input_limit_shows_unavailable(coord_client, round_, criteria)
         )
     assert response.status_code == 200
     assert "Drafting is unavailable right now." in response.content.decode()
+
+
+@pytest.mark.ac("RND-8.4")
+def test_storage_error_from_the_gateway_gives_503(coord_client, round_, criteria):
+    with mock.patch("ai.views.gateway.complete", side_effect=DatabaseError("x")):
+        response = coord_client.post(
+            reverse("ai:draft", args=[round_.pk]), {"criteria": [criteria[0].pk]}
+        )
+    assert response.status_code == 503
+
+
+def test_error_reports_hide_covered_criterion_text(coord_client, round_):
+    secret = Criterion.objects.create(round=round_, text="Secret criterion text")
+    broken = [drafting.Draft("t", "s", "e", ("C1", "C9"))]
+    with (
+        mock.patch("ai.views.gateway.complete", return_value=Success("{}")),
+        mock.patch("ai.views.drafting.parse", return_value=broken),
+        pytest.raises(TypeError) as info,
+    ):
+        coord_client.post(
+            reverse("ai:draft", args=[round_.pk]), {"criteria": [secret.pk]}
+        )
+    frames = ExceptionReporter(
+        None, info.type, info.value, info.tb
+    ).get_traceback_frames()
+    views = [frame for frame in frames if frame["filename"].endswith("ai/views.py")]
+    assert [frame["function"] for frame in views] == ["draft_page"]
+    assert "Secret criterion text" not in repr([frame["vars"] for frame in views])
+
+
+@pytest.mark.parametrize(
+    ("field", "limit"),
+    [("title", 120), ("steps", 2000), ("expected_result", 1000)],
+)
+@pytest.mark.ac("RND-8.9")
+def test_prefill_ignores_a_field_over_twice_its_limit(
+    coord_client, round_, criteria, field, limit
+):
+    at_bound = use(coord_client, round_, criteria, **{field: "a" * (2 * limit)})
+    assert at_bound.context["form"][field].value() == "a" * (2 * limit)
+    over = use(coord_client, round_, criteria, **{field: "a" * (2 * limit + 1)})
+    assert over.context["form"][field].value() == ""

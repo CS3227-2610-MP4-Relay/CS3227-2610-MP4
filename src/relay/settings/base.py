@@ -55,3 +55,8 @@ CSRF_COOKIE_SAMESITE = "Lax"
 # Secure everywhere except local development, which turns it off.
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+
+# Live SoC LLM calls stay off until the provider's API, retention and training
+# terms and limits are confirmed. Code-level, never read from the environment,
+# so turning it on needs a reviewed change (workflow/specs/ai/llm-gateway.md).
+SOC_LLM_LIVE = False

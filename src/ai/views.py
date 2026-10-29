@@ -3,6 +3,7 @@
 import json
 import logging
 
+from django.db import DatabaseError
 from django.shortcuts import render
 from django.urls import reverse
 from django.views.decorators.cache import never_cache
@@ -19,6 +20,14 @@ from .forms import DraftSelectForm
 logger = logging.getLogger(__name__)
 
 
+def _posted_text(request, name, limit, *, title=False):
+    """Return a cleaned posted field, or "" when over twice its RND-2 limit."""
+    value = request.POST.get(name, "")
+    if len(value) > 2 * limit:
+        return ""
+    return drafting.clean(value, title=title)
+
+
 def _form(round_, data=None):
     form = DraftSelectForm(round_, data)
     form.fields["criteria"].error_messages.update(
@@ -30,7 +39,17 @@ def _form(round_, data=None):
 @never_cache
 @coordinator_view(["GET", "POST"])
 @sensitive_post_parameters("criteria")
-@sensitive_variables("selected", "text", "data", "result", "parsed", "drafts", "error")
+@sensitive_variables(
+    "selected",
+    "text",
+    "data",
+    "result",
+    "parsed",
+    "drafts",
+    "error",
+    "by_label",
+    "context",
+)
 def draft_page(request, round_id):
     """Show the drafting selection, then transient suggestions (RND-8.1-8.8)."""
     round_ = own_round(request, round_id)
@@ -58,6 +77,8 @@ def draft_page(request, round_id):
                 data = json.dumps({"criteria": text}, ensure_ascii=False)
                 try:
                     result = gateway.complete(request.user, drafting.INSTRUCTIONS, data)
+                except DatabaseError:
+                    raise
                 except Exception:  # noqa: BLE001 - fixed user-facing failure
                     logger.warning("Drafting gateway raised")
                     result = gateway.Failed("provider-error")
@@ -123,9 +144,11 @@ def use_draft(request, round_id):
     own = {str(item.pk): item for item in round_.criteria.all()}
     chosen = [item for key, item in own.items() if key in posted]
     initial = {
-        "title": drafting.clean(request.POST.get("title", ""), title=True),
-        "steps": drafting.clean(request.POST.get("steps", "")),
-        "expected_result": drafting.clean(request.POST.get("expected_result", "")),
+        "title": _posted_text(request, "title", drafting.TITLE_LIMIT, title=True),
+        "steps": _posted_text(request, "steps", drafting.STEPS_LIMIT),
+        "expected_result": _posted_text(
+            request, "expected_result", drafting.EXPECTED_LIMIT
+        ),
         "criteria": [item.pk for item in chosen],
     }
     form = CaseForm(round_, initial=initial)

@@ -18,20 +18,6 @@ class CallSlot(models.Model):
         ]
 
 
-class Usage(models.Model):
-    """A reserved place for future token metrics; not a quota lock."""
-
-    scope = models.CharField(max_length=32)
-    key = models.CharField(max_length=64)
-    window_start = models.DateTimeField()
-    count = models.PositiveIntegerField(default=0)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["scope", "key"], name="ai_usage_scope_key")
-        ]
-
-
 class CallRecord(models.Model):
     """One counted gateway call, for the rolling quota window."""
 
