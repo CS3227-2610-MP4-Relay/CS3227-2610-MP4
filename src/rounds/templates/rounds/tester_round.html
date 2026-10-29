@@ -15,6 +15,7 @@
 <ul>{% for criterion in case.criteria.all %}<li>{{ criterion.text|isolated_lines }}</li>{% endfor %}</ul>
 {% if case.current_build %}<h4>Current build</h4>
 <p>{{ case.current_build.label|isolated_lines }}</p>{% endif %}
+{% if round.state == "open" and case.current_build %}<p><a href="{% url 'accounts:tester-result' round.id case.id case.current_build.id %}">Record result</a></p>{% endif %}
 {% endfor %}
 <p><a href="{% url 'accounts:tester' %}">Tester home</a></p>
 {% endblock %}
