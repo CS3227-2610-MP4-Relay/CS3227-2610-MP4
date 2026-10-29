@@ -54,6 +54,7 @@ Builder choices in the 2026-10-29 repair, pending the same confirmation:
 - **B5 Pre-fill bound (S7):** a "Use this draft" text field longer than twice its RND-2 limit is ignored, as if not posted, before cleaning; twice allows every line break to come back as CR LF.
 - **B6 Remove `ai.Usage` (S7):** nothing records token metrics, and its seeded row showed a count of 0 where the contract requires "unavailable", so the model and row are removed by a migration; a slice that records metrics specifies its own table.
 - **B7 Deadline mechanics (S1):** the deadline starts at reservation; name resolution runs in a helper thread that is abandoned at the deadline; slots expire 35 seconds after reservation, the 30-second bound plus a 5-second release margin.
+- **B8 Seeded slots in tests (repair D):** an autouse fixture in `src/ai/tests/conftest.py` recreates the two deployment slots for every database-backed AI test, because ACC-3's transactional tests and the browser tests' live server flush every table, seeded rows included. The gateway still refuses when they are missing, as the spec's fixed rows require; `serialized_rollback` was rejected because it collides with content types recreated after a flush.
 
 ## Checkpoints
 
@@ -125,7 +126,7 @@ The coordinator commits each unit after its focused checks.
 - [x] Repair round 2: specs and plan (on `440de48`).
 - [ ] Human and Whimsyturtle confirmation in the PR.
 - [x] Implementation slice for RND-8, using the fake provider; live evaluation remains an operator step.
-- [ ] Repair A: specs and plans.
-- [ ] Repair B: live switch and gateway repairs.
-- [ ] Repair C: test repairs and additions.
+- [x] Repair A: specs and plans (`1969298`, `85143ac`).
+- [x] Repair B: live switch and gateway repairs (`60b9574`).
+- [x] Repair C: test repairs and additions (`15e0611`).
 - [ ] Repair D: guides and README.
