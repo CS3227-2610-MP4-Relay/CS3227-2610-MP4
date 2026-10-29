@@ -1,0 +1,27 @@
+# Slice 12: See the tests available to me (#12)
+
+Goal: implement [RES-1](../specs/product/results.md#res-1-see-the-tests-available-to-me), the read-only tester availability journey.
+
+Tier: High (role and workspace access). Branch: `feat/12-available-tests`; starting HEAD: `79bc4ea7f02b01db6c3319a479bb4b2fa691d00b`. Budget: one requirement, RES-1, eight criteria; at most 400 changed non-test, non-migration lines under `src/`. Estimated implementation: 130–200 such lines, no migrations, dependencies, credentials or services. Only the coordinator changes Git/GitHub state.
+
+## Decisions and limits
+
+- Why: testers currently reach an account-only home; they need the instructions and current build for published tests in their workspace.
+- Confirmed slice boundary: own-workspace round list and read-only detail using existing models, workspace helper and text filters. No outcomes, submissions, observation storage, history, AI or filtering capability.
+- Availability assumption: Open only. The coordinator offered the human Open-only (recommended) versus Closed reference access; no explicit choice had arrived when checkpoint 1 was drafted. This chooses the smallest read-only availability scope and adds no Closed-reference capability. The coordinator must resolve any later contrary answer before implementation.
+- Existing round/build ordering and caps are reused. Current build means the latest covering build for each case, including partial and overlapping retests; no separate retest queue or notification is added.
+- UI, routes and controls have one home in [RES-1](../specs/product/results.md#res-1-see-the-tests-available-to-me), [tester routes](../specs/TECHNICAL-SPEC.md#tester-routes) and [access controls](../specs/SECURITY-SPEC.md#sign-in-and-access-control).
+
+## Commit checkpoints
+
+1. **Specs and plan** — `workflow/specs/product/results.md`, `workflow/specs/TECHNICAL-SPEC.md`, `workflow/specs/SECURITY-SPEC.md`, this plan. Add RES-1 before code. Focused checks: changed-section readback, criterion IDs/links, `git diff --check`, builder scope check by coordinator. Yield for the coordinator's spec commit and fresh scope snapshot.
+2. **Implementation and server regressions** — `src/accounts/views.py`, `src/accounts/urls.py`, `src/rounds/views.py`, tester templates under `src/rounds/templates/rounds/`, and focused tests under `src/accounts/tests/` and `src/rounds/tests/`; adjust exact module placement to avoid import cycles and preserve coordinator behavior. Reuse role/method/cache/storage wrapper patterns without duplicating authorization, workspace lookup, text filters and current-build semantics. Add criterion-marked server tests first and record real missing-behaviour failures, then implement. Cover RES-1.1–1.8: both testers, sort ties, empty list, linked criteria, repeated/partial retests, every unavailable state/workspace partition, signed-out/wrong-role access before lookup, all refused methods and CSRF precedence, no domain writes, cache, lazy-session and related-read failures, attacker-written text, close/publish refresh. Also test malformed cross-round criterion/build links cannot leak records. Focused checks: these regressions plus affected account, coordinator and rendering tests, Ruff check/format. Yield for a coherent implementation-and-tests commit.
+3. **Browser journey and docs** — `src/e2e/test_tester.py` (reuse `src/e2e/conftest.py`), `docs/UserGuide.md`, `docs/DeveloperGuide.md` only if its design summary needs updating, and this plan. Add real form sign-in → empty home → coordinator publishes → tester reload/list/detail → coordinator partial retest → tester refresh → coordinator closes → tester refresh/list removal and detail 404. Use separate browser contexts and existing fixtures, bounded waits and synthetic text. Map browser checks to RES-1.1, .2, .3, .7 and .8; server tests retain detailed denial/failure partitions. Record browser red evidence before implementation where possible; otherwise justify tests of already-built behavior and demonstrate defect detection without manufactured failures. Update the guide with built labels only. Run focused browser checks and full `ruff check . && ruff format --check . && pytest` in Git Bash with `.venv` active against the existing PostgreSQL test environment. Yield before coordinator commits.
+4. **Independent review repairs** — coordinator freezes the candidate for verifier and security-reviewer; builder only performs specifically assigned repairs in separate coherent checkpoints, then reruns affected and required checks. Independent reports and draft-PR delivery belong to the coordinator.
+
+## Status and next step
+
+- Checkpoint 1: specifications and plan drafted; no application or test changes yet. Coordinator scope/diff review and commit are next.
+- No new subsystem or dependency is needed. If implementation cannot fit the confirmed budget, stop affected work and return `needs-decision`.
+- Environment reported by coordinator: isolated PostgreSQL 17 at loopback port 55432, synthetic test database/user `relay_test`, Chromium already installed. No credential files are needed; implementation checks must use the coordinator-provided test configuration and avoid concurrent database suites.
+- Usage baseline taken with `workflow/scripts/resource_usage.py` after initial instruction/code reads; those initial reads are outside the measured delta. Final usage and check evidence belong in the checkpoint handoff and session log, not raw transcripts.
