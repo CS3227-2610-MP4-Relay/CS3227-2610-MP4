@@ -110,9 +110,17 @@ Re-reviews of `0f6322a..d0ad39a` and of the move found no gaps. Repair round 2, 
 - **F3 (verifier nits):** `"00"` joins the body variants; body IDs come from one table shared with the URL variants and a `BodyIds` entry per route.
 - **F4 (security Info):** `tester_a` has bystander rows, and a caller without any fails with a message; a successful rounds write by `coord_a` must leave A's workspace row and accounts unchanged, and one by `coord_b` B's.
 
+## Merge of main with RES-1 (#12)
+
+The coordinator merged `origin/main` at `c2a315b`, bringing RES-1's `accounts:tester-round` (`/tester/rounds/<round>/`, `rounds.tester.detail`); `test_every_route_has_a_matrix_entry` then failed with "Extra items in the left set: 'accounts:tester-round'". Test and plan only, expectations from RES-1.4 and 1.5, the [tester routes](../specs/TECHNICAL-SPEC.md#tester-routes) and the SECURITY-SPEC tester-availability bullet:
+
+- **Row:** `expect_tester_round` applies the spec's order: CSRF 403, then 405 for every method but GET (HEAD included), sign-in redirect, 403 for any coordinator, then 404 unless the round is the tester's own Open or Closed round. `test_tester_round_matrix` sends every request kind for each caller and state of the target round (12 tests); `test_forged_tester_round_ids_get_the_404_page` sends the forged URL IDs and another workspace's round, moved to the same state, as `anonymous`, `tester_a` and `coord_a` (16 tests). Pages about the target must not show its sibling's mark.
+- **Mutations** on temporary edits of `src/rounds/tester.py`, each restored and confirmed with `git diff --exit-code`: (a) no tester role check failed 23 (`accounts:tester` for both coordinators, the 6 coordinator rows of the detail matrix and the 15 forged rows other than malformed, where `coord_a` got past 403); (b) Draft in `available_rounds` failed 1 (`tester_a` on the Draft target); (c) `Round.objects` instead of `workspace_records` failed 2 (the Open and Closed "other workspace" rows). Mutation (c) first survived, because the foreign round stayed Draft; moving it to the row's state fixed that.
+- `pytest -q -p no:cacheprovider src/relay/tests/test_access_matrix.py`: 453 passed. Ruff clean.
+
 ## Open issues
 
-- Later routes add their rows when built: RND-4's results route, the RES (Beta Tester results) routes and the AI routes; until then #25 stays open.
+- Later routes add their rows when built: RND-4's results route, the RES (Beta Tester results) routes after RES-1 and the AI routes; until then #25 stays open.
 - The accounts routes table does not say, as the rounds routes do, that a route accepts exactly the methods listed; the matrix's HEAD 405 on accounts routes other than `/` rests on the recorded assumption (kept by the coordinator, R10). Suggested later spec wording for the accounts routes: "A route accepts exactly the methods listed, so HEAD gets 405 where only GET is listed." No spec change in this slice.
 - Not sent: PATCH, DELETE and OPTIONS; PUT stands for an unlisted method (verifier Info).
 - CSRF variants beyond a missing token and a foreign `Origin`, such as a wrong or stale token, are left to Django's own tests (verifier Info).

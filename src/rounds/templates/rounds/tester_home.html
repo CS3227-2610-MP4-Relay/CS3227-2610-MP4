@@ -1,0 +1,9 @@
+{% extends "accounts/home.html" %}
+{% load rounds_text %}
+{% block sections %}
+<h2>Available tests</h2>
+{% if rounds %}<ul>
+{% for round in rounds %}<li><a href="{% url 'accounts:tester-round' round.pk %}">{{ round.title|isolated_lines }}</a> ({{ round.get_state_display }})</li>
+{% endfor %}</ul>
+{% else %}<p>No tests available.</p>{% endif %}
+{% endblock %}

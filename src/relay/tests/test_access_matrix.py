@@ -618,6 +618,34 @@ ACCOUNTS = {
 }
 
 
+# The TECHNICAL-SPEC tester routes: the detail page takes GET only and shows
+# only Open and Closed rounds of the tester's own workspace (RES-1.4, 1.5).
+TESTER_ROUND = "accounts:tester-round"
+TESTER_MARKS = ("RES-1.4", "RES-1.5")
+PUBLISHED = frozenset({OPEN, CLOSED})
+
+
+def expect_tester_round(caller, kind, state, *, names_a_round=True):
+    """A tester detail request's expectation, by the tester routes' order.
+
+    `names_a_round` is False when the URL's ID is missing or another
+    workspace's: the same 404 as a Draft round.
+    """
+    if kind.fails_csrf():
+        outcome = FORBIDDEN
+    elif kind.method != "GET":
+        outcome = NOT_ALLOWED
+    elif caller == ANON:
+        outcome = SIGN_IN
+    elif caller != TESTER_A:
+        outcome = FORBIDDEN
+    elif not names_a_round or state not in PUBLISHED:
+        outcome = NOT_FOUND_PAGE
+    else:
+        outcome = OK
+    return Expect(outcome, allow=GET_ONLY, scoped=True)
+
+
 # ------------------------------------------------------------------- URLs
 
 
@@ -703,7 +731,7 @@ def get_or_post(route):
 def test_every_route_has_a_matrix_entry():
     names = list(route_names(get_resolver().url_patterns))
     assert len(names) == len(set(names))
-    assert set(names) == set(ACCOUNTS) | set(ROUNDS)
+    assert set(names) == set(ACCOUNTS) | set(ROUNDS) | {TESTER_ROUND}
 
 
 @pytest.mark.parametrize(
@@ -822,6 +850,47 @@ def test_missing_and_other_workspace_404s_are_identical(name, state):
     assert fetch(COORD_A, forged_ids(route, world, "other workspace")) == reference_a
     # B's coordinator: A's real IDs look exactly like missing ones.
     assert fetch(COORD_B, own_ids(route, world.target)) == fetch(COORD_B, missing)
+
+
+@pytest.mark.parametrize(
+    ("name", "caller", "state"),
+    [marked(TESTER_ROUND, TESTER_MARKS, c, s) for c in CALLERS for s in STATES],
+)
+def test_tester_round_matrix(name, caller, state):
+    world = build_world(state)
+    target = url(name, {"round_id": world.target.round.pk})
+    failures = Failures()
+    for kind in KINDS:
+        expect = expect_tester_round(caller, kind, state)
+        exchange(world, caller, kind, target, None, expect, failures)
+    failures.assert_none()
+
+
+@pytest.mark.parametrize(
+    ("name", "state", "variant"),
+    [
+        marked(TESTER_ROUND, (*TESTER_MARKS, "ACC-2.4"), state, variant)
+        for variant in (*FORGED_URL_IDS, "other workspace")
+        for state in ((DRAFT,) if variant in STATELESS else STATES)
+    ],
+)
+def test_forged_tester_round_ids_get_the_404_page(name, state, variant):
+    world = build_world(state)
+    if variant == "other workspace":
+        # Foreign rounds are unavailable in every state, Open and Closed too.
+        move_to(world.foreign, state)
+        round_id = world.foreign.round.pk
+    else:
+        round_id = FORGED_URL_IDS[variant]
+    forged = url(name, {"round_id": round_id})
+    failures = Failures()
+    for caller in (ANON, TESTER_A, COORD_A):
+        if variant in STATELESS:
+            expect = Expect(NOT_FOUND_PAGE, scoped=True)
+        else:
+            expect = expect_tester_round(caller, GET, state, names_a_round=False)
+        exchange(world, caller, GET, forged, None, expect, failures)
+    failures.assert_none()
 
 
 @dataclass(frozen=True)
