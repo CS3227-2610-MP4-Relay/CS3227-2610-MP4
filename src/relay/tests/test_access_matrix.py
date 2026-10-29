@@ -27,6 +27,7 @@ from django.test import Client
 from django.urls import URLResolver, get_resolver, reverse
 
 from accounts.models import User, Workspace
+from ai.models import CallRecord, CallSlot
 from rounds import services
 from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
 from rounds.tests.conftest import DENIED, NOT_FOUND, PASSWORD, csrf_token, signed_in
@@ -59,6 +60,7 @@ OK = "200 page"
 SIGN_IN = "302 to /sign-in/"
 OWN_HOME = "302 to own role home"
 DONE = "302 to the round page after a change"
+RENDERED = "200 page after a POST that saves nothing"
 DEMO = "200 Your demo workspace"
 SIGN_IN_FAILED = "200 sign-in failure"
 FORBIDDEN = "403 page"
@@ -177,7 +179,18 @@ def build_world(state):
     return world
 
 
-MODELS = (Workspace, User, Round, Criterion, Case, CaseCriterion, Build, BuildCase)
+MODELS = (
+    Workspace,
+    User,
+    Round,
+    Criterion,
+    Case,
+    CaseCriterion,
+    Build,
+    BuildCase,
+    CallRecord,
+    CallSlot,
+)
 
 
 def every_row():
@@ -275,6 +288,7 @@ class Expect:
     allow: frozenset = frozenset()
     done_at: str = ""
     scoped: bool = False
+    shows: tuple = ()
 
 
 def check(world, caller, response, expect, before):
@@ -282,12 +296,13 @@ def check(world, caller, response, expect, before):
 
     `done_at` is the exact redirect after a change, or empty for a new round,
     which must then be in the caller's workspace. `scoped` marks a page about
-    the target round, which must show nothing of its sibling round.
+    the target round, which must show nothing of its sibling round. `shows`
+    lists texts the page must contain.
     """
     body = response.content.decode()
     status, outcome = response.status_code, expect.outcome
     client = world.clients[caller]
-    if outcome == OK:
+    if outcome in (OK, RENDERED):
         assert status == 200
     elif outcome == SIGN_IN:
         assert (status, response["Location"]) == (302, "/sign-in/")
@@ -323,6 +338,8 @@ def check(world, caller, response, expect, before):
         assert f"This action is not available while the round is {label}." in body
     else:
         raise AssertionError(f"unknown outcome {outcome}")
+    for text in expect.shows:
+        assert text in body, f"missing {text!r}"
     hidden = set(HIDDEN_FROM[caller])
     if outcome == FORBIDDEN:
         # The 403 page shows no workspace data (ACC-1.4).
@@ -369,13 +386,20 @@ def exchange(world, caller, kind, url, data, expect, failures):
 
 @dataclass(frozen=True)
 class RoundsRoute:
-    """A rounds route's listed methods, allowed states, ID slots and payload."""
+    """A rounds route's listed methods, allowed states, ID slots and payload.
+
+    `posted` is an allowed POST's outcome: DONE for a change, or RENDERED for a
+    page that saves nothing. `shows` maps a method to texts its allowed page
+    must contain.
+    """
 
     methods: frozenset
     states: frozenset
     slots: tuple
     marks: tuple
     payload: object = None
+    posted: str = DONE
+    shows: dict = field(default_factory=dict)
 
     def data(self, world):
         """A valid payload, so a wrongly allowed request would change data."""
@@ -399,6 +423,19 @@ def case(world):
     }
 
 
+def selection(world):
+    return {"criteria": [world.target.linked.pk]}
+
+
+def draft(world):
+    return {
+        "title": "Synthetic draft title",
+        "steps": "Synthetic draft steps",
+        "expected_result": "Synthetic draft result",
+        "criteria": [world.target.linked.pk],
+    }
+
+
 def publish(world):
     return {"label": "Synthetic 1.5"}
 
@@ -418,7 +455,11 @@ ANY_STATE, DRAFT_ONLY, OPEN_ONLY = (
     frozenset({OPEN}),
 )
 R, RC, RK = ("round_id",), ("round_id", "criterion_id"), ("round_id", "case_id")
-RND1, RND2 = ("RND-1.6", "RND-1.7"), ("RND-2.8",)
+RND1, RND2, RND8 = ("RND-1.6", "RND-1.7"), ("RND-2.8",), ("RND-8.7",)
+OFF_FOR_NOW = "AI suggestions are switched off for now, so nothing is sent"
+UNAVAILABLE = (
+    "Drafting is unavailable right now. You can still add test cases yourself."
+)
 
 # The TECHNICAL-SPEC rounds routes table: methods and the states each allows.
 ROUNDS = {
@@ -434,6 +475,25 @@ ROUNDS = {
     "rounds:publish": RoundsRoute(POST_ONLY, DRAFT_ONLY, R, ("RND-3.6",), publish),
     "rounds:retest": RoundsRoute(BOTH, OPEN_ONLY, R, ("RND-5.8",), retest),
     "rounds:close": RoundsRoute(POST_ONLY, OPEN_ONLY, R, ("RND-6.3", "RND-6.5")),
+    # Live AI calls are off, so a valid draft request gets the unavailable message.
+    "ai:draft": RoundsRoute(
+        BOTH,
+        DRAFT_ONLY,
+        R,
+        RND8,
+        selection,
+        RENDERED,
+        {"GET": (OFF_FOR_NOW,), "POST": (OFF_FOR_NOW, UNAVAILABLE)},
+    ),
+    "ai:use-draft": RoundsRoute(
+        POST_ONLY,
+        DRAFT_ONLY,
+        R,
+        RND8,
+        draft,
+        RENDERED,
+        {"POST": ("Pre-filled from an AI draft. Review it before adding it.",)},
+    ),
 }
 
 
@@ -455,7 +515,7 @@ def rounds_outcome(route, caller, kind, state, *, names_a_record=True):
         return NOT_FOUND_PAGE
     if state not in route.states:
         return CONFLICT
-    return OK if kind.method == "GET" else DONE
+    return OK if kind.method == "GET" else route.posted
 
 
 def rounds_expect(name, world, caller, kind, state, *, names_a_record=True):
@@ -463,7 +523,10 @@ def rounds_expect(name, world, caller, kind, state, *, names_a_record=True):
     route = ROUNDS[name]
     outcome = rounds_outcome(route, caller, kind, state, names_a_record=names_a_record)
     done_at = f"/coordinator/rounds/{world.target.round.pk}/" if route.slots else ""
-    return Expect(outcome, state, route.methods, done_at, scoped=bool(route.slots))
+    shows = route.shows.get(kind.method, ()) if outcome in (OK, RENDERED) else ()
+    return Expect(
+        outcome, state, route.methods, done_at, scoped=bool(route.slots), shows=shows
+    )
 
 
 @dataclass(frozen=True)
@@ -785,6 +848,9 @@ BODY_ID_ROUTES = {
     "rounds:retest": BodyIds(
         "cases", OPEN, "Choose test cases from this round.", "RND-5.6"
     ),
+    "ai:draft": BodyIds(
+        "criteria", DRAFT, "Choose criteria from this round.", "RND-8.8"
+    ),
 }
 BODY_VARIANTS = (*FORGED_URL_IDS, "other workspace", "other round")
 
@@ -819,3 +885,5 @@ def test_forged_body_ids_get_the_field_message(name, variant, with_own):
     response = send(world.clients[COORD_A], POST, target, data)
     check(world, COORD_A, response, Expect(OK, scoped=True), before)
     assert body.message in response.content.decode()
+    # Refused before the gateway: no unavailable message.
+    assert UNAVAILABLE not in response.content.decode()
