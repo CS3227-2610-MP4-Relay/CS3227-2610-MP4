@@ -225,7 +225,7 @@ The Django/PostgreSQL architecture, environment separation and planned delivery 
 
 ## SoC LLM
 
-Relay's planned AI contracts live under [`workflow/specs/ai/`](../workflow/specs/ai/llm-gateway.md). SoC LLM is the provider; its account setup and service guidance are on [SoC DocHub](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). Before implementing the gateway, verify the team's actual model availability and service limits. Record the chosen model, bounded context, output validation, quotas and failure behaviour in the contracts. No provider call or live probe is implemented.
+Relay's AI contracts live under [`workflow/specs/ai/`](../workflow/specs/ai/llm-gateway.md). SoC LLM is the provider; its account setup and service guidance are on [SoC DocHub](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). The `ai` app (`src/ai/`) owns the gateway, its operational rows and the Test Coordinator's drafting pages. A deployment sets `SOC_LLM_ENDPOINT`, `SOC_LLM_MODEL` and `SOC_LLM_API_KEY`; missing configuration gives the feature's fixed unavailable message. The gateway sends instructions and JSON data separately, refuses redirects, bounds the request and reply, enforces rolling per-user and deployment call quotas, limits concurrent calls, and stores no prompt, source or reply text. Feature code validates its own structured reply: `ai/drafting.py` holds RND-8's cleaning table and strict parser. Tests inject `ai.fakes.FakeProvider`; the live evaluation remains an operator step and needs the verified model, limits and provider retention terms.
 
 ## Product website
 
