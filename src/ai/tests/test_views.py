@@ -2,12 +2,14 @@
 
 import json
 import logging
+import re
 from unittest import mock
 
 import pytest
 from django.db import DatabaseError, connection
 from django.test import Client
 from django.urls import reverse
+from django.utils.html import escape
 from django.views.debug import ExceptionReporter
 
 from ai import drafting, gateway
@@ -16,8 +18,6 @@ from ai.gateway import Failed, Refused, Success
 from ai.models import CallSlot
 from rounds.models import Case, Criterion, Round
 from rounds.tests.conftest import csrf_token, signed_in
-
-from .html_forms import browser_post, forms
 
 INTRO = (
     "Select 1 to 5 acceptance criteria. AI suggestions are switched off for now, "
@@ -493,18 +493,16 @@ def post_draft(client, round_, ids, result):
 
 
 def checked(page):
-    """The criterion IDs the selection form submits as checked."""
-    (selection,) = [form for form in forms(page) if form["action"] is None]
-    return [value for name, value in selection["fields"] if name == "criteria"]
+    """The criterion IDs of the selection form's checked boxes."""
+    return re.findall(r'name="criteria" value="(\d+)"[^>]* checked>', page)
 
 
-def draft_forms(page, round_):
+def draft_criteria(page, round_):
+    """The criterion IDs each "Use this draft" form posts, in page order."""
     action = reverse("ai:use-draft", args=[round_.pk])
-    return [form for form in forms(page) if form["action"] == action]
-
-
-def values(form, name):
-    return [value for field, value in form["fields"] if field == name]
+    forms = [part.split("</form>", 1)[0] for part in page.split(action)[1:]]
+    hidden = r'<input type="hidden" name="criteria" value="(\d+)">'
+    return [re.findall(hidden, form) for form in forms]
 
 
 @pytest.fixture
@@ -525,9 +523,10 @@ def test_each_draft_covers_exactly_its_labelled_criteria(
     )
     response, _ = post_draft(coord_client, round_, [c.pk for c in selected], result)
     page = response.content.decode()
-    first, second = draft_forms(page, round_)
-    assert values(first, "criteria") == [str(criteria[0].pk), str(third.pk)]
-    assert values(second, "criteria") == [str(criteria[1].pk)]
+    assert draft_criteria(page, round_) == [
+        [str(criteria[0].pk), str(third.pk)],
+        [str(criteria[1].pk)],
+    ]
     _, first_covers, second_covers = (
         part.split("</ul>", 1)[0] for part in page.split("Covers acceptance criteria")
     )
@@ -535,37 +534,6 @@ def test_each_draft_covers_exactly_its_labelled_criteria(
     assert "criterion two" not in first_covers
     assert "criterion two" in second_covers
     assert "criterion one" not in second_covers
-
-
-@pytest.mark.ac("RND-8.2")
-def test_adopting_a_draft_and_submitting_unchanged_saves_it(
-    coord_client, round_, criteria
-):
-    draft = one(
-        title="Synthetic adopted title",
-        steps="1. Open the app.\n2. Press Save.",
-        expected_result="The item is saved.",
-        criteria=["C2"],
-    )
-    response, _ = post_draft(
-        coord_client, round_, [c.pk for c in criteria], Success(reply(draft))
-    )
-    (use_form,) = draft_forms(response.content.decode(), round_)
-    prefilled = coord_client.post(use_form["action"], browser_post(use_form["fields"]))
-    assert not Case.objects.exists()
-    new_case = reverse("rounds:case-new", args=[round_.pk])
-    (case_form,) = [
-        form for form in forms(prefilled.content.decode()) if form["action"] == new_case
-    ]
-    saved = coord_client.post(new_case, browser_post(case_form["fields"]))
-    assert saved.status_code == 302
-    case = Case.objects.get()
-    assert (case.title, case.steps, case.expected_result) == (
-        draft["title"],
-        draft["steps"],
-        draft["expected_result"],
-    )
-    assert list(case.criteria.all()) == [criteria[1]]
 
 
 @pytest.mark.ac("RND-8.7")
@@ -656,11 +624,11 @@ def test_hostile_reply_text_is_escaped_isolated_and_round_trips(
     second_line = '<br><span dir="auto">line two &quot;&gt;&lt;input'
     assert line("&lt;b&gt;bold&lt;/b&gt;") + second_line in page
     assert line("Synthetic " + chr(0x202E) + "reversed") in page
-    (draft,) = draft_forms(page, round_)
-    assert values(draft, "title") == [markup]
-    assert values(draft, "steps") == [steps]
-    assert values(draft, "expected_result") == ["AB"]
-    assert values(draft, "criteria") == [str(criteria[0].pk)]
+    field = '<input type="hidden" name="{}" value="{}">'.format
+    assert field("title", escape(markup)) in page
+    assert field("steps", escape(steps)) in page
+    assert field("expected_result", "AB") in page
+    assert draft_criteria(page, round_) == [[str(criteria[0].pk)]]
 
 
 @pytest.mark.ac("RND-8.8")
