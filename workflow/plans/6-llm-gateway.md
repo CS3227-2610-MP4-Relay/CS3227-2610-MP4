@@ -116,5 +116,5 @@ Size estimate: about 180 changed lines: spec and plan about 30, `gateway.py` abo
 - Cosmetic follow-up from repair round 3 (item 5): rename the local `keys` in `_report_loop_event` to `codes`.
 - Confirmation of the contract's proposals by Whimsyturtle and the human.
 - The live provider check, after the live switch's conditions are met.
-- **Pre-live:** the TLS environment variables condition in the [live switch](../specs/ai/llm-gateway.md#live-switch).
+- **Pre-live:** the TLS environment variables condition in the [live switch](../specs/ai/llm-gateway.md#live-switch), and asyncio debug mode (`PYTHONASYNCIODEBUG`, `-X dev`) off in production, which [after the call](../specs/ai/llm-gateway.md#transport-contract-proposed) requires but the live switch does not yet list (round 3 reviews).
 - **Residual:** a thread blocked in the operating system's resolver cannot be stopped. After the [2026-10-30 repair](#review-repair-2026-10-30) it no longer delays exit, but it keeps running until the resolver returns ([after the call](../specs/ai/llm-gateway.md#transport-contract-proposed)). Cancellable lookups would need aiodns, a new dependency the human declined on 2026-10-30.
