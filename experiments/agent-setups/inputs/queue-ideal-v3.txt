@@ -1,0 +1,6 @@
+ideal-v3 i3-haiku-1 MODEL_OVERRIDE=claude-haiku-5-5 RELAY_PROFILE=guarded
+ideal-v3 i3-codex-1 TOOL=codex RELAY_PROFILE=guarded
+ideal-v3 i3-hermes-1 TOOL=hermes RELAY_PROFILE=guarded
+ideal-v3 i3-haiku-2 MODEL_OVERRIDE=claude-haiku-5-5 RELAY_PROFILE=guarded
+ideal-v3 i3-sonnet-1 MODEL_OVERRIDE=claude-sonnet-5-5 RELAY_PROFILE=strong
+ideal-v3 i3-haiku-opusreview-1 MODEL_OVERRIDE=claude-haiku-5-5 RELAY_PROFILE=guarded RELAY_REVIEW_MODEL=opus

@@ -1,0 +1,4 @@
+ideal-v4 i4-codex-auto-1 TOOL=codex
+ideal-v4 i4-hermes-auto-1 TOOL=hermes
+ideal-v4 i4-haiku-1 MODEL_OVERRIDE=claude-haiku-5-5 RELAY_PROFILE=guarded
+ideal-v4 i4-sonnet-1 MODEL_OVERRIDE=claude-sonnet-5-5 RELAY_PROFILE=strong

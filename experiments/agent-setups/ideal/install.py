@@ -34,6 +34,15 @@ PROFILE_SECTION = (
     "it together with the slice skill, and name the profile at the start of your "
     "report.\n\n"
 )
+# From v4: the profile is never chosen by the model; unset means guarded.
+PROFILE_SECTION_V4 = (
+    "## Model profile\n\n"
+    "Before starting work, run `printenv RELAY_PROFILE`. If it prints `strong`, "
+    "read `workflow/profiles/strong.md`; otherwise read "
+    "`workflow/profiles/guarded.md`. Do not choose a profile yourself. Follow it "
+    "together with the slice skill, and name the profile at the start of your "
+    "report.\n\n"
+)
 VERIFIER_OLD = "4. Review correctness, role/workspace isolation,"
 VERIFIER_NEW = (
     "4. For a Standard slice with no separate security-reviewer, also apply "
@@ -67,9 +76,8 @@ def main(version, repo):
 
     agents = repo / "AGENTS.md"
     replace_once(agents, FEATURE_OLD, FEATURE_NEW)
-    replace_once(
-        agents, "## Scope confirmation\n", PROFILE_SECTION + "## Scope confirmation\n"
-    )
+    profile = PROFILE_SECTION_V4 if version >= "v4" else PROFILE_SECTION
+    replace_once(agents, "## Scope confirmation\n", profile + "## Scope confirmation\n")
     verifier_new = VERIFIER_NEW
     if version != "v1":
         verifier_new = VERIFIER_CHECKS + VERIFIER_NEW.removeprefix("4. ")
