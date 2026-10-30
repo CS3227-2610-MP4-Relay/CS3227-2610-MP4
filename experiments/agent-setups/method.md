@@ -124,3 +124,54 @@ In the spec-kit arm, the adapter test is told to ignore spec-kit's own skills. E
 - The decisions are given up front, so the discovery the original slice did through review is not measured.
 - Opus grades Opus-built work in the blind review. The hidden suite and mutants are the objective checks.
 - Headless runs have no human, so "stops to ask" is measured as decisions recorded in the final report.
+
+## Second task
+
+Added on 2026-10-30, after task 1 was reported. Its method was fixed before any of its runs ended, and its mutants before any candidate was read.
+
+Task 1 was small. Task 2 is larger and has more ways to be wrong, to test whether task 1's findings hold.
+
+- **Task:** issue #16, "Request a retest" (RND-5). It starts from `99169c7`, the commit before RND-5 work began, plus the same harness commit. It needs:
+  - a new route, page, form and service;
+  - checks under the round-row lock;
+  - a build cap and label normalisation;
+  - rules for rendering user text.
+
+  No merged reference exists.
+- **Prompt:** [`inputs/task-prompt-2.md`](inputs/task-prompt-2.md), with eight decisions given up front.
+- **Runs:** 14, in the order of [`inputs/queue-task2.txt`](inputs/queue-task2.txt), up to four at once:
+  - one run each of caveman, ponytail, headroom, superpowers, spec-kit, mp3 and ideal v1 (Opus, `strong`);
+  - two runs each of mp4 and the portable ideal v5 on Opus (`strong`);
+  - one run of v5 on Sonnet (`strong`);
+  - one run of v5 on Haiku with no profile set, which tests the guarded default;
+  - one run of mp4 on Haiku, as the weak-model reference.
+
+  Left out:
+  - the stack arm, because each add-on is compared on its own;
+  - solo and the Sonnet mixes, which task 1 already placed and the ideal replaces.
+
+  DeepSeek is not rerun. Its task-1 runs are the reference for weaker models, with Haiku standing in on task 2.
+- **Hidden suite (27 tests):** written from RND-5, the route table and the decisions only, and added to `harness/` once every task-2 run has ended. It drives the coordinator's pages over HTTP and covers:
+  - the page and the link;
+  - 409 for Draft and Closed rounds;
+  - sign-in, 403 and 404;
+  - escaping;
+  - the happy path and the singular;
+  - duplicates and label boundaries;
+  - used labels: equal, with a format character, and decomposed;
+  - labels that stay distinct: case and full width;
+  - the cap of 10 builds;
+  - repeated retests;
+  - foreign cases.
+
+  RND-5.7's races are not covered. On the starting commit, 25 fail and 2 pass, both of them about pages that must not change.
+- **Mutants, task 2:**
+  - M1, foreign cases accepted: every check that the chosen cases belong to the round is removed;
+  - M2, the cap off by one: an eleventh build is allowed;
+  - M3, labels compared as typed: the used-label check skips the comparison key;
+  - M4, any round state accepted: every Open check for the retest is removed;
+  - M5, the label unescaped: the success message renders the label as HTML.
+
+  They are planted, scored and confirmed live as in task 1.
+- **Blind review:** the same rubric, with the task-2 issue and decisions, focused on RND-5.
+- **Limitation:** most arms run once, so task 2 shows whether task 1's pattern holds. It cannot rank arms that are close.
