@@ -6,10 +6,12 @@ own rules here; aiohttp does the networking.
 """
 
 import asyncio
+import concurrent.futures
 import json
 import logging
 import os
 import ssl
+import threading
 import time
 from dataclasses import dataclass
 from datetime import timedelta
@@ -30,6 +32,7 @@ REPLY_LIMIT = 20000
 RESPONSE_BYTES = REPLY_LIMIT * 12 + 4096
 TOTAL_TIMEOUT = 30
 RELEASE_MARGIN = 5
+CLEANUP_TIMEOUT = 1
 USER_CALLS = 20
 DEPLOYMENT_CALLS = 200
 USER_WINDOW = timedelta(hours=1)
@@ -188,13 +191,74 @@ async def _exchange(url, headers, body, deadline):
         return response.status, bytes(received)
 
 
+class _DaemonExecutor(concurrent.futures.ThreadPoolExecutor):
+    """Run each job, such as a name lookup, in its own daemon thread.
+
+    A daemon thread is not joined at interpreter exit, so a hung lookup cannot
+    delay a worker's shutdown; shutting the executor down never waits.
+    """
+
+    def submit(self, fn, /, *args, **kwargs):
+        """Start `fn(*args, **kwargs)` in a new daemon thread; return its future."""
+        future = concurrent.futures.Future()
+
+        def work():
+            if not future.set_running_or_notify_cancel():
+                return
+            try:
+                result = fn(*args, **kwargs)
+            except BaseException as error:  # noqa: BLE001 - handed to the awaiting call
+                future.set_exception(error)
+            else:
+                future.set_result(result)
+
+        threading.Thread(target=work, daemon=True).start()
+        return future
+
+    def shutdown(self, wait=True, *, cancel_futures=False):
+        """Do nothing: the daemon threads are never waited for."""
+
+
+class _CallLoop(asyncio.EventLoop):
+    """One call's event loop, which records every connection it opens."""
+
+    def __init__(self):
+        super().__init__()
+        self.transports = []
+        self.set_default_executor(_DaemonExecutor())
+
+    async def create_connection(self, *args, **kwargs):
+        """Open a connection as asyncio does, recording its transport."""
+        transport, protocol = await super().create_connection(*args, **kwargs)
+        self.transports.append(transport)
+        return transport, protocol
+
+
 def _run(awaitable):
-    """Run `awaitable` on a new loop, closed without asyncio.run's wait for threads."""
-    loop = asyncio.new_event_loop()
+    """Run `awaitable` on a new loop, leaving no connection or task behind.
+
+    Unlike asyncio.run, closing the loop does not wait for a lookup's thread.
+    """
+    loop = _CallLoop()
     try:
         return loop.run_until_complete(awaitable)
     finally:
-        loop.close()
+        try:
+            _settle(loop)
+        finally:
+            loop.close()
+
+
+def _settle(loop):
+    """Cancel `loop`'s remaining tasks, then abort and close its connections."""
+    pending = asyncio.all_tasks(loop)
+    for task in pending:
+        task.cancel()
+    if pending:
+        loop.run_until_complete(asyncio.wait(pending, timeout=CLEANUP_TIMEOUT))
+    for transport in loop.transports:
+        transport.abort()
+    loop.run_until_complete(asyncio.sleep(0))  # one pass closes the aborted sockets
 
 
 def _no_repeated_keys(pairs):

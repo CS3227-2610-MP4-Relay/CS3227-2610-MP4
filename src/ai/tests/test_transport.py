@@ -1,10 +1,18 @@
 """The gateway's HTTPS transport against a real local TLS server (no provider)."""
 
+import asyncio
+import gc
 import gzip
 import json
 import logging
+import os
 import socket
+import subprocess
+import sys
+import threading
 import time
+import warnings
+from pathlib import Path
 
 import pytest
 
@@ -65,6 +73,12 @@ def http(status, body=b"", headers=b""):
 
 def text_reply(text):
     return http(200, json.dumps({"text": text}, ensure_ascii=False).encode())
+
+
+def padded_reply(size):
+    """A valid `{"text": "ok"}` body padded with JSON whitespace to `size` bytes."""
+    body = json.dumps({"text": "ok"}).encode()
+    return body + b" " * (size - len(body))
 
 
 def timed(user):
@@ -190,6 +204,135 @@ def test_a_trickling_body_is_cut_off_at_the_total_deadline(user, serve, short_de
     result, elapsed = timed(user)
     assert result == Failed("timeout")
     assert elapsed < 3
+
+
+def client_sockets(port):
+    """Count this process's open TCP sockets connected to 127.0.0.1:`port`."""
+    if not os.path.isdir("/dev/fd"):
+        pytest.skip("Counting open sockets needs /dev/fd.")
+    count = 0
+    for name in os.listdir("/dev/fd"):
+        try:
+            with socket.fromfd(int(name), socket.AF_INET, socket.SOCK_STREAM) as sock:
+                count += sock.getpeername() == ("127.0.0.1", port)
+        except OSError:
+            continue
+    return count
+
+
+@pytest.fixture
+def no_gc():
+    """Pause automatic garbage collection, so only the call itself closes sockets."""
+    gc.collect()
+    gc.disable()
+    yield
+    gc.enable()
+
+
+def collected_resource_warnings():
+    """Collect garbage and return the ResourceWarnings it reports."""
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        gc.collect()
+    return [w for w in caught if issubclass(w.category, ResourceWarning)]
+
+
+@pytest.mark.parametrize(
+    ("script", "expected"),
+    [
+        (hold(b"", 6), Failed("timeout")),
+        (
+            trickle(
+                b"HTTP/1.1 200 Synthetic\r\nContent-Length: 100000\r\n\r\n",
+                b" ",
+                0.2,
+                6,
+            ),
+            Failed("timeout"),
+        ),
+        (hold(text_reply("ok"), 6), Success("ok")),
+        (
+            hold(http(200, padded_reply(gateway.RESPONSE_BYTES + 1)), 6),
+            Failed("invalid-response"),
+        ),
+    ],
+    ids=["silent", "trickle", "success", "oversized"],
+)
+def test_no_connection_is_left_open_after_the_call(
+    user, serve, short_deadline, no_gc, script, expected
+):
+    """The server holds every connection open, so only the client can close it."""
+    server = serve(script)
+    result, elapsed = timed(user)
+    assert result == expected
+    assert elapsed < 3
+    assert client_sockets(server.port) == 0
+    assert collected_resource_warnings() == []
+
+
+def test_a_hung_name_lookup_leaves_no_thread_that_delays_exit(
+    user, serve, short_deadline, monkeypatch
+):
+    server = serve(respond(text_reply("ok")))
+    monkeypatch.setenv("SOC_LLM_ENDPOINT", f"https://localhost:{server.port}/llm")
+    original = socket.getaddrinfo
+
+    def slow(*args, **kwargs):
+        time.sleep(6)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", slow)
+    before = set(threading.enumerate())
+    assert timed(user)[0] == Failed("timeout")
+    started = [t for t in threading.enumerate() if t not in before and t.is_alive()]
+    assert started, "the hung lookup's thread should still be running"
+    assert all(thread.daemon for thread in started)
+
+
+def test_a_process_with_a_hung_name_lookup_exits_promptly():
+    """The helper's lookup hangs for 20 seconds; exit must not wait for it."""
+    src = Path(__file__).resolve().parents[2]
+    started = time.monotonic()
+    finished = subprocess.run(
+        [sys.executable, "-m", "ai.tests.hung_lookup"],
+        cwd=src,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    elapsed = time.monotonic() - started
+    assert finished.returncode == 0, finished.stderr[-2000:]
+    assert finished.stdout.strip() == "timeout"
+    assert elapsed < 10
+
+
+def test_the_call_cancels_its_leftover_tasks():
+    leftovers = []
+
+    async def work():
+        leftovers.append(asyncio.get_running_loop().create_task(asyncio.sleep(10)))
+        return "done"
+
+    assert gateway._run(work()) == "done"
+    assert leftovers[0].cancelled()
+
+
+def test_a_task_ignoring_cancellation_delays_the_call_by_at_most_the_bound():
+    async def stubborn():
+        try:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            await asyncio.sleep(10)
+
+    async def work():
+        asyncio.get_running_loop().create_task(stubborn())
+        await asyncio.sleep(0)
+        return "done"
+
+    started = time.monotonic()
+    assert gateway._run(work()) == "done"
+    assert time.monotonic() - started < gateway.CLEANUP_TIMEOUT + 0.5
 
 
 def test_the_deadline_passed_in_bounds_the_request(serve):
@@ -355,12 +498,6 @@ def test_a_refusal_object_is_a_refusal(user, serve):
 def test_an_invalid_envelope_is_an_invalid_response(user, serve, body):
     serve(respond(http(200, body)))
     assert complete(user, "", "{}") == Failed("invalid-response")
-
-
-def padded_reply(size):
-    """A valid `{"text": "ok"}` body padded with JSON whitespace to `size` bytes."""
-    body = json.dumps({"text": "ok"}).encode()
-    return body + b" " * (size - len(body))
 
 
 def test_a_body_at_the_byte_cap_is_accepted(user, serve):
