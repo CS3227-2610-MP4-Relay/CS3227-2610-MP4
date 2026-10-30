@@ -219,12 +219,23 @@ class _DaemonExecutor(concurrent.futures.ThreadPoolExecutor):
         """Do nothing: the daemon threads are never waited for."""
 
 
+_LOOP_REPORTS = (
+    (("task", "future"), "leftover-task"),
+    (("asyncgen",), "asyncgen-close"),
+    (("transport", "protocol"), "connection-error"),
+)
+
+
 def _report_loop_event(loop, context):
     """Log asyncio's report about the call's loop as a fixed code only.
 
-    asyncio's own report names the task and repeats the exception text.
+    The code depends only on which keys `context` has: asyncio's message and
+    exception can carry task, exception or operating-system text.
     """
-    logger.warning("LLM gateway loop report: %s", "leftover-task")
+    keys = [
+        code for names, code in _LOOP_REPORTS if not context.keys().isdisjoint(names)
+    ]
+    logger.warning("LLM gateway loop report: %s", (keys or ["loop-error"])[0])
 
 
 class _CallLoop(asyncio.EventLoop):
@@ -248,7 +259,7 @@ class _CallLoop(asyncio.EventLoop):
         self.transports.append(transport)
         tls = getattr(transport, "_ssl_protocol", None)
         below = getattr(tls, "_transport", None)
-        if below is not None:
+        if isinstance(below, asyncio.BaseTransport):
             self.transports.append(below)
         return transport, protocol
 
@@ -271,26 +282,26 @@ def _run(awaitable):
 def _settle(loop):
     """Cancel `loop`'s remaining work, then abort and close its connections.
 
-    Leftover tasks and asynchronous generators get CLEANUP_TIMEOUT in all.
+    Leftover tasks and generators get CLEANUP_TIMEOUT in all, then are abandoned.
     """
+    end = time.monotonic() + CLEANUP_TIMEOUT
     pending = asyncio.all_tasks(loop)
     for task in pending:
         task.cancel()
-
-    async def finish():
-        if pending:
-            await asyncio.wait(pending)
-        await loop.shutdown_asyncgens()
-
-    try:
-        loop.run_until_complete(asyncio.wait_for(finish(), CLEANUP_TIMEOUT))
-    except TimeoutError:
-        pass
+    if pending:
+        loop.run_until_complete(asyncio.wait(pending, timeout=CLEANUP_TIMEOUT))
+    closing = {loop.create_task(loop.shutdown_asyncgens())}
+    loop.run_until_complete(
+        asyncio.wait(closing, timeout=max(0, end - time.monotonic()))
+    )
     for task in pending:
         if task.done() and not task.cancelled():
             task.exception()  # retrieved, so asyncio does not report it
     for transport in loop.transports:
-        transport.abort()
+        try:
+            transport.abort()
+        except Exception:  # noqa: BLE001, S110 - the others must still be aborted
+            pass
     loop.run_until_complete(asyncio.sleep(0))  # one pass closes the aborted sockets
 
 

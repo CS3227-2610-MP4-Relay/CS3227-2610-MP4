@@ -11,6 +11,7 @@ import subprocess
 import sys
 import threading
 import time
+import types
 import warnings
 from pathlib import Path
 
@@ -404,7 +405,7 @@ def test_leftover_tasks_log_no_exception_or_task_text(caplog):
         loop.create_task(failed_early_secret_task())
         loop.create_task(stubborn_secret_task())
         loop.create_task(failing_secret_task())
-        await asyncio.sleep(0)
+        await asyncio.sleep(0.05)  # failing_secret_task fails first
         return "done"
 
     caplog.set_level(logging.DEBUG)
@@ -415,6 +416,64 @@ def test_leftover_tasks_log_no_exception_or_task_text(caplog):
     )
     for secret in (KEY, "secret-data", "secret_task", "RuntimeError"):
         assert secret not in logged
+    report = "LLM gateway loop report: leftover-task"
+    assert report in [r.getMessage() for r in caplog.records]
+
+
+@pytest.mark.parametrize("stubborn_task", [False, True])
+def test_a_generator_ignoring_cancellation_does_not_hold_the_call(stubborn_task):
+    async def stubborn():
+        try:
+            yield 1
+        finally:
+            try:
+                await asyncio.sleep(10)
+            except asyncio.CancelledError:
+                await asyncio.sleep(3)
+
+    async def work(generator):
+        await anext(generator)
+        if stubborn_task:  # the generator then gets only what is left of the bound
+            await anext(other := stubborn())
+            asyncio.ensure_future(other.aclose())
+        return "done"
+
+    generator = stubborn()  # kept, so the loop must close it
+    started = time.monotonic()
+    assert gateway._run(work(generator)) == "done"
+    assert time.monotonic() - started < gateway.CLEANUP_TIMEOUT + 0.5
+
+
+def test_loop_reports_log_a_code_chosen_only_by_the_kind_of_object(caplog):
+    caplog.set_level(logging.DEBUG)
+    error = RuntimeError(f"synthetic {KEY} os-error-text")
+    for key in ("task", "future", "asyncgen", "transport", "protocol", "handle"):
+        gateway._report_loop_event(
+            None, {"message": str(error), "exception": error, key: 1}
+        )
+    codes = ["leftover-task"] * 2 + ["asyncgen-close"] + ["connection-error"] * 2
+    expected = [(f"LLM gateway loop report: {c}", None) for c in [*codes, "loop-error"]]
+    assert [(r.getMessage(), r.exc_info) for r in caplog.records] == expected
+
+
+def test_one_failing_abort_skips_no_other_transport(monkeypatch):
+    aborted = []
+    below = types.SimpleNamespace(abort=lambda: aborted.append("not a transport"))
+    tls = types.SimpleNamespace(_transport=below)
+    first = types.SimpleNamespace(abort=lambda: 1 / 0, _ssl_protocol=tls)
+    second = types.SimpleNamespace(abort=lambda: aborted.append("second"))
+    connections = iter([first, second])
+
+    async def connect(self, *args, **kwargs):
+        return next(connections), None
+
+    monkeypatch.setattr(asyncio.BaseEventLoop, "create_connection", connect)
+    loop = gateway._CallLoop()
+    for _ in range(2):
+        loop.run_until_complete(loop.create_connection())
+    gateway._settle(loop)
+    loop.close()
+    assert aborted == ["second"]
 
 
 def test_the_deadline_passed_in_bounds_the_request(serve):
