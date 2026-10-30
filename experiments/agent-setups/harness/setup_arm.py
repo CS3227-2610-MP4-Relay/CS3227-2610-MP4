@@ -43,6 +43,7 @@ ARMS = {
     "ideal-v3": "Ideal setup v3",
     "ideal-v4": "Ideal setup v4",
     "ideal-v5": "Ideal setup v5, the project-independent package",
+    "ideal-v6": "Ideal setup v6, v5 with three rules from its reviews",
 }
 IDEAL = Path(
     os.environ.get(
@@ -162,13 +163,13 @@ def setup_mp3(repo):
         )
 
 
-def setup_portable(repo):
-    """Install the project-independent package with Relay's project settings.
+def setup_portable(repo, version):
+    """Install a version of the project-independent package with Relay's settings.
 
     Relay's own adapter test lists every agent and skill; like spec-kit's skills,
     the package's `aw-` adapters are added to what it allows.
     """
-    package = IDEAL / "v5"
+    package = IDEAL / version
     subprocess.run(
         [
             sys.executable,
@@ -264,8 +265,8 @@ def main(arm, run_id):
                 r"(?m)^model(_reasoning_effort)? = .*\n", "", path.read_text()
             )
             path.write_text(text)
-    if arm == "ideal-v5":
-        setup_portable(repo)
+    if arm in ("ideal-v5", "ideal-v6"):
+        setup_portable(repo, arm.removeprefix("ideal-"))
     elif arm.startswith("ideal-"):
         version = arm.removeprefix("ideal-")
         install = IDEAL / "install.py"
