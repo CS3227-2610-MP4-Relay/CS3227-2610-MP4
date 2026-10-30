@@ -1,13 +1,13 @@
 # Technical spec
 
-How Relay will be built and run. What it will do is in [`PRODUCT-SPEC.md`](PRODUCT-SPEC.md). The application runs locally and in CI only. Workspaces, accounts and sessions (ACC-1), demo workspace creation (ACC-2), abuse-limit counters (ACC-3), test rounds with their title and state (RND-1), their acceptance criteria, test cases and links (RND-2), builds with publishing (RND-3), retests as further builds (RND-5), closing with its closing time (RND-6), each new demo workspace's sample round (RND-7), and the AI gateway with its operational rows exist, with live AI calls switched off; RND-8's drafting pages, other business schema and hosted application environments remain planned.
+How Relay will be built and run. What it will do is in [`PRODUCT-SPEC.md`](PRODUCT-SPEC.md). The application runs locally and in CI only. Workspaces, accounts and sessions (ACC-1), demo workspace creation (ACC-2), abuse-limit counters (ACC-3), test rounds with their title and state (RND-1), their acceptance criteria, test cases and links (RND-2), builds with publishing (RND-3), retests as further builds (RND-5), closing with its closing time (RND-6), each new demo workspace's sample round (RND-7), and the AI gateway with its operational rows exist; live AI call status belongs in the [gateway contract](ai/llm-gateway.md#live-switch); RND-8's drafting pages, other business schema and hosted application environments remain planned.
 
 ## Architecture
 
 - One Django project that renders HTML on the server, with no separate front end. Application code and its tests will live under `src/`.
 - PostgreSQL for application storage and database-backed tests.
 - Configuration from environment variables, with no committed credentials.
-- SoC LLM through one shared gateway; feature code selects authorized context before invoking it. The boundary is built, with live provider calls switched off; its contract is in [`ai/llm-gateway.md`](ai/llm-gateway.md).
+- SoC LLM through one shared gateway; feature code selects authorized context before invoking it. The boundary is built; its live-call status and contract are in [`ai/llm-gateway.md`](ai/llm-gateway.md).
 
 `src/manage.py` starts the `relay` Django project; `relay.wsgi` is its WSGI entry point and `relay.pages` owns public presentation. Shared templates live in `src/relay/templates/`. The `accounts` app (`src/accounts/`) owns the [workspace and account models](#accounts-and-workspaces) and the accounts routes, with Django's `auth`, `contenttypes`, `sessions` and `messages` apps; `django.contrib.admin` is never installed. The `rounds` app (`src/rounds/`), added by RND-1, owns the [round models](#rounds) and the [rounds routes](#rounds-routes). The `ai` app (`src/ai/`) owns the [gateway's rows](#ai-gateway) and the gateway, and will own the RND-8 drafting views. ACC-1 adds the accounts apps; until then no auth/session apps or business models are installed. Runtime and dependency pins belong in the root configuration files.
 

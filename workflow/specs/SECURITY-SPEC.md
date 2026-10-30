@@ -61,7 +61,7 @@ Threat: edits or concurrent submissions change the meaning of an earlier result,
 
 Threat: user-written requirements, cases or observations steer the model into misleading another user, disclosing unrelated records or changing a testing decision.
 
-- Live provider calls stay switched off by a code-level setting until the real SoC LLM API, the provider's retention and training terms and its limits are confirmed ([live switch](ai/llm-gateway.md#live-switch)); with it off, no user text leaves Relay.
+- Live provider calls use a code-level switch subject to review and a configured operator environment; the [gateway contract](ai/llm-gateway.md#live-switch) owns the confirmed provider evidence, TLS key-log suppression, per-call debug suppression and pending live validation. With the switch off, no user text leaves Relay.
 - Keep developer instructions separate from user-written source data. Select only relevant, authorized context; exclude secrets and unrelated records.
 - AI suggests text only. It has no browsing, execution or database tools and cannot publish tests, set outcomes, rewrite submitted observations or close rounds. Applying a suggestion requires an explicit authorized action through normal server checks.
 - Validate a bounded response schema, allowed identifiers and text lengths; reject extra fields, including outcome/status changes. Render accepted suggestions as escaped plain text and keep the source material visible for review.
