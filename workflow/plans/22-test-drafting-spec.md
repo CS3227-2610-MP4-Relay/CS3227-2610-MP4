@@ -211,7 +211,7 @@ Human decisions (2026-10-30): **A.** Move the "Use this draft" round trip to a P
 
 ### Round 1 (2026-10-30)
 
-On `b568a7b`. Reviewers found nothing at High; three Low findings, fixed in `src/e2e/test_drafting.py` and `src/ai/tests/test_views.py`:
+On `b568a7b`. Reviewers found nothing at High; three Low findings, fixed in `src/e2e/test_drafting.py` and `src/ai/tests/test_views.py` (`0b9b88b`, with this record in `bd9d453`, both committed after the round's one builder run). By the slice metric the round adds 0 lines: it changes only tests and this plan (30 test lines, 12 plan lines).
 
 - **Plain browser draft (both):** the browser draft's steps and expected result now carry markup, `"`, `&` and `<`. Red: with the hidden steps rendered `|safe` or `|force_escape|force_escape`, the `b568a7b` test passes and the new one fails on the Steps value.
 - **Substring hidden-field checks (verifier):** the hostile test now reads the single "Use this draft" form and requires each hidden text field exactly once. Red: with a duplicated hidden `title`, the old test passes and the new one fails (`assert 2 == 1`).
