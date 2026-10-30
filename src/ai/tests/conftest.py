@@ -8,12 +8,14 @@ from django.utils import timezone
 from accounts.models import User, Workspace
 from ai.gateway import DEPLOYMENT_SCOPE
 from ai.models import CallSlot
-from rounds.tests.conftest import other_workspace, tester
+from rounds.tests.conftest import coord_client, make_round, other_workspace, tester
 
 PASSWORD = "Synthetic16Chars"
 
 __all__ = [
+    "coord_client",
     "coordinator",
+    "make_round",
     "other_workspace",
     "tester",
     "workspace",

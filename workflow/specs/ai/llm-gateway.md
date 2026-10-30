@@ -22,7 +22,7 @@ The [security spec](../SECURITY-SPEC.md#ai-features-and-prompt-injection) owns t
 - `ssl.create_default_context()` honours `SSLKEYLOGFILE`, `SSL_CERT_FILE` and `SSL_CERT_DIR`. The transport clears each fresh context's `keylog_filename` before use to prevent TLS key logging. `SSL_CERT_FILE` and `SSL_CERT_DIR`, if set, must name only trusted CA stores; that remains an operator environment obligation.
 - Each call's event loop explicitly disables asyncio debug mode, including when `PYTHONASYNCIODEBUG` or `-X dev` would enable it, to prevent raw asyncio debug reports from bypassing the fixed-code handler. Production debug mode must still remain off.
 - The transport connects directly and ignores `HTTPS_PROXY` and the other proxy variables. Operators must confirm direct provider reachability in the deployment environment; this integration adds no proxy support.
-- RND-8's [planned notice](../product/rounds.md#rnd-8-draft-test-cases-with-ai) says what is sent. RND-8 is not implemented in this checkout; enabling the gateway does not implement that UI.
+- RND-8's [notice](../product/rounds.md#rnd-8-draft-test-cases-with-ai) says what is sent. Its drafting UI is built; real provider smoke checks and live evaluation remain pending.
 
 ## Transport contract (proposed)
 

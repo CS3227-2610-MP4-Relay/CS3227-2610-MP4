@@ -16,7 +16,8 @@
 {% if forloop.last %}</ul>{% endif %}{% empty %}<p>No acceptance criteria yet.</p>
 {% endfor %}
 <h2>Test cases</h2>
-{% if draft %}<p><a href="{% url 'rounds:case-new' round.pk %}">Add test case</a></p>{% endif %}
+{% if draft %}<p><a href="{% url 'rounds:case-new' round.pk %}">Add test case</a></p>
+<p><a href="{% url 'ai:draft' round.pk %}">Draft test cases with AI</a></p>{% endif %}
 {% for case in cases %}<h3>{{ case.title|isolated_lines }}</h3>
 <h4>Steps</h4>
 <p>{{ case.steps|isolated_lines }}</p>

@@ -192,3 +192,28 @@ From the builder's runs on each checkpoint; full verification is the coordinator
 - **Matrix (C):** `test_every_route_has_a_matrix_entry` failed without the `ai:*` rows; with them, the whole matrix passes (501). A successful drafting POST is the new `RENDERED` outcome (200, nothing changed), and the snapshot now covers `CallRecord` and `CallSlot`. Mutations caught: `use_draft` without its Draft check, a selection from every round, the notice removed, `use_draft` saving a case. `use-draft`'s `criteria` has no body-ID row: under RND-8.9 it shows no message, and `src/ai/tests/test_views.py` covers it.
 - **Focused checks:** `pytest src/ai` 190 passed; `pytest src/relay/tests/test_access_matrix.py` 501 passed; the e2e drafting journey passed; `ruff check .` and `ruff format --check .` clean; `check_scope.py builder` clean at each checkpoint.
 - **Size, pending the human's confirmation:** by the [slice skill's metric](../skills/slice.md), round 2 changes 128 lines of non-test `src/` (76 insertions plus 52 deletions, `6e7b844..46fae22`), so the repairs total 534 (406 plus 128). That exceeds human decision 2's estimate of 100 to 200 lines for the repairs; the human has not yet confirmed it.
+
+## Review repair (2026-10-30, Whimsyturtle)
+
+On `32db732` (`origin/main` with #91 merged in). Inline comments on `6724e3b`: `src/ai/tests/html_forms.py` reinvents what Playwright already does; `INVISIBLE` in `src/ai/drafting.py` needs a better name, the source of its ranges, and seems fragile hardcoding that a library might reduce.
+
+Human decisions (2026-10-30): **A.** Move the "Use this draft" round trip to a Playwright test in `src/e2e/`, stubbing the drafting call, and delete `html_forms.py`; tests that only read a page's fields may stay as Django-client tests. No new dependency. **B.** Rename the table, say where its ranges come from and why it is fixed ([cleaning rule 3](../specs/ai/test-drafting.md#cleaning)); no library.
+
+- **Changed:** `src/e2e/test_drafting.py` replaces `test_adopting_a_draft_and_submitting_unchanged_saves_it` (RND-8.2): Chromium checks both criteria, gets one stubbed draft, uses it, sees the pre-filled fields and the checked criterion, and submits; after Playwright stops, the saved case must equal the draft with LF and link only its criterion. The read-only checks in `src/ai/tests/test_views.py` match the rendered checkbox and hidden-field markup instead. `html_forms.py` is deleted. `INVISIBLE` is now `IGNORABLE_RANGES`, with a comment giving its Unicode 16.0.0 source, the two extra ranges and why it is fixed. The test-drafting spec's Rendering bullet now says a browser test submits the fields.
+- **Evidence** (each break restored from a copy; `git status` showed no other change):
+  - `RoundTextField` keeping CR LF: `pytest src/e2e/test_drafting.py` errors at teardown, saved steps `'1. Open the app.\r\n2. Press Save.'`, so the browser posted CR LF.
+  - `use_draft` not pre-filling steps: the same test fails, Steps value `""`.
+  - Hidden steps isolated and draft IDs reversed in `ai/draft.html`: `test_hostile_reply_text_is_escaped_isolated_and_round_trips` and `test_each_draft_covers_exactly_its_labelled_criteria` fail.
+  - Selection boxes not marked checked: the three `test_gateway_failures_show_fixed_message_and_keep_selection` cases fail.
+- **Checks:** focused `pytest src/ai/tests/test_views.py src/ai/tests/test_drafting.py src/e2e/test_drafting.py` 111 passed. Full: Django check and `makemigrations --check --dry-run` (test settings) clean, `ruff check .` and `ruff format --check .` clean, `pytest -q -p no:cacheprovider` 2097 passed and 231 subtests. `check_scope.py builder --base 32db732` clean.
+- **Commits:** `6628b18` (spec), then `3e2c8ff` (test), `2a7090e` (refactor) and `b568a7b` (plan). The coordinator made all four after one builder edit run, so spec-first is shown only by their order, as in the earlier [retrospective split](#history-deviations).
+- **Size:** by the [slice skill's metric](../skills/slice.md), non-test `src/` is `src/ai/drafting.py` only, 16 lines (11 insertions plus 5 deletions, `32db732..b568a7b`), bringing the unconfirmed repair total above to 550. All files: 224 (117 insertions plus 107 deletions, including the deleted 50-line helper), under the coordinator's 250-line stop threshold for this repair, which was not a human budget.
+
+### Round 1 (2026-10-30)
+
+On `b568a7b`. Reviewers found nothing at High; three Low findings, fixed in `src/e2e/test_drafting.py` and `src/ai/tests/test_views.py` (`0b9b88b`, with this record in `bd9d453`, both committed after the round's one builder run). By the slice metric the round adds 0 lines: it changes only tests and this plan (30 test lines, 12 plan lines).
+
+- **Plain browser draft (both):** the browser draft's steps and expected result now carry markup, `"`, `&` and `<`. Red: with the hidden steps rendered `|safe` or `|force_escape|force_escape`, the `b568a7b` test passes and the new one fails on the Steps value.
+- **Substring hidden-field checks (verifier):** the hostile test now reads the single "Use this draft" form and requires each hidden text field exactly once. Red: with a duplicated hidden `title`, the old test passes and the new one fails (`assert 2 == 1`).
+- **Criterion markup (security):** the hostile criterion now has `<i>"><` and U+202E, asserted escaped and isolated in both the checkbox label and the covers list. Red: removing `isolated_lines` from either, the old test passes and the new one fails.
+- **Checks:** focused 111 passed; Django check and migrations check clean; `ruff check .` and `ruff format --check .` clean; `pytest -q -p no:cacheprovider` 2097 passed and 231 subtests; `check_scope.py builder --base b568a7b` clean.
