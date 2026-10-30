@@ -2,6 +2,8 @@
 
 Goal: one server-side HTTP journey proves a coordinator can create a demo workspace, sign in, prepare a round, publish it, retest a case twice and close it, submitting each action through the form its page renders, with the shipped state transitions and refusals ([ACC-1](../specs/product/accounts.md#acc-1-sign-in-and-out-by-role), [ACC-2.1](../specs/product/accounts.md#acc-2-create-an-isolated-demo-workspace), [RND-1](../specs/product/rounds.md#rnd-1-prepare-a-test-round), [RND-2](../specs/product/rounds.md#rnd-2-manage-acceptance-criteria-and-test-cases), [RND-3](../specs/product/rounds.md#rnd-3-publish-a-round-to-beta-testers), [RND-5](../specs/product/rounds.md#rnd-5-request-a-retest), [RND-6](../specs/product/rounds.md#rnd-6-close-a-round)).
 
+Since the [2026-10-30 review repair](#review-repair-2026-10-30-whimsyturtle), Playwright browser journeys in `src/e2e/` carry this coverage and the HTTP journey is deleted; the sections up to History record the earlier candidates.
+
 Tier: Standard, test-only: no product code, criteria, security controls, dependencies or CI change. Base/branch: `a121d6e` / `26-test-coordinator-e2e`; main merged in at `922a8d4`. Owner: zheng-jj. The PR refers to #26 ("Refs #26") and does not close it: [RND-4](../specs/product/rounds.md#rnd-4-review-submitted-results) (results, unimplemented) is not covered, and RND-8 (AI test drafting, specified only on the #78 branch, not on this branch) is not covered.
 
 Size: the estimate was 220-300 lines in one test file. The first candidate exceeded it at about 420 lines; the repaired journey, with its form-reading helper and the added assertions, is about 516 lines, roughly 1.7 times the estimate. This is test code, so it does not count against the 400-line non-test slice budget.
@@ -56,9 +58,8 @@ The repaired journey then passed (`1 passed`), and with the modules it imports h
 
 With `.venv` active, from the repository root:
 
-- `pytest -q src/rounds/tests/test_coordinator_journey.py`
-- `pytest -q src/rounds/tests/test_sample_round.py src/accounts/tests/test_demo_views.py` (modules whose patterns are imported)
-- `ruff check src/rounds/tests && ruff format --check src/rounds/tests`
+- `pytest -q src/e2e/test_round_lifecycle.py src/e2e/test_accounts.py src/e2e/test_rounds.py`
+- `ruff check src/e2e && ruff format --check src/e2e`
 - Full verification is run by the coordinator: `ruff check . && ruff format --check . && pytest`
 
 ## History
@@ -67,6 +68,22 @@ With `.venv` active, from the repository root:
 - An independent review then found: CSRF disabled with hand-built POSTs (M1), undocumented overlap with #81 (M2), an overclaim to close #26 (M3), plan overclaims at steps 6-9 and 11 and a wrong step 8 tag (L4), no unchanged-title checks after refusals (L5), duplicated helpers (L6), `ValueError` lookups and a single-line `current_build` (L7), comments naming unmarked criteria (L8), an unrecorded size overrun (L9), stale checkpoints (L10) and the role record (L12). The human decided on 2026-10-29 to repair and keep the HTTP journey; checkpoints 6 and 7 carry that repair.
 - The independent re-verification of `922a8d4..0aeb49b` passed the repair and left only Low findings, which checkpoint 8 (repair round 2, the last allowed) fixes.
 
+## Review repair (2026-10-30, Whimsyturtle)
+
+On `6a79f31` (`origin/main` with #78 merged in). Inline comment on `src/rounds/tests/test_coordinator_journey.py` line 39, where its `HTMLParser` form reader starts: "Same issue as #78, I feel like this is reinventing the wheel, can't we use existing Playwright functionality?" Human decision (2026-10-30): the same fix as #78. Rewrite the journey as Playwright tests in `src/e2e/`, delete the parser and the Django-client file, keep the criteria it proves, don't duplicate the existing create, add and publish journey, and add no dependency.
+
+- **Changed:** `src/rounds/tests/test_coordinator_journey.py` deleted.
+  - `src/e2e/test_accounts.py` gains `test_demo_workspace_credentials_sign_in_to_coordinator_home` (ACC-2.1, ACC-1.1). Chromium creates a demo workspace from the start page and sees the heading, credential table (Test Coordinator, then two Beta Testers) and save warning. A second tab is sent to sign in, so the visitor stays signed out. It then signs in with the shown coordinator credentials and sees the Coordinator home with the workspace, username and the Sample round in Draft.
+  - New `src/e2e/test_round_lifecycle.py`, `test_coordinator_edits_retests_twice_and_closes_round` (RND-1.2, 5.1, 5.5, 6.1 to 6.3). A `browser_accounts` override creates a Draft round with two criteria and two linked cases before Playwright starts. The browser retitles the round (checked on the round page and the Coordinator home) and edits a criterion and a case. It publishes, retests the first case twice, and checks each exact status message and which build is current for each case. It closes the round and checks that the content stays and no button remains. Stale tabs then get the exact 409 heading for publishing an Open round, and for closing, retesting and retitling a Closed one. After Playwright stops, the override checks the stored state, title, criteria, case fields and links, and each build's coverage.
+- **Division of work with `src/e2e/`:** `test_rounds.py` keeps creating, adding and publishing (RND-1.1, 2.1, 2.2, 3.1, already marked there) and reuses its `sign_in_coordinator`. `test_accounts.py` keeps ACC-1 sign-in with fixture accounts. The new tests cover what the HTTP journey added: demo credentials, edits, retests, close and refusals. Detailed markup, order and cache-header checks stay in the server-side tests (`test_views.py`, `test_publish.py`, `test_retest.py`, `test_close.py`, `test_demo_views.py`).
+- **Evidence:** each file was copied to the scratchpad, broken, run, then restored, and `cmp` reported it identical.
+  - `rounds/views.py` close flash changed to `"Round closed!"`: `pytest -q -p no:cacheprovider src/e2e/test_round_lifecycle.py` gave `1 failed`, "Locator expected to have text 'Round closed.'".
+  - `rounds/services.py` `request_retest` covering every case: the same command gave `1 failed`; `get_by_text("Synthetic build 1.0")` expected count 2 and got 1, because the second case lost its current build.
+  - `accounts/views.py` `create_demo` signing the coordinator in: `pytest -q -p no:cacheprovider src/e2e/test_accounts.py -k demo` gave `1 failed`; the second tab stayed on `/coordinator/` instead of `/sign-in/`.
+- **Checks:** focused `pytest -q -p no:cacheprovider src/e2e/test_round_lifecycle.py src/e2e/test_accounts.py`: 7 passed. Full, without `TOX_PARALLEL_ENV`: `manage.py check` and `makemigrations --check --dry-run` (test settings) clean; `ruff check .` and `ruff format --check .` clean; `pytest -q -p no:cacheprovider`: 2099 passed and 231 subtests. `check_scope.py builder --base 6a79f31` clean.
+- **Size:** non-test `src/` is 0. All files, `6a79f31` to the candidate: 271 insertions (250 test, 21 plan), plus the mandated 518-line deletion and 4 plan deletions, 793 in total. The coordinator's ~600-line stop guards against growth, so it is counted on insertions; the deletion is what the human decision requires (coordinator, 2026-10-30).
+- **Open:** `TECHNICAL-SPEC.md`'s Browser verification still says "the four selected journeys … are in slice 80's plan", which was already stale before this repair (`test_tester.py`, `test_results.py` and `test_drafting.py` are additional). It is left unchanged here, by the coordinator's direction.
+
 ## Next step
 
-After checkpoint 8 is committed and passes full verification, the slice is complete. The draft PR (#79) refers to #26 with "Refs #26"; the humans decide on review and merge. #26 stays open for RND-4 and RND-8 coverage, to be planned when those features are on main.
+After the review repair is committed and passes full verification, the slice is complete. The draft PR (#79) refers to #26 with "Refs #26"; the humans decide on review and merge. #26 stays open for RND-4 and RND-8 coverage, to be planned when those features are on main.
