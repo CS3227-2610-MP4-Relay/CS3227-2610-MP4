@@ -81,6 +81,7 @@ def prepare(sha, destination):
         "src/relay",
         "src/accounts",
         "src/rounds",
+        "src/ai",
     ]
     excluded = {
         "tests",
