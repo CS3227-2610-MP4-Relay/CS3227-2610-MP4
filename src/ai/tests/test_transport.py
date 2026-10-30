@@ -207,9 +207,12 @@ def test_a_trickling_body_is_cut_off_at_the_total_deadline(user, serve, short_de
 
 
 def client_sockets(port):
-    """Count this process's open TCP sockets connected to 127.0.0.1:`port`."""
+    """Count this process's open TCP sockets connected to 127.0.0.1:`port`.
+
+    Returns None where open descriptors cannot be listed (no /dev/fd).
+    """
     if not os.path.isdir("/dev/fd"):
-        pytest.skip("Counting open sockets needs /dev/fd.")
+        return None
     count = 0
     for name in os.listdir("/dev/fd"):
         try:
@@ -255,8 +258,9 @@ def collected_resource_warnings():
             hold(http(200, padded_reply(gateway.RESPONSE_BYTES + 1)), 6),
             Failed("invalid-response"),
         ),
+        (hold(b"HELLO\r\n\r\n", 6), Failed("transport")),
     ],
-    ids=["silent", "trickle", "success", "oversized"],
+    ids=["silent", "trickle", "success", "oversized", "unparsable"],
 )
 def test_no_connection_is_left_open_after_the_call(
     user, serve, short_deadline, no_gc, script, expected
@@ -266,7 +270,7 @@ def test_no_connection_is_left_open_after_the_call(
     result, elapsed = timed(user)
     assert result == expected
     assert elapsed < 3
-    assert client_sockets(server.port) == 0
+    assert client_sockets(server.port) in {0, None}  # None: not countable here
     assert collected_resource_warnings() == []
 
 
@@ -333,6 +337,84 @@ def test_a_task_ignoring_cancellation_delays_the_call_by_at_most_the_bound():
     started = time.monotonic()
     assert gateway._run(work()) == "done"
     assert time.monotonic() - started < gateway.CLEANUP_TIMEOUT + 0.5
+
+
+def test_the_call_closes_its_suspended_async_generators():
+    closed = []
+    suspended = []
+
+    async def numbers():
+        try:
+            yield 1
+            yield 2
+        finally:
+            closed.append(True)
+
+    async def work():
+        generator = numbers()
+        suspended.append(generator)
+        await anext(generator)
+        return "done"
+
+    assert gateway._run(work()) == "done"
+    assert closed == [True]
+
+
+def test_a_leftover_task_failing_on_cancellation_is_not_reported(caplog):
+    """Its exception is retrieved after the wait, so asyncio reports nothing."""
+
+    async def failing_on_cancel():
+        try:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            raise RuntimeError("synthetic failure while cancelled") from None
+
+    async def work():
+        asyncio.get_running_loop().create_task(failing_on_cancel())
+        await asyncio.sleep(0)
+        return "done"
+
+    gc.collect()  # earlier tests' leftovers are reported now, not below
+    caplog.clear()
+    caplog.set_level(logging.DEBUG)
+    assert gateway._run(work()) == "done"
+    gc.collect()
+    reports = [r for r in caplog.records if r.levelno >= logging.WARNING]
+    assert reports == []
+
+
+def test_leftover_tasks_log_no_exception_or_task_text(caplog):
+    """asyncio's own reports would name the task and repeat the exception."""
+
+    async def failing_secret_task():
+        await asyncio.sleep(0.01)
+        raise RuntimeError(f"synthetic {KEY} secret-data")
+
+    async def stubborn_secret_task():
+        try:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            await asyncio.sleep(10)
+
+    async def failed_early_secret_task():
+        raise RuntimeError(f"synthetic {KEY} early-secret-data")
+
+    async def work():
+        loop = asyncio.get_running_loop()
+        loop.create_task(failed_early_secret_task())
+        loop.create_task(stubborn_secret_task())
+        loop.create_task(failing_secret_task())
+        await asyncio.sleep(0)
+        return "done"
+
+    caplog.set_level(logging.DEBUG)
+    assert gateway._run(work()) == "done"
+    gc.collect()
+    logged = repr(
+        [(r.getMessage(), r.exc_info, r.exc_text, r.args) for r in caplog.records]
+    )
+    for secret in (KEY, "secret-data", "secret_task", "RuntimeError"):
+        assert secret not in logged
 
 
 def test_the_deadline_passed_in_bounds_the_request(serve):
