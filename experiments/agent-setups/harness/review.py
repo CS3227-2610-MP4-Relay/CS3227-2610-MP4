@@ -23,6 +23,8 @@ LABELS = PRIVATE / "review" / "labels.json"
 FOCUS = {
     "1": "round text input must refuse the nine controls; the marks, joiners "
     "and other\nscripts must stay allowed",
+    "3": "decision must hold, including privacy between testers, the "
+    "refusals,\nand the agent's own RES-2 criteria for everything left open",
     "2": "RND-5 criterion must hold, including the checks made under the "
     "round\nlock, the build cap, label comparison and the rendering rules",
 }
@@ -65,7 +67,8 @@ def git(cwd, *args, check=True):
 def task_text(task):
     """The issue and decisions, without the run's environment notes."""
     prompt = (
-        EXP / ("task-prompt-2.md" if task == "2" else "task-prompt.md")
+        EXP
+        / {"2": "task-prompt-2.md", "3": "task-prompt-3.md"}.get(task, "task-prompt.md")
     ).read_text()
     return prompt.split("## Environment")[0].strip()
 
@@ -89,7 +92,7 @@ def main(run):
     if workspace.exists():
         shutil.rmtree(workspace)
     task = meta.get("task", "1")
-    base = EXP / ("base2" if task == "2" else "base")
+    base = EXP / {"2": "base2", "3": "base3"}.get(task, "base")
     git(EXP, "clone", "-q", str(base), str(workspace))
     git(workspace, "remote", "remove", "origin")
     git(candidate, "add", "-A", "-N", ".")

@@ -18,9 +18,11 @@ import sys
 from pathlib import Path
 
 EXP = Path(__file__).resolve().parent.parent
-# TASK=2 selects the second task: its own base clone and prompt.
+# TASK=2 or TASK=3 selects a later task: its own base clone and prompt. Task 3
+# starts from a later Relay commit with browser tests, so it has its own venv.
 TASK = os.environ.get("TASK", "1")
-BASE = EXP / ("base2" if TASK == "2" else "base")
+BASE = EXP / {"2": "base2", "3": "base3"}.get(TASK, "base")
+VENV = EXP / ("venv3" if TASK == "3" else "venv")
 MP3, ADDONS = EXP / "mp3", EXP / "addons"
 
 ARMS = {
@@ -31,6 +33,7 @@ ARMS = {
     "mp4-sonnet": "MP4 workflow, Sonnet everywhere",
     "superpowers": "superpowers methodology",
     "spec-kit": "spec-kit Spec-Driven Development flow",
+    "openspec": "OpenSpec spec-driven flow (added at the human's request)",
     "caveman": "MP4 workflow + caveman",
     "ponytail": "MP4 workflow + ponytail",
     "headroom": "MP4 workflow + headroom proxy",
@@ -80,6 +83,14 @@ FEATURE_LINES = {
         "skill and "
         "the role agents in `workflow/agents/` are not used. The specs in "
         "`workflow/specs/` remain the requirements; spec-kit's feature documents "
+        "describe how this change meets them."
+    ),
+    "openspec": (
+        "- Feature work follows OpenSpec's spec-driven flow, using the "
+        "`openspec-*` skills and `/opsx:*` commands in `.claude/` (propose, "
+        "apply, archive) and the files in `openspec/`. The `slice` skill and the "
+        "role agents in `workflow/agents/` are not used. The specs in "
+        "`workflow/specs/` remain the requirements; OpenSpec's change documents "
         "describe how this change meets them."
     ),
 }
@@ -230,6 +241,48 @@ def setup_spec_kit(repo):
     )
 
 
+def setup_openspec(repo):
+    """Install OpenSpec's Claude skills and commands with its own pinned CLI.
+
+    The CLI is installed under addons/openspec with install scripts off, and
+    runs with a throwaway home so it writes no user configuration.
+    """
+    home = ADDONS / "openspec-home"
+    home.mkdir(exist_ok=True)
+    cli = ADDONS / "openspec" / "node_modules" / ".bin" / "openspec"
+    subprocess.run(
+        [
+            str(cli),
+            "init",
+            "--tools",
+            "claude",
+            "--profile",
+            "core",
+            "--no-animation",
+            "--no-copilot-cloud",
+            ".",
+        ],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        env={
+            **os.environ,
+            "HOME": str(home),
+            "XDG_CONFIG_HOME": str(home / ".config"),
+            "CI": "1",
+        },
+    )
+    # The adapter test lists every skill; OpenSpec adds its own openspec-* ones.
+    replace_once(
+        repo / "workflow" / "scripts" / "test_adapters.py",
+        'p.parent.name for p in (ROOT / root / "skills").glob("*/SKILL.md")',
+        'p.parent.name for p in (ROOT / root / "skills").glob("*/SKILL.md") '
+        'if not p.parent.name.startswith("openspec-")',
+    )
+    ruff = EXP / "venv" / "bin" / "ruff"
+    subprocess.run([str(ruff), "format", "-q", str(repo / "workflow")], check=True)
+
+
 def main(arm, run_id):
     """Clone the base for `run_id`, apply `arm`'s setup and record its commits."""
     assert arm in ARMS, arm
@@ -241,13 +294,15 @@ def main(arm, run_id):
     git(repo, "config", "user.email", "experiment@relay.invalid")
     with open(repo / ".git" / "info" / "exclude", "a") as exclude:
         exclude.write(".venv\n")
-    (repo / ".venv").symlink_to(EXP / "venv")
+    (repo / ".venv").symlink_to(VENV)
 
     if arm == "mp3":
         setup_mp3(repo)
     elif arm in FEATURE_LINES:
         if arm == "spec-kit":
             setup_spec_kit(repo)
+        if arm == "openspec":
+            setup_openspec(repo)
         replace_once(repo / "AGENTS.md", FEATURE_LINE, FEATURE_LINES[arm])
     if arm == "mp4-sonnet-builder":
         set_models(repo, ["builder"], "claude-sonnet-5-5")

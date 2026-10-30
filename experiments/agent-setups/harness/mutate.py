@@ -37,7 +37,7 @@ def main(run):
     spec = json.loads((RESULTS / "mutations" / f"{run}.json").read_text())
     source = PRIVATE / "evalwt" / run
     meta = json.loads((EXP / "out" / f"{run}.meta.json").read_text())
-    task_dir = "eval2" if meta.get("task") == "2" else "eval"
+    task_dir = {"2": "eval2", "3": "eval3"}.get(meta.get("task"), "eval")
     hidden = PRIVATE / task_dir / "zz_hidden"
     outcome = {}
     for mutant, edits in spec["mutants"].items():
