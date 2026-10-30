@@ -2,6 +2,9 @@
 
 from .base import *
 
+# Keep provider calls disabled even when the shared runtime enables them.
+SOC_LLM_LIVE = False
+
 SECRET_KEY = "relay-test-only-not-a-production-secret"
 DEBUG = False
 ALLOWED_HOSTS = ["testserver", "localhost", "127.0.0.1"]

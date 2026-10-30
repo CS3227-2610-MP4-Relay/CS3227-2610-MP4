@@ -1,8 +1,8 @@
 """Bounded provider-independent access to Relay's shared SoC LLM.
 
-Every limit here is a proposal pending confirmation (workflow/specs/ai/llm-gateway.md),
-and live calls stay off while `settings.SOC_LLM_LIVE` is False. Relay applies its
-own rules here; aiohttp does the networking.
+The contract is workflow/specs/ai/llm-gateway.md. Live calls require configured
+provider settings and refuse while `settings.SOC_LLM_LIVE` is False. Relay
+applies its own rules here; aiohttp does the networking.
 """
 
 import asyncio
@@ -171,6 +171,8 @@ async def _exchange(url, headers, body, deadline):
     verified, redirects are not followed and proxy variables are ignored.
     """
     timeout = aiohttp.ClientTimeout(total=_remaining(deadline))
+    tls = ssl.create_default_context()
+    tls.keylog_filename = None
     async with (
         aiohttp.ClientSession(
             timeout=timeout, trust_env=False, auto_decompress=False
@@ -180,7 +182,7 @@ async def _exchange(url, headers, body, deadline):
             data=body,
             headers=headers,
             allow_redirects=False,
-            ssl=ssl.create_default_context(),
+            ssl=tls,
         ) as response,
     ):
         received = bytearray()
@@ -243,6 +245,7 @@ class _CallLoop(asyncio.EventLoop):
 
     def __init__(self):
         super().__init__()
+        self.set_debug(False)
         self.transports = []
         self.set_default_executor(_DaemonExecutor())
         self.set_exception_handler(_report_loop_event)
@@ -319,7 +322,7 @@ def _reject_constant(value):
     raise ValueError(value)
 
 
-@sensitive_variables("body", "value", "text")
+@sensitive_variables("body", "value", "choices", "choice", "message", "refusal", "text")
 def _envelope(body):
     """Map a 2xx body to Success, a refusal or an invalid-response failure."""
     try:
@@ -330,13 +333,30 @@ def _envelope(body):
         )
     except (ValueError, RecursionError):
         return Failed("invalid-response")
-    if type(value) is dict and set(value) == {"refusal"}:
-        if type(value["refusal"]) is str:
-            return Refused("provider-refused")
+    if type(value) is not dict:
         return Failed("invalid-response")
-    if type(value) is not dict or set(value) != {"text"}:
+    choices = value.get("choices")
+    if type(choices) is not list or not choices or type(choices[0]) is not dict:
         return Failed("invalid-response")
-    text = value["text"]
+    choice = choices[0]
+    message = choice.get("message")
+    if (
+        type(message) is not dict
+        or message.get("role", "assistant") != "assistant"
+        or message.get("tool_calls") is not None
+        or message.get("function_call") is not None
+    ):
+        return Failed("invalid-response")
+    refusal = message.get("refusal")
+    if refusal is not None:
+        if type(refusal) is not str or not refusal:
+            return Failed("invalid-response")
+        return Refused("provider-refused")
+    if choice.get("finish_reason") == "content_filter":
+        return Refused("provider-refused")
+    if choice.get("finish_reason") == "length":
+        return Failed("invalid-response")
+    text = message.get("content")
     if (
         type(text) is not str
         or len(text) > REPLY_LIMIT
@@ -365,7 +385,15 @@ def _transport(instructions, data, deadline):
     }
     try:
         body = json.dumps(
-            {"model": model, "instructions": instructions, "data": data},
+            {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": instructions},
+                    {"role": "user", "content": data},
+                ],
+                "temperature": 0,
+                "stream": False,
+            },
             ensure_ascii=False,
         ).encode("utf-8")
         status, body = _run(_exchange(url, headers, body, deadline))

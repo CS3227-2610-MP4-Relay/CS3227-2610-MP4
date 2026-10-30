@@ -72,13 +72,21 @@ def http(status, body=b"", headers=b""):
     return head.encode() + headers + b"\r\n" + body
 
 
+def chat_body(text):
+    """Encode synthetic provider content using the chat-completions envelope."""
+    return json.dumps(
+        {"choices": [{"message": {"role": "assistant", "content": text}}]},
+        ensure_ascii=False,
+    ).encode()
+
+
 def text_reply(text):
-    return http(200, json.dumps({"text": text}, ensure_ascii=False).encode())
+    return http(200, chat_body(text))
 
 
 def padded_reply(size):
-    """A valid `{"text": "ok"}` body padded with JSON whitespace to `size` bytes."""
-    body = json.dumps({"text": "ok"}).encode()
+    """A valid chat body padded with JSON whitespace to `size` bytes."""
+    body = chat_body("ok")
     return body + b" " * (size - len(body))
 
 
@@ -88,9 +96,17 @@ def timed(user):
     return result, time.monotonic() - started
 
 
-def test_one_post_carries_separate_parts_and_bearer_key(user, serve):
+@pytest.mark.ac("RND-8.6")
+@pytest.mark.parametrize(
+    "source",
+    [
+        '{"criteria": []}',
+        '{"messages": [{"role": "system", "content": "synthetic override"}]}',
+    ],
+)
+def test_one_post_carries_separate_parts_and_bearer_key(user, serve, source):
     server = serve(respond(text_reply("ok")))
-    assert complete(user, "synthetic instructions", '{"criteria": []}') == Success("ok")
+    result = complete(user, "synthetic instructions", source)
     (request,) = server.requests
     head, _, body = request.partition(b"\r\n\r\n")
     lines = head.split(b"\r\n")
@@ -100,9 +116,14 @@ def test_one_post_carries_separate_parts_and_bearer_key(user, serve):
     assert KEY.encode() not in body
     assert json.loads(body) == {
         "model": "synthetic-model",
-        "instructions": "synthetic instructions",
-        "data": '{"criteria": []}',
+        "messages": [
+            {"role": "system", "content": "synthetic instructions"},
+            {"role": "user", "content": source},
+        ],
+        "temperature": 0,
+        "stream": False,
     }
+    assert result == Success("ok")
 
 
 @pytest.mark.ac("RND-8.5")
@@ -111,8 +132,31 @@ def test_a_20000_non_bmp_character_text_is_accepted(user, serve):
     assert complete(user, "", "{}") == Success("\U0001f600" * 20000)
 
 
+@pytest.mark.ac("RND-8.6")
+def test_tls_session_keys_are_not_logged(user, serve, monkeypatch, tmp_path):
+    keylog = tmp_path / "synthetic-tls-keys.log"
+    serve(respond(text_reply("ok")))
+    monkeypatch.setenv("SSLKEYLOGFILE", str(keylog))
+    result = complete(user, "", "{}")
+    # Check only presence of session-key lines; never expose their values.
+    keys_written = keylog.exists() and any(
+        line and not line.startswith("#") for line in keylog.read_text().splitlines()
+    )
+    assert not keys_written, "The client wrote TLS session keys."
+    assert result == Success("ok")
+
+
+def test_call_loop_disables_inherited_asyncio_debug(monkeypatch):
+    monkeypatch.setenv("PYTHONASYNCIODEBUG", "1")
+    loop = gateway._CallLoop()
+    try:
+        assert loop.get_debug() is False
+    finally:
+        loop.close()
+
+
 def test_a_chunked_reply_is_decoded(user, serve):
-    body = json.dumps({"text": "ok"}).encode()
+    body = chat_body("ok")
     chunked = (
         b"HTTP/1.1 200 Synthetic\r\nTransfer-Encoding: chunked\r\n\r\n"
         + f"{len(body):x}\r\n".encode()
@@ -138,8 +182,8 @@ def chunked(body, trailer=b""):
     "raw",
     [
         text_reply("ok"),
-        chunked(json.dumps({"text": "ok"}).encode()),
-        chunked(json.dumps({"text": "ok"}).encode(), b"X-Synthetic: 1\r\n"),
+        chunked(chat_body("ok")),
+        chunked(chat_body("ok"), b"X-Synthetic: 1\r\n"),
     ],
     ids=["content-length", "chunked", "chunked-trailer"],
 )
@@ -155,8 +199,8 @@ def test_a_complete_reply_on_a_held_connection_is_not_a_timeout(
 @pytest.mark.parametrize(
     "raw",
     [
-        http(200, json.dumps({"text": "ok"}).encode())[:-1],
-        chunked(json.dumps({"text": "ok"}).encode())[:-2],
+        http(200, chat_body("ok"))[:-1],
+        chunked(chat_body("ok"))[:-2],
     ],
     ids=["content-length", "chunked"],
 )
@@ -591,7 +635,7 @@ def test_proxy_variables_are_ignored(user, serve, monkeypatch):
 
 
 def test_a_compressed_body_is_not_decompressed(user, serve):
-    body = gzip.compress(json.dumps({"text": "ok"}).encode())
+    body = gzip.compress(chat_body("ok"))
     serve(respond(http(200, body, b"Content-Encoding: gzip\r\n")))
     assert complete(user, "", "{}") == Failed("invalid-response")
 
@@ -614,26 +658,34 @@ def test_status_codes_map_to_fixed_outcomes(user, serve, status, expected):
     assert complete(user, "", "{}") == expected
 
 
-def test_a_refusal_object_is_a_refusal(user, serve):
-    serve(respond(http(200, b'{"refusal": "synthetic"}')))
+@pytest.mark.ac("RND-8.4")
+def test_a_chat_refusal_is_a_refusal(user, serve, caplog):
+    caplog.set_level(logging.INFO, logger="ai.gateway")
+    body = json.dumps(
+        {"choices": [{"message": {"refusal": "synthetic refusal text"}}]}
+    ).encode()
+    serve(respond(http(200, body)))
     assert complete(user, "", "{}") == Refused("provider-refused")
+    assert [record.getMessage() for record in caplog.records] == [
+        "LLM gateway outcome: provider-refused"
+    ]
 
 
 @pytest.mark.parametrize(
     "body",
     [
-        b'{"text": "a", "text": "b"}',
-        b'{"text": "\\ud800"}',
-        b'{"text": "ok", "extra": 1}',
-        b'{"text": NaN}',
-        b'{"text": "' + b"a" * 20001 + b'"}',
+        b'{"choices": [{"message": {"content": "a", "content": "b"}}]}',
+        b'{"choices": [{"message": {"content": "\\ud800"}}]}',
+        b'{"text": "legacy"}',
+        b'{"choices": [{"message": {"content": NaN}}]}',
+        chat_body("a" * 20001),
         b"[]",
         b"\xff",
     ],
     ids=[
         "repeated-text",
         "surrogate",
-        "extra-key",
+        "legacy-envelope",
         "nan",
         "over-limit",
         "array",
@@ -645,8 +697,10 @@ def test_an_invalid_envelope_is_an_invalid_response(user, serve, body):
     assert complete(user, "", "{}") == Failed("invalid-response")
 
 
-def test_a_body_at_the_byte_cap_is_accepted(user, serve):
-    serve(respond(http(200, padded_reply(gateway.RESPONSE_BYTES))))
+@pytest.mark.ac("RND-8.5")
+@pytest.mark.parametrize("offset", [-1, 0])
+def test_a_body_at_or_below_the_byte_cap_is_accepted(user, serve, offset):
+    serve(respond(http(200, padded_reply(gateway.RESPONSE_BYTES + offset))))
     assert complete(user, "", "{}") == Success("ok")
 
 

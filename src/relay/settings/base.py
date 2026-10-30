@@ -56,7 +56,6 @@ CSRF_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
-# Live SoC LLM calls stay off until the provider's API, retention and training
-# terms and limits are confirmed. Code-level, never read from the environment,
-# so turning it on needs a reviewed change (workflow/specs/ai/llm-gateway.md).
-SOC_LLM_LIVE = False
+# Code-level provider switch, never read from the environment. Runtime setup,
+# confirmed evidence and pending validation: workflow/specs/ai/llm-gateway.md.
+SOC_LLM_LIVE = True
