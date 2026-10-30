@@ -1,0 +1,41 @@
+{
+  "run": "r2-superpowers",
+  "notes": "Check is one `if` line in RoundTextField.clean (isdisjoint on BIDI_CONTROLS).",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if not BIDI_CONTROLS.isdisjoint(value):\n",
+        "new": "        if False:\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if not BIDI_CONTROLS.isdisjoint(value):\n",
+        "new": "        if not (BIDI_CONTROLS - {chr(0x2069)}).isdisjoint(value):\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if not BIDI_CONTROLS.isdisjoint(value):\n",
+        "new": "        if not (BIDI_CONTROLS - {chr(0x202B)}).isdisjoint(value):\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if not BIDI_CONTROLS.isdisjoint(value):\n",
+        "new": "        if not (BIDI_CONTROLS | {chr(0x200E)}).isdisjoint(value):\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if not BIDI_CONTROLS.isdisjoint(value):\n",
+        "new": "        if not BIDI_CONTROLS.isdisjoint(value) and self.label != \"Build label\":\n"
+      }
+    ]
+  }
+}

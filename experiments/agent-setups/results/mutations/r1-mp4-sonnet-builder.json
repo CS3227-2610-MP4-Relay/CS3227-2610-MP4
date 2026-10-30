@@ -1,0 +1,41 @@
+{
+  "run": "r1-mp4-sonnet-builder",
+  "notes": "Check inside RoundTextField.clean with a DIRECTION_CONTROLS frozenset shared with the title filter.",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if not DIRECTION_CONTROLS.isdisjoint(value):\n",
+        "new": "        if False:\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if not DIRECTION_CONTROLS.isdisjoint(value):\n",
+        "new": "        if not (DIRECTION_CONTROLS - {chr(0x2069)}).isdisjoint(value):\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if not DIRECTION_CONTROLS.isdisjoint(value):\n",
+        "new": "        if not (DIRECTION_CONTROLS - {chr(0x202B)}).isdisjoint(value):\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if not DIRECTION_CONTROLS.isdisjoint(value):\n",
+        "new": "        if not (DIRECTION_CONTROLS | {chr(0x200E)}).isdisjoint(value):\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if not DIRECTION_CONTROLS.isdisjoint(value):\n",
+        "new": "        if not DIRECTION_CONTROLS.isdisjoint(value) and self.label != \"Build label\":\n"
+      }
+    ]
+  }
+}

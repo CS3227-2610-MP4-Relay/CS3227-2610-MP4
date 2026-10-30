@@ -1,0 +1,303 @@
+{
+  "findings": [
+    {
+      "run": "i1-haiku-1",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "rounds.md's rendering rule now claims the title removals and isolates protect only text that bypasses the forms, which is false because dir=auto and FSI/PDI still isolate RTL text and the allowed LRM/RLM/ALM marks; the SECURITY-SPEC bullet similarly drops that rationale."
+    },
+    {
+      "run": "i1-opus-1",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "The rendering rule in rounds.md now claims each rules criterion tests direction marks in rendered text, but the RND-1.7, RND-2.8 and RND-6.5 rendering tests (test_rendering.py, test_record_rendering.py, test_close.py) use no marks, so the spec claims tests that do not exist."
+    },
+    {
+      "run": "i1-sonnet-2",
+      "severity": "Medium",
+      "area": "tests",
+      "summary": "The refusal and acceptance tests only exercise the new-criterion and new-case routes, so the criterion and case edit inputs that RND-2.8 now promises to refuse are never sent a direction control."
+    },
+    {
+      "run": "i2-hermes-1",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "Rule 5 now states the checks run strictly in the order length, null, direction, visibility, but Django runs the length and null-character checks together, so text that is too long and contains a null gets both messages; the rule also restates the per-field length message that the criteria already hold."
+    },
+    {
+      "run": "r1-mp4-sonnet-builder",
+      "severity": "Medium",
+      "area": "tests",
+      "summary": "`HEX = lambda ...` in test_direction_controls.py violates Ruff's default E731 rule, so the required `ruff check .` verification would fail."
+    },
+    {
+      "run": "r1-spec-kit",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "The rendering rule in rounds.md now says each rules criterion tests direction-mark rendering, but only RND-5.8 has such tests; RND-1.7, RND-2.8 and RND-3.6 rendering tests use only U+202E, U+200B and U+2066."
+    },
+    {
+      "run": "r1-superpowers",
+      "severity": "Medium",
+      "area": "tests",
+      "summary": "The allowed-character test covers only LRM, RLM, ALM and ZWSP, so a regression that refused joiners (U+200C/U+200D), right-to-left script letters or the characters next to the refused ranges (U+2029, U+202F, U+2065, U+206A) would not fail any test."
+    },
+    {
+      "run": "r1-superpowers",
+      "severity": "Medium",
+      "area": "tests",
+      "summary": "The RND-3.6 and RND-5.8 rendering tests (round-page build labels, retest and sign-in messages) were switched from bidi controls to direction marks without adding the saved-text bidi-control tests that the new rendering-rule sentence requires, so only the Closed page still covers saved bidi labels."
+    },
+    {
+      "run": "r2-headroom",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "The rendering rule now says each requirement's rules criterion tests direction-mark characters, but the RND-1, RND-2 and RND-6.5 rendering tests (test_rendering, test_record_rendering, test_close) were not extended with LRM/RLM/ALM."
+    },
+    {
+      "run": "r2-mp4-sonnet",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "The new SECURITY-SPEC residual explains accepting look-alike labels by saying mark-inserted labels equal the plain label, which means they would be refused as duplicates; the real residual is RLM/ALM reordering neutral characters so a different label, title or case looks like another."
+    },
+    {
+      "run": "r2-mp4-sonnet-builder",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "SECURITY-SPEC records the 'stored text not cleaned / Draft item uneditable with nothing visible to remove' residual as accepted by the human on 2026-10-27 (#68), but the human's decisions accepted only the zero-width and direction-mark look-alike residuals, so this misstates an approval."
+    },
+    {
+      "run": "r2-ponytail",
+      "severity": "Medium",
+      "area": "tests",
+      "summary": "The build-label rendering tests (test_publish.py:641, test_retest.py:672, test_messages.py:172) were switched to allowed marks, and no test writes a build label with real bidi controls into the database, so RND-3.6's rendering coverage of bidi controls in already-saved labels is gone, despite rounds.md now saying tests put controls in stored text directly."
+    },
+    {
+      "run": "r2-stack",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "TECHNICAL-SPEC.md 'Text fields' still says the shared round text field applies only the visibility check, length limits and null-character validator, omitting the new text-direction control refusal."
+    },
+    {
+      "run": "r3-mp4",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "SECURITY-SPEC records a new residual as 'not yet seen by the human' and points to a plan file that is absent, instead of stating it fully in its home and resolving its acceptance before merge."
+    },
+    {
+      "run": "ref-codex-mp4-1",
+      "severity": "Medium",
+      "area": "tests",
+      "summary": "The view-level text-direction refusal tests cover only criterion text and case title (not steps or expected result, unlike the adjacent null-character test over all FIELDS) and only round creation (not retitling), so not every round text input is tested to refuse the controls."
+    }
+  ],
+  "headroom": {
+    "r1-headroom": {
+      "requests": 173,
+      "wire_percent": 1.07
+    },
+    "r1-stack": {
+      "requests": 136,
+      "wire_percent": 1.06
+    },
+    "r2-headroom": {
+      "requests": 142,
+      "wire_percent": 0.91
+    },
+    "r2-stack": {
+      "requests": 129,
+      "wire_percent": 0.94
+    }
+  },
+  "opus_cost_split": {
+    "runs": 19,
+    "per_million": {
+      "cache_read": 0.29136260047793666,
+      "cache_write": 6.219705479067216,
+      "output": 12.000261008015128
+    },
+    "mean_share": {
+      "cache_read": 0.40562202992505564,
+      "cache_write": 0.3961243719644286,
+      "output": 0.1982535981105158
+    },
+    "note": "Fitted to Claude Code's reported costs, not published prices."
+  },
+  "report_accuracy": {
+    "i1-codex-1": {
+      "reported": 838,
+      "measured": 838,
+      "match": true
+    },
+    "i1-codex-2": {
+      "reported": 867,
+      "measured": 867,
+      "match": true
+    },
+    "i1-haiku-1": {
+      "reported": 852,
+      "measured": 852,
+      "match": true
+    },
+    "i1-hermes-1": {
+      "reported": 837,
+      "measured": 837,
+      "match": true
+    },
+    "i1-opus-1": {
+      "reported": 891,
+      "measured": 891,
+      "match": true
+    },
+    "i1-sonnet-1": {
+      "reported": 971,
+      "measured": 971,
+      "match": true
+    },
+    "i1-sonnet-2": {
+      "reported": 964,
+      "measured": 964,
+      "match": true
+    },
+    "i2-codex-1": {
+      "reported": 836,
+      "measured": 836,
+      "match": true
+    },
+    "i2-haiku-1": {
+      "reported": 890,
+      "measured": 890,
+      "match": true
+    },
+    "i2-hermes-1": {
+      "reported": 827,
+      "measured": 827,
+      "match": true
+    },
+    "r1-caveman": {
+      "reported": 1017,
+      "measured": 1017,
+      "match": true
+    },
+    "r1-headroom": {
+      "reported": null,
+      "measured": 872,
+      "match": null
+    },
+    "r1-mp3": {
+      "reported": 1098,
+      "measured": 1098,
+      "match": true
+    },
+    "r1-mp4": {
+      "reported": 862,
+      "measured": 862,
+      "match": true
+    },
+    "r1-mp4-sonnet": {
+      "reported": 1129,
+      "measured": 1129,
+      "match": true
+    },
+    "r1-mp4-sonnet-builder": {
+      "reported": 863,
+      "measured": 863,
+      "match": true
+    },
+    "r1-ponytail": {
+      "reported": null,
+      "measured": 849,
+      "match": null
+    },
+    "r1-solo": {
+      "reported": 890,
+      "measured": 890,
+      "match": true
+    },
+    "r1-spec-kit": {
+      "reported": null,
+      "measured": 849,
+      "match": null
+    },
+    "r1-stack": {
+      "reported": 846,
+      "measured": 846,
+      "match": true
+    },
+    "r1-superpowers": {
+      "reported": null,
+      "measured": 860,
+      "match": null
+    },
+    "r2-caveman": {
+      "reported": 844,
+      "measured": 844,
+      "match": true
+    },
+    "r2-headroom": {
+      "reported": 873,
+      "measured": 873,
+      "match": true
+    },
+    "r2-mp3": {
+      "reported": 869,
+      "measured": 869,
+      "match": true
+    },
+    "r2-mp4": {
+      "reported": 853,
+      "measured": 853,
+      "match": true
+    },
+    "r2-mp4-sonnet": {
+      "reported": 1010,
+      "measured": 1010,
+      "match": true
+    },
+    "r2-mp4-sonnet-builder": {
+      "reported": 852,
+      "measured": 852,
+      "match": true
+    },
+    "r2-ponytail": {
+      "reported": 840,
+      "measured": 840,
+      "match": true
+    },
+    "r2-solo": {
+      "reported": 880,
+      "measured": 880,
+      "match": true
+    },
+    "r2-spec-kit": {
+      "reported": 859,
+      "measured": 859,
+      "match": true
+    },
+    "r2-stack": {
+      "reported": 850,
+      "measured": 850,
+      "match": true
+    },
+    "r2-superpowers": {
+      "reported": 845,
+      "measured": 845,
+      "match": true
+    },
+    "r3-mp4": {
+      "reported": 878,
+      "measured": 878,
+      "match": true
+    },
+    "ref-codex-mp4-1": {
+      "reported": 820,
+      "measured": 820,
+      "match": true
+    },
+    "ref-haiku-mp4-1": {
+      "reported": null,
+      "measured": 1076,
+      "match": null
+    }
+  }
+}

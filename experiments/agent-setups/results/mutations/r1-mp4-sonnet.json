@@ -1,0 +1,41 @@
+{
+  "run": "r1-mp4-sonnet",
+  "notes": "Default validator on RoundTextField using the shared BIDI_CONTROLS table.",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    if any(ord(char) in BIDI_CONTROLS for char in value):\n",
+        "new": "    if False:\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    if any(ord(char) in BIDI_CONTROLS for char in value):\n",
+        "new": "    if any(ord(char) in BIDI_CONTROLS and ord(char) != 0x2069 for char in value):\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    if any(ord(char) in BIDI_CONTROLS for char in value):\n",
+        "new": "    if any(ord(char) in BIDI_CONTROLS and ord(char) != 0x202B for char in value):\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    if any(ord(char) in BIDI_CONTROLS for char in value):\n",
+        "new": "    if any(ord(char) in BIDI_CONTROLS or ord(char) == 0x200E for char in value):\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    return RoundTextField(\n        max_length=100,\n        label=\"Build label\",\n        widget=forms.TextInput(attrs={\"dir\": \"auto\"}),\n    )\n",
+        "new": "    field = RoundTextField(\n        max_length=100,\n        label=\"Build label\",\n        widget=forms.TextInput(attrs={\"dir\": \"auto\"}),\n    )\n    field.validators = [v for v in field.validators if v is not refuse_text_direction_controls]\n    return field\n"
+      }
+    ]
+  }
+}
