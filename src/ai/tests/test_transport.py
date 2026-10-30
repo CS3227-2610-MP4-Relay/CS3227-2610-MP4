@@ -1,10 +1,19 @@
 """The gateway's HTTPS transport against a real local TLS server (no provider)."""
 
+import asyncio
+import gc
 import gzip
 import json
 import logging
+import os
 import socket
+import subprocess
+import sys
+import threading
 import time
+import types
+import warnings
+from pathlib import Path
 
 import pytest
 
@@ -65,6 +74,12 @@ def http(status, body=b"", headers=b""):
 
 def text_reply(text):
     return http(200, json.dumps({"text": text}, ensure_ascii=False).encode())
+
+
+def padded_reply(size):
+    """A valid `{"text": "ok"}` body padded with JSON whitespace to `size` bytes."""
+    body = json.dumps({"text": "ok"}).encode()
+    return body + b" " * (size - len(body))
 
 
 def timed(user):
@@ -190,6 +205,279 @@ def test_a_trickling_body_is_cut_off_at_the_total_deadline(user, serve, short_de
     result, elapsed = timed(user)
     assert result == Failed("timeout")
     assert elapsed < 3
+
+
+def client_sockets(port):
+    """Count this process's open TCP sockets connected to 127.0.0.1:`port`.
+
+    Returns None where open descriptors cannot be listed (no /dev/fd).
+    """
+    if not os.path.isdir("/dev/fd"):
+        return None
+    count = 0
+    for name in os.listdir("/dev/fd"):
+        try:
+            with socket.fromfd(int(name), socket.AF_INET, socket.SOCK_STREAM) as sock:
+                count += sock.getpeername() == ("127.0.0.1", port)
+        except OSError:
+            continue
+    return count
+
+
+@pytest.fixture
+def no_gc():
+    """Pause automatic garbage collection, so only the call itself closes sockets."""
+    gc.collect()
+    gc.disable()
+    yield
+    gc.enable()
+
+
+def collected_resource_warnings():
+    """Collect garbage and return the ResourceWarnings it reports."""
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        gc.collect()
+    return [w for w in caught if issubclass(w.category, ResourceWarning)]
+
+
+@pytest.mark.parametrize(
+    ("script", "expected"),
+    [
+        (hold(b"", 6), Failed("timeout")),
+        (
+            trickle(
+                b"HTTP/1.1 200 Synthetic\r\nContent-Length: 100000\r\n\r\n",
+                b" ",
+                0.2,
+                6,
+            ),
+            Failed("timeout"),
+        ),
+        (hold(text_reply("ok"), 6), Success("ok")),
+        (
+            hold(http(200, padded_reply(gateway.RESPONSE_BYTES + 1)), 6),
+            Failed("invalid-response"),
+        ),
+        (hold(b"HELLO\r\n\r\n", 6), Failed("transport")),
+    ],
+    ids=["silent", "trickle", "success", "oversized", "unparsable"],
+)
+def test_no_connection_is_left_open_after_the_call(
+    user, serve, short_deadline, no_gc, script, expected
+):
+    """The server holds every connection open, so only the client can close it."""
+    server = serve(script)
+    result, elapsed = timed(user)
+    assert result == expected
+    assert elapsed < 3
+    assert client_sockets(server.port) in {0, None}  # None: not countable here
+    assert collected_resource_warnings() == []
+
+
+def test_a_hung_name_lookup_leaves_no_thread_that_delays_exit(
+    user, serve, short_deadline, monkeypatch
+):
+    server = serve(respond(text_reply("ok")))
+    monkeypatch.setenv("SOC_LLM_ENDPOINT", f"https://localhost:{server.port}/llm")
+    original = socket.getaddrinfo
+
+    def slow(*args, **kwargs):
+        time.sleep(6)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", slow)
+    before = set(threading.enumerate())
+    assert timed(user)[0] == Failed("timeout")
+    started = [t for t in threading.enumerate() if t not in before and t.is_alive()]
+    assert started, "the hung lookup's thread should still be running"
+    assert all(thread.daemon for thread in started)
+
+
+def test_a_process_with_a_hung_name_lookup_exits_promptly():
+    """The helper's lookup hangs for 20 seconds; exit must not wait for it."""
+    src = Path(__file__).resolve().parents[2]
+    started = time.monotonic()
+    finished = subprocess.run(
+        [sys.executable, "-m", "ai.tests.hung_lookup"],
+        cwd=src,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    elapsed = time.monotonic() - started
+    assert finished.returncode == 0, finished.stderr[-2000:]
+    assert finished.stdout.strip() == "timeout"
+    assert elapsed < 10
+
+
+def test_the_call_cancels_its_leftover_tasks():
+    leftovers = []
+
+    async def work():
+        leftovers.append(asyncio.get_running_loop().create_task(asyncio.sleep(10)))
+        return "done"
+
+    assert gateway._run(work()) == "done"
+    assert leftovers[0].cancelled()
+
+
+def test_a_task_ignoring_cancellation_delays_the_call_by_at_most_the_bound():
+    async def stubborn():
+        try:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            await asyncio.sleep(10)
+
+    async def work():
+        asyncio.get_running_loop().create_task(stubborn())
+        await asyncio.sleep(0)
+        return "done"
+
+    started = time.monotonic()
+    assert gateway._run(work()) == "done"
+    assert time.monotonic() - started < gateway.CLEANUP_TIMEOUT + 0.5
+    gc.collect()  # the abandoned task is reported now, not in a later test
+
+
+def test_the_call_closes_its_suspended_async_generators():
+    closed = []
+    suspended = []
+
+    async def numbers():
+        try:
+            yield 1
+            yield 2
+        finally:
+            closed.append(True)
+
+    async def work():
+        generator = numbers()
+        suspended.append(generator)
+        await anext(generator)
+        return "done"
+
+    assert gateway._run(work()) == "done"
+    assert closed == [True]
+
+
+def test_a_leftover_task_failing_on_cancellation_is_not_reported(caplog):
+    """Its exception is retrieved after the wait, so asyncio reports nothing."""
+
+    async def failing_on_cancel():
+        try:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            raise RuntimeError("synthetic failure while cancelled") from None
+
+    async def work():
+        asyncio.get_running_loop().create_task(failing_on_cancel())
+        await asyncio.sleep(0)
+        return "done"
+
+    gc.collect()  # earlier tests' leftovers are reported now, not below
+    caplog.clear()
+    caplog.set_level(logging.DEBUG)
+    assert gateway._run(work()) == "done"
+    gc.collect()
+    reports = [r for r in caplog.records if r.levelno >= logging.WARNING]
+    assert reports == []
+
+
+def test_leftover_tasks_log_no_exception_or_task_text(caplog):
+    """asyncio's own reports would name the task and repeat the exception."""
+
+    async def failing_secret_task():
+        await asyncio.sleep(0.01)
+        raise RuntimeError(f"synthetic {KEY} secret-data")
+
+    async def stubborn_secret_task():
+        try:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            await asyncio.sleep(10)
+
+    async def failed_early_secret_task():
+        raise RuntimeError(f"synthetic {KEY} early-secret-data")
+
+    async def work():
+        loop = asyncio.get_running_loop()
+        loop.create_task(failed_early_secret_task())
+        loop.create_task(stubborn_secret_task())
+        loop.create_task(failing_secret_task())
+        await asyncio.sleep(0.05)  # failing_secret_task fails first
+        return "done"
+
+    caplog.set_level(logging.DEBUG)
+    assert gateway._run(work()) == "done"
+    gc.collect()
+    logged = repr(
+        [(r.getMessage(), r.exc_info, r.exc_text, r.args) for r in caplog.records]
+    )
+    for secret in (KEY, "secret-data", "secret_task", "RuntimeError"):
+        assert secret not in logged
+    report = "LLM gateway loop report: leftover-task"
+    assert report in [r.getMessage() for r in caplog.records]
+
+
+@pytest.mark.parametrize("stubborn_task", [False, True])
+def test_a_generator_ignoring_cancellation_does_not_hold_the_call(stubborn_task):
+    async def stubborn():
+        try:
+            yield 1
+        finally:
+            try:
+                await asyncio.sleep(10)
+            except asyncio.CancelledError:
+                await asyncio.sleep(3)
+
+    async def work(generator):
+        await anext(generator)
+        if stubborn_task:  # the generator then gets only what is left of the bound
+            await anext(other := stubborn())
+            asyncio.ensure_future(other.aclose())
+        return "done"
+
+    generator = stubborn()  # kept, so the loop must close it
+    started = time.monotonic()
+    assert gateway._run(work(generator)) == "done"
+    assert time.monotonic() - started < gateway.CLEANUP_TIMEOUT + 0.5
+    del generator
+    gc.collect()  # the abandoned tasks are reported now, not in a later test
+
+
+def test_loop_reports_log_a_code_chosen_only_by_the_kind_of_object(caplog):
+    caplog.set_level(logging.DEBUG)
+    error = RuntimeError(f"synthetic {KEY} os-error-text")
+    for key in ("task", "future", "asyncgen", "transport", "protocol", "handle"):
+        gateway._report_loop_event(
+            None, {"message": str(error), "exception": error, key: 1}
+        )
+    codes = ["leftover-task"] * 2 + ["asyncgen-close"] + ["connection-error"] * 2
+    expected = [(f"LLM gateway loop report: {c}", None) for c in [*codes, "loop-error"]]
+    assert [(r.getMessage(), r.exc_info) for r in caplog.records] == expected
+
+
+def test_one_failing_abort_skips_no_other_transport(monkeypatch, caplog):
+    aborted = []
+    below = types.SimpleNamespace(abort=lambda: aborted.append("not a transport"))
+    tls = types.SimpleNamespace(_transport=below)
+    first = types.SimpleNamespace(abort=lambda: 1 / 0, _ssl_protocol=tls)
+    second = types.SimpleNamespace(abort=lambda: aborted.append("second"))
+    connections = iter([first, second])
+
+    async def connect(self, *args, **kwargs):
+        return next(connections), None
+
+    monkeypatch.setattr(asyncio.BaseEventLoop, "create_connection", connect)
+    loop = gateway._CallLoop()
+    for _ in range(2):
+        loop.run_until_complete(loop.create_connection())
+    gateway._settle(loop)
+    loop.close()
+    assert aborted == ["second"]
+    assert caplog.messages == ["LLM gateway loop report: abort-failed"]
 
 
 def test_the_deadline_passed_in_bounds_the_request(serve):
@@ -355,12 +643,6 @@ def test_a_refusal_object_is_a_refusal(user, serve):
 def test_an_invalid_envelope_is_an_invalid_response(user, serve, body):
     serve(respond(http(200, body)))
     assert complete(user, "", "{}") == Failed("invalid-response")
-
-
-def padded_reply(size):
-    """A valid `{"text": "ok"}` body padded with JSON whitespace to `size` bytes."""
-    body = json.dumps({"text": "ok"}).encode()
-    return body + b" " * (size - len(body))
 
 
 def test_a_body_at_the_byte_cap_is_accepted(user, serve):

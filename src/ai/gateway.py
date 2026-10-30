@@ -6,10 +6,12 @@ own rules here; aiohttp does the networking.
 """
 
 import asyncio
+import concurrent.futures
 import json
 import logging
 import os
 import ssl
+import threading
 import time
 from dataclasses import dataclass
 from datetime import timedelta
@@ -30,6 +32,7 @@ REPLY_LIMIT = 20000
 RESPONSE_BYTES = REPLY_LIMIT * 12 + 4096
 TOTAL_TIMEOUT = 30
 RELEASE_MARGIN = 5
+CLEANUP_TIMEOUT = 1
 USER_CALLS = 20
 DEPLOYMENT_CALLS = 200
 USER_WINDOW = timedelta(hours=1)
@@ -188,13 +191,118 @@ async def _exchange(url, headers, body, deadline):
         return response.status, bytes(received)
 
 
+class _DaemonExecutor(concurrent.futures.ThreadPoolExecutor):
+    """Run each job, such as a name lookup, in its own daemon thread.
+
+    A daemon thread is not joined at interpreter exit, so a hung lookup cannot
+    delay a worker's shutdown; shutting the executor down never waits.
+    """
+
+    def submit(self, fn, /, *args, **kwargs):
+        """Start `fn(*args, **kwargs)` in a new daemon thread; return its future."""
+        future = concurrent.futures.Future()
+
+        def work():
+            if not future.set_running_or_notify_cancel():
+                return
+            try:
+                result = fn(*args, **kwargs)
+            except BaseException as error:  # noqa: BLE001 - handed to the awaiting call
+                future.set_exception(error)
+            else:
+                future.set_result(result)
+
+        threading.Thread(target=work, daemon=True).start()
+        return future
+
+    def shutdown(self, wait=True, *, cancel_futures=False):
+        """Do nothing: the daemon threads are never waited for."""
+
+
+_LOOP_REPORTS = (
+    (("task", "future"), "leftover-task"),
+    (("asyncgen",), "asyncgen-close"),
+    (("transport", "protocol"), "connection-error"),
+)
+
+
+def _report_loop_event(loop, context):
+    """Log asyncio's report about the call's loop as a fixed code only.
+
+    The code depends only on which keys `context` has: asyncio's message and
+    exception can carry task, exception or operating-system text.
+    """
+    keys = [
+        code for names, code in _LOOP_REPORTS if not context.keys().isdisjoint(names)
+    ]
+    logger.warning("LLM gateway loop report: %s", (keys or ["loop-error"])[0])
+
+
+class _CallLoop(asyncio.EventLoop):
+    """One call's event loop, which records every connection it opens."""
+
+    def __init__(self):
+        super().__init__()
+        self.transports = []
+        self.set_default_executor(_DaemonExecutor())
+        self.set_exception_handler(_report_loop_event)
+
+    async def create_connection(self, *args, **kwargs):
+        """Open a connection as asyncio does, recording its transports.
+
+        For TLS, the socket transport below is recorded too: once aiohttp has
+        closed a TLS transport twice, aborting it no longer reaches that socket.
+        asyncio offers no public way to reach it, hence the private attributes;
+        the unparsable-reply transport test fails if they change.
+        """
+        transport, protocol = await super().create_connection(*args, **kwargs)
+        self.transports.append(transport)
+        tls = getattr(transport, "_ssl_protocol", None)
+        below = getattr(tls, "_transport", None)
+        if isinstance(below, asyncio.BaseTransport):
+            self.transports.append(below)
+        return transport, protocol
+
+
 def _run(awaitable):
-    """Run `awaitable` on a new loop, closed without asyncio.run's wait for threads."""
-    loop = asyncio.new_event_loop()
+    """Run `awaitable` on a new loop, leaving no connection or task behind.
+
+    Unlike asyncio.run, closing the loop does not wait for a lookup's thread.
+    """
+    loop = _CallLoop()
     try:
         return loop.run_until_complete(awaitable)
     finally:
-        loop.close()
+        try:
+            _settle(loop)
+        finally:
+            loop.close()
+
+
+def _settle(loop):
+    """Cancel `loop`'s remaining work, then abort and close its connections.
+
+    Leftover tasks and generators get CLEANUP_TIMEOUT in all, then are abandoned.
+    """
+    end = time.monotonic() + CLEANUP_TIMEOUT
+    pending = asyncio.all_tasks(loop)
+    for task in pending:
+        task.cancel()
+    if pending:
+        loop.run_until_complete(asyncio.wait(pending, timeout=CLEANUP_TIMEOUT))
+    closing = {loop.create_task(loop.shutdown_asyncgens())}
+    loop.run_until_complete(
+        asyncio.wait(closing, timeout=max(0, end - time.monotonic()))
+    )
+    for task in pending:
+        if task.done() and not task.cancelled():
+            task.exception()  # retrieved, so asyncio does not report it
+    for transport in loop.transports:
+        try:
+            transport.abort()
+        except Exception:  # noqa: BLE001 - the others must still be aborted
+            logger.warning("LLM gateway loop report: %s", "abort-failed")
+    loop.run_until_complete(asyncio.sleep(0))  # one pass closes the aborted sockets
 
 
 def _no_repeated_keys(pairs):
