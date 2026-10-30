@@ -1,8 +1,7 @@
 """Plant the five behavioural mutants in one candidate: python mutate.py <run_id>
 
-The mutants are fixed in method.md (M1 no check, M2 U+2069 allowed, M3 U+202B
-allowed, M4 LRM refused, M5 build labels unchecked). How each is planted depends
-on the candidate's code, so results/mutations/<run_id>.json gives, per mutant,
+Each task's five mutants are fixed in method.md. How each is planted depends on
+the candidate's code, so results/mutations/<run_id>.json gives, per mutant,
 exact text replacements in the candidate's own files. A mutant is killed when the
 candidate's own full test suite fails, and live when the hidden suite fails.
 """
@@ -37,6 +36,9 @@ def main(run):
     """Plant each mutant in a copy of `run` and record whether it was caught."""
     spec = json.loads((RESULTS / "mutations" / f"{run}.json").read_text())
     source = PRIVATE / "evalwt" / run
+    meta = json.loads((EXP / "out" / f"{run}.meta.json").read_text())
+    task_dir = "eval2" if meta.get("task") == "2" else "eval"
+    hidden = PRIVATE / task_dir / "zz_hidden"
     outcome = {}
     for mutant, edits in spec["mutants"].items():
         copy = PRIVATE / "mut" / f"{run}-{mutant}"
@@ -50,7 +52,7 @@ def main(run):
             path.write_text(text.replace(edit["old"], edit["new"]))
         suffix = f"m_{run}_{mutant}".replace("-", "_")
         killed = not pytest(copy, "", suffix)
-        shutil.copytree(PRIVATE / "eval" / "zz_hidden", copy / "src" / "zz_hidden")
+        shutil.copytree(hidden, copy / "src" / "zz_hidden")
         live = not pytest(copy, "src/zz_hidden", suffix)
         outcome[mutant] = {"killed": killed, "live": live}
         shutil.rmtree(copy)

@@ -19,7 +19,13 @@ from pathlib import Path
 
 EXP = Path(os.environ["EXP"])
 PRIVATE = Path(os.environ["PRIVATE"])
-HIDDEN = PRIVATE / "eval" / "zz_hidden"
+
+
+def hidden_dir(task):
+    """The hidden suite for `task`: task 1 (#68) or task 2 (RND-5, #16)."""
+    return PRIVATE / ("eval2" if task == "2" else "eval") / "zz_hidden"
+
+
 PROJECTS = Path.home() / ".claude" / "projects"
 COUNT = re.compile(r"(\d+) (passed|failed|errors?|skipped)")
 
@@ -126,10 +132,10 @@ def audit(calls, repo, session_id=None):
     return outside
 
 
-def hidden_suite(copy, run):
+def hidden_suite(copy, run, task="1"):
     """Run the hidden acceptance suite in the copy and count outcomes by group."""
     target = copy / "src" / "zz_hidden"
-    shutil.copytree(HIDDEN, target)
+    shutil.copytree(hidden_dir(task), target)
     report = copy / "hidden.xml"
     code, output = sh(
         f"source .venv/bin/activate && pytest -q -p no:cacheprovider "
@@ -154,6 +160,8 @@ def hidden_suite(copy, run):
         "refusal_failed": groups["refusal"][0],
         "allowed_passed": groups["allowed"][1],
         "allowed_failed": groups["allowed"][0],
+        "passed": groups["refusal"][1] + groups["allowed"][1],
+        "failed": groups["refusal"][0] + groups["allowed"][0],
         "failures": failures[:40],
         "tail": output.strip().splitlines()[-1:] if output.strip() else [],
     }
@@ -426,7 +434,7 @@ def main(run):
         "uncommitted_changes": dirty,
         "diff": diff_size(copy, meta["arm_base"]),
         "verification": verification(copy, run),
-        "hidden": hidden_suite(copy, run),
+        "hidden": hidden_suite(copy, run, meta.get("task", "1")),
         "outside_access": audit(calls + disk, repo, spent["session_id"])[:50],
     }
     (EXP / "out" / f"{run}.eval.json").write_text(json.dumps(evaluation, indent=2))

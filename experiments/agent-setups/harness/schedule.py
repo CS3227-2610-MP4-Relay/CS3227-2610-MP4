@@ -38,11 +38,17 @@ def launch(arm, run, settings):
     hermes; claude by default), and environment such as MODEL_OVERRIDE and
     RELAY_PROFILE for the session.
     """
-    if not (EXP / "runs" / run).exists():
-        subprocess.run(
-            [PYTHON, str(EXP / "bin" / "setup_arm.py"), arm, run], check=True
-        )
     env = dict(word.split("=", 1) for word in settings)
+    if not (EXP / "runs" / run).exists():
+        setup = subprocess.run(  # noqa: PLW1510 - a failed setup is logged and skipped
+            [PYTHON, str(EXP / "bin" / "setup_arm.py"), arm, run],
+            env={**os.environ, **env},
+            capture_output=True,
+            text=True,
+        )
+        if setup.returncode != 0:
+            log(f"setup failed {run}: {setup.stderr.strip()[-300:]}")
+            return None
     tool = env.pop("TOOL", "claude")
     log(f"start {run} ({arm}, {tool}, {env})")
     if tool == "claude":
@@ -70,7 +76,10 @@ def main(queue_file):
             arm, run, *settings = queue.pop(0)
             if (EXP / "out" / f"{run}.end.json").exists():
                 continue
-            running[run] = launch(arm, run, settings)
+            process = launch(arm, run, settings)
+            if process is None:
+                continue
+            running[run] = process
             started[run] = time.monotonic()
         time.sleep(20)
         for run, process in list(running.items()):

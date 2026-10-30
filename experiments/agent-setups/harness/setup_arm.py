@@ -18,7 +18,10 @@ import sys
 from pathlib import Path
 
 EXP = Path(__file__).resolve().parent.parent
-BASE, MP3, ADDONS = EXP / "base", EXP / "mp3", EXP / "addons"
+# TASK=2 selects the second task: its own base clone and prompt.
+TASK = os.environ.get("TASK", "1")
+BASE = EXP / ("base2" if TASK == "2" else "base")
+MP3, ADDONS = EXP / "mp3", EXP / "addons"
 
 ARMS = {
     "mp4": "MP4 consolidated workflow (baseline)",
@@ -39,6 +42,7 @@ ARMS = {
     "ideal-v2": "Ideal setup v2",
     "ideal-v3": "Ideal setup v3",
     "ideal-v4": "Ideal setup v4",
+    "ideal-v5": "Ideal setup v5, the project-independent package",
 }
 IDEAL = Path(
     os.environ.get(
@@ -136,7 +140,7 @@ def setup_mp3(repo):
         replace_tree(MP3 / part, repo / part)
     shutil.copy(MP3 / ".codex" / "hooks.json", repo / ".codex" / "hooks.json")
     shutil.copy(MP3 / ".claude" / "settings.json", repo / ".claude" / "settings.json")
-    shutil.rmtree(repo / ".agents")
+    shutil.rmtree(repo / ".agents", ignore_errors=True)
     for name in (
         "check_scope.py",
         "test_check_scope.py",
@@ -147,7 +151,7 @@ def setup_mp3(repo):
         scripts = Path("workflow") / "scripts" / name
         shutil.copy(MP3 / scripts, repo / scripts)
     # MP4-only test of MP4's Codex approval rules; MP3 had no equivalent.
-    (repo / "workflow" / "scripts" / "test_codex_approvals.py").unlink()
+    (repo / "workflow" / "scripts" / "test_codex_approvals.py").unlink(missing_ok=True)
     for role, effort in MP3_EFFORT.items():
         path = repo / ".claude" / "agents" / f"{role}.md"
         text = path.read_text()
@@ -156,6 +160,44 @@ def setup_mp3(repo):
         path.write_text(
             text.replace(head, f"{head}model: claude-opus-5-5\neffort: {effort}\n")
         )
+
+
+def setup_portable(repo):
+    """Install the project-independent package with Relay's project settings.
+
+    Relay's own adapter test lists every agent and skill; like spec-kit's skills,
+    the package's `aw-` adapters are added to what it allows.
+    """
+    package = IDEAL / "v5"
+    subprocess.run(
+        [
+            sys.executable,
+            str(package / "install.py"),
+            str(repo),
+            "--project",
+            str(package / "examples" / "relay-project.md"),
+        ],
+        check=True,
+    )
+    test = repo / "workflow" / "scripts" / "test_adapters.py"
+    for old in (
+        '(ROOT / ".claude" / "agents").glob("*.md")',
+        '(ROOT / ".codex" / "agents").glob("*.toml")',
+    ):
+        replace_once(
+            test,
+            f"p.stem for p in {old}",
+            f'p.stem for p in {old} if not p.stem.startswith("aw-")',
+        )
+    replace_once(
+        test,
+        'p.parent.name for p in (ROOT / root / "skills").glob("*/SKILL.md")',
+        'p.parent.name for p in (ROOT / root / "skills").glob("*/SKILL.md") '
+        'if not p.parent.name.startswith("aw-")',
+    )
+    # Ruff wraps the inserted conditions the way the repository's formatter does.
+    ruff = EXP / "venv" / "bin" / "ruff"
+    subprocess.run([str(ruff), "format", "-q", str(test)], check=True)
 
 
 def setup_spec_kit(repo):
@@ -222,7 +264,9 @@ def main(arm, run_id):
                 r"(?m)^model(_reasoning_effort)? = .*\n", "", path.read_text()
             )
             path.write_text(text)
-    if arm.startswith("ideal-"):
+    if arm == "ideal-v5":
+        setup_portable(repo)
+    elif arm.startswith("ideal-"):
         version = arm.removeprefix("ideal-")
         install = IDEAL / "install.py"
         subprocess.run([sys.executable, str(install), version, str(repo)], check=True)
@@ -233,6 +277,7 @@ def main(arm, run_id):
         git(repo, "commit", "-q", "-m", message)
     meta = {
         "arm": arm,
+        "task": TASK,
         "arm_description": ARMS[arm],
         "run_id": run_id,
         "base": git(BASE, "rev-parse", "HEAD"),

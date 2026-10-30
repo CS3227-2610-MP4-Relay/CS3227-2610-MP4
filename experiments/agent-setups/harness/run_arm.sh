@@ -9,7 +9,7 @@ set -euo pipefail
 ARM=$1
 RUN=$2
 EXP=$(cd "$(dirname "$0")/.." && pwd)
-PROMPT_FILE=${3:-$EXP/task-prompt.md}
+PROMPT_FILE=${3:-${PROMPT_FILE:-$EXP/task-prompt.md}}
 REPO=$EXP/runs/$RUN
 OUT=$EXP/out
 CLAUDE=$EXP/bin/claude-2.1.312

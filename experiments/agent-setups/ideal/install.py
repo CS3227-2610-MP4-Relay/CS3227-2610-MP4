@@ -97,6 +97,8 @@ def main(version, repo):
         repo / ".claude" / "skills" / "slice" / "SKILL.md",
         repo / ".agents" / "skills" / "slice" / "SKILL.md",
     ):
+        if not path.exists():
+            continue
         text = re.sub(
             r"(?m)^description: .*$",
             f"description: {SLICE_DESCRIPTION}",

@@ -1,7 +1,9 @@
 """Collect every scored run into results/runs.csv and results/summary.json.
 
 Reads out/<run>.eval.json, out/<run>.mutants.json and out/<run>.review.json.
-A run missing a step is reported with that step empty, never as zero.
+A run missing a step is reported with that step empty, never as zero. The
+hidden_refusal and hidden_allowed columns split task 1's suite; hidden_passed
+and hidden_failed total either task's.
 """
 
 import csv
@@ -16,6 +18,7 @@ RESULTS = Path(__file__).resolve().parent.parent / "results"
 
 FIELDS = [
     "run",
+    "task",
     "arm",
     "tool",
     "model",
@@ -30,6 +33,8 @@ FIELDS = [
     "subagent_cache_read",
     "hidden_refusal",
     "hidden_allowed",
+    "hidden_passed",
+    "hidden_failed",
     "verify_passed",
     "pytest_passed",
     "mutants_killed",
@@ -73,6 +78,7 @@ def row(run):
     model, tool = end["model"], end.get("tool", "claude")
     return {
         "run": run,
+        "task": evaluation.get("task", "1"),
         "arm": evaluation["arm"],
         "tool": tool,
         "model": model,
@@ -99,6 +105,8 @@ def row(run):
         ),
         "hidden_refusal": evaluation["hidden"]["refusal_passed"],
         "hidden_allowed": evaluation["hidden"]["allowed_passed"],
+        "hidden_passed": evaluation["hidden"]["passed"],
+        "hidden_failed": evaluation["hidden"]["failed"],
         "verify_passed": evaluation["verification"]["all_passed"],
         "pytest_passed": evaluation["verification"]["pytest"].get("passed"),
         "mutants_killed": sum(m["killed"] for m in mutants.values())
@@ -154,6 +162,7 @@ def main(prefixes):
         if f
         not in (
             "run",
+            "task",
             "arm",
             "tool",
             "model",
@@ -162,16 +171,19 @@ def main(prefixes):
             "spec_first",
         )
     ]
+    # Keyed by task, then arm: the two tasks' numbers are never pooled.
     summary = {}
-    for arm in sorted({r["arm"] for r in rows}):
-        mine = [r for r in rows if r["arm"] == arm]
-        summary[arm] = {field: spread([r[field] for r in mine]) for field in numeric}
-        summary[arm]["runs"] = [r["run"] for r in mine]
-        summary[arm]["verify_passed"] = [r["verify_passed"] for r in mine]
-        summary[arm]["spec_first"] = [r["spec_first"] for r in mine]
-        summary[arm]["mergeable"] = [r["mergeable"] for r in mine]
+    for task, arm in sorted({(r["task"], r["arm"]) for r in rows}):
+        mine = [r for r in rows if (r["task"], r["arm"]) == (task, arm)]
+        entry = {field: spread([r[field] for r in mine]) for field in numeric}
+        entry["runs"] = [r["run"] for r in mine]
+        entry["verify_passed"] = [r["verify_passed"] for r in mine]
+        entry["spec_first"] = [r["spec_first"] for r in mine]
+        entry["mergeable"] = [r["mergeable"] for r in mine]
+        summary.setdefault(task, {})[arm] = entry
     (RESULTS / "summary.json").write_text(json.dumps(summary, indent=2))
-    print(f"{len(rows)} runs, {len(summary)} arms")
+    arms = sum(len(by_arm) for by_arm in summary.values())
+    print(f"{len(rows)} runs, {arms} task-arm groups")
 
 
 if __name__ == "__main__":
