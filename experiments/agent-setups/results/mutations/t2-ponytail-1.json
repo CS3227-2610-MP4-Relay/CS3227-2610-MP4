@@ -1,0 +1,61 @@
+{
+  "run": "t2-ponytail-1",
+  "notes": "RetestForm (subclass of PublishForm) limits cases to the round; services.retest checks cap, cases, key under the view's lock, with an IntegrityError backstop; retest_round checks Open before and under the lock; message built inline with format_html and isolated_lines. M3 also stores the raw label as the key in retest, because the IntegrityError backstop would otherwise still refuse a key collision.",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        self.fields[\"cases\"].queryset = round_.cases.all()\n",
+        "new": "        self.fields[\"cases\"].queryset = Case.objects.all()\n"
+      },
+      {
+        "file": "src/rounds/services.py",
+        "old": "    cases = list(round_.cases.filter(pk__in=ids))\n",
+        "new": "    cases = list(Case.objects.filter(pk__in=ids))\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/services.py",
+        "old": "    if round_.builds.count() >= BUILD_LIMIT:\n",
+        "new": "    if round_.builds.count() > BUILD_LIMIT:\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/services.py",
+        "old": "    if round_.builds.filter(key=key).exists():\n",
+        "new": "    if round_.builds.filter(label=label).exists():\n"
+      },
+      {
+        "file": "src/rounds/services.py",
+        "old": "        build = Build.objects.create(round=round_, label=label, key=key)\n",
+        "new": "        build = Build.objects.create(round=round_, label=label, key=label)\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/views.py",
+        "old": "    round_ = own_round(request, round_id)\n    if round_.state != Round.State.OPEN:\n        return state_conflict(request, round_)\n    data = request.POST if request.method == \"POST\" else None\n    form = RetestForm(",
+        "new": "    round_ = own_round(request, round_id)\n    data = request.POST if request.method == \"POST\" else None\n    form = RetestForm("
+      },
+      {
+        "file": "src/rounds/views.py",
+        "old": "                round_ = own_round(request, round_id, lock=True)\n                if round_.state != Round.State.OPEN:\n                    return state_conflict(request, round_)\n                services.retest(",
+        "new": "                round_ = own_round(request, round_id, lock=True)\n                services.retest("
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/views.py",
+        "old": "from django.utils.html import format_html\n",
+        "new": "from django.utils.html import format_html, mark_safe\n"
+      },
+      {
+        "file": "src/rounds/views.py",
+        "old": "            message = format_html(text, len(cases), noun, isolated_lines(label))\n",
+        "new": "            message = format_html(text, len(cases), noun, mark_safe(label))\n"
+      }
+    ]
+  }
+}
