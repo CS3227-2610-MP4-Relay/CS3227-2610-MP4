@@ -44,8 +44,14 @@ NO_DRAFTS = (
 SELECT = "Select 1 to 5 acceptance criteria."
 FOREIGN = "Choose criteria from this round."
 
-# The specification's fixed table, in inclusive ranges.
-INVISIBLE = (
+# Inclusive code point ranges cleaning rule 3 removes (keeping ZWNJ and ZWJ):
+# Unicode 16.0.0's Default_Ignorable_Code_Point property from its
+# DerivedCoreProperties.txt, plus two invisible format ranges outside it,
+# U+FFF9-FFFB (interlinear annotation) and U+13430-1343F (Egyptian hieroglyph
+# format controls). The spec fixes this table instead of deriving it from
+# unicodedata or a library, so a Python or library upgrade cannot change it;
+# test_cleaning_table_equals_the_contract_ranges checks it against the spec.
+IGNORABLE_RANGES = (
     (0x00AD, 0x00AD),
     (0x034F, 0x034F),
     (0x061C, 0x061C),
@@ -67,8 +73,8 @@ INVISIBLE = (
     (0xE0000, 0xE0FFF),
 )
 FILLERS = frozenset(chr(code) for code in (0x3164, 0x115F, 0x1160, 0xFFA0, 0x2800))
-_invisible = frozenset(
-    chr(code) for start, end in INVISIBLE for code in range(start, end + 1)
+_ignorable = frozenset(
+    chr(code) for start, end in IGNORABLE_RANGES for code in range(start, end + 1)
 ) - {"\u200c", "\u200d"}
 
 
@@ -94,7 +100,7 @@ def clean(text, *, title=False):
     """Apply the RND-8 cleaning order, with an optional one-line title step."""
     text = text.replace("\r\n", "\n")
     text = "".join(" " if char in FILLERS else char for char in text)
-    text = "".join(char for char in text if char not in _invisible)
+    text = "".join(char for char in text if char not in _ignorable)
     text = "".join(
         char
         for char in text

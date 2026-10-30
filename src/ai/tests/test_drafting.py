@@ -202,7 +202,7 @@ def test_cleaning_table_equals_the_contract_ranges():
         (int(start, 16), int(end or start, 16))
         for start, end in re.findall(r"U\+([0-9A-F]+)(?: to U\+([0-9A-F]+))?", listed)
     }
-    assert ranges == set(drafting.INVISIBLE)
+    assert ranges == set(drafting.IGNORABLE_RANGES)
 
 
 @pytest.mark.ac("RND-8.6")
