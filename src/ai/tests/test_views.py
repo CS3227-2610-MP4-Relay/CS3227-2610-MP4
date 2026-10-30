@@ -497,12 +497,16 @@ def checked(page):
     return re.findall(r'name="criteria" value="(\d+)"[^>]* checked>', page)
 
 
+def use_forms(page, round_):
+    """The markup of each "Use this draft" form, in page order."""
+    action = reverse("ai:use-draft", args=[round_.pk])
+    return [part.split("</form>", 1)[0] for part in page.split(action)[1:]]
+
+
 def draft_criteria(page, round_):
     """The criterion IDs each "Use this draft" form posts, in page order."""
-    action = reverse("ai:use-draft", args=[round_.pk])
-    forms = [part.split("</form>", 1)[0] for part in page.split(action)[1:]]
     hidden = r'<input type="hidden" name="criteria" value="(\d+)">'
-    return [re.findall(hidden, form) for form in forms]
+    return [re.findall(hidden, form) for form in use_forms(page, round_)]
 
 
 @pytest.fixture
@@ -606,7 +610,7 @@ def test_posts_need_a_token_and_this_sites_origin(coordinator, round_, criteria,
 def test_hostile_reply_text_is_escaped_isolated_and_round_trips(
     coord_client, round_, criteria
 ):
-    criteria[0].text = "Synthetic " + chr(0x202E) + "reversed"
+    criteria[0].text = "Synthetic \x3ci\x3e\x22\x3e\x3c" + chr(0x202E) + "reversed"
     criteria[0].save(update_fields=["text"])
     markup = "\x3cscript\x3ealert(1)\x3c/script\x3e"
     breakout = (
@@ -623,11 +627,17 @@ def test_hostile_reply_text_is_escaped_isolated_and_round_trips(
     assert "<h3>" + line("&lt;script&gt;alert(1)&lt;/script&gt;") + "</h3>" in page
     second_line = '<br><span dir="auto">line two &quot;&gt;&lt;input'
     assert line("&lt;b&gt;bold&lt;/b&gt;") + second_line in page
-    assert line("Synthetic " + chr(0x202E) + "reversed") in page
+    criterion = line("Synthetic &lt;i&gt;&quot;&gt;&lt;" + chr(0x202E) + "reversed")
+    assert "<i>" not in page
+    assert f'">{criterion}</label>' in page
+    assert f"<li>{criterion}</li>" in page
+    (form,) = use_forms(page, round_)
     field = '<input type="hidden" name="{}" value="{}">'.format
-    assert field("title", escape(markup)) in page
-    assert field("steps", escape(steps)) in page
-    assert field("expected_result", "AB") in page
+    assert field("title", escape(markup)) in form
+    assert field("steps", escape(steps)) in form
+    assert field("expected_result", "AB") in form
+    for name in ("title", "steps", "expected_result"):
+        assert form.count(f'<input type="hidden" name="{name}"') == 1
     assert draft_criteria(page, round_) == [[str(criteria[0].pk)]]
 
 

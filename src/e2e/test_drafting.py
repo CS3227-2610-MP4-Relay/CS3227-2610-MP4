@@ -12,8 +12,8 @@ from rounds.models import Case, Criterion, Round
 
 DRAFT = {
     "title": "Synthetic adopted title",
-    "steps": "1. Open the app.\n2. Press Save.",
-    "expected_result": "The item is saved.",
+    "steps": "1. Open \x3cb\x3ethe\x3c/b\x3e app.\n2. Press \x22Save \x26 close\x22.",
+    "expected_result": "The item is saved if 1 \x3c 2.",
     "criteria": ["C2"],
 }
 
