@@ -1,0 +1,15 @@
+caveman t3-caveman-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md
+ideal-v6 t3-ideal-v6-haiku-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md MODEL_OVERRIDE=claude-haiku-5-5
+ideal-v6 t3-ideal-v6-opus-2 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md AGENT_PROFILE=strong
+headroom t3-headroom-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md
+ideal-v6 t3-ideal-v6-sonnet-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md MODEL_OVERRIDE=claude-sonnet-5-5 AGENT_PROFILE=strong
+ponytail t3-ponytail-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md
+openspec t3-openspec-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md
+ideal-v6 t3-ideal-v6-opus-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md AGENT_PROFILE=strong
+mp4-haiku t3-mp4-haiku-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md MODEL_OVERRIDE=claude-haiku-5-5
+mp3 t3-mp3-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md
+superpowers t3-superpowers-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md
+mp4 t3-mp4-2 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md
+spec-kit t3-spec-kit-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md
+mp4 t3-mp4-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md
+ideal-v6 t3-ideal-v6-sonnet-opusreview-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md MODEL_OVERRIDE=claude-sonnet-5-5 AGENT_PROFILE=strong AGENT_REVIEW_MODEL=opus

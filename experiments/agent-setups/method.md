@@ -175,3 +175,44 @@ Task 1 was small. Task 2 is larger and has more ways to be wrong, to test whethe
   They are planted, scored and confirmed live as in task 1.
 - **Blind review:** the same rubric, with the task-2 issue and decisions, focused on RND-5.
 - **Limitation:** most arms run once, so task 2 shows whether task 1's pattern holds. It cannot rank arms that are close.
+
+## Third task, OpenSpec and repeats
+
+Added on 2026-10-31, at the human's request, after tasks 1 and 2 were reported. These points were fixed before any of the new runs ended.
+
+- **Why.** Tasks 1 and 2 were not hard enough to separate the setups on quality. The human asked for three things:
+  - a larger and vaguer task, where review has more to find;
+  - more repeats of the setups whose results were close;
+  - OpenSpec, a spec-driven tool like spec-kit, which the comparison had missed.
+- **Task 3:** issue #13, "Save and submit an outcome with observations" (RES-2).
+  - **Start:** `10f0a0b`, the commit before the original slice began, plus the same test-database harness commit.
+  - **Larger:** it needs a new model and migration, a form, a page, privacy between testers, state rules and retest interactions. The original slice added about 280 lines of non-test code.
+  - **Vaguer:** at the start, RES-2 is only "Planned work". The prompt, [`inputs/task-prompt-3.md`](inputs/task-prompt-3.md), fixes only the external interface: the route, field and button names, status text, the main rules and the refusal statuses. Each run must write the RES-2 criteria itself, and decide everything else, recording its choices: concurrency, failure handling, messages and retest behaviour.
+  - **Environment:** task 3's starting commit has Playwright browser tests, so its runs use a separate virtual environment built from that commit's pinned dev requirements.
+- **Task 3 runs:** 15, up to two at a time:
+  - one run each of mp3, caveman, ponytail, headroom, superpowers, spec-kit and OpenSpec;
+  - two of mp4, and two of the ideal setup's latest version, v6, on Opus (`strong`);
+  - one of v6 on Sonnet (`strong`);
+  - one of v6 on Sonnet with Opus reviewers (`AGENT_REVIEW_MODEL=opus`);
+  - one of v6 on Haiku, with no profile set;
+  - one of mp4 on Haiku.
+
+  The human expected the hardest task might need Opus. The Sonnet, Sonnet-with-Opus-review and Haiku runs test where a cheaper model stops being enough.
+- **Hidden suite, task 3:** written from the prompt's decisions only, before any task-3 run ended, and checked to pass on the original team implementation (`ea78f09`). It drives the pages over HTTP and judges outcomes only from status codes and page text. Races are not covered.
+- **Mutants, task 3:**
+  - M1, another tester's result shown or changed;
+  - M2, Fail accepted without an observation;
+  - M3, a Closed round accepted;
+  - M4, a submitted result changeable;
+  - M5, an observation of 2,001 characters accepted.
+- **OpenSpec:** OpenSpec 1.14.3 (`@fission-ai/openspec`), installed under the experiment folder with install scripts off.
+  - Each run's setup commit adds its Claude skills and commands with `openspec init --tools claude --profile core`, run with a throwaway home folder.
+  - The arm's `AGENTS.md` line points feature work at OpenSpec's propose, apply and archive flow, as the spec-kit arm does for spec-kit.
+  - Runs: task 1 twice, task 2 three times, task 3 once.
+- **Repeats on task 2:**
+  - superpowers, spec-kit, caveman, ponytail and headroom get two more runs each;
+  - mp4 gets one more;
+  - the ideal setup's v6 gets three runs on Opus.
+
+  This brings each of these to three runs on task 2. Their order is seeded (`random.Random(31)`), as in [`inputs/queue-task2-repeats.txt`](inputs/queue-task2-repeats.txt).
+- **Unchanged:** everything else follows the earlier sections.
