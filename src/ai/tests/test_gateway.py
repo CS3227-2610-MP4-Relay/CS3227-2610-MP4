@@ -356,11 +356,6 @@ def test_invalid_chat_message_is_rejected(message):
         ],
         b'{"choices":[{"message":{"content":"ok"}}]} trailing',
         b"\xff",
-        b'{"choices":[{"message":{"content":"ok"}}],"metadata":'
-        + b"[" * 20000
-        + b"0"
-        + b"]" * 20000
-        + b"}",
     ],
     ids=[
         "duplicate-root",
@@ -371,11 +366,27 @@ def test_invalid_chat_message_is_rejected(message):
         "negative-infinity",
         "trailing",
         "invalid-utf8",
-        "too-deep",
     ],
 )
 def test_unsafe_chat_json_is_rejected_even_in_metadata(body):
     assert gateway._envelope(body) == Failed("invalid-response")
+
+
+@pytest.mark.ac("RND-8.5")
+def test_parser_recursion_failure_is_a_fixed_invalid_response(monkeypatch, caplog):
+    body = chat_envelope({"content": "ok"})
+    seen = []
+
+    def recurse(text, **kwargs):
+        seen.append(text)
+        raise RecursionError("synthetic parser detail")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(gateway.json, "loads", recurse)
+        result = gateway._envelope(body)
+    assert seen == [body.decode("utf-8")]
+    assert result == Failed("invalid-response")
+    assert "synthetic parser detail" not in caplog.text
 
 
 def test_network_step_is_blocked_without_opt_in(block_llm_network):

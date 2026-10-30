@@ -26,7 +26,7 @@ Adapt Relay's provider wire format using MP3 evidence and enable the gateway whi
 - The [gateway contract](../specs/ai/llm-gateway.md) owns MP3 evidence and the human's 2026-10-31 no-retention, no-training and default-limit confirmations. Live enablement is authorized within this PR, conditional on implemented/tested adapter and runtime safety controls. No live invocation occurs before operator environment configuration; smoke check and feature live evaluation remain pending, not executed or implied by local tests. Do not claim provider terms independently verified, production readiness or #6 complete.
 - Do not copy MP3's 512-token output cap: local character/body/deadline bounds remain. Actual provider compatibility is part of pending manual validation.
 - Trusted CA configuration and direct provider reachability remain documented operator obligations. Clear key logging and disable per-call debug as the existing controls require; no new safety subsystem. Preserve the existing hosting time-margin concern and report it without broadening this slice.
-- **Next:** coordinator commits the CI repair's spec checkpoint, then assigns its test checkpoint using a fresh snapshot: replace the platform-specific depth assertion with a controlled parser `RecursionError` test, retaining actual malformed JSON cases and existing bounds. Run focused checks and full verification, then yield for commit/CI. Independent review, human merge/release decisions and manual live validation remain pending.
+- **Next:** coordinator commits/pushes the CI test repair, then runs final full verification and CI on that committed candidate while independent reviewers inspect it. Human merge/release decisions and manual live validation remain pending.
 
 ## Checkpoint 2 evidence
 
@@ -45,3 +45,8 @@ Adapt Relay's provider wire format using MP3 evidence and enable the gateway whi
 ## CI repair round 1: spec checkpoint
 
 - Correct the slice's inaccurate nesting assumption: reject parser recursion failure, with no independent numeric depth limit, under the existing response byte cap. Duplicate-key, UTF-8, nonfinite-number, content and body bounds remain intact. Specs precede the separately assigned test repair; runtime/tests are untouched here.
+
+## CI repair round 1: test checkpoint
+
+- Spec committed first as `82dd390`. Replaced only the platform-invalid depth fixture with a controlled parser `RecursionError` test, asserting the parser was called, the fixed failure outcome and no exception-text log leakage. Existing correct runtime passes it without changes; real malformed JSON and transport bounds remain tested.
+- Mutation evidence: a temporary test-only rebind of the handler's `RecursionError` lookup to `KeyError` made the new test fail with uncaught `RecursionError`; removed the rebind before final checks. Ruff check/format passed; `pytest src/ai -q -p no:cacheprovider --basetemp=C:/Users/limbe/AppData/Local/Temp/relay-issue6-ci-focused --tb=short` passed 158 tests in 30.70 seconds. Coordinator owns final full verification/CI; runtime source remains unchanged at 60 changed lines.
