@@ -31,6 +31,8 @@ FIELDS = [
     "cache_write_tokens",
     "orchestrator_cache_read",
     "subagent_cache_read",
+    "orchestrator_cache_write",
+    "subagent_cache_write",
     "hidden_refusal",
     "hidden_allowed",
     "hidden_passed",
@@ -71,6 +73,7 @@ def row(run):
     models = spent.get("model_usage") or {}
     split = spent.get("cache_split") or {}
     diff = evaluation["diff"]
+    hidden = evaluation["hidden"]
     verdict = (review or {}).get("verdict") or {}
     severities = [f.get("severity") for f in verdict.get("findings", [])]
     scores = verdict.get("scores") or {}
@@ -103,10 +106,16 @@ def row(run):
         "subagent_cache_read": split.get("subagents", {}).get(
             "cache_read_input_tokens"
         ),
+        "orchestrator_cache_write": split.get("orchestrator", {}).get(
+            "cache_creation_input_tokens"
+        ),
+        "subagent_cache_write": split.get("subagents", {}).get(
+            "cache_creation_input_tokens"
+        ),
         "hidden_refusal": evaluation["hidden"]["refusal_passed"],
         "hidden_allowed": evaluation["hidden"]["allowed_passed"],
-        "hidden_passed": evaluation["hidden"]["passed"],
-        "hidden_failed": evaluation["hidden"]["failed"],
+        "hidden_passed": hidden["refusal_passed"] + hidden["allowed_passed"],
+        "hidden_failed": hidden["refusal_failed"] + hidden["allowed_failed"],
         "verify_passed": evaluation["verification"]["all_passed"],
         "pytest_passed": evaluation["verification"]["pytest"].get("passed"),
         "mutants_killed": sum(m["killed"] for m in mutants.values())
@@ -187,4 +196,6 @@ def main(prefixes):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:] or ["r1-", "r2-", "r3-"])
+    # By default every counted run: the comparison, the ideal-setup runs, their
+    # references and task 2. Smoke tests are left out.
+    main(sys.argv[1:] or ["r1-", "r2-", "r3-", "i", "ref-", "t2-"])
