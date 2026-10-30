@@ -187,10 +187,14 @@ A Closed round's page still shows its criteria, its cases with their linked crit
 
 ### Draft test cases with AI
 
-AI suggestions are switched off for now, so this page does not suggest test cases yet. Add test cases yourself with **Add test case**.
+Use AI to draft suggestions from selected acceptance criteria, then review each one before adding it. You can also add test cases yourself with **Add test case**.
 
-While a round is Draft, its page has a **Draft test cases with AI** link directly after **Add test case**. The drafting page says "Select 1 to 5 acceptance criteria. AI suggestions are switched off for now, so nothing is sent to the AI service. Suggestions are not saved; review each one before adding it." It lists the round's criteria under **Acceptance criteria to draft from**, with a **Draft test cases** button, an **Add test case** link and a **Back to round** link.
+While a round is Draft, its page has a **Draft test cases with AI** link directly after **Add test case**. The drafting page says "Select 1 to 5 acceptance criteria. The selected criteria are sent to the SoC AI service to suggest test cases. Suggestions are not saved; review each one before adding it." It lists the round's criteria under **Acceptance criteria to draft from**, with a **Draft test cases** button, an **Add test case** link and a **Back to round** link.
 
-Ticking one to five criteria and choosing **Draft test cases** shows, under **Suggested test cases**, "Drafting is unavailable right now. You can still add test cases yourself." If every ticked criterion is blank once hidden characters are removed, it says "No test cases were suggested for these criteria. You can still add test cases yourself." instead.
+Tick one to five criteria and choose **Draft test cases**. When suggestions are returned, **Suggested test cases** shows each title, **Steps**, **Expected result** and **Covers acceptance criteria**. Review these beside the criteria; nothing is saved by drafting.
+
+Choose **Use this draft** to open **New test case** with the suggested fields and covered criteria filled in. The page says "Pre-filled from an AI draft. Review it before adding it." Edit the fields and links as needed, then choose **Add test case** to save under the normal [test case limits](#criteria-and-test-case-limits).
+
+If the service is unavailable or its reply cannot be used, the page says "Drafting is unavailable right now. You can still add test cases yourself." If it returns no drafts, or every ticked criterion is blank once hidden characters are removed, it says "No test cases were suggested for these criteria. You can still add test cases yourself."
 
 With no criterion ticked, or more than five, the page says "Select 1 to 5 acceptance criteria." A ticked criterion that is no longer in the round, for example because it was deleted meanwhile, gets "Choose criteria from this round." A round with 30 test cases says "This round has reached its limit of 30 test cases." In every case your ticks are kept, the round, its criteria and its cases stay unchanged, and **Add test case** still works.
