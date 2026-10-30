@@ -53,7 +53,7 @@ docker run --rm -d --name relay-test-db \
   -p 127.0.0.1:55432:5432 postgres:17.6
 ```
 
-Wait for PostgreSQL to accept connections. With `.venv` active, install Chromium after installing the development dependencies, and repeat after upgrading Playwright:
+The gateway's transport tests also need the `openssl` command-line tool ([SoC LLM](#soc-llm)). Wait for PostgreSQL to accept connections. With `.venv` active, install Chromium after installing the development dependencies, and repeat after upgrading Playwright:
 
 ```bash
 python -m playwright install chromium
@@ -227,7 +227,12 @@ The Django/PostgreSQL architecture, environment separation and planned delivery 
 
 ## SoC LLM
 
-Relay's planned AI contracts live under [`workflow/specs/ai/`](../workflow/specs/ai/llm-gateway.md). SoC LLM is the provider; its account setup and service guidance are on [SoC DocHub](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). Before implementing the gateway, verify the team's actual model availability and service limits. Record the chosen model, bounded context, output validation, quotas and failure behaviour in the contracts. No provider call or live probe is implemented.
+SoC LLM is the provider; its account setup and service guidance are on [SoC DocHub](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). The `ai` app (`src/ai/`) holds the shared gateway (`gateway.py`), its rows (`ai.CallSlot`, `ai.CallRecord`), RND-8's drafting pages and `drafting.py`, which cleans text and validates replies. The gateway's controls, all proposals pending confirmation, are in [`llm-gateway.md`](../workflow/specs/ai/llm-gateway.md); what drafting sends and accepts is in [`test-drafting.md`](../workflow/specs/ai/test-drafting.md).
+
+- **Live switch.** `SOC_LLM_LIVE` in `src/relay/settings/base.py` is off, so no provider call is made; its rules and the conditions for turning it on are under [live switch](../workflow/specs/ai/llm-gateway.md#live-switch).
+- **Settings.** With live calls on, the gateway reads `SOC_LLM_ENDPOINT`, `SOC_LLM_MODEL` and `SOC_LLM_API_KEY` from the environment at each call ([configuration](../workflow/specs/TECHNICAL-SPEC.md#configuration)). `.env.example` lists them empty; never commit a real key.
+- **Tests.** No test reaches a provider, even if your shell sets `SOC_LLM_*`; the fixture in `src/conftest.py` that ensures this is described under [configuration](../workflow/specs/TECHNICAL-SPEC.md#configuration). Gateway tests pass `ai.fakes.FakeProvider` to `gateway.complete`, and the drafting view tests replace `gateway.complete`. Tests marked `llm_transport` (`src/ai/tests/test_transport.py`) run the real transport, which sends requests through aiohttp, against a local HTTPS server; they generate a throwaway certificate with the `openssl` command-line tool, which must be on `PATH` (macOS and Linux include it; on Windows, Git Bash provides it).
+- **Live evaluation.** An operator step, not CI ([test drafting](../workflow/specs/ai/test-drafting.md#live-evaluation)).
 
 ## Product website
 
@@ -245,7 +250,7 @@ The [product website](https://cs3227-2610-mp4-relay.github.io/CS3227-2610-MP4/) 
 
 Relay's development workflow, tooling and repository conventions were adapted from the [MP3 Deskmate baseline](https://github.com/CS3227-2610-MP3-Deskmate/CS3227-2610-MP3/tree/97ad99155307825a4b53925906e42f663647a70b), then streamlined for MP4.
 
-The product-site scaffold uses GitHub's [Cayman theme](https://github.com/pages-themes/cayman). Relay uses [Django](https://www.djangoproject.com/) and [PostgreSQL](https://www.postgresql.org/) and plans to use [SoC LLM](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). Local/CI container examples use the [official PostgreSQL image](https://hub.docker.com/_/postgres), whose [17.6 tag](https://hub.docker.com/layers/library/postgres/17.6/) was verified for this slice. Record any further reused external ideas, code or documentation here as they are adopted.
+The product-site scaffold uses GitHub's [Cayman theme](https://github.com/pages-themes/cayman). Relay uses [Django](https://www.djangoproject.com/) and [PostgreSQL](https://www.postgresql.org/) and plans to use [SoC LLM](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). The LLM gateway sends its requests with the [aiohttp](https://github.com/aio-libs/aiohttp) client library. Local/CI container examples use the [official PostgreSQL image](https://hub.docker.com/_/postgres), whose [17.6 tag](https://hub.docker.com/layers/library/postgres/17.6/) was verified for this slice. Record any further reused external ideas, code or documentation here as they are adopted.
 
 Static-site delivery uses GitHub's official [Jekyll build](https://github.com/actions/jekyll-build-pages), [artifact upload](https://github.com/actions/upload-pages-artifact) and [Pages deployment](https://github.com/actions/deploy-pages) actions.
 

@@ -184,3 +184,13 @@ Closing ends testing on an Open round and makes it read-only. While a round is O
 The round page shows "Round closed." and "State: Closed". A Closed round cannot be reopened or returned to Draft.
 
 A Closed round's page still shows its criteria, its cases with their linked criteria and **Current build**, and the **Builds** list. It has no links or buttons for changing the round, no **Request a retest** link and no **Close round** button.
+
+### Draft test cases with AI
+
+AI suggestions are switched off for now, so this page does not suggest test cases yet. Add test cases yourself with **Add test case**.
+
+While a round is Draft, its page has a **Draft test cases with AI** link directly after **Add test case**. The drafting page says "Select 1 to 5 acceptance criteria. AI suggestions are switched off for now, so nothing is sent to the AI service. Suggestions are not saved; review each one before adding it." It lists the round's criteria under **Acceptance criteria to draft from**, with a **Draft test cases** button, an **Add test case** link and a **Back to round** link.
+
+Ticking one to five criteria and choosing **Draft test cases** shows, under **Suggested test cases**, "Drafting is unavailable right now. You can still add test cases yourself." If every ticked criterion is blank once hidden characters are removed, it says "No test cases were suggested for these criteria. You can still add test cases yourself." instead.
+
+With no criterion ticked, or more than five, the page says "Select 1 to 5 acceptance criteria." A ticked criterion that is no longer in the round, for example because it was deleted meanwhile, gets "Choose criteria from this round." A round with 30 test cases says "This round has reached its limit of 30 test cases." In every case your ticks are kept, the round, its criteria and its cases stay unchanged, and **Add test case** still works.
