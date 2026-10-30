@@ -21,7 +21,7 @@ EXP = Path(__file__).resolve().parent.parent
 # TASK=2 or TASK=3 selects a later task: its own base clone and prompt. Task 3
 # starts from a later Relay commit with browser tests, so it has its own venv.
 TASK = os.environ.get("TASK", "1")
-BASE = EXP / {"2": "base2", "3": "base3"}.get(TASK, "base")
+BASE = EXP / {"2": "base2", "3": "base3", "4": "base4"}.get(TASK, "base")
 VENV = EXP / ("venv3" if TASK == "3" else "venv")
 MP3, ADDONS = EXP / "mp3", EXP / "addons"
 

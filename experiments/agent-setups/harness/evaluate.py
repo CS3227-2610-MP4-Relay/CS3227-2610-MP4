@@ -22,8 +22,9 @@ PRIVATE = Path(os.environ["PRIVATE"])
 
 
 def hidden_dir(task):
-    """The hidden suite for `task`: 1 (#68), 2 (RND-5, #16) or 3 (RES-2, #13)."""
-    return PRIVATE / {"2": "eval2", "3": "eval3"}.get(task, "eval") / "zz_hidden"
+    """The hidden suite for `task`: 1 (#68), 2 (#16), 3 (#13) or 4 (ACC-3, #4)."""
+    folders = {"2": "eval2", "3": "eval3", "4": "eval4"}
+    return PRIVATE / folders.get(task, "eval") / "zz_hidden"
 
 
 PROJECTS = Path.home() / ".claude" / "projects"
