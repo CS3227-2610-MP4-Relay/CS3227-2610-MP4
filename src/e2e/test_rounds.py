@@ -146,7 +146,7 @@ def test_empty_round_publish_is_refused_without_creating_build(page, browser_acc
 
 @pytest.mark.ac("RND-8.4")
 def test_drafting_page_keeps_manual_workflow_when_unavailable(page, browser_accounts):
-    """With live calls off, drafting shows the notice and unavailable message."""
+    """Test settings disable live calls; manual drafting remains available."""
     sign_in_coordinator(page, browser_accounts)
     create_draft_round(page, "Synthetic drafting browser round")
     criterion = "The synthetic drafting criterion is visible."
@@ -156,9 +156,9 @@ def test_drafting_page_keeps_manual_workflow_when_unavailable(page, browser_acco
     page.get_by_role("link", name="Draft test cases with AI", exact=True).click()
     expect(
         page.get_by_text(
-            "Select 1 to 5 acceptance criteria. AI suggestions are switched off "
-            "for now, so nothing is sent to the AI service. Suggestions are not "
-            "saved; review each one before adding it.",
+            "Select 1 to 5 acceptance criteria. The selected criteria are sent to "
+            "the SoC AI service to suggest test cases. Suggestions are not saved; "
+            "review each one before adding it.",
             exact=True,
         )
     ).to_be_visible()

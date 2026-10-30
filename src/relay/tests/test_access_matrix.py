@@ -488,7 +488,9 @@ ANY_STATE, DRAFT_ONLY, OPEN_ONLY = (
 )
 R, RC, RK = ("round_id",), ("round_id", "criterion_id"), ("round_id", "case_id")
 RND1, RND2, RND8 = ("RND-1.6", "RND-1.7"), ("RND-2.8",), ("RND-8.7",)
-OFF_FOR_NOW = "AI suggestions are switched off for now, so nothing is sent"
+DRAFTING_DISCLOSURE = (
+    "The selected criteria are sent to the SoC AI service to suggest test cases."
+)
 UNAVAILABLE = (
     "Drafting is unavailable right now. You can still add test cases yourself."
 )
@@ -507,7 +509,7 @@ ROUNDS = {
     "rounds:publish": RoundsRoute(POST_ONLY, DRAFT_ONLY, R, ("RND-3.6",), publish),
     "rounds:retest": RoundsRoute(BOTH, OPEN_ONLY, R, ("RND-5.8",), retest),
     "rounds:close": RoundsRoute(POST_ONLY, OPEN_ONLY, R, ("RND-6.3", "RND-6.5")),
-    # Live AI calls are off, so a valid draft request gets the unavailable message.
+    # Fixed test settings disable live calls, so valid drafting is unavailable.
     "ai:draft": RoundsRoute(
         BOTH,
         DRAFT_ONLY,
@@ -515,7 +517,7 @@ ROUNDS = {
         RND8,
         selection,
         RENDERED,
-        {"GET": (OFF_FOR_NOW,), "POST": (OFF_FOR_NOW, UNAVAILABLE)},
+        {"GET": (DRAFTING_DISCLOSURE,), "POST": (DRAFTING_DISCLOSURE, UNAVAILABLE)},
     ),
     "ai:use-draft": RoundsRoute(
         POST_ONLY,
