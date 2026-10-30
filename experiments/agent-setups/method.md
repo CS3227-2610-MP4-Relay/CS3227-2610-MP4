@@ -221,3 +221,20 @@ Added on 2026-10-31, at the human's request, after tasks 1 and 2 were reported. 
 
   This brings each of these to three runs on task 2. Their order is seeded (`random.Random(31)`), as in [`inputs/queue-task2-repeats.txt`](inputs/queue-task2-repeats.txt).
 - **Unchanged:** everything else follows the earlier sections.
+
+## Ideal setup v7
+
+Added on 2026-10-31, during the task-3 runs, after the human's feedback on v6. It was fixed before any v7 run ended.
+
+- **Why.** The human wants one setup to plug into any project, with Codex, Hermes or Claude Code, and with Opus, Sonnet, DeepSeek v4.1 Flash or other open models. A setup cannot know which model is weaker, so v7 drops the strong and guarded profiles. Every model follows one workflow, which keeps the safeguards that paid off for all models.
+- **What it borrows.** It takes ideas from the compared tools, kept only if they earn their place:
+  - OpenSpec's requirement delta;
+  - spec-kit's consistency read before building;
+  - ponytail's "test each behaviour once";
+  - caveman's terse working notes, never in requirements, docs or reports.
+- **New projects.** A step 0 fills `project.md` from what the repository shows and asks the person to confirm the rest. This lets the setup start a new project as well as join an existing one.
+- **Runs:** task 3, one each:
+  - Opus, Sonnet and Haiku in Claude Code;
+  - DeepSeek v4.1 Flash in Codex and in Hermes, through OpenRouter.
+
+  The order is in [`inputs/queue-ideal-v7-task3.txt`](inputs/queue-ideal-v7-task3.txt). Later versions follow the same pattern, each fixing what the previous version's runs showed.

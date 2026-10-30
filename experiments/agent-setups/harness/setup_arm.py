@@ -47,6 +47,7 @@ ARMS = {
     "ideal-v4": "Ideal setup v4",
     "ideal-v5": "Ideal setup v5, the project-independent package",
     "ideal-v6": "Ideal setup v6, v5 with three rules from its reviews",
+    "ideal-v7": "Ideal setup v7, one workflow for every model, with borrowed ideas",
 }
 IDEAL = Path(
     os.environ.get(
@@ -320,7 +321,7 @@ def main(arm, run_id):
                 r"(?m)^model(_reasoning_effort)? = .*\n", "", path.read_text()
             )
             path.write_text(text)
-    if arm in ("ideal-v5", "ideal-v6"):
+    if arm in ("ideal-v5", "ideal-v6", "ideal-v7"):
         setup_portable(repo, arm.removeprefix("ideal-"))
     elif arm.startswith("ideal-"):
         version = arm.removeprefix("ideal-")
