@@ -227,11 +227,27 @@ The Django/PostgreSQL architecture, environment separation and planned delivery 
 
 ## SoC LLM
 
-SoC LLM is the provider; its account setup and service guidance are on [SoC DocHub](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). The `ai` app (`src/ai/`) holds the shared gateway (`gateway.py`) and its rows (`ai.CallSlot`, `ai.CallRecord`). The gateway's controls, all proposals pending confirmation, are in [`llm-gateway.md`](../workflow/specs/ai/llm-gateway.md).
+SoC LLM is the provider; its account setup and service guidance are on [SoC DocHub](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). The `ai` app (`src/ai/`) holds the shared gateway (`gateway.py`) and its rows (`ai.CallSlot`, `ai.CallRecord`). Its chat format, implemented controls, human-confirmed provider terms/defaults and pending live validation are in [`llm-gateway.md`](../workflow/specs/ai/llm-gateway.md).
 
-- **Live switch.** `SOC_LLM_LIVE` in `src/relay/settings/base.py` is off, so no provider call is made; its rules and the conditions for turning it on are under [live switch](../workflow/specs/ai/llm-gateway.md#live-switch).
-- **Settings.** With live calls on, the gateway reads `SOC_LLM_ENDPOINT`, `SOC_LLM_MODEL` and `SOC_LLM_API_KEY` from the environment at each call ([configuration](../workflow/specs/TECHNICAL-SPEC.md#configuration)). `.env.example` lists them empty; never commit a real key.
+- **Live switch.** `SOC_LLM_LIVE=True` in shared settings permits provider calls; it is code-level, not an environment flag. Fixed test settings override it to `False`. Missing provider configuration returns `Refused("not-configured")`; an explicit false override returns `Refused("live-off")` before quota or transport work.
+- **Wire format.** One POST sends fixed instructions as the system message and source JSON text as the user message, with the configured model, `temperature=0` and `stream=false`. The adapter reads `choices[0].message.content`; the [contract](../workflow/specs/ai/llm-gateway.md#transport-contract-proposed) defines refusals, malformed replies and limits.
+- **Settings.** The gateway reads `SOC_LLM_ENDPOINT`, `SOC_LLM_MODEL` and `SOC_LLM_API_KEY` from exported environment variables at each call ([configuration](../workflow/specs/TECHNICAL-SPEC.md#configuration)). `.env` files are not automatically read; `.env.example` lists the names only. Never commit a real key.
 - **Tests.** No test reaches a provider, even if your shell sets `SOC_LLM_*`; the fixture in `src/conftest.py` that ensures this is described under [configuration](../workflow/specs/TECHNICAL-SPEC.md#configuration). Gateway tests pass `ai.fakes.FakeProvider` to `gateway.complete`. Tests marked `llm_transport` (`src/ai/tests/test_transport.py`) run the real transport, which sends requests through aiohttp, against a local HTTPS server; they generate a throwaway certificate with the `openssl` command-line tool, which must be on `PATH` (macOS and Linux include it; on Windows, Git Bash provides it).
+
+For an authorized operator session, use the MP3-compatible endpoint/model below in Git Bash, with `.venv` active. Enter the key at the hidden prompt so it does not appear in command history:
+
+```bash
+set +x
+export SOC_LLM_ENDPOINT='https://soclaas-api.comp.nus.edu.sg/v1/chat/completions'
+export SOC_LLM_MODEL='llama3.1:8b'
+read -r -s -p 'SoC LLM API key: ' SOC_LLM_API_KEY
+printf '\n'
+export SOC_LLM_API_KEY
+```
+
+Start the application from that same shell; remove the values afterwards with `unset SOC_LLM_API_KEY SOC_LLM_ENDPOINT SOC_LLM_MODEL`. For production, configure these names privately in the runtime environment. Confirm direct provider reachability and trusted CA overrides, keep production debug mode off, and follow the [runtime obligations](../workflow/specs/ai/llm-gateway.md#live-switch). The transport clears TLS key logging and disables its call loop's asyncio debug mode.
+
+No real provider smoke check or drafting [live evaluation](../workflow/specs/ai/test-drafting.md#live-evaluation) has been run for this integration; local TLS/fake-provider tests do not establish provider availability or production readiness. RND-8's drafting UI remains planned in this checkout.
 
 ## Product website
 
@@ -247,7 +263,7 @@ The [product website](https://cs3227-2610-mp4-relay.github.io/CS3227-2610-MP4/) 
 
 ## Acknowledgements
 
-Relay's development workflow, tooling and repository conventions were adapted from the [MP3 Deskmate baseline](https://github.com/CS3227-2610-MP3-Deskmate/CS3227-2610-MP3/tree/97ad99155307825a4b53925906e42f663647a70b), then streamlined for MP4.
+Relay's development workflow, tooling, repository conventions and SoC chat-completions wire mapping were adapted from the [MP3 Deskmate baseline](https://github.com/CS3227-2610-MP3-Deskmate/CS3227-2610-MP3/tree/97ad99155307825a4b53925906e42f663647a70b), then streamlined for MP4; the gateway retains MP4's networking and quota controls.
 
 The product-site scaffold uses GitHub's [Cayman theme](https://github.com/pages-themes/cayman). Relay uses [Django](https://www.djangoproject.com/) and [PostgreSQL](https://www.postgresql.org/) and plans to use [SoC LLM](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). The LLM gateway sends its requests with the [aiohttp](https://github.com/aio-libs/aiohttp) client library. Local/CI container examples use the [official PostgreSQL image](https://hub.docker.com/_/postgres), whose [17.6 tag](https://hub.docker.com/layers/library/postgres/17.6/) was verified for this slice. Record any further reused external ideas, code or documentation here as they are adopted.
 

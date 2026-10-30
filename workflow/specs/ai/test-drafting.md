@@ -92,7 +92,7 @@ Drafting needs the gateway to do the following. The [gateway contract](llm-gatew
 8. Need no result reuse for drafting; if reuse is adopted for other features, never reuse a drafting reply across workspaces or for a different instruction version or source text.
 9. Provide a fake provider that tests can script with an exact reply, refusal, failure or timeout, and run the [live evaluation](#live-evaluation) as part of its live-check procedure.
 
-Drafting validates its own reply as above, whatever the gateway checks. Who owns the live evaluation if #6 declines it, and the provider's retention and training terms, are open.
+Drafting validates its own reply as above, whatever the gateway checks. Who owns the feature's live evaluation if #6 declines it remains open; provider confirmations and pending gateway live validation belong in the [gateway contract](llm-gateway.md#live-switch).
 
 ## Evaluation
 

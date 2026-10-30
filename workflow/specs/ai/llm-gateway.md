@@ -1,8 +1,8 @@
 # Shared LLM gateway
 
-Relay's one boundary for SoC LLM calls. Live requests require the [configured operator environment](#live-switch); a real provider evaluation remains pending.
+Relay's one boundary for SoC LLM calls, using the [configured operator environment](#live-switch).
 
-**Status: integration in progress.** The requested integration includes the chat-format adaptation and code-level live enablement, retaining the existing application caps and transport controls. Independent and human review remain pending. The code-level switch remains off until the adapter and safety changes below are implemented and tested; the intended integrated setting is on. This contract does not claim that a real provider call or drafting evaluation has passed.
+The chat-completions adapter, runtime safety controls and shared code-level live switch are built. A real provider smoke check and drafting evaluation remain pending; local tests do not establish provider availability or production readiness.
 
 The chat format below adapts the MP3 implementation at commit `97ad991` (`src/deskmate/llm.py` and `src/deskmate/llm_gateway.py`): endpoint `https://soclaas-api.comp.nus.edu.sg/v1/chat/completions`, model `llama3.1:8b`, Bearer authentication and `choices[0].message.content`. This is local implementation evidence, not confirmation of current availability, limits or provider terms; endpoint and model remain configured values. The [integration plan](../../plans/6-soc-chat-completions.md) tracks this change separately from the frozen original gateway plan.
 
@@ -16,17 +16,17 @@ The [security spec](../SECURITY-SPEC.md#ai-features-and-prompt-injection) owns t
 
 ## Live switch
 
-- `SOC_LLM_LIVE` in the shared settings (`relay.settings.base`) is a code-level setting, not read from the environment. This integration sets it to `True` after the chat adapter and runtime safety controls pass their tests, subject to pending review; operators must configure the endpoint, model and key before invoking the provider.
+- `SOC_LLM_LIVE=True` in the shared settings (`relay.settings.base`) is a code-level setting, not read from the environment. Fixed test settings override it to `False`; operators must configure the endpoint, model and key before invoking the provider. Missing or invalid settings refuse without a network call.
 - While it is off, `gateway.complete` called without a test provider returns `Refused("live-off")` before any quota record, reservation or transport step, and the transport also refuses before reading any `SOC_LLM_*` variable. No network call is made, whatever `SOC_LLM_*` holds.
 - The MP3 format evidence and human confirmations above support this integration; a live smoke check and the feature's live evaluation remain separate manual validation, never inferred from fake-provider or local transport tests.
 - `ssl.create_default_context()` honours `SSLKEYLOGFILE`, `SSL_CERT_FILE` and `SSL_CERT_DIR`. The transport clears each fresh context's `keylog_filename` before use to prevent TLS key logging. `SSL_CERT_FILE` and `SSL_CERT_DIR`, if set, must name only trusted CA stores; that remains an operator environment obligation.
-- Each call's event loop explicitly disables asyncio debug mode, including when `PYTHONASYNCIODEBUG` or `-X dev` would enable it, to prevent raw asyncio debug reports from bypassing the fixed-code handler.
+- Each call's event loop explicitly disables asyncio debug mode, including when `PYTHONASYNCIODEBUG` or `-X dev` would enable it, to prevent raw asyncio debug reports from bypassing the fixed-code handler. Production debug mode must still remain off.
 - The transport connects directly and ignores `HTTPS_PROXY` and the other proxy variables. Operators must confirm direct provider reachability in the deployment environment; this integration adds no proxy support.
 - RND-8's [planned notice](../product/rounds.md#rnd-8-draft-test-cases-with-ai) says what is sent. RND-8 is not implemented in this checkout; enabling the gateway does not implement that UI.
 
 ## Transport contract (proposed)
 
-Relay owns the rules below; the [aiohttp](https://docs.aiohttp.org/) client library does the networking: name resolution, connecting, TLS, HTTP parsing and knowing when a response is complete.
+The rules below are implemented; the historical "proposed" headings remain for existing links. Relay owns these rules; the [aiohttp](https://docs.aiohttp.org/) client library does the networking: name resolution, connecting, TLS, HTTP parsing and knowing when a response is complete.
 
 - One fixed HTTPS endpoint from `SOC_LLM_ENDPOINT`, with no credentials or fragment in the URL. The request is one `POST` with the JSON body below. The system message contains only the feature's fixed instructions; the user message contains the feature's source JSON text unchanged as a string, never promoted into instructions or parsed into additional messages. No tool, browsing or function-calling fields are sent. No `max_tokens` value is introduced: MP3's 512-token setting does not establish a suitable cap for Relay's drafting reply. Existing local reply, byte and time bounds still apply. Certificate and hostname verification are on, using a verifying context made for each call; no redirect is followed (a 3xx is `Failed("transport")`); and no proxy is used ([live switch](#live-switch)). No call retries.
 
