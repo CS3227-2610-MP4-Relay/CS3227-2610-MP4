@@ -38,6 +38,7 @@ ARMS = {
     "ideal-v1": "Ideal setup v1",
     "ideal-v2": "Ideal setup v2",
     "ideal-v3": "Ideal setup v3",
+    "ideal-v4": "Ideal setup v4",
 }
 IDEAL = Path(
     os.environ.get(

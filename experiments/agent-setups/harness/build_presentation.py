@@ -144,7 +144,7 @@ def index_chart(groups):
     series = [
         ("reference", "MP4 workflow", "s2"),
         ("v1", "Ideal v1", "s1"),
-        ("v2", "Ideal v2", "s3"),
+        ("final", "Ideal, latest tested", "s3"),
     ]
     width, left, bottom, height = 900, 60, 40, 330
     plot_h = height - bottom - 20
@@ -177,10 +177,11 @@ def index_chart(groups):
                     'text-anchor="middle">n/a</text>'
                 )
                 continue
-            percent, dollars = value
+            percent, dollars = value[0], value[1]
+            shown = f"Ideal {value[2]}" if len(value) > 2 else label
             bar_h = min(percent, top) / top * plot_h
             y = 20 + plot_h - bar_h
-            tip = f"{name}, {label}: ${dollars:.2f} ({percent:.0f}% of MP4)"
+            tip = f"{name}, {shown}: ${dollars:.2f} ({percent:.0f}% of MP4)"
             parts.append(
                 f'<rect class="bar {role}" x="{x:.1f}" y="{y:.1f}" width="{bar_w:.1f}" '
                 f'height="{bar_h:.1f}" rx="4" tabindex="0" data-tip="{esc(tip)}"/>'
@@ -204,6 +205,7 @@ def index_chart(groups):
 
 # --- Ideal-setup data -------------------------------------------------------
 
+VERSIONS = ["v1", "v2", "v3", "v4"]
 PLATFORMS = [
     ("Opus · Claude Code", "claude", "claude-opus-5-5", ARMS["mp4"]),
     ("Sonnet · Claude Code", "claude", "claude-sonnet-5-5", ARMS["mp4-sonnet"]),
@@ -233,12 +235,21 @@ def ideal_groups():
         values = {}
         if ref_cost:
             values["reference"] = (100.0, ref_cost)
-        for key, arm in (("v1", "ideal-v1"), ("v2", "ideal-v2")):
-            rows = platform_rows(tool, model, arm)
-            cost = median(rows, "cost_usd")
-            if rows and ref_cost:
-                values[key] = (cost / ref_cost * 100, cost)
-            table.append((name, key, rows))
+        latest = None
+        for version in VERSIONS:
+            rows = platform_rows(tool, model, f"ideal-{version}")
+            if rows:
+                latest = (version, rows)
+                table.append((name, version, rows))
+        first = platform_rows(tool, model, "ideal-v1")
+        if first and ref_cost:
+            values["v1"] = (
+                median(first, "cost_usd") / ref_cost * 100,
+                median(first, "cost_usd"),
+            )
+        if latest and latest[0] != "v1" and ref_cost:
+            cost = median(latest[1], "cost_usd")
+            values["final"] = (cost / ref_cost * 100, cost, latest[0])
         table.append((name, "reference", ref))
         groups.append((name, values))
     return groups, table
@@ -308,6 +319,12 @@ def build():
     wire = [v["wire_percent"] for v in headroom.values()]
     sonnet_cut = 1 - median(ARMS["mp4-sonnet"], "cost_usd") / BASE_COST
     groups, ideal_table = ideal_groups()
+    v4_costs = [
+        num(r["cost_usd"])
+        for r in RUNS
+        if r["arm"] == "ideal-v4" and r["tool"] in ("codex", "hermes")
+    ]
+    deepseek_v4 = f"${min(v4_costs):.2f}–{max(v4_costs):.2f}" if v4_costs else "—"
 
     slides = []
     slides.append(
@@ -324,7 +341,7 @@ def build():
         )
         + stat(f"−{sonnet_cut:.0%}", "cost, all-Sonnet vs MP4", "same quality")
         + stat("2–3×", "faster in one session", "12 vs 30 minutes")
-        + stat("$0.16–0.20", "ideal setup on DeepSeek", "Codex and Hermes")
+        + stat(deepseek_v4, "ideal v4 on DeepSeek", "Codex and Hermes, all correct")
         + "</div></section>"
     )
     slides.append(
@@ -567,9 +584,9 @@ def build():
             "unsure: a ticked checklist, hard stops before scope or rule changes, "
             "tests "
             "shown to fail first, a can-fail self-check and numbers only from commands "
-            'run.</p><p class="muted small">Unset: the model picks by its own '
-            "identity, "
-            "and defaults to guarded.</p></div></div>",
+            'run.</p><p class="muted small">Unset means guarded (v4): in v2, a '
+            "DeepSeek run left to pick for itself followed the strong flow.</p>"
+            "</div></div>",
             "Design",
         )
     )
@@ -608,7 +625,7 @@ def build():
                 "wide",
             )
             + '<div class="card"><p class="card-title">Install and launch</p><pre>'
-            "python experiments/agent-setups/ideal/install.py v2 .\n\n"
+            "python experiments/agent-setups/ideal/install.py v4 .\n\n"
             "RELAY_PROFILE=strong  claude --model sonnet\n"
             "RELAY_PROFILE=guarded codex -m deepseek/deepseek-v4.1-flash\n"
             "RELAY_PROFILE=guarded hermes -m deepseek/deepseek-v4.1-flash --provider "
@@ -619,7 +636,7 @@ def build():
     )
     ideal_rows = []
     for name, key, rows in ideal_table:
-        label = {"reference": "MP4 workflow", "v1": "Ideal v1", "v2": "Ideal v2"}[key]
+        label = "MP4 workflow" if key == "reference" else f"Ideal {key}"
         ideal_rows.append((name, label, *quality_cells(rows)))
     slides.append(
         slide(
@@ -644,6 +661,55 @@ def build():
                 "wide",
             )
             + "</details>",
+            "Evaluation",
+        )
+    )
+    tuning = [
+        (
+            "v1",
+            "Lean slice, one reviewer, strong/guarded profiles",
+            (
+                "All correct; Sonnet $1.35, Opus $4.23; on Hermes 2× cheaper and "
+                "4.5× faster than MP4. Two Medium spec findings; one High (Haiku "
+                "missed recording two decisions)."
+            ),
+        ),
+        (
+            "v2",
+            "Check every mention and every old test, builder and reviewer",
+            (
+                "No Medium findings on Sonnet or Opus. But Haiku chose Opus reviewers "
+                "on its own (3× cost), and Hermes sampled the refused characters, so "
+                "one planted bug survived."
+            ),
+        ),
+        (
+            "v3",
+            "Reviewer model only from RELAY_REVIEW_MODEL; test every listed value",
+            "Haiku back to $0.92 with clean reviews; Codex and Hermes clean at $0.15.",
+        ),
+        (
+            "v4",
+            "Unset profile means guarded; plan maps each human decision",
+            (
+                "Both unset DeepSeek runs chose guarded; Hermes $0.13 in 10 min. "
+                "Haiku still put two residuals in its plan, not the security spec "
+                "(High): next, say where residuals live."
+            ),
+        ),
+    ]
+    rows = "".join(
+        f'<div class="step"><span class="badge">{esc(v)}</span><p><b>{esc(a)}</b>'
+        f'<br><span class="muted">{esc(b)}</span></p></div>'
+        for v, a, b in tuning
+    )
+    slides.append(
+        slide(
+            "Tuning for both kinds of model",
+            f'<div class="card"><div class="flow four">{rows}</div></div>'
+            '<p class="muted small">Each version was run on the weaker models '
+            "(Haiku; DeepSeek in Codex and Hermes) and on Sonnet; see the table on "
+            "the previous slide.</p>",
             "Evaluation",
         )
     )

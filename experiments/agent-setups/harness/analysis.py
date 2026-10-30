@@ -51,8 +51,10 @@ def headroom(runs):
 def report_accuracy(runs):
     """Whether each run's final report states the full-suite count we measured.
 
-    The largest "N passed" in the report is taken as its full-suite claim and
-    compared with the pytest count from scoring the same final candidate.
+    A report matches when one of its "N passed" counts equals the pytest count
+    from scoring the same final candidate. It is wrong when it states a
+    full-suite-sized count (at least 90% of the measured one) that differs, and
+    otherwise it states no full-suite count, which is recorded as None.
     """
     accuracy = {}
     for run in runs:
@@ -62,14 +64,14 @@ def report_accuracy(runs):
             int(n.replace(",", "")) for n in re.findall(r"([\d,]+) passed", report)
         ]
         measured = evaluation["verification"]["pytest"].get("passed")
-        if claims and measured:
-            accuracy[run] = {
-                "reported": max(claims),
-                "measured": measured,
-                "match": max(claims) == measured,
-            }
+        full = [c for c in claims if measured and c >= 0.9 * measured]
+        if measured in claims:
+            match = True
+        elif full:
+            match = False
         else:
-            accuracy[run] = {"reported": None, "measured": measured, "match": None}
+            match = None
+        accuracy[run] = {"claims": claims, "measured": measured, "match": match}
     return accuracy
 
 
