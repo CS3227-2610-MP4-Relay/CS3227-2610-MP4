@@ -198,7 +198,12 @@ Added on 2026-10-31, at the human's request, after tasks 1 and 2 were reported. 
   - one of mp4 on Haiku.
 
   The human expected the hardest task might need Opus. The Sonnet, Sonnet-with-Opus-review and Haiku runs test where a cheaper model stops being enough.
-- **Hidden suite, task 3:** written from the prompt's decisions only, before any task-3 run ended, and checked to pass on the original team implementation (`ea78f09`). It drives the pages over HTTP and judges outcomes only from status codes and page text. Races are not covered.
+- **Hidden suite, task 3 (46 tests from 30 functions):** written from the prompt's decisions only, before any task-3 run ended.
+  - **Checked against the original team implementation (`ea78f09`):** all 46 pass.
+  - **Checked against the starting commit:** 45 fail and 1 passes, the absence of a link on a Closed round.
+  - **How it judges:** it drives the pages over HTTP and judges outcomes only from status codes, the two status texts, the values shown and whether the form is present.
+  - **Left out:** races. Two drafted checks were also dropped because the prompt leaves them to the candidate: whether a retest copies a saved draft forward, and what closing does to a draft.
+  - **Planted bugs:** each of the five task-3 bugs, planted in the reference, fails at least one test.
 - **Mutants, task 3:**
   - M1, another tester's result shown or changed;
   - M2, Fail accepted without an observation;
