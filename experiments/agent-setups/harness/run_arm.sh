@@ -24,6 +24,8 @@ case $ARM in
   caveman) PLUGINS=(--plugin-dir "$ADDONS/caveman") ;;
   ponytail) PLUGINS=(--plugin-dir "$ADDONS/ponytail") ;;
   superpowers) PLUGINS=(--plugin-dir "$ADDONS/superpowers") ;;
+  # OpenSpec's skills call its CLI; put the pinned copy on the PATH.
+  openspec) export PATH="$ADDONS/openspec-bin:$PATH" ;;
   stack) PLUGINS=(--plugin-dir "$ADDONS/caveman" --plugin-dir "$ADDONS/ponytail") ;;
 esac
 
