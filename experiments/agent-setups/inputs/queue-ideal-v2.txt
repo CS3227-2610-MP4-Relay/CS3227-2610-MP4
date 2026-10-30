@@ -1,0 +1,10 @@
+ideal-v2 i2-haiku-1 MODEL_OVERRIDE=claude-haiku-5-5 RELAY_PROFILE=guarded
+ideal-v2 i2-codex-1 TOOL=codex RELAY_PROFILE=guarded
+ideal-v2 i2-hermes-1 TOOL=hermes RELAY_PROFILE=guarded
+ideal-v2 i2-sonnet-1 MODEL_OVERRIDE=claude-sonnet-5-5 RELAY_PROFILE=strong
+ideal-v2 i2-haiku-2 MODEL_OVERRIDE=claude-haiku-5-5 RELAY_PROFILE=guarded
+ideal-v2 i2-codex-2 TOOL=codex RELAY_PROFILE=guarded
+ideal-v2 i2-hermes-2 TOOL=hermes RELAY_PROFILE=guarded
+ideal-v2 i2-sonnet-2 MODEL_OVERRIDE=claude-sonnet-5-5 RELAY_PROFILE=strong
+ideal-v2 i2-opus-1 RELAY_PROFILE=strong
+ideal-v2 i2-codex-auto-1 TOOL=codex
