@@ -1,33 +1,33 @@
 {
   "run": "i2-codex-1",
-  "notes": "Helper has_direction_control in rounds/text.py, called from RoundTextField.clean.",
+  "notes": "Helper has_direction_control in rounds/text.py (isdisjoint on code points), called from RoundTextField.clean.",
   "mutants": {
     "M1": [
       {
         "file": "src/rounds/text.py",
-        "old": "    return any(ord(char) in DIRECTION_CONTROLS for char in text)\n",
+        "old": "    return not DIRECTION_CONTROLS.isdisjoint(map(ord, text))\n",
         "new": "    return False\n"
       }
     ],
     "M2": [
       {
         "file": "src/rounds/text.py",
-        "old": "    return any(ord(char) in DIRECTION_CONTROLS for char in text)\n",
-        "new": "    return any(ord(char) in DIRECTION_CONTROLS and ord(char) != 0x2069 for char in text)\n"
+        "old": "    return not DIRECTION_CONTROLS.isdisjoint(map(ord, text))\n",
+        "new": "    return not (DIRECTION_CONTROLS - {0x2069}).isdisjoint(map(ord, text))\n"
       }
     ],
     "M3": [
       {
         "file": "src/rounds/text.py",
-        "old": "    return any(ord(char) in DIRECTION_CONTROLS for char in text)\n",
-        "new": "    return any(ord(char) in DIRECTION_CONTROLS and ord(char) != 0x202B for char in text)\n"
+        "old": "    return not DIRECTION_CONTROLS.isdisjoint(map(ord, text))\n",
+        "new": "    return not (DIRECTION_CONTROLS - {0x202B}).isdisjoint(map(ord, text))\n"
       }
     ],
     "M4": [
       {
         "file": "src/rounds/text.py",
-        "old": "    return any(ord(char) in DIRECTION_CONTROLS for char in text)\n",
-        "new": "    return any(ord(char) in DIRECTION_CONTROLS or ord(char) == 0x200E for char in text)\n"
+        "old": "    return not DIRECTION_CONTROLS.isdisjoint(map(ord, text))\n",
+        "new": "    return not (DIRECTION_CONTROLS | {0x200E}).isdisjoint(map(ord, text))\n"
       }
     ],
     "M5": [

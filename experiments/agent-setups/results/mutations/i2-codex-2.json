@@ -1,0 +1,41 @@
+{
+  "run": "i2-codex-2",
+  "notes": "Helper has_text_direction_character over the shared BIDI_CONTROLS keys.",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    return not BIDI_CONTROLS.keys().isdisjoint(map(ord, text))\n",
+        "new": "    return False\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    return not BIDI_CONTROLS.keys().isdisjoint(map(ord, text))\n",
+        "new": "    return not (BIDI_CONTROLS.keys() - {0x2069}).isdisjoint(map(ord, text))\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    return not BIDI_CONTROLS.keys().isdisjoint(map(ord, text))\n",
+        "new": "    return not (BIDI_CONTROLS.keys() - {0x202B}).isdisjoint(map(ord, text))\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    return not BIDI_CONTROLS.keys().isdisjoint(map(ord, text))\n",
+        "new": "    return not (BIDI_CONTROLS.keys() | {0x200E}).isdisjoint(map(ord, text))\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if has_text_direction_character(value):\n",
+        "new": "        if has_text_direction_character(value) and self.label != \"Build label\":\n"
+      }
+    ]
+  }
+}

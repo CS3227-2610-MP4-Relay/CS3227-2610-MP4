@@ -1,0 +1,41 @@
+{
+  "run": "i3-sonnet-1",
+  "notes": "Validator refuse_bidi_controls on RoundTextField (isdisjoint on BIDI_CONTROLS).",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    if not BIDI_CONTROLS.isdisjoint(text):\n",
+        "new": "    if False:\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    if not BIDI_CONTROLS.isdisjoint(text):\n",
+        "new": "    if not (BIDI_CONTROLS - {chr(0x2069)}).isdisjoint(text):\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    if not BIDI_CONTROLS.isdisjoint(text):\n",
+        "new": "    if not (BIDI_CONTROLS - {chr(0x202B)}).isdisjoint(text):\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    if not BIDI_CONTROLS.isdisjoint(text):\n",
+        "new": "    if not (BIDI_CONTROLS | {chr(0x200E)}).isdisjoint(text):\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    return RoundTextField(\n        max_length=100,\n        label=\"Build label\",\n        widget=forms.TextInput(attrs={\"dir\": \"auto\"}),\n    )\n",
+        "new": "    field = RoundTextField(\n        max_length=100,\n        label=\"Build label\",\n        widget=forms.TextInput(attrs={\"dir\": \"auto\"}),\n    )\n    field.validators = [v for v in field.validators if v is not refuse_bidi_controls]\n    return field\n"
+      }
+    ]
+  }
+}

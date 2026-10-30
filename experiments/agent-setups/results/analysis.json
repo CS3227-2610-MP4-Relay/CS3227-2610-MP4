@@ -7,6 +7,18 @@
       "summary": "rounds.md's rendering rule now claims the title removals and isolates protect only text that bypasses the forms, which is false because dir=auto and FSI/PDI still isolate RTL text and the allowed LRM/RLM/ALM marks; the SECURITY-SPEC bullet similarly drops that rationale."
     },
     {
+      "run": "i1-haiku-2",
+      "severity": "High",
+      "area": "specs",
+      "summary": "Decisions 2 and 3 are not met: no residual is recorded in SECURITY-SPEC for unrefused zero-width characters and joiners (deferred to #22) or for look-alike labels that the allowed direction marks can produce."
+    },
+    {
+      "run": "i1-hermes-2",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "SECURITY-SPEC.md, the home for controls and residual gaps, is not updated: the new input refusal is not listed, and decisions 2 and 3's residuals (zero-width and joiner characters not refused, deferred to #22; look-alike labels from the allowed marks) are not recorded in any reviewed file."
+    },
+    {
       "run": "i1-opus-1",
       "severity": "Medium",
       "area": "specs",
@@ -19,10 +31,28 @@
       "summary": "The refusal and acceptance tests only exercise the new-criterion and new-case routes, so the criterion and case edit inputs that RND-2.8 now promises to refuse are never sent a direction control."
     },
     {
+      "run": "i2-haiku-2",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "RND-1.7, RND-2.8, RND-3.6 and RND-5.8 now claim their tests include the text-direction refusal, but the new tests carry no criterion marks (their docstring says so), so the criteria's claims are not backed by tests marked with their IDs."
+    },
+    {
       "run": "i2-hermes-1",
       "severity": "Medium",
       "area": "specs",
       "summary": "Rule 5 now states the checks run strictly in the order length, null, direction, visibility, but Django runs the length and null-character checks together, so text that is too long and contains a null gets both messages; the rule also restates the per-field length message that the criteria already hold."
+    },
+    {
+      "run": "i3-sonnet-1",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "The edited rendering rule says every rules criterion tests rendering of typed-in direction marks, but only RND-1.7 has such a test (built via make_round, not typed), so RND-2.8, RND-3.6 and RND-5.8 lack the promised rendering tests."
+    },
+    {
+      "run": "i4-haiku-1",
+      "severity": "High",
+      "area": "specs",
+      "summary": "Decisions 2 and 3 are not recorded as residuals: SECURITY-SPEC has no accepted residual for unrefused zero-width/joiner characters (with #22) or for look-alike text the allowed direction marks can produce, and rule 5 only says other invisible characters are not refused."
     },
     {
       "run": "r1-mp4-sonnet-builder",
@@ -125,179 +155,454 @@
   },
   "report_accuracy": {
     "i1-codex-1": {
-      "reported": 838,
+      "claims": [
+        347,
+        375,
+        345,
+        838
+      ],
       "measured": 838,
       "match": true
     },
     "i1-codex-2": {
-      "reported": 867,
+      "claims": [
+        354,
+        401,
+        345,
+        867
+      ],
       "measured": 867,
       "match": true
     },
     "i1-haiku-1": {
-      "reported": 852,
+      "claims": [
+        852,
+        810,
+        538
+      ],
       "measured": 852,
       "match": true
     },
+    "i1-haiku-2": {
+      "claims": [
+        943
+      ],
+      "measured": 943,
+      "match": true
+    },
     "i1-hermes-1": {
-      "reported": 837,
+      "claims": [
+        344,
+        353,
+        837
+      ],
       "measured": 837,
       "match": true
     },
+    "i1-hermes-2": {
+      "claims": [
+        351,
+        383,
+        351,
+        847
+      ],
+      "measured": 847,
+      "match": true
+    },
     "i1-opus-1": {
-      "reported": 891,
+      "claims": [
+        365,
+        891
+      ],
       "measured": 891,
       "match": true
     },
     "i1-sonnet-1": {
-      "reported": 971,
+      "claims": [
+        971
+      ],
       "measured": 971,
       "match": true
     },
     "i1-sonnet-2": {
-      "reported": 964,
+      "claims": [
+        964
+      ],
       "measured": 964,
       "match": true
     },
     "i2-codex-1": {
-      "reported": 836,
+      "claims": [
+        63,
+        84,
+        58,
+        836
+      ],
       "measured": 836,
       "match": true
     },
+    "i2-codex-2": {
+      "claims": [
+        352,
+        375,
+        376,
+        838
+      ],
+      "measured": 838,
+      "match": true
+    },
+    "i2-codex-auto-1": {
+      "claims": [
+        1,
+        21,
+        592,
+        878
+      ],
+      "measured": 878,
+      "match": true
+    },
     "i2-haiku-1": {
-      "reported": 890,
+      "claims": [
+        810,
+        890,
+        6
+      ],
       "measured": 890,
       "match": true
     },
+    "i2-haiku-2": {
+      "claims": [
+        13
+      ],
+      "measured": 900,
+      "match": null
+    },
     "i2-hermes-1": {
-      "reported": 827,
+      "claims": [
+        525,
+        541,
+        525,
+        827
+      ],
       "measured": 827,
       "match": true
     },
+    "i2-hermes-2": {
+      "claims": [
+        9,
+        30,
+        439,
+        9,
+        30,
+        849
+      ],
+      "measured": 849,
+      "match": true
+    },
+    "i2-opus-1": {
+      "claims": [
+        863
+      ],
+      "measured": 863,
+      "match": true
+    },
+    "i2-sonnet-1": {
+      "claims": [
+        352
+      ],
+      "measured": 871,
+      "match": null
+    },
+    "i2-sonnet-2": {
+      "claims": [
+        882
+      ],
+      "measured": 882,
+      "match": true
+    },
+    "i3-codex-1": {
+      "claims": [
+        351,
+        375,
+        342,
+        837
+      ],
+      "measured": 837,
+      "match": true
+    },
+    "i3-haiku-1": {
+      "claims": [
+        810,
+        907
+      ],
+      "measured": 907,
+      "match": true
+    },
+    "i3-haiku-2": {
+      "claims": [
+        810,
+        14,
+        868
+      ],
+      "measured": 868,
+      "match": true
+    },
+    "i3-haiku-opusreview-1": {
+      "claims": [
+        810,
+        902,
+        88
+      ],
+      "measured": 902,
+      "match": true
+    },
+    "i3-hermes-1": {
+      "claims": [
+        4,
+        19,
+        4,
+        19,
+        753,
+        830,
+        830,
+        830
+      ],
+      "measured": 830,
+      "match": true
+    },
+    "i3-sonnet-1": {
+      "claims": [
+        992
+      ],
+      "measured": 992,
+      "match": true
+    },
+    "i4-codex-auto-1": {
+      "claims": [
+        536,
+        597,
+        351,
+        412,
+        883
+      ],
+      "measured": 883,
+      "match": true
+    },
+    "i4-haiku-1": {
+      "claims": [
+        810,
+        934,
+        8,
+        8,
+        11
+      ],
+      "measured": 934,
+      "match": true
+    },
+    "i4-hermes-auto-1": {
+      "claims": [
+        859,
+        360,
+        14,
+        23
+      ],
+      "measured": 859,
+      "match": true
+    },
+    "i4-sonnet-1": {
+      "claims": [
+        977
+      ],
+      "measured": 977,
+      "match": true
+    },
     "r1-caveman": {
-      "reported": 1017,
+      "claims": [
+        1017,
+        604
+      ],
       "measured": 1017,
       "match": true
     },
     "r1-headroom": {
-      "reported": null,
+      "claims": [],
       "measured": 872,
       "match": null
     },
     "r1-mp3": {
-      "reported": 1098,
+      "claims": [
+        1098
+      ],
       "measured": 1098,
       "match": true
     },
     "r1-mp4": {
-      "reported": 862,
+      "claims": [
+        862,
+        810,
+        26
+      ],
       "measured": 862,
       "match": true
     },
     "r1-mp4-sonnet": {
-      "reported": 1129,
+      "claims": [
+        1129
+      ],
       "measured": 1129,
       "match": true
     },
     "r1-mp4-sonnet-builder": {
-      "reported": 863,
+      "claims": [
+        863,
+        24
+      ],
       "measured": 863,
       "match": true
     },
     "r1-ponytail": {
-      "reported": null,
+      "claims": [],
       "measured": 849,
       "match": null
     },
     "r1-solo": {
-      "reported": 890,
+      "claims": [
+        890
+      ],
       "measured": 890,
       "match": true
     },
     "r1-spec-kit": {
-      "reported": null,
+      "claims": [],
       "measured": 849,
       "match": null
     },
     "r1-stack": {
-      "reported": 846,
+      "claims": [
+        846,
+        56
+      ],
       "measured": 846,
       "match": true
     },
     "r1-superpowers": {
-      "reported": null,
+      "claims": [],
       "measured": 860,
       "match": null
     },
     "r2-caveman": {
-      "reported": 844,
+      "claims": [
+        844
+      ],
       "measured": 844,
       "match": true
     },
     "r2-headroom": {
-      "reported": 873,
+      "claims": [
+        810,
+        873,
+        379
+      ],
       "measured": 873,
       "match": true
     },
     "r2-mp3": {
-      "reported": 869,
+      "claims": [
+        869
+      ],
       "measured": 869,
       "match": true
     },
     "r2-mp4": {
-      "reported": 853,
+      "claims": [
+        853,
+        810
+      ],
       "measured": 853,
       "match": true
     },
     "r2-mp4-sonnet": {
-      "reported": 1010,
+      "claims": [
+        1010
+      ],
       "measured": 1010,
       "match": true
     },
     "r2-mp4-sonnet-builder": {
-      "reported": 852,
+      "claims": [
+        852
+      ],
       "measured": 852,
       "match": true
     },
     "r2-ponytail": {
-      "reported": 840,
+      "claims": [
+        840
+      ],
       "measured": 840,
       "match": true
     },
     "r2-solo": {
-      "reported": 880,
+      "claims": [
+        880
+      ],
       "measured": 880,
       "match": true
     },
     "r2-spec-kit": {
-      "reported": 859,
+      "claims": [
+        859
+      ],
       "measured": 859,
       "match": true
     },
     "r2-stack": {
-      "reported": 850,
+      "claims": [
+        850,
+        26
+      ],
       "measured": 850,
       "match": true
     },
     "r2-superpowers": {
-      "reported": 845,
+      "claims": [
+        845
+      ],
       "measured": 845,
       "match": true
     },
     "r3-mp4": {
-      "reported": 878,
+      "claims": [
+        878,
+        40
+      ],
       "measured": 878,
       "match": true
     },
     "ref-codex-mp4-1": {
-      "reported": 820,
+      "claims": [
+        820,
+        358
+      ],
       "measured": 820,
       "match": true
     },
     "ref-haiku-mp4-1": {
-      "reported": null,
+      "claims": [],
       "measured": 1076,
       "match": null
+    },
+    "ref-hermes-mp4-1": {
+      "claims": [
+        339,
+        350,
+        361,
+        371,
+        833,
+        823
+      ],
+      "measured": 833,
+      "match": true
     }
   }
 }
