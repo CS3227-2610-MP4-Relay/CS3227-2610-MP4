@@ -168,7 +168,7 @@ Task 1 was small. Task 2 is larger and has more ways to be wrong, to test whethe
 - **Mutants, task 2:**
   - M1, foreign cases accepted: every check that the chosen cases belong to the round is removed;
   - M2, the cap off by one: an eleventh build is allowed;
-  - M3, labels compared as typed: the used-label check skips the comparison key;
+  - M3, labels compared as typed: the used-label check, and the key stored with the new build, use the label as typed instead of its comparison key;
   - M4, any round state accepted: every Open check for the retest is removed;
   - M5, the label unescaped: the success message renders the label as HTML.
 
