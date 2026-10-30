@@ -8,9 +8,6 @@ round after Playwright stops.
 import pytest
 from playwright.sync_api import expect
 
-# pytest imports this rootless directory by basename (prepend mode).
-from test_rounds import sign_in_coordinator
-
 from accounts.models import Workspace
 from rounds.models import Case, Criterion, Round
 
@@ -67,8 +64,20 @@ def browser_accounts(browser_accounts):
         ]
 
 
-def refused(tab, state):
-    """A stale tab's submission gets the state conflict page."""
+def sign_in_coordinator(page, accounts):
+    """Open the coordinator home through the real sign-in form."""
+    page.goto("/sign-in/")
+    page.get_by_label("Username", exact=True).fill(accounts["coordinator"])
+    page.get_by_label("Password", exact=True).fill(accounts["password"])
+    page.get_by_role("button", name="Sign in", exact=True).click()
+
+
+def refused(tab, state, button=None):
+    """A stale tab's `button` POST, if given, gets 409 and the conflict page."""
+    if button is not None:
+        with tab.expect_response(lambda r: r.request.method == "POST") as response:
+            tab.get_by_role("button", name=button, exact=True).click()
+        assert response.value.status == 409
     expect(
         tab.get_by_role(
             "heading",
@@ -78,12 +87,13 @@ def refused(tab, state):
     ).to_be_visible()
 
 
-def stale_tab(page, link=None):
+def stale_tab(page, heading, link=None):
     """Open the current page in another tab, optionally following one link."""
     tab = page.context.new_page()
     tab.goto(page.url)
     if link is not None:
         tab.get_by_role("link", name=link, exact=True).first.click()
+    expect(tab.get_by_role("heading", name=heading, exact=True)).to_be_visible()
     return tab
 
 
@@ -112,11 +122,16 @@ def request_retest(page, label):
     page.reload()
 
 
-def expect_label_counts(page, counts):
-    """Each build label appears as a build heading plus once per current case."""
-    for label, count in zip(BUILDS, counts, strict=False):
+def expect_builds(page, *current):
+    """Builds up to the first case's are listed; each case's section shows its own."""
+    for label in BUILDS[: BUILDS.index(current[0]) + 1]:
         expect(page.get_by_role("heading", name=label, exact=True)).to_be_visible()
-        expect(page.get_by_text(label, exact=True)).to_have_count(count)
+    for title, label in zip((FIRST_CASE, SECOND_CASE), current, strict=True):
+        case = page.get_by_role("heading", name=title, exact=True)
+        own = (
+            "xpath=following-sibling::h4[.='Current build'][1]/following-sibling::p[1]"
+        )
+        expect(case.locator(own)).to_have_text(label)
 
 
 @pytest.mark.ac("RND-1.2", "RND-5.1", "RND-5.5", "RND-6.1", "RND-6.2", "RND-6.3")
@@ -129,7 +144,7 @@ def test_coordinator_edits_retests_twice_and_closes_round(page, browser_accounts
     # editing observed, not marked).
     page.get_by_role("link", name="Edit round", exact=True).click()
     expect(page.get_by_label("Title", exact=True)).to_have_value(TITLE)
-    edit_tab = stale_tab(page)
+    edit_tab = stale_tab(page, "Edit round")
     save(page, "Title", REVISED_TITLE)
     expect(page.get_by_role("heading", name=REVISED_TITLE, exact=True)).to_be_visible()
     page.get_by_role("link", name="Edit criterion", exact=True).first.click()
@@ -154,25 +169,24 @@ def test_coordinator_edits_retests_twice_and_closes_round(page, browser_accounts
 
     # Publishing opens the round; a Draft tab's publish is then refused (part
     # of RND-3.6, not marked).
-    draft_tab = stale_tab(page)
+    draft_tab = stale_tab(page, REVISED_TITLE)
     page.get_by_label("Build label", exact=True).fill(BUILDS[0])
     page.get_by_role("button", name="Publish round", exact=True).click()
     expect(page.get_by_role("status")).to_have_text("Round published.")
     expect(page.get_by_text("State: Open", exact=True)).to_be_visible()
     draft_tab.get_by_label("Build label", exact=True).fill(IGNORED)
-    draft_tab.get_by_role("button", name="Publish round", exact=True).click()
-    refused(draft_tab, "Open")
+    refused(draft_tab, "Open", "Publish round")
 
     # RND-5.1 and RND-5.5: retest one case twice; the other keeps its build.
     request_retest(page, BUILDS[1])
-    expect_label_counts(page, (2, 2))
+    expect_builds(page, BUILDS[1], BUILDS[0])
     request_retest(page, BUILDS[2])
-    expect_label_counts(page, (2, 1, 2))
+    expect_builds(page, BUILDS[2], BUILDS[0])
 
     # RND-6.1 and RND-6.2: closing keeps the content and removes every control.
     expect(page.get_by_text(WARNING, exact=True)).to_be_visible()
-    open_tab = stale_tab(page)
-    retest_tab = stale_tab(page, "Request a retest")
+    open_tab = stale_tab(page, REVISED_TITLE)
+    retest_tab = stale_tab(page, "Request a retest", "Request a retest")
     page.get_by_role("button", name="Close round", exact=True).click()
     expect(page.get_by_role("status")).to_have_text("Round closed.")
     page.reload()
@@ -181,7 +195,7 @@ def test_coordinator_edits_retests_twice_and_closes_round(page, browser_accounts
     expect(page.get_by_text(REVISED_FIRST, exact=True)).to_have_count(2)
     for title in (FIRST_CASE, SECOND_CASE):
         expect(page.get_by_role("heading", name=title, exact=True)).to_be_visible()
-    expect_label_counts(page, (2, 1, 2))
+    expect_builds(page, BUILDS[2], BUILDS[0])
     expect(page.get_by_text(WARNING, exact=True)).to_have_count(0)
     expect(page.get_by_role("button")).to_have_count(0)
     for link in ("Edit round", "Request a retest", "Add test case"):
@@ -189,14 +203,12 @@ def test_coordinator_edits_retests_twice_and_closes_round(page, browser_accounts
 
     # RND-6.3: closing again is refused, as are retests and retitling (part of
     # RND-1.7, not marked), and the round stays Closed.
-    open_tab.get_by_role("button", name="Close round", exact=True).click()
-    refused(open_tab, "Closed")
+    refused(open_tab, "Closed", "Close round")
     retest_tab.get_by_role("checkbox", name=FIRST_CASE, exact=True).check()
     retest_tab.get_by_label("Build label", exact=True).fill(IGNORED)
-    retest_tab.get_by_role("button", name="Request retest", exact=True).click()
-    refused(retest_tab, "Closed")
-    save(edit_tab, "Title", IGNORED)
-    refused(edit_tab, "Closed")
+    refused(retest_tab, "Closed", "Request retest")
+    edit_tab.get_by_label("Title", exact=True).fill(IGNORED)
+    refused(edit_tab, "Closed", "Save")
     assert page.goto(edit_tab.url).status == 409
     refused(page, "Closed")
     page.goto(round_url)
