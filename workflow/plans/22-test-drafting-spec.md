@@ -206,4 +206,14 @@ Human decisions (2026-10-30): **A.** Move the "Use this draft" round trip to a P
   - Hidden steps isolated and draft IDs reversed in `ai/draft.html`: `test_hostile_reply_text_is_escaped_isolated_and_round_trips` and `test_each_draft_covers_exactly_its_labelled_criteria` fail.
   - Selection boxes not marked checked: the three `test_gateway_failures_show_fixed_message_and_keep_selection` cases fail.
 - **Checks:** focused `pytest src/ai/tests/test_views.py src/ai/tests/test_drafting.py src/e2e/test_drafting.py` 111 passed. Full: Django check and `makemigrations --check --dry-run` (test settings) clean, `ruff check .` and `ruff format --check .` clean, `pytest -q -p no:cacheprovider` 2097 passed and 231 subtests. `check_scope.py builder --base 32db732` clean.
-- **Size:** 138 lines in tracked code and spec (31 insertions, 107 deletions, including the 50-line helper) plus the 71-line new test: 209, and this entry, within the 250-line budget.
+- **Commits:** `6628b18` (spec), then `3e2c8ff` (test), `2a7090e` (refactor) and `b568a7b` (plan). The coordinator made all four after one builder edit run, so spec-first is shown only by their order, as in the earlier [retrospective split](#history-deviations).
+- **Size:** by the [slice skill's metric](../skills/slice.md), non-test `src/` is `src/ai/drafting.py` only, 16 lines (11 insertions plus 5 deletions, `32db732..b568a7b`), bringing the unconfirmed repair total above to 550. All files: 224 (117 insertions plus 107 deletions, including the deleted 50-line helper), under the coordinator's 250-line stop threshold for this repair, which was not a human budget.
+
+### Round 1 (2026-10-30)
+
+On `b568a7b`. Reviewers found nothing at High; three Low findings, fixed in `src/e2e/test_drafting.py` and `src/ai/tests/test_views.py`:
+
+- **Plain browser draft (both):** the browser draft's steps and expected result now carry markup, `"`, `&` and `<`. Red: with the hidden steps rendered `|safe` or `|force_escape|force_escape`, the `b568a7b` test passes and the new one fails on the Steps value.
+- **Substring hidden-field checks (verifier):** the hostile test now reads the single "Use this draft" form and requires each hidden text field exactly once. Red: with a duplicated hidden `title`, the old test passes and the new one fails (`assert 2 == 1`).
+- **Criterion markup (security):** the hostile criterion now has `<i>"><` and U+202E, asserted escaped and isolated in both the checkbox label and the covers list. Red: removing `isolated_lines` from either, the old test passes and the new one fails.
+- **Checks:** focused 111 passed; Django check and migrations check clean; `ruff check .` and `ruff format --check .` clean; `pytest -q -p no:cacheprovider` 2097 passed and 231 subtests; `check_scope.py builder --base b568a7b` clean.
