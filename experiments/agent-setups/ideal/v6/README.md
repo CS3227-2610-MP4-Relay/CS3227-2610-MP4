@@ -1,14 +1,14 @@
 # Portable agent workflow
 
-A small, project-independent workflow for coding agents. It runs the same way in Claude Code, Codex, Hermes or any tool that reads `AGENTS.md`. It came out of the [agent-setups experiment](../../README.md): 11 setups compared on real tasks, then tuned on strong models (Opus, Sonnet) and weak ones (Haiku, DeepSeek v4.1 Flash).
+A small, project-independent workflow for coding agents. It runs the same way in Claude Code, Codex, Hermes or any tool that reads `AGENTS.md`. It came out of the [agent-setups experiment](../../README.md): twelve setups compared on two real tasks, then tuned over six versions on strong models (Opus, Sonnet) and weak ones (Haiku, DeepSeek v4.1 Flash). This is version 6: version 5 plus three rules taken from version 5's own review findings.
 
 ## How it works
 
 The workflow has five steps, in [`agent-workflow/slice.md`](agent-workflow/slice.md):
 
 1. **Specify:** update the requirements first, and write a short plan.
-2. **Build in one session:** write the tests first and see them fail, make the smallest complete change, and commit as you go.
-3. **Check consistency:** every mention of what changed is updated, every old test still tests what it did, and every human decision has a home.
+2. **Build in one session:** write the tests first and see them fail, mocking only what lies outside the change. Make the smallest complete change, and commit as you go.
+3. **Check consistency:** every mention of what changed is updated, and every claim that tests cover something points to a test that does. Every old test still tests what it did. Every human decision has a home, and nothing is recorded as accepted that the human did not decide.
 4. **Freeze:** run the project's full verification once, on the final candidate.
 5. **One independent, read-only review:** a separate reviewer session checks the frozen commit range, with at most two repair rounds.
 
@@ -26,13 +26,16 @@ Each rule answers something the experiment measured:
 
 | Rule | Evidence |
 | --- | --- |
-| Build in one session, not through builder subagents | Builder hand-offs were MP4's main cost: 50–70% of its cached reads were in subagents, and it wrote four times the cache that a single session wrote. Single-session setups were 50–75% cheaper and two to three times faster, with the same correctness. |
+| Build in one session, not through builder subagents | Builder hand-offs were MP4's main cost: about 55% of its money went on subagents re-reading the repository. Single-session setups cost 45–63% less and took 40–66% of the time, with the same correctness, on both tasks. |
 | Keep one independent reviewer | Self-review missed scope, ownership and integration problems in the earlier weaker-model run. One reviewer costs far less than MP4's repeated builder and reviewer cycles. |
 | Reviewer on the session's model unless set | Left to choose, Haiku started Opus reviewers on its own and tripled its cost. |
 | The three consistency checks | Every Medium or High review finding across the runs was one of three things: a spec statement left stale, an old test whose input was switched to an allowed one, or a decision or accepted risk left out of its home. |
 | Test each listed value | One DeepSeek run sampled the refused characters, and a planted bug that allowed one of them survived. |
+| Accept only what the human decided | Two runs recorded a residual as accepted that the human never accepted. |
+| Claims about tests point to a test | The commonest review finding was spec text saying tests covered something they did not. |
+| Mock only outside the change | A Haiku run mocked the whole service under test, so its failure test checked nothing. |
 | Unset profile means guarded | A DeepSeek run left to pick its own profile took the strong flow. |
-| No add-ons | caveman, ponytail and headroom did not improve quality. headroom compressed about 1% of traffic and passes your credentials through a third-party proxy. |
+| No add-ons | caveman, ponytail and headroom did not improve quality, and their task-1 savings did not survive task 2. headroom compressed about 1% of traffic and passes your credentials through a third-party proxy. |
 
 ## Install
 
@@ -62,6 +65,7 @@ Then ask for the change. The session reads `AGENTS.md`, its profile, `agent-work
 
 ## Limits
 
-- **Evidence base:** tested on two tasks in one Django project, with 1–3 runs per setup.
+- **Evidence base:** tested on two tasks in one Django project, with 1–3 runs per setup. Version 6's three rules were checked in one Sonnet and one Haiku run, which had no Medium or High findings and cost no more than version 5.
+- **Cost on small models:** on Haiku, this workflow is not reliably cheaper than a multi-agent one, because those subagents are cheap too, but it finished in about half the time.
 - **Read-only reviewer:** it is enforced only in Claude Code, by the adapter's tool list. In Codex and Hermes it is an instruction.
 - **Commits:** the workflow does not push, open pull requests or wait for CI. Delivery follows the repository's own rules.
