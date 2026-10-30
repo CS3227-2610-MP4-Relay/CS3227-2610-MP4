@@ -59,11 +59,28 @@ Size estimate: about 400 changed lines in total, most of them removals (the hand
 - **Repair round 3 (approved by the human, 2026-10-30):** the error-report test now also checks that the slots are released when a `BaseException` escapes; the live-switch TLS bullet separates `SSLKEYLOGFILE` from the CA-store variables; the socket residual states both causes; and the decisions line distinguishes `Exception` from `BaseException`.
 - **Package identity:** each new package's installed metadata names its upstream repository: `aio-libs/aiohttp`, `aiohappyeyeballs`, `aiosignal`, `frozenlist`, `multidict`, `propcache` and `yarl`, `python-attrs/attrs` and `kjd/idna`. Their names match those declared by aiohttp 3.14.5 and yarl 1.25.1. This metadata is self-declared, so it does not prove where the packages were downloaded from.
 
+## Review repair (2026-10-30)
+
+Whimsyturtle requested changes on #91: a timed-out request can leave background work and connections behind. This matches the two residuals previously recorded under [Open](#open) with no code change:
+
+- After a timeout the socket stayed open until garbage collection. After TLS is established (a silent server or a trickle), `Connection.close()` starts asyncio's graceful TLS shutdown, which `loop.close()` abandons; with a garbage collection after each test and `-W error::ResourceWarning`, `test_a_server_that_never_answers_times_out` and the trickle test each reported an unclosed socket and `_SelectorSocketTransport`, and still passed. A discarded close callback during connect or the handshake was suspected but not shown: a scratch run against a listener that never answers the handshake reported no warning.
+- A hung lookup's executor thread kept running after the call and was joined at interpreter exit, which can delay worker shutdown.
+
+Goal: after any outcome the call leaves no open socket or transport and no thread that can delay interpreter exit, within the 30-second deadline and 5-second release margin and without a new dependency ([after the call](../specs/ai/llm-gateway.md#transport-contract-proposed)).
+
+Approach: the call's loop subclasses `asyncio.EventLoop`, recording each transport `create_connection` returns, and its default executor runs each job in its own daemon thread. In `_run`'s `finally`, remaining tasks are cancelled and awaited for at most 1 second, the recorded transports are aborted, one loop pass runs their close callbacks, and the loop closes. A scratch run of this approach against `tls_server.py` showed no `ResourceWarning` for the silent and trickle cases and no non-daemon thread after a hung lookup.
+
+Checkpoints, each committed after its focused checks:
+
+1. `spec:` the "After the call" bullet in the transport contract and this section.
+2. `fix:` `src/ai/gateway.py` (`_run`, the loop subclass and the daemon executor) with regression tests in `src/ai/tests/test_transport.py`, and `tls_server.py` if a helper is needed: no `ResourceWarning` and no client socket left open after a silent-server timeout, a trickle timeout, a success and an oversized body; no non-daemon thread after a hung lookup; a subprocess making one hung-lookup call exits promptly. Red evidence against the old `_run`. Checks: `pytest -q -p no:cacheprovider src/ai`, Ruff.
+3. `plan:` the outcome, after the full checks.
+
+Size estimate: about 180 changed lines: spec and plan about 30, `gateway.py` about 45, tests about 100.
+
 ## Open
 
 - Confirmation of the contract's proposals by Whimsyturtle and the human.
 - The live provider check, after the live switch's conditions are met.
 - **Pre-live:** the TLS environment variables condition in the [live switch](../specs/ai/llm-gateway.md#live-switch).
-- **Residuals, recorded with no code change:**
-  - After a timeout, the socket can stay open until garbage collection, for either of two reasons. After TLS is established (a silent server or a trickle), `Connection.close()` starts asyncio's graceful TLS shutdown, which `loop.close()` abandons. During connect or the handshake, the close callback scheduled for the cancelled transport is discarded. The first case is confirmed: with a garbage collection after each test and `-W error::ResourceWarning`, `test_a_server_that_never_answers_times_out` and the trickle test each reported one unclosed socket and `_SelectorSocketTransport` at collection, and still passed. The second case is not confirmed by a test.
-  - A hung lookup's thread keeps running after the call returns and is joined at interpreter exit, which can delay worker shutdown.
+- **Residual:** a thread blocked in the operating system's resolver cannot be stopped. After the [2026-10-30 repair](#review-repair-2026-10-30) it no longer delays exit, but it keeps running until the resolver returns ([after the call](../specs/ai/llm-gateway.md#transport-contract-proposed)). Cancellable lookups would need aiodns, a new dependency awaiting a decision.
