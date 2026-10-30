@@ -224,7 +224,7 @@ def ratio_chart(field, fmt, title):
             rows.append((label, arm, cells))
     rows.sort(key=lambda row: (row[2].get("1") or row[2]["2"])[0])
     top = max(1.2, max(c[0] for row in rows for c in row[2].values()) * 1.05)
-    left, right, width, bar, gap, band = 180, 150, 900, 12, 2, 40
+    left, right, width, bar, gap, band = 180, 150, 900, 11, 2, 32
     scale = (width - left - right) / top
     height = band * len(rows) + 44
     parts = [svg_open(width, height, title)]
@@ -482,46 +482,12 @@ def ideal_chart():
 # --- Quality ----------------------------------------------------------------
 
 
-def quality_cell(rows):
-    """One task's quality summary for a setup: correct runs, bugs caught, findings."""
-    if not rows:
-        return "not run"
-    right = sum(1 for r in rows if correct(r))
-    scored = [r for r in rows if r["mutants_killed"]]
-    caught = sum(int(r["mutants_killed"]) for r in scored)
-    reviewed = [r for r in rows if r["review_high"] != ""]
-    high = sum(int(r["review_high"]) for r in reviewed)
-    medium = sum(int(r["review_medium"]) for r in reviewed)
-    bugs = f"{caught}/{5 * len(scored)}" if scored else "pending"
-    findings = f"{high} / {medium}" if reviewed else "pending"
-    return f"{right}/{len(rows)} correct · bugs {bugs} · High/Med {findings}"
-
-
-def quality_rows():
-    """Per-setup quality on both tasks."""
-    out = []
-    for label, arm, model, _, _ in SETUPS:
-        cells = [quality_cell(select(task, arm, model)) for task in TASKS]
-        if any(c != "not run" for c in cells):
-            out.append((label, *cells))
-    return out
-
-
 def counted():
     """Every run in the comparison and ideal evaluation, variants and stack aside."""
     return [r for r in RUNS if r["run"] not in VARIANTS and r["arm"] != "stack"]
 
 
 # --- Page -------------------------------------------------------------------
-
-
-def stat(value, label, note=""):
-    """A stat tile."""
-    extra = f'<p class="muted small">{esc(note)}</p>' if note else ""
-    return (
-        f'<div class="card stat"><p class="stat-value">{esc(value)}</p>'
-        f'<p class="stat-label">{esc(label)}</p>{extra}</div>'
-    )
 
 
 def slide(title, body, kicker=""):
@@ -583,106 +549,205 @@ def share_range(values):
     return f"{low}%" if low == high else f"{low}–{high}%"
 
 
+def hero(value, label):
+    """A big number with a short label under it."""
+    return (
+        f'<div class="hero-stat"><p class="hero-value">{esc(value)}</p>'
+        f'<p class="hero-label">{esc(label)}</p></div>'
+    )
+
+
+def headline(title, lead, body="", kicker=""):
+    """A finding slide: the finding as the title, one plain sentence, evidence."""
+    kick = f'<p class="kicker">{esc(kicker)}</p>' if kicker else ""
+    return (
+        f'<section class="slide">{kick}<h2 class="finding">{esc(title)}</h2>'
+        f'<p class="lead">{lead}</p>{body}</section>'
+    )
+
+
+def kinds_chart(counts):
+    """One bar per kind of review finding, longest first."""
+    rows = sorted(counts.items(), key=lambda item: -item[1])
+    left, width, bar, band = 360, 900, 18, 34
+    top = max(count for _, count in rows)
+    scale = (width - left - 60) / top
+    height = band * len(rows) + 8
+    parts = [svg_open(width, height, "Review findings by kind")]
+    for index, (label, count) in enumerate(rows):
+        y = 6 + index * band
+        span = max(count * scale, 2)
+        parts.append(
+            f'<text class="label" x="{left - 12}" y="{y + bar - 4}" '
+            f'text-anchor="end">{esc(label[:1].upper() + label[1:])}</text>'
+            f'<path class="s1" d="{bar_path(left, y, span, bar)}" tabindex="0" '
+            f'data-tip="{esc(label)}: {count}"/>'
+            f'<text class="value-small" x="{left + span + 8:.1f}" '
+            f'y="{y + bar - 4}">{count}</text>'
+        )
+    parts.append("</svg>")
+    return "".join(parts)
+
+
+def addon_chart():
+    """Each add-on's cost as a share of MP4's: task 1 dot, task 2 dot, joined."""
+    names = [("caveman", "MP4 + caveman"), ("ponytail", "MP4 + ponytail")]
+    names.append(("headroom", "MP4 + headroom"))
+    left, right, width, band = 180, 40, 900, 46
+    low, high = 0.4, 1.2
+    scale = (width - left - right) / (high - low)
+    height = band * len(names) + 40
+
+    def x(share_):
+        return left + (share_ - low) * scale
+
+    parts = [svg_open(width, height, "Add-on cost as a share of MP4, by task")]
+    tick = low
+    while tick <= high + 1e-9:
+        role = "grid base" if abs(tick - 1) < 1e-9 else "grid"
+        parts.append(
+            f'<line class="{role}" x1="{x(tick):.1f}" x2="{x(tick):.1f}" y1="4" '
+            f'y2="{height - 28}"/><text class="tick" x="{x(tick):.1f}" '
+            f'y="{height - 10}" text-anchor="middle">{tick:.0%}</text>'
+        )
+        tick += 0.2
+    for index, (arm, label) in enumerate(names):
+        y = 22 + index * band
+        one, two = share("1", arm), share("2", arm)
+        parts.append(
+            f'<text class="label" x="{left - 14}" y="{y + 5}" text-anchor="end">'
+            f"{esc(label)}</text>"
+            f'<line class="link" x1="{x(one):.1f}" x2="{x(two):.1f}" y1="{y}" '
+            f'y2="{y}"/>'
+        )
+        for value, role, task in ((one, "s1", "1"), (two, "s2", "2")):
+            tip = f"{label}, {TASKS[task]}: {value:.0%} of MP4's cost"
+            parts.append(
+                f'<circle class="{role} dot-ring" cx="{x(value):.1f}" cy="{y}" '
+                f'r="7" tabindex="0" data-tip="{esc(tip)}"/>'
+                f'<text class="value-small" x="{x(value):.1f}" y="{y - 13}" '
+                f'text-anchor="middle">{signed(value - 1)}</text>'
+            )
+    parts.append("</svg>")
+    return legend([("s1", TASKS["1"]), ("s2", TASKS["2"])]) + "".join(parts)
+
+
+def check_cells(rows):
+    """Correct, bugs caught and Medium-or-higher findings for one task's runs."""
+    if not rows:
+        return ["", "", ""]
+    right = sum(1 for r in rows if correct(r))
+    scored = [r for r in rows if r["mutants_killed"]]
+    caught = sum(int(r["mutants_killed"]) for r in scored)
+    findings = sum(
+        int(r["review_high"] or 0) + int(r["review_medium"] or 0) for r in rows
+    )
+    mark = "ok" if right == len(rows) else "bad"
+    return [
+        Raw(f'<span class="{mark}">{right}/{len(rows)}</span>'),
+        Raw(
+            f'<span class="{"ok" if caught == 5 * len(scored) else "bad"}">'
+            f"{caught}/{5 * len(scored)}</span>"
+        ),
+        str(findings),
+    ]
+
+
 def build():
     """Assemble the slides and write presentation.html."""
     runs = counted()
     right = sum(1 for r in runs if correct(r))
-    t2 = [r for r in runs if r["task"] == "2"]
-    single = ["solo", "superpowers", "spec-kit", "ideal-v1", "ideal-v5"]
-    single_shares = {t: [share(t, a) for a in single] for t in TASKS}
-    addon_shares = {
-        t: [share(t, a) for a in ("caveman", "ponytail", "headroom")] for t in TASKS
-    }
-    time_shares = {
-        t: [
-            median(select(t, a, OPUS), "wall_min") / base(t, "wall_min")
-            for a in single
-            if select(t, a, OPUS)
-        ]
-        for t in TASKS
-    }
-    mp4_money = {t: money_parts(select(t, "mp4", OPUS)) for t in TASKS}
-    sub_share = {t: m[1] / sum(m) for t, m in mp4_money.items()}
-    v5 = {t: share(t, "ideal-v5") for t in TASKS}
-    mp4_sub = {t: median(select(t, "mp4", OPUS), "subagent_runs") for t in TASKS}
-    findings = ANALYSIS["findings"]
     scored = [r for r in runs if r["mutants_killed"]]
     all_bugs = sum(1 for r in scored if r["mutants_killed"] == "5")
+    compared = [
+        r
+        for _, arm, model, _, _ in SETUPS
+        for t in TASKS
+        for r in select(t, arm, model)
+    ]
+    compared_high = sum(int(r["review_high"] or 0) for r in compared)
+    single = ["solo", "superpowers", "spec-kit", "ideal-v1", "ideal-v5"]
+    single_shares = [share(t, a) for t in TASKS for a in single]
+    time_shares = [
+        median(select(t, a, OPUS), "wall_min") / base(t, "wall_min")
+        for t in TASKS
+        for a in single
+        if select(t, a, OPUS)
+    ]
+    addons = ("caveman", "ponytail", "headroom")
+    addon_shares = {t: [share(t, a) for a in addons] for t in TASKS}
+    mp4_money = {t: money_parts(select(t, "mp4", OPUS)) for t in TASKS}
+    sub_share = [m[1] / sum(m) for m in mp4_money.values()]
+    mp4_subs = sorted(
+        int(num(r["subagent_runs"])) for t in TASKS for r in select(t, "mp4", OPUS)
+    )
+    findings = ANALYSIS["findings"]
+    kinds = [finding_kind(f) for f in findings]
     headroom = [v["wire_percent"] for v in ANALYSIS["headroom"].values()]
+
+    def cost(task, arm, model=OPUS, tool="claude"):
+        return f"${median(select(task, arm, model, tool), 'cost_usd'):.2f}"
+
+    def minutes(task, arm, model=OPUS):
+        return f"{median(select(task, arm, model), 'wall_min'):.0f} min"
 
     slides = []
     slides.append(
         '<section class="slide title-slide">'
-        '<p class="kicker">Experiment #31 · zheng-jj · 30 October 2026</p>'
+        '<p class="kicker">Experiment #31 · zheng-jj · October 2026</p>'
         "<h1>What does an agent workflow cost, and what does it buy?</h1>"
-        '<p class="lead">Twelve ways to set up a coding agent, from MP4\'s '
-        "multi-agent slice to popular plugins and methodologies, each run on two "
-        "real Relay tasks with everything else held fixed. Then a portable setup "
-        "built from the results, tested on five models in three tools.</p>"
-        '<div class="grid four">'
-        + stat(
-            f"{right}/{len(runs)}",
-            "runs fully correct",
-            "hidden tests and full verification",
-        )
-        + stat(
-            less_range(single_shares["1"] + single_shares["2"]),
-            "cost for one-session setups than MP4",
-            "same quality, both tasks",
-        )
-        + stat(
-            pct_range(addon_shares["2"]),
-            "cost of MP4 with an add-on, task 2",
-            f"they looked {less_range(addon_shares['1'])} on task 1",
-        )
-        + stat(
-            less_range([v for v in v5.values() if v]),
-            "cost for the portable ideal (v5) than MP4",
-            "Opus, both tasks; one independent reviewer kept",
-        )
-        + "</div></section>"
+        '<p class="lead">We ran twelve ways of setting up a coding agent on two '
+        f"real Relay tasks, {len(RUNS)} runs in all, with everything else held "
+        "fixed. Then we built a setup from what we learned and tested it on five "
+        "models.</p></section>"
+    )
+    answer = [
+        ("Every setup wrote correct code.", f"{right}/{len(runs)} runs correct"),
+        (
+            "Building in one session costs about half, and takes about half the time.",
+            less_range(single_shares),
+        ),
+        (
+            "The money goes on hand-offs between agents.",
+            f"about {max(sub_share):.0%} of MP4's cost",
+        ),
+        (
+            "The popular add-ons didn't pay off.",
+            f"{pct_range(addon_shares['2'])} on task 2",
+        ),
+        (
+            "Methodology plugins are one session with extra steps.",
+            "same cost as one session",
+        ),
+        (
+            "Sonnet is enough for this work.",
+            f"{cost('1', 'mp4-sonnet', SONNET)} vs {cost('1', 'mp4')}",
+        ),
+    ]
+    rows = "".join(
+        f'<div class="answer"><span class="badge">{i}</span>'
+        f'<p class="answer-text">{esc(text)}</p>'
+        f'<p class="answer-stat">{esc(number)}</p></div>'
+        for i, (text, number) in enumerate(answer, start=1)
     )
     slides.append(
         slide(
-            "Five findings",
-            '<ol class="findings">'
-            "<li><b>Quality did not separate the setups.</b> Every comparison run "
-            "on both tasks passed its hidden acceptance suite and full "
-            "verification, its own tests caught every planted bug, and no blind "
-            f"review found a High issue. Across all {len(runs)} runs, "
-            f"{all_bugs}/{len(scored)} caught every planted bug.</li>"
-            "<li><b>Hand-offs are the cost.</b> In MP4, about "
-            f"{sub_share['1']:.0%} (task 1) and {sub_share['2']:.0%} (task 2) of "
-            "an average run's money went on subagents re-reading the repository. "
-            "Setups that build in one session cost "
-            f"{less_range(single_shares['1'] + single_shares['2'])} than MP4 and "
-            f"took {share_range(time_shares['1'] + time_shares['2'])} of its "
-            "time.</li>"
-            "<li><b>The add-ons do not pay.</b> caveman, ponytail and headroom "
-            f"cost {less_range(addon_shares['1'])} than MP4 on task 1, but "
-            f"{pct_range(addon_shares['2'])} on task 2. What moved was how many "
-            "subagents the coordinator started, not the add-on.</li>"
-            "<li><b>Methodologies are one session with ceremony.</b> superpowers "
-            "and spec-kit matched a single session's cost and quality. They bring "
-            "planning and test-first habits, but no independent review "
-            "unless asked.</li>"
-            "<li><b>The ideal: build in one session, keep one independent "
-            "reviewer.</b> The portable version cost about half of MP4 on Opus "
-            "and far less on Sonnet, with the same quality. A guarded profile "
-            "keeps weaker models on track; on Haiku it is not reliably cheaper "
-            "than MP4, but it is up to twice as fast.</li>"
-            "</ol>",
-            "The answer first",
+            "Six findings",
+            f'<div class="answers">{rows}</div>'
+            '<p class="lead small-gap">So our ideal setup builds in one session and '
+            "keeps one independent reviewer. It gives the same quality at about "
+            "half MP4's cost.</p>",
+            "The short answer",
         )
     )
     groups = {}
-    for label, arm, model, group, what in SETUPS:
+    for label, _, _, group, what in SETUPS:
         groups.setdefault(group, []).append((label, what))
     cards = "".join(
         card(
             group,
             "".join(
-                f'<p class="item"><span class="badge">{esc(a)}</span> '
+                f'<p class="item"><b>{esc(a)}</b><br>'
                 f'<span class="muted">{esc(b)}</span></p>'
                 for a, b in items
             ),
@@ -693,389 +758,297 @@ def build():
         slide(
             "Twelve setups",
             f'<div class="grid three">{cards}</div>'
-            '<p class="muted small">Each add-on runs on top of the MP4 workflow, '
-            "one at a time. Opus 5.5 is the session model unless the setup says "
-            "otherwise.</p>",
-            "What was compared",
+            '<p class="muted small">Opus 5.5 unless a setup says otherwise. Each '
+            "add-on runs on top of MP4, one at a time.</p>",
+            "What we compared",
         )
     )
-    t1_runs = [
-        r for r in runs if r["task"] == "1" and r["run"][:3] in ("r1-", "r2-", "r3-")
+    slides.append(
+        slide(
+            "Two real Relay tasks",
+            '<div class="grid two">'
+            + card(
+                "Task 1 · #68 · small",
+                "<p>Refuse hidden text-direction characters in 12 text "
+                "inputs.</p>"
+                '<p class="muted">About 15 lines of code. 132 hidden tests. '
+                "23 comparison runs.</p>",
+            )
+            + card(
+                "Task 2 · #16 · larger",
+                "<p>Let a coordinator request a retest: a new page, form and "
+                "service, with a row lock, a build cap and label rules.</p>"
+                '<p class="muted">About 120 lines of code. 27 hidden tests. '
+                f"{sum(1 for r in RUNS if r['task'] == '2')} runs.</p>",
+            )
+            + "</div>"
+            '<p class="lead">Same prompt, same decisions, same tools and '
+            "permissions. Each run got its own clean copy of the repository.</p>",
+            "What we compared",
+        )
+    )
+    slides.append(
+        slide(
+            "How we scored each run",
+            flow(
+                [
+                    ("Hidden tests", "written before any run"),
+                    ("Verification", "lint, checks, full test suite"),
+                    ("Planted bugs", "its own tests must catch 5"),
+                    ("Blind review", "a fresh reviewer, no setup name"),
+                    ("Audit", "spec first, commits, no peeking"),
+                ],
+                "five",
+            )
+            + '<p class="muted small">Cost is each tool\'s own report at list '
+            "prices. Time is wall-clock.</p>",
+            "What we compared",
+        )
+    )
+    slides.append(
+        headline(
+            "Every setup wrote correct code",
+            "On both tasks, every compared setup passed every hidden test and "
+            "caught every planted bug. So the choice of setup changes cost and "
+            "speed, not correctness.",
+            '<div class="heroes">'
+            + hero(f"{right} / {len(runs)}", "runs passed every hidden test")
+            + hero(f"{all_bugs} / {len(scored)}", "caught all 5 planted bugs")
+            + hero(str(compared_high), "High issues in the compared setups")
+            + "</div>",
+            "Finding 1",
+        )
+    )
+    quality = [
+        (
+            label,
+            *check_cells(select("1", arm, model)),
+            *check_cells(select("2", arm, model)),
+        )
+        for label, arm, model, _, _ in SETUPS
     ]
     slides.append(
         slide(
-            "Two real tasks, everything else fixed",
-            '<div class="grid two">'
-            + card(
-                "Task 1 · #68: refuse hidden text-direction characters",
-                bullets(
-                    [
-                        "Small: one validation rule across 12 round-text inputs.",
-                        "Hidden suite: 132 tests (108 refusals, 24 allowed).",
-                        (
-                            "Planted bugs: no check; two controls allowed; a mark "
-                            "refused; build labels unchecked."
-                        ),
-                        f"{len(t1_runs)} comparison runs: 2 per setup, 3 for MP4.",
-                    ]
-                ),
-            )
-            + card(
-                "Task 2 · #16: request a retest (RND-5)",
-                bullets(
-                    [
-                        (
-                            "Larger: a new page, form and service, checks under a row "
-                            "lock, a build cap, label rules and escaping."
-                        ),
-                        "Hidden suite: 27 HTTP tests.",
-                        (
-                            "Planted bugs: foreign cases accepted; cap off by one; "
-                            "labels compared as typed; any round state accepted; "
-                            "label unescaped."
-                        ),
-                        f"{len(t2)} runs: 1 per setup, 2 for MP4 and v5.",
-                    ]
-                ),
-            )
-            + "</div>"
-            + card(
-                "Held fixed",
-                bullets(
-                    [
-                        "The same prompt and the human's decisions, given up front.",
-                        (
-                            "Claude Code 2.1.312, pinned and headless; web, GitHub, "
-                            "push and installs blocked."
-                        ),
-                        (
-                            "Each run in its own clone with no later history, and its "
-                            "own test database."
-                        ),
-                        "Add-ons loaded per session only, pinned to a commit.",
-                        (
-                            "The method was written down before the first counted run "
-                            "of each task."
-                        ),
-                    ]
-                ),
-            ),
-            "Method",
-        )
-    )
-    slides.append(
-        slide(
-            "How each run was scored",
-            flow(
-                [
-                    ("Run", "headless, in its own clone"),
-                    ("Hidden suite", "written from the issue before any run"),
-                    ("Verification", "Django, migrations, Ruff, full pytest"),
-                    ("Planted bugs", "5 per run; its own tests must fail"),
-                    ("Blind review", "fresh Opus, random label, product diff"),
-                    ("Audit", "spec first, commits, outside access"),
-                ]
-            )
-            + '<p class="muted small">Cost is each tool\'s own report at API list '
-            "prices; time is wall-clock. Runs overlapped three or four at a "
-            "time.</p>",
-            "Method",
-        )
-    )
-    kinds = [finding_kind(f) for f in findings]
-    high_count = sum(1 for f in findings if f["severity"] == "High")
-    kind_text = "; ".join(
-        f"{text} ({kinds.count(kind)})" for kind, text in FINDING_KINDS.items()
-    )
-    slides.append(
-        slide(
-            "Finding 1: every setup was correct, on both tasks",
+            "Quality, setup by setup",
             '<div class="scroll">'
-            + table(["Setup", TASKS["1"], TASKS["2"]], quality_rows(), "wide small")
+            + table(
+                [
+                    "Setup",
+                    "T1 correct",
+                    "T1 bugs caught",
+                    "T1 findings",
+                    "T2 correct",
+                    "T2 bugs caught",
+                    "T2 findings",
+                ],
+                quality,
+                "wide checks",
+            )
             + "</div>"
-            + card(
-                "What the blind reviews did find",
-                f"<p>{len(findings)} Medium-or-higher findings across all "
-                f"{len(RUNS)} runs, {high_count} of them High, both in the "
-                "ideal setup's Haiku runs on task 1. None was wrong behaviour. "
-                "By kind: "
-                f"{kind_text}. Twice, a run recorded a residual as accepted that "
-                "the human never accepted.</p>",
-            ),
-            "Results",
+            '<p class="muted small">Findings: blind-review findings of Medium or '
+            "High. Blank: not run on that task.</p>",
+            "Finding 1",
         )
     )
     slides.append(
-        slide(
-            "Finding 2: one session costs about half of MP4",
+        headline(
+            "Reviews still found gaps, but not bugs",
+            f"Across all {len(RUNS)} runs, the blind reviews raised {len(findings)} "
+            "Medium or High findings. None was wrong behaviour. Most were records "
+            "that drifted from the code.",
+            '<div class="card">'
+            + kinds_chart(
+                {text: kinds.count(kind) for kind, text in FINDING_KINDS.items()}
+            )
+            + "</div>",
+            "Finding 1",
+        )
+    )
+    slides.append(
+        headline(
+            "Building in one session costs about half",
+            f"Solo, superpowers, spec-kit and the ideal setup cost "
+            f"{less_range(single_shares)} than MP4, on both tasks.",
             '<div class="card">'
             + ratio_chart("cost_usd", lambda v: f"${v:.2f}", "Cost relative to MP4")
-            + '<p class="muted small">Median cost per run as a share of MP4 on the '
-            "same task (the line at 100%). Hover a bar for the range.</p></div>",
-            "Results",
+            + '<p class="muted small">Median cost per run, as a share of MP4 on '
+            "the same task. The dark line is MP4.</p></div>",
+            "Finding 2",
         )
     )
     slides.append(
-        slide(
-            "…and finishes in about half the time",
+        headline(
+            "…and takes about half the time",
+            f"The same setups finished in {share_range(time_shares)} of MP4's time.",
             '<div class="card">'
             + ratio_chart("wall_min", lambda v: f"{v:.0f} min", "Time relative to MP4")
-            + '<p class="muted small">Median wall-clock minutes as a share of MP4 '
-            "on the same task.</p></div>",
-            "Results",
+            + "</div>",
+            "Finding 2",
         )
     )
-    mp4_write = {t: median(select(t, "mp4", OPUS), "cache_write_tokens") for t in TASKS}
-    solo_write = median(select("1", "solo", OPUS), "cache_write_tokens")
     slides.append(
-        slide(
-            "Why: the money goes on hand-offs",
+        headline(
+            "The money goes on hand-offs",
+            f"About {max(sub_share):.0%} of an MP4 run's cost "
+            "is subagents reading the repository again. The single-session setups "
+            "barely pay this.",
             '<div class="card">'
             + money_chart()
-            + '<p class="muted small">Estimated from each run\'s tokens with rates '
-            f"fitted to {ANALYSIS['opus_cost_split']['runs']} single-model Opus "
-            "runs: cache reads, cache writes and output. Opus-only setups.</p></div>"
-            '<div class="grid three">'
-            + stat(
-                f"{sub_share['1']:.0%} / {sub_share['2']:.0%}",
-                "of MP4's money is subagent context",
-                "task 1 / task 2",
-            )
-            + stat(
-                f"{mp4_sub['1']:.0f} / {mp4_sub['2']:.0f}",
-                "subagent runs in a median MP4 run",
-                "each starts cold and re-reads the repository",
-            )
-            + stat(
-                f"{mp4_write['1'] / solo_write:.1f}×",
-                "more context cached by MP4 than by one session",
-                "task 1; a cache write costs about 20 cache reads",
-            )
-            + "</div>",
-            "Why it happens",
+            + '<p class="muted small">Estimated from each run\'s tokens, with rates '
+            "fitted to the Opus runs.</p></div>",
+            "Finding 3",
         )
     )
     slides.append(
         slide(
-            "How a hand-off costs money",
+            "Why hand-offs are expensive",
             '<div class="grid two">'
             + card(
-                "MP4: a coordinator and fresh subagents",
+                "MP4: a new agent for each step",
                 '<div class="lane">'
                 '<span class="node main">Coordinator</span>'
-                '<span class="node sub">Builder · checkpoint 1</span>'
-                '<span class="node sub">Builder · checkpoint 2</span>'
+                '<span class="node sub">Builder</span>'
+                '<span class="node sub">Builder</span>'
                 '<span class="node sub">Verifier</span>'
                 '<span class="node sub">Security reviewer</span>'
-                '<span class="node sub">Builder · repair</span>'
-                '<span class="node sub">Verifier · recheck</span></div>'
-                "<p>Every subagent starts with an empty context. It reads "
-                "<code>AGENTS.md</code>, its role, the specs and the code again, "
-                "and caches all of it afresh. The coordinator then reads each "
-                f"report back. A median MP4 run started {mp4_sub['1']:.0f} of them on "
-                f"task 1 and {mp4_sub['2']:.0f} on task 2.</p>",
+                '<span class="node sub">Builder (repair)</span>'
+                '<span class="node sub">Verifier (recheck)</span></div>'
+                "<p>Each subagent starts empty. It reads the rules, the specs "
+                "and the code again, and pays to cache them again. MP4 started "
+                f"{mp4_subs[0]}–{mp4_subs[-1]} of them per run.</p>",
             )
             + card(
-                "One session: build once, review once",
-                '<div class="lane">'
-                '<span class="node main">Session: spec → tests → code → docs → '
-                "checks</span>"
-                '<span class="node sub">One reviewer</span></div>'
-                "<p>The session keeps its context and its cache for the whole "
-                "build, so the repository is read once. One independent reviewer "
-                "still reads it cold, because that independence is what catches "
-                "what the builder cannot see in its own work.</p>",
+                "One session: read once",
+                '<div class="lane"><span class="node main">One session: spec, '
+                'tests, code, docs</span><span class="node sub">One reviewer'
+                "</span></div>"
+                "<p>The session keeps what it has read for the whole build. Only "
+                "the reviewer starts fresh, and that fresh view is the point of "
+                "having it.</p>",
             )
             + "</div>",
-            "Why it happens",
+            "Finding 3",
         )
     )
-    addon = {
-        name: {t: select(t, name, OPUS) for t in TASKS}
-        for name in ("caveman", "ponytail", "headroom", "mp4")
-    }
-
-    def addon_line(name, field, fmt):
-        return " · ".join(
-            f"task {t}: {fmt(median(addon[name][t], field))} vs MP4 "
-            f"{fmt(median(addon['mp4'][t], field))}"
-            for t in TASKS
-            if addon[name][t]
+    slides.append(
+        headline(
+            "The add-ons didn't pay off",
+            f"On task 1 they looked {less_range(addon_shares['1'])} than MP4. On "
+            f"task 2 the saving was gone: {pct_range(addon_shares['2'])}. None "
+            "changed quality.",
+            '<div class="card">'
+            + addon_chart()
+            + '<p class="muted small">What actually moved the cost was how many '
+            "subagents the coordinator started, not the add-on.</p></div>",
+            "Finding 4",
         )
-
-    def addon_subs(task):
-        values = sorted(
-            int(num(r["subagent_runs"]))
-            for name in ("caveman", "ponytail", "headroom")
-            for r in addon[name][task]
-        )
-        return (
-            f"{values[0]}–{values[-1]}" if values[0] != values[-1] else str(values[0])
-        )
-
-    def mp4_subs(task):
-        values = sorted(int(num(r["subagent_runs"])) for r in addon["mp4"][task])
-        return (
-            f"{values[0]}–{values[-1]}" if values[0] != values[-1] else str(values[0])
-        )
-
-    def money(v):
-        return f"${v:.2f}"
-
-    def kilo(v):
-        return f"{v / 1000:.0f}k"
-
-    def lines(v):
-        return f"{v:.0f}"
-
+    )
+    caveman = {t: median(select(t, "caveman", OPUS), "output_tokens") for t in TASKS}
+    mp4_out = {t: median(select(t, "mp4", OPUS), "output_tokens") for t in TASKS}
     slides.append(
         slide(
             "The add-ons, one at a time",
             '<div class="grid three">'
             + card(
-                "caveman: terse output",
-                bullets(
-                    [
-                        "<b>Promise:</b> fewer output tokens.",
-                        (
-                            "<b>Output tokens:</b> "
-                            f"{addon_line('caveman', 'output_tokens', kilo)}."
-                        ),
-                        f"<b>Cost:</b> {addon_line('caveman', 'cost_usd', money)}.",
-                        (
-                            "<b>Verdict:</b> real but small. Output is about a fifth "
-                            "of cost, and reports came out in normal prose anyway."
-                        ),
-                    ]
-                ),
+                "caveman",
+                '<p class="muted">Promise: shorter output.</p>'
+                f"<p>Output fell {1 - caveman['1'] / mp4_out['1']:.0%} on task 1 "
+                f"and {1 - caveman['2'] / mp4_out['2']:.0%} on task 2. But output "
+                "is only about a fifth of the bill.</p>"
+                '<p><span class="badge">Small effect</span></p>',
             )
             + card(
-                "ponytail: smallest change",
-                bullets(
-                    [
-                        "<b>Promise:</b> smaller diffs.",
-                        (
-                            "<b>Test lines:</b> "
-                            f"{addon_line('ponytail', 'test_lines', lines)}."
-                        ),
-                        f"<b>Cost:</b> {addon_line('ponytail', 'cost_usd', money)}.",
-                        (
-                            "<b>Verdict:</b> smaller tests on task 1, same quality; "
-                            "no saving that survived task 2."
-                        ),
-                    ]
-                ),
+                "ponytail",
+                '<p class="muted">Promise: the smallest change.</p>'
+                "<p>Leaner tests on task 1, same quality. The saving didn't hold "
+                "on task 2.</p>"
+                '<p><span class="badge">No lasting effect</span></p>',
             )
             + card(
-                "headroom: compressing proxy",
-                bullets(
-                    [
-                        "<b>Promise:</b> compress the context sent to the model.",
-                        (
-                            "<b>Compressed:</b> "
-                            f"{min(headroom):.1f}–{max(headroom):.1f}% "
-                            "of request traffic."
-                        ),
-                        f"<b>Cost:</b> {addon_line('headroom', 'cost_usd', money)}.",
-                        (
-                            "<b>Verdict:</b> too little compression to matter, and it "
-                            "routes your credentials through a third-party proxy."
-                        ),
-                    ]
-                ),
-            )
-            + "</div>"
-            f'<p class="muted small">Subagent runs per add-on run: {addon_subs("1")} '
-            f"on task 1 against MP4's {mp4_subs('1')}; {addon_subs('2')} on task 2 "
-            f"against {mp4_subs('2')}. Cost followed the subagent count, not the "
-            "add-on. None of the three changed quality.</p>",
-            "Results",
-        )
-    )
-
-    def v_cost(task, arm, model):
-        return f"${median(select(task, arm, model), 'cost_usd'):.2f}"
-
-    def setup_line(arm, model=OPUS):
-        return " · ".join(
-            f"task {t}: ${median(select(t, arm, model), 'cost_usd'):.2f}, "
-            f"{median(select(t, arm, model), 'wall_min'):.0f} min"
-            for t in TASKS
-            if select(t, arm, model)
-        )
-
-    slides.append(
-        slide(
-            "Workflows, models and methodologies",
-            '<div class="grid two">'
-            + card(
-                "MP3 six roles",
-                f"<p>{setup_line('mp3')}. The most roles and the most test code, "
-                "with no quality gain. It ran cheaper than MP4 only because each "
-                "of its roles reads less.</p>",
-            )
-            + card(
-                "Solo session",
-                f"<p>{setup_line('solo')}. One session plays every MP4 role: the "
-                "cheapest Opus setup on task 1. Its weakness is that it reviews "
-                "its own work.</p>",
-            )
-            + card(
-                "Sonnet",
-                f"<p>All-Sonnet MP4: {setup_line('mp4-sonnet', SONNET)}. A Sonnet "
-                f"builder under Opus: {setup_line('mp4-sonnet-builder')}. Sonnet "
-                "was enough for both tasks; the saving comes from running every "
-                "session on it.</p>",
-            )
-            + card(
-                "superpowers and spec-kit",
-                f"<p>superpowers: {setup_line('superpowers')}. spec-kit: "
-                f"{setup_line('spec-kit')}. Both build in one session, so both "
-                "cost about what a single session costs. Neither adds an "
-                "independent review unless asked.</p>",
+                "headroom",
+                '<p class="muted">Promise: compressed context.</p>'
+                f"<p>It compressed only {min(headroom):.1f}–{max(headroom):.1f}% "
+                "of traffic, and it routes your API key through a proxy.</p>"
+                '<p><span class="badge">Not worth the risk</span></p>',
             )
             + "</div>",
-            "Results",
+            "Finding 4",
         )
     )
     slides.append(
         slide(
-            "The ideal setup: how it works",
+            "Methodology plugins are one session with extra steps",
+            '<div class="grid two">'
+            + card(
+                "superpowers",
+                f"<p>{cost('1', 'superpowers')} and {cost('2', 'superpowers')}. "
+                "Planning and test-first habits, built in one session. One review "
+                "subagent.</p>",
+            )
+            + card(
+                "spec-kit",
+                f"<p>{cost('1', 'spec-kit')} and {cost('2', 'spec-kit')}. A "
+                "spec, plan and task list first, then one session builds. No "
+                "independent review.</p>",
+            )
+            + card(
+                "MP3: six roles",
+                f"<p>{cost('1', 'mp3')} and {cost('2', 'mp3')}. More roles and "
+                "more tests, but nothing extra found. On task 2 it cost as much "
+                "as MP4.</p>",
+            )
+            + card(
+                "Solo: one session plays every role",
+                f"<p>{cost('1', 'solo')}, the cheapest Opus setup on task 1. Its "
+                "weakness: it reviews its own work.</p>",
+            )
+            + "</div>"
+            '<p class="muted small">Costs are medians for task 1 and task 2 '
+            "on Opus.</p>",
+            "Finding 5",
+        )
+    )
+    slides.append(
+        headline(
+            "Sonnet is enough",
+            "Sonnet passed every check on both tasks, at a fraction of Opus's cost.",
+            '<div class="heroes">'
+            + hero(
+                cost("1", "mp4-sonnet", SONNET),
+                f"MP4 on Sonnet, vs {cost('1', 'mp4')} on Opus",
+            )
+            + hero(cost("2", "ideal-v6", SONNET), "ideal setup on Sonnet, task 2")
+            + hero("0", "correctness lost")
+            + "</div>",
+            "Finding 6",
+        )
+    )
+    slides.append(
+        slide(
+            "The ideal setup: one session builds, one reviewer checks",
             flow(
                 [
                     ("Specify", "requirements first, short plan"),
-                    ("Build", "tests fail first; every listed value tested"),
-                    ("Check", "every mention, every old test, every decision"),
-                    ("Freeze", "full verification on the final commit"),
-                    ("Review", "one independent read-only reviewer"),
-                    ("Repair", "at most two rounds, then ask"),
-                ]
+                    ("Build", "tests first; test every value"),
+                    ("Check", "every mention, old test and decision"),
+                    ("Freeze", "full verification once"),
+                    ("Review", "one independent reviewer"),
+                    ("Repair", "two rounds, then ask"),
+                ],
+                "six",
             )
-            + '<div class="grid three">'
+            + '<div class="grid two">'
             + card(
-                "Two switches",
-                '<p><span class="badge">AGENT_PROFILE</span> <code>strong</code> '
-                "for Opus, Sonnet and GPT-5-class models; anything else, or unset, "
-                "gets <code>guarded</code>: a ticked checklist, hard stops, tests "
-                "shown failing first, a can-the-tests-fail check, and numbers only "
-                'from commands run.</p><p><span class="badge">AGENT_REVIEW_MODEL'
-                "</span> optionally a stronger reviewer. Otherwise the reviewer "
-                "uses the session's model; the model never picks one.</p>",
+                "AGENT_PROFILE",
+                "<p><b>strong</b> for Opus or Sonnet: the steps as written.</p>"
+                "<p><b>guarded</b> for anything else, or when unset: a checklist, "
+                "hard stops, and numbers only from commands actually run.</p>",
             )
             + card(
                 "One file per project",
-                "<p><code>agent-workflow/project.md</code> holds what differs "
-                "between repositories: the verification command, folders, where "
-                "requirements, docs, plans and accepted risks live, the high-risk "
-                "areas and the size budget. The workflow itself never names a "
-                "project.</p>",
-            )
-            + card(
-                "Any tool that reads AGENTS.md",
-                "<p>The installer adds a marked block to <code>AGENTS.md</code>, "
-                "the workflow folder, and adapters: Claude Code subagents and a "
-                "skill, Codex agents, and a skill that Codex and Hermes read. "
-                "Hermes delegates the review as a task.</p>",
+                "<p><code>project.md</code> says how to verify, where specs, docs "
+                "and accepted risks live, and the size budget. Everything else is "
+                "the same in every repository and every tool.</p>",
             )
             + "</div>",
             "The ideal setup",
@@ -1083,272 +1056,153 @@ def build():
     )
     slides.append(
         slide(
-            "Why each rule is there",
+            "Every rule comes from a run that went wrong",
             table(
-                ["Rule", "Evidence from the runs"],
+                ["Rule", "What happened without it"],
                 [
-                    (
-                        "Build in one session",
-                        (
-                            "Subagent context was "
-                            f"{sub_share['1']:.0%}–{sub_share['2']:.0%} "
-                            "of MP4's money; one-session setups cost about half, with "
-                            "the same quality."
-                        ),
-                    ),
+                    ("Build in one session", "Hand-offs cost about half of MP4."),
                     (
                         "Keep one independent reviewer",
-                        (
-                            "A session reviewing itself missed scope and ownership "
-                            "problems in the earlier weaker-model run. One reviewer is "
-                            "a fraction of MP4's repeated reviews."
-                        ),
+                        "A model reviewing itself missed scope problems.",
                     ),
                     (
-                        "Reviewer on the session's model unless set",
-                        (
-                            "Left to choose, Haiku started Opus reviewers on its own "
-                            "and tripled its cost (v2)."
-                        ),
+                        "Never pick your own reviewer model",
+                        "Haiku hired Opus, 3× cost.",
                     ),
-                    (
-                        "The three consistency checks",
-                        (
-                            "Every Medium or High finding was a stale spec, a weakened "
-                            "old test or a decision left out of its home."
-                        ),
-                    ),
-                    (
-                        "Test each listed value",
-                        (
-                            "A DeepSeek run sampled the refused characters, and a "
-                            "planted bug survived (v2)."
-                        ),
-                    ),
+                    ("Test every listed value", "A sampled test let a bug through."),
                     (
                         "Unset profile means guarded",
-                        (
-                            "A DeepSeek run left to choose took the strong flow (v2); "
-                            "from v4 every unset run chose guarded."
-                        ),
+                        "A weak model chose the loose path.",
+                    ),
+                    ("Check every mention", "Specs kept claiming untrue things."),
+                    (
+                        "Accept only what the human decided",
+                        "Two runs invented an approval.",
                     ),
                     (
-                        "Project facts in one file",
-                        (
-                            "Haiku kept putting accepted risks in the plan until "
-                            "project.md named their home; the v5 Haiku run got it "
-                            "right."
-                        ),
+                        "Mock only outside the change",
+                        "A mocked service made a test check nothing.",
                     ),
-                    (
-                        "Only the human's decisions are accepted (v6)",
-                        (
-                            "Two runs recorded a residual as accepted that the "
-                            "human never accepted."
-                        ),
-                    ),
-                    (
-                        "Claims about tests point to a test (v6)",
-                        (
-                            "The commonest finding was spec text saying tests "
-                            "covered something they did not."
-                        ),
-                    ),
-                    (
-                        "Mock only outside the change (v6)",
-                        (
-                            "A v5 Haiku run mocked the whole service, so its "
-                            "failure test checked nothing."
-                        ),
-                    ),
-                    (
-                        "No add-ons",
-                        (
-                            "None improved quality; their task-1 savings did not "
-                            "survive task 2."
-                        ),
-                    ),
+                    ("No add-ons", "No quality gain, and the savings didn't last."),
                 ],
                 "wide",
             ),
             "The ideal setup",
         )
     )
-    ideal_table = []
-    for name, task, cells in ideal_rows():
-        for key in ["reference", *[v for v in VERSIONS if v in cells]]:
-            rows = cells.get(key) or []
-            label = "MP4 workflow" if key == "reference" else f"Ideal {key}"
-            if not rows:
-                continue
-            ideal_table.append(
-                (
-                    f"{name} · task {task}",
-                    label,
-                    len(rows),
-                    f"${median(rows, 'cost_usd'):.2f}",
-                    f"{median(rows, 'wall_min'):.0f} min",
-                    quality_cell(rows),
-                )
-            )
     slides.append(
-        slide(
-            "The ideal setup, measured on five models",
+        headline(
+            "It works on five models in three tools",
+            "Opus, Sonnet and Haiku in Claude Code, and DeepSeek in Codex and "
+            "Hermes. Every run was correct.",
             '<div class="card">'
             + ideal_chart()
-            + '<p class="muted small">Median cost as a share of the MP4 workflow on '
-            "the same model, tool and task (the line at 100%). DeepSeek v4.1 Flash "
-            "ran through OpenRouter in Codex 0.165.0 and Hermes 0.21.3.</p></div>"
-            "<details><summary>Every platform and version</summary>"
-            + table(
-                ["Platform", "Setup", "Runs", "Cost", "Time", "Quality"],
-                ideal_table,
-                "wide small",
-            )
-            + "</details>",
+            + '<p class="muted small">Cost as a share of the MP4 workflow on the '
+            "same model and tool. The dark line is MP4.</p></div>",
+            "The ideal setup",
+        )
+    )
+    haiku = [
+        (
+            f"Task {t}",
+            label,
+            cost(t, arm, HAIKU),
+            minutes(t, arm, HAIKU),
+        )
+        for t, arm, label in (
+            ("1", "mp4-haiku", "MP4"),
+            ("1", "ideal-v5", "Ideal v5"),
+            ("2", "mp4-haiku", "MP4"),
+            ("2", "ideal-v5", "Ideal v5"),
+            ("2", "ideal-v6", "Ideal v6"),
+        )
+        if select(t, arm, HAIKU)
+    ]
+    slides.append(
+        headline(
+            "On Haiku, it isn't cheaper, but it is faster",
+            "MP4's subagents run on cheap Haiku too, and the guarded checklist "
+            "adds turns. So the ideal setup can cost more on Haiku, but it still "
+            "finished task 2 in about half the time.",
+            table(["Task", "Setup", "Cost", "Time"], haiku, "wide"),
             "The ideal setup",
         )
     )
     slides.append(
         slide(
-            "Tuning, v1 to v6",
+            "Tuning it, v1 to v6",
             flow(
                 [
-                    ("v1", "lean slice, one reviewer, two profiles"),
-                    ("v2", "check every mention and every old test"),
-                    ("v3", "reviewer model only by setting; test every value"),
-                    ("v4", "unset means guarded; decisions mapped in the plan"),
-                    ("v5", "project-independent; project facts in one file"),
-                    ("v6", "accept only real decisions; back test claims; mock less"),
+                    ("v1", "one session, one reviewer"),
+                    ("v2", "check mentions and old tests"),
+                    ("v3", "set the reviewer model; test every value"),
+                    ("v4", "unset means guarded"),
+                    ("v5", "works in any repository"),
+                    ("v6", "real decisions only; no mocking the change"),
                 ],
                 "six",
             )
-            + '<div class="grid two">'
-            + card(
-                "What each step fixed",
-                bullets(
-                    [
-                        "v2 removed the Medium spec findings on Sonnet and Opus.",
-                        (
-                            "v3 stopped Haiku choosing Opus reviewers, and Hermes "
-                            "sampling values."
-                        ),
-                        "v4 made every unset DeepSeek run choose guarded.",
-                        (
-                            "v5 let Haiku record accepted risks in the right home, "
-                            "and installs into any repository."
-                        ),
-                    ]
-                ),
-            )
-            + card(
-                "v6: three rules from v5's own reviews",
-                bullets(
-                    [
-                        (
-                            "v5 on task 2 had one Medium finding each on Sonnet "
-                            f"({v_cost('2', 'ideal-v5', SONNET)}) and Haiku "
-                            f"({v_cost('2', 'ideal-v5', HAIKU)}): an invented "
-                            "approval and a mocked service."
-                        ),
-                        (
-                            "v6 on the same task had none, on Sonnet "
-                            f"({v_cost('2', 'ideal-v6', SONNET)}) and Haiku "
-                            f"({v_cost('2', 'ideal-v6', HAIKU)}), with every "
-                            "planted bug caught."
-                        ),
-                        (
-                            "One run each: the rules cost nothing, but whether "
-                            "they reliably help needs more runs."
-                        ),
-                    ]
-                ),
-            )
-            + "</div>",
+            + '<p class="lead">Each version fixed something a run had got wrong. '
+            "On task 2, v6 had no Medium or High findings on Sonnet or Haiku, "
+            "where v5 had one each.</p>",
+            "The ideal setup",
+        )
+    )
+    slides.append(
+        slide(
+            "Use it",
+            '<div class="card"><pre>python install.py /path/to/repo '
+            "--project my-project.md\n\n"
+            "AGENT_PROFILE=strong  claude --model sonnet\n"
+            "AGENT_PROFILE=guarded codex -m &lt;model&gt;\n"
+            "AGENT_PROFILE=guarded hermes -m &lt;model&gt;</pre></div>"
+            '<p class="lead">The package is in '
+            "<code>experiments/agent-setups/ideal/v6/</code>. It adds one "
+            "workflow folder, a block in <code>AGENTS.md</code>, and small "
+            "adapters for each tool.</p>",
             "The ideal setup",
         )
     )
     slides.append(
         slide(
             "Takeaways",
-            '<div class="grid two">'
-            + card(
-                "If you run coding agents on a real repository",
-                '<ol class="tight">'
-                "<li><b>Build in one session.</b> Hand-offs to builder subagents "
-                "doubled cost and time here with no quality gain.</li>"
-                "<li><b>Keep exactly one independent reviewer.</b> It is the part a "
-                "session cannot do for itself, and it is cheap.</li>"
-                "<li><b>Try the cheaper model first.</b> Sonnet passed every check "
-                "on both tasks at a fraction of Opus's cost.</li>"
-                "<li><b>Give weaker models a checklist, not freedom.</b> Hard "
-                "stops, tests shown failing first, numbers only from commands "
-                "run.</li>"
-                "<li><b>Before review, check consistency.</b> Every mention, every "
-                "old test, every decision: that is where the findings were.</li>"
-                "<li><b>Write the project's facts down once.</b> Commands, homes "
-                "and budgets in one file let the same workflow move between "
-                "repositories and tools.</li>"
-                "</ol>",
-            )
-            + card(
-                "Skip, or measure first",
-                bullets(
-                    [
-                        (
-                            "<b>Output-compression and proxy add-ons:</b> small or no "
-                            "savings, and a proxy sees your credentials."
-                        ),
-                        (
-                            "<b>More roles:</b> MP3's six roles cost more and found "
-                            "nothing extra."
-                        ),
-                        (
-                            "<b>Letting the model pick its reviewer or profile:</b> it "
-                            "chose the expensive or the loose option."
-                        ),
-                        (
-                            "<b>Trusting one task:</b> task 1 made the add-ons look "
-                            "useful; task 2 did not."
-                        ),
-                    ]
-                ),
-            )
-            + "</div>",
+            '<ol class="takeaways">'
+            "<li>Build in one session.</li>"
+            "<li>Keep exactly one independent reviewer.</li>"
+            "<li>Try the cheaper model first.</li>"
+            "<li>Give weaker models a checklist, not freedom.</li>"
+            "<li>Before review, check that specs, tests and decisions still "
+            "agree.</li>"
+            "<li>Write the project's facts down once.</li>"
+            "</ol>",
+            "Conclusion",
+        )
+    )
+    slides.append(
+        slide(
+            "Skip, or test on your own work first",
+            '<ul class="takeaways">'
+            "<li>Token-saving add-ons and proxies.</li>"
+            "<li>Adding more agent roles.</li>"
+            "<li>Letting the model choose its reviewer or its profile.</li>"
+            "<li>Trusting a result from one task.</li>"
+            "</ul>",
             "Conclusion",
         )
     )
     slides.append(
         slide(
             "Limits",
-            bullets(
-                [
-                    (
-                        "Two tasks in one Django project, both with the human's "
-                        "decisions given up front. Large or ambiguous work, where "
-                        "review "
-                        "has more to find, may rank the setups differently."
-                    ),
-                    (
-                        "One to three runs per setup and task. Only large, consistent "
-                        "differences are worth reading."
-                    ),
-                    (
-                        "Quality hit the ceiling on both tasks, so the comparison "
-                        "mostly measures cost and time."
-                    ),
-                    (
-                        "Opus wrote the hidden suites and the blind reviews, and built "
-                        "most candidates. The hidden suites and planted bugs are the "
-                        "objective checks."
-                    ),
-                    (
-                        "Costs are list prices from each tool's report; the "
-                        "subscription bills differently. Runs overlapped, so times "
-                        "include contention."
-                    ),
-                ]
-            ),
+            '<ul class="takeaways small-list">'
+            "<li>Two tasks, in one Django project, with the decisions given up "
+            "front.</li>"
+            "<li>One to three runs per setup, so only large differences count.</li>"
+            "<li>Quality was at the ceiling, so this mostly measures cost and "
+            "time.</li>"
+            "<li>Opus wrote the hidden tests and reviews, and built most "
+            "candidates.</li>"
+            "<li>Costs are list prices; a subscription bills differently.</li>"
+            "</ul>",
             "Conclusion",
         )
     )
