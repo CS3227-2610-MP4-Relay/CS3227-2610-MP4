@@ -4,7 +4,7 @@ Goal: one server-side HTTP journey proves a coordinator can create a demo worksp
 
 Since the [2026-10-30 review repair](#review-repair-2026-10-30-whimsyturtle), Playwright browser journeys in `src/e2e/` carry this coverage and the HTTP journey is deleted; the sections up to History record the earlier candidates.
 
-Tier: Standard, test-only: no product code, criteria, security controls, dependencies or CI change. Base/branch: `a121d6e` / `26-test-coordinator-e2e`; main merged in at `922a8d4`. Owner: zheng-jj. The PR refers to #26 ("Refs #26") and does not close it: [RND-4](../specs/product/rounds.md#rnd-4-review-submitted-results) (results, unimplemented) is not covered, and RND-8 (AI test drafting, specified only on the #78 branch, not on this branch) is not covered.
+Tier: Standard, test-only: no product code, criteria, security controls, dependencies or CI change. Base/branch: `a121d6e` / `26-test-coordinator-e2e`; main merged in at `6a79f31`. Owner: zheng-jj. The PR refers to #26 ("Refs #26") and does not close it: [RND-4](../specs/product/rounds.md#rnd-4-review-submitted-results) (results, unimplemented) is not covered, and [RND-8](../specs/product/rounds.md#rnd-8-draft-test-cases-with-ai) (AI test drafting, on this branch since #78 merged at `6a79f31`) is covered by its own tests, including `src/e2e/test_drafting.py`, not by this journey.
 
 Size: the estimate was 220-300 lines in one test file. The first candidate exceeded it at about 420 lines; the repaired journey, with its form-reading helper and the added assertions, is about 516 lines, roughly 1.7 times the estimate. This is test code, so it does not count against the 400-line non-test slice budget.
 
@@ -52,13 +52,16 @@ The repaired journey then passed (`1 passed`), and with the modules it imports h
 5. `922a8d4` chore: merge main (#81 Playwright journeys and deployment work).
 6. `5d9aad4` plan: record the review repairs, division with `src/e2e/`, overclaim fixes and history. Check: `git diff --check`; read back.
 7. `0aeb49b` test: rename to `test_coordinator_journey.py`; CSRF-enforcing form submissions; unchanged-title and unchanged-page checks after refusals; shared helpers; readable lookups; the step 6, 7, 9 and 11 assertions; comment and docstring fixes. Checks: the focused commands below and the CSRF mutations.
-8. Repair round 2 (`test:` and `plan:`): a readable workspace-name assertion, sign-in fetched without a misleading `next`, a tidier close-form string, and this plan's size, evidence and next step. Checks: the focused commands below.
+8. `e3d6a12` test and `dad9d6d` plan, repair round 2: a readable workspace-name assertion, sign-in fetched without a misleading `next`, a tidier close-form string, and this plan's size, evidence and next step.
+9. Merges: `f1dc15d` (#87's branch), then `origin/main` at `50f2a61` (#89), `2b9f1cb` (#77), `b80cf93` (#92) and `6a79f31` (#78).
+10. `fb2294f` plan and `d982e56` test, the [review repair](#review-repair-2026-10-30-whimsyturtle). The coordinator committed the plan entry before the tests it records.
+11. Review repair round 1 (`test:` and `plan:`), below.
 
 ## Focused checks
 
 With `.venv` active, from the repository root:
 
-- `pytest -q src/e2e/test_round_lifecycle.py src/e2e/test_accounts.py src/e2e/test_rounds.py`
+- `pytest -q -p no:cacheprovider src/e2e/test_round_lifecycle.py src/e2e/test_accounts.py src/e2e/test_rounds.py`
 - `ruff check src/e2e && ruff format --check src/e2e`
 - Full verification is run by the coordinator: `ruff check . && ruff format --check . && pytest`
 
@@ -75,7 +78,7 @@ On `6a79f31` (`origin/main` with #78 merged in). Inline comment on `src/rounds/t
 - **Changed:** `src/rounds/tests/test_coordinator_journey.py` deleted.
   - `src/e2e/test_accounts.py` gains `test_demo_workspace_credentials_sign_in_to_coordinator_home` (ACC-2.1, ACC-1.1). Chromium creates a demo workspace from the start page and sees the heading, credential table (Test Coordinator, then two Beta Testers) and save warning. A second tab is sent to sign in, so the visitor stays signed out. It then signs in with the shown coordinator credentials and sees the Coordinator home with the workspace, username and the Sample round in Draft.
   - New `src/e2e/test_round_lifecycle.py`, `test_coordinator_edits_retests_twice_and_closes_round` (RND-1.2, 5.1, 5.5, 6.1 to 6.3). A `browser_accounts` override creates a Draft round with two criteria and two linked cases before Playwright starts. The browser retitles the round (checked on the round page and the Coordinator home) and edits a criterion and a case. It publishes, retests the first case twice, and checks each exact status message and which build is current for each case. It closes the round and checks that the content stays and no button remains. Stale tabs then get the exact 409 heading for publishing an Open round, and for closing, retesting and retitling a Closed one. After Playwright stops, the override checks the stored state, title, criteria, case fields and links, and each build's coverage.
-- **Division of work with `src/e2e/`:** `test_rounds.py` keeps creating, adding and publishing (RND-1.1, 2.1, 2.2, 3.1, already marked there) and reuses its `sign_in_coordinator`. `test_accounts.py` keeps ACC-1 sign-in with fixture accounts. The new tests cover what the HTTP journey added: demo credentials, edits, retests, close and refusals. Detailed markup, order and cache-header checks stay in the server-side tests (`test_views.py`, `test_publish.py`, `test_retest.py`, `test_close.py`, `test_demo_views.py`).
+- **Division of work with `src/e2e/`:** `test_rounds.py` keeps creating, adding and publishing (RND-1.1, 2.1, 2.2, 3.1, already marked there). `test_accounts.py` keeps ACC-1 sign-in with fixture accounts. `test_tester.py` (RES-1) and `test_results.py` (RES-1, RES-2) already retest and close through the coordinator's forms, including 409s for stale retest and close forms, but they assert what testers see and their results. The new tests cover what the HTTP journey added: demo credentials, edits, and the coordinator's RND-5 and RND-6 view, which no other browser test asserts. That view is the retest form's contents, the exact retest and close messages, each case's current build after two retests of one case, the close warning and removed controls, and the Closed-round refusals and stored state. Detailed markup, order and cache-header checks stay in the server-side tests (`test_views.py`, `test_publish.py`, `test_retest.py`, `test_close.py`, `test_demo_views.py`).
 - **Evidence:** each file was copied to the scratchpad, broken, run, then restored, and `cmp` reported it identical.
   - `rounds/views.py` close flash changed to `"Round closed!"`: `pytest -q -p no:cacheprovider src/e2e/test_round_lifecycle.py` gave `1 failed`, "Locator expected to have text 'Round closed.'".
   - `rounds/services.py` `request_retest` covering every case: the same command gave `1 failed`; `get_by_text("Synthetic build 1.0")` expected count 2 and got 1, because the second case lost its current build.
@@ -84,6 +87,19 @@ On `6a79f31` (`origin/main` with #78 merged in). Inline comment on `src/rounds/t
 - **Size:** non-test `src/` is 0. All files, `6a79f31` to the candidate: 271 insertions (250 test, 21 plan), plus the mandated 518-line deletion and 4 plan deletions, 793 in total. The coordinator's ~600-line stop guards against growth, so it is counted on insertions; the deletion is what the human decision requires (coordinator, 2026-10-30).
 - **Open:** `TECHNICAL-SPEC.md`'s Browser verification still says "the four selected journeys … are in slice 80's plan", which was already stale before this repair (`test_tester.py`, `test_results.py` and `test_drafting.py` are additional). It is left unchanged here, by the coordinator's direction.
 
+### Round 1 (2026-10-30)
+
+On `d982e56`. The verifier found nothing High and no lost coverage; all its findings are fixed in `src/e2e/test_round_lifecycle.py` and this plan.
+
+- **L1:** build labels were counted page-wide, so swapping the two cases' current builds passed. `expect_builds` now reads each case's own "Current build" paragraph. Red: with `show_round` swapping the two cases' current builds for display only, `d982e56`'s test passed and the new one failed ("expected to have text 'Synthetic build 1.1'", actual `Synthetic build 1.0`).
+- **L2:** a local `sign_in_coordinator` replaces the import from `test_rounds`.
+- **L3:** `stale_tab` waits for the tab's heading before the next state change.
+- **L4:** the stale-form refusals assert status 409 through `expect_response`, as `test_results.py` does. Red: with `state_conflict` returning 200 for POSTs (409 for GETs), `d982e56`'s test passed and the new one failed (`assert 200 == 409`).
+- **M1, L5, L6, I1, I2:** checkpoints completed with hashes and the commit-order note; `6a79f31` and RND-8 status in the header and next step; `test_tester.py` and `test_results.py` in the division of work; the focused command now matches the recorded run.
+- Each broken variant ran with a temporary copy of `d982e56`'s test beside the new one; `views.py` was restored and `cmp` reported it identical, and the copy was deleted.
+- **Checks:** focused `pytest -q -p no:cacheprovider src/e2e/test_round_lifecycle.py src/e2e/test_accounts.py src/e2e/test_rounds.py`: 11 passed. Full, without `TOX_PARALLEL_ENV`: `manage.py check` and `makemigrations --check --dry-run` (test settings) clean; `ruff check .` and `ruff format --check .` clean; `pytest -q -p no:cacheprovider`: 2099 passed and 231 subtests. `check_scope.py builder --base d982e56` clean.
+- **Size:** `git diff --numstat 6a79f31` after this round: 301 insertions (262 test, 39 plan), plus the mandated 518-line deletion and 6 plan deletions, 825 in total; non-test `src/` is 0. This round alone (`git diff --numstat d982e56`): 88 lines, 62 test (37 insertions plus 25 deletions) and 26 plan (21 plus 5).
+
 ## Next step
 
-After the review repair is committed and passes full verification, the slice is complete. The draft PR (#79) refers to #26 with "Refs #26"; the humans decide on review and merge. #26 stays open for RND-4 and RND-8 coverage, to be planned when those features are on main.
+After the review repair is committed and passes full verification, the slice is complete. The draft PR (#79) refers to #26 with "Refs #26"; the humans decide on review and merge. #26 stays open for RND-4 coverage, to be planned when RND-4 is on main. RND-8 is on main with its own browser test, so whether #26 needs more for it is for the humans.
