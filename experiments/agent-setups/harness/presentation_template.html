@@ -95,6 +95,7 @@ main { max-width: 1120px; margin: 0 auto; padding: 32px 24px 64px; }
 .slide.active { display: block; }
 body.outline .slide { display: block; padding-bottom: 48px; margin-bottom: 48px; border-bottom: 1px solid var(--border); }
 @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .slide { animation: none; } }
 h1 { font-size: clamp(32px, 5vw, 52px); line-height: 1.1; letter-spacing: -0.03em; margin: 8px 0 16px; }
 h2 { font-size: clamp(24px, 3.4vw, 34px); letter-spacing: -0.02em; line-height: 1.2; margin: 4px 0 20px; }
 .kicker { text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; font-weight: 600; color: var(--muted-foreground); margin: 0; }
@@ -142,7 +143,20 @@ summary { cursor: pointer; color: var(--muted-foreground); font-size: 14px; }
 .chart .label { fill: var(--foreground); font-size: 14px; }
 .chart .label.strong, .chart .value { fill: var(--foreground); font-weight: 600; }
 .chart .grid { stroke: var(--grid); stroke-width: 1; }
-.chart .grid.base { stroke: var(--muted-foreground); stroke-dasharray: 4 4; }
+.chart .grid.base { stroke: var(--foreground); opacity: 0.55; }
+.chart .value-small { fill: var(--foreground); font-size: 13px; font-weight: 500; }
+.chart path:hover, .chart path:focus { opacity: 0.85; }
+ol.findings { margin: 0; padding-left: 22px; display: grid; gap: 14px; font-size: 18px; max-width: 900px; }
+ol.findings li { padding-left: 6px; }
+ol.tight { margin: 6px 0 0; padding-left: 20px; }
+ol.tight li { margin: 6px 0; }
+.flow.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.flow.six { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+@media (max-width: 860px) { .flow.five, .flow.six { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.lane { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+.node { font-size: 13px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); }
+.node.main { background: color-mix(in srgb, var(--s1) 16%, var(--card)); border-color: var(--s1); }
+.node.sub { background: color-mix(in srgb, var(--s2) 14%, var(--card)); border-color: var(--s2); }
 .chart .range { stroke: var(--s1); stroke-width: 2; stroke-linecap: round; opacity: 0.45; }
 .chart .dot { fill: var(--s1); stroke: var(--card); stroke-width: 2; cursor: default; }
 .chart .dot.strong { fill: var(--foreground); }
