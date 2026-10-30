@@ -76,7 +76,7 @@ Threat: oversized inputs, repeated calls or incorrect cache reuse spend the shar
 
 - Bound context, replies, time, calls and retries according to verified SoC limits. Make AI failure or refusal leave the manual workflow usable.
 - If result reuse is implemented, isolate it by access scope and source version; authorize before lookup and invalidate on relevant changes. Do not add a cache merely to fill out the scaffold.
-- Residual gap, pending confirmation (#6): a name lookup blocked in the operating system's resolver cannot be cancelled, so each counted gateway call can leave at most one daemon thread running, at most 20 per user and 200 per deployment per rolling hour, with no overall cap while the resolver never returns; the human chose this on 2026-10-30 over adding aiodns ([after the call](ai/llm-gateway.md#transport-contract-proposed)).
+- Residual gap, pending confirmation (#6): a name lookup blocked in the operating system's resolver cannot be cancelled, so each counted gateway call can leave at most one daemon thread running, and at most 20 per user and 200 per deployment can be started per rolling hour, with no overall cap while the resolver never returns; the human chose this on 2026-10-30 over adding aiodns ([after the call](ai/llm-gateway.md#transport-contract-proposed)).
 - Record only the necessary operational metadata; specify retention and failure behaviour before adding persistent telemetry. Do not log prompts, observations, credentials or provider error bodies by default.
 
 Threat: accumulated business records, abandoned workspaces and expired sessions exhaust shared storage and prevent other users from saving work. The controls and the accepted residual risk are in the [persistence decision](TECHNICAL-SPEC.md#data-model).
