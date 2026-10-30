@@ -78,9 +78,21 @@ Checkpoints, each committed after its focused checks:
 
 Size estimate: about 180 changed lines: spec and plan about 30, `gateway.py` about 45, tests about 100.
 
+### Outcome (2026-10-30)
+
+- **Commits:** `0c243f6` (spec), `4cb6fda` (plan), `66f6a2e` (fix and tests), then this outcome.
+- **Human decision (2026-10-30):** lookups use daemon threads; aiodns, which would make them cancellable, is not adopted.
+- **Size:** 281 changed lines (+269/−12) against the ~180 estimate: spec and plan 24, `gateway.py` 70 (+67/−3), tests 187 (`test_transport.py` +143/−6, of which the 6 removals are `padded_reply` moved above its first use, and the new subprocess helper `hung_lookup.py`, 38). The overrun is in the tests: four outcome cases for open sockets instead of two, two `_run` task tests added beyond the plan, and the subprocess helper.
+- **Tests:** `test_no_connection_is_left_open_after_the_call` (silent, trickle, success, oversized; no client socket to the server right after the call with automatic collection paused, and no `ResourceWarning` at a following `gc.collect()`; skipped where `/dev/fd` is missing), `test_a_hung_name_lookup_leaves_no_thread_that_delays_exit`, `test_a_process_with_a_hung_name_lookup_exits_promptly` (20-second hung lookup, exit in under 10 seconds), `test_the_call_cancels_its_leftover_tasks` and `test_a_task_ignoring_cancellation_delays_the_call_by_at_most_the_bound`.
+- **Red evidence against the old `gateway.py`:** 6 failed, 3 passed. Silent and trickle left one open client socket; the hung lookup left a non-daemon thread; the subprocess took 20.5 seconds to exit; the leftover task was not cancelled. The cancellation-bound test failed only on the missing `CLEANUP_TIMEOUT`, so its evidence is the unbounded-wait mutant below. Success and oversized already passed: they guard against regressions.
+- **Mutation evidence against the fix:** no `abort()` and no final loop pass each failed silent and trickle (and, with the socket count removed, the `ResourceWarning` assertion alone failed both); no daemon executor and `daemon=False` each failed the thread and subprocess tests; no `task.cancel()` failed the leftover-task test; `asyncio.wait` without a timeout failed the cancellation-bound test.
+- **Checks:** focused `src/ai` tests (94 passed) and Ruff on `66f6a2e`'s candidate; full checks on `66f6a2e`: Django check (no issues), `makemigrations --check --dry-run` (no changes), Ruff check and format, `pytest -q -p no:cacheprovider` (1,900 passed, 231 subtests).
+- **Known noise:** the cancellation-bound test leaves its task pending on purpose, so asyncio prints "Task was destroyed but it is pending!" to stderr.
+- **Residual:** see [Open](#open).
+
 ## Open
 
 - Confirmation of the contract's proposals by Whimsyturtle and the human.
 - The live provider check, after the live switch's conditions are met.
 - **Pre-live:** the TLS environment variables condition in the [live switch](../specs/ai/llm-gateway.md#live-switch).
-- **Residual:** a thread blocked in the operating system's resolver cannot be stopped. After the [2026-10-30 repair](#review-repair-2026-10-30) it no longer delays exit, but it keeps running until the resolver returns ([after the call](../specs/ai/llm-gateway.md#transport-contract-proposed)). Cancellable lookups would need aiodns, a new dependency awaiting a decision.
+- **Residual:** a thread blocked in the operating system's resolver cannot be stopped. After the [2026-10-30 repair](#review-repair-2026-10-30) it no longer delays exit, but it keeps running until the resolver returns ([after the call](../specs/ai/llm-gateway.md#transport-contract-proposed)). Cancellable lookups would need aiodns, a new dependency the human declined on 2026-10-30.
