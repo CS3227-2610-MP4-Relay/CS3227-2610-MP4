@@ -1,5 +1,7 @@
 """Browser journeys through the existing role-based account forms."""
 
+import re
+
 import pytest
 from playwright.sync_api import expect
 
@@ -108,3 +110,45 @@ def test_wrong_role_navigation_preserves_own_session(
     expect(
         page.get_by_text(f"Workspace: {browser_accounts['workspace']}", exact=True)
     ).to_be_visible()
+
+
+@pytest.mark.ac("ACC-2.1", "ACC-1.1")
+def test_demo_workspace_credentials_sign_in_to_coordinator_home(page, live_server):
+    page.goto("/")
+    page.get_by_role("button", name="Create a demo workspace", exact=True).click()
+    expect(page).to_have_title("Your demo workspace")
+    expect(
+        page.get_by_role("heading", name="Your demo workspace", exact=True)
+    ).to_be_visible()
+    expect(page.get_by_role("columnheader")).to_have_text(
+        ["Role", "Username", "Password"]
+    )
+    rows = page.get_by_role("row").filter(has=page.get_by_role("cell"))
+    expect(rows).to_have_count(3)
+    for row, role in enumerate(("Test Coordinator", "Beta Tester", "Beta Tester")):
+        expect(rows.nth(row).get_by_role("cell").first).to_have_text(role)
+    expect(
+        page.get_by_text(
+            "Save these passwords now. They will not be shown again.", exact=True
+        )
+    ).to_be_visible()
+    workspace = page.get_by_text(re.compile(r"^Workspace: .+$")).inner_text()
+    cells = rows.first.get_by_role("cell")
+    username, password = cells.nth(1).inner_text(), cells.nth(2).inner_text()
+
+    # The visitor stays signed out: another tab is sent to sign in.
+    other = page.context.new_page()
+    other.goto("/coordinator/")
+    expect(other).to_have_url(re.compile(rf"^{live_server.url}/sign-in/"))
+    other.close()
+
+    page.get_by_role("link", name="Sign in", exact=True).click()
+    submit_sign_in(page, username, password)
+    expect(page).to_have_url(f"{live_server.url}/coordinator/")
+    expect(
+        page.get_by_role("heading", name="Coordinator home", exact=True)
+    ).to_be_visible()
+    expect(page.get_by_text(workspace, exact=True)).to_be_visible()
+    expect(page.get_by_text(f"Username: {username}", exact=True)).to_be_visible()
+    # The sample round is observed only; RND-7 has its own tests.
+    expect(page.get_by_role("listitem")).to_have_text(["Sample round (Draft)"])
