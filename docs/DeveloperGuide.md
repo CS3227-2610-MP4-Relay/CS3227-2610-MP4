@@ -227,11 +227,12 @@ The Django/PostgreSQL architecture, environment separation and planned delivery 
 
 ## SoC LLM
 
-SoC LLM is the provider; its account setup and service guidance are on [SoC DocHub](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). The `ai` app (`src/ai/`) holds the shared gateway (`gateway.py`) and its rows (`ai.CallSlot`, `ai.CallRecord`). The gateway's controls, all proposals pending confirmation, are in [`llm-gateway.md`](../workflow/specs/ai/llm-gateway.md).
+SoC LLM is the provider; its account setup and service guidance are on [SoC DocHub](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). The `ai` app (`src/ai/`) holds the shared gateway (`gateway.py`), its rows (`ai.CallSlot`, `ai.CallRecord`), RND-8's drafting pages and `drafting.py`, which cleans text and validates replies. The gateway's controls, all proposals pending confirmation, are in [`llm-gateway.md`](../workflow/specs/ai/llm-gateway.md); what drafting sends and accepts is in [`test-drafting.md`](../workflow/specs/ai/test-drafting.md).
 
 - **Live switch.** `SOC_LLM_LIVE` in `src/relay/settings/base.py` is off, so no provider call is made; its rules and the conditions for turning it on are under [live switch](../workflow/specs/ai/llm-gateway.md#live-switch).
 - **Settings.** With live calls on, the gateway reads `SOC_LLM_ENDPOINT`, `SOC_LLM_MODEL` and `SOC_LLM_API_KEY` from the environment at each call ([configuration](../workflow/specs/TECHNICAL-SPEC.md#configuration)). `.env.example` lists them empty; never commit a real key.
-- **Tests.** No test reaches a provider, even if your shell sets `SOC_LLM_*`; the fixture in `src/conftest.py` that ensures this is described under [configuration](../workflow/specs/TECHNICAL-SPEC.md#configuration). Gateway tests pass `ai.fakes.FakeProvider` to `gateway.complete`. Tests marked `llm_transport` (`src/ai/tests/test_transport.py`) run the real transport, which sends requests through aiohttp, against a local HTTPS server; they generate a throwaway certificate with the `openssl` command-line tool, which must be on `PATH` (macOS and Linux include it; on Windows, Git Bash provides it).
+- **Tests.** No test reaches a provider, even if your shell sets `SOC_LLM_*`; the fixture in `src/conftest.py` that ensures this is described under [configuration](../workflow/specs/TECHNICAL-SPEC.md#configuration). Gateway tests pass `ai.fakes.FakeProvider` to `gateway.complete`, and the drafting view tests replace `gateway.complete`. Tests marked `llm_transport` (`src/ai/tests/test_transport.py`) run the real transport, which sends requests through aiohttp, against a local HTTPS server; they generate a throwaway certificate with the `openssl` command-line tool, which must be on `PATH` (macOS and Linux include it; on Windows, Git Bash provides it).
+- **Live evaluation.** An operator step, not CI ([test drafting](../workflow/specs/ai/test-drafting.md#live-evaluation)).
 
 ## Product website
 
