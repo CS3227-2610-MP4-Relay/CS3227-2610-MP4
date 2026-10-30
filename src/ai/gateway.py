@@ -300,8 +300,8 @@ def _settle(loop):
     for transport in loop.transports:
         try:
             transport.abort()
-        except Exception:  # noqa: BLE001, S110 - the others must still be aborted
-            pass
+        except Exception:  # noqa: BLE001 - the others must still be aborted
+            logger.warning("LLM gateway loop report: %s", "abort-failed")
     loop.run_until_complete(asyncio.sleep(0))  # one pass closes the aborted sockets
 
 

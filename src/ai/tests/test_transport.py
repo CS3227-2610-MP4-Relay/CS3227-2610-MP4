@@ -338,6 +338,7 @@ def test_a_task_ignoring_cancellation_delays_the_call_by_at_most_the_bound():
     started = time.monotonic()
     assert gateway._run(work()) == "done"
     assert time.monotonic() - started < gateway.CLEANUP_TIMEOUT + 0.5
+    gc.collect()  # the abandoned task is reported now, not in a later test
 
 
 def test_the_call_closes_its_suspended_async_generators():
@@ -442,6 +443,8 @@ def test_a_generator_ignoring_cancellation_does_not_hold_the_call(stubborn_task)
     started = time.monotonic()
     assert gateway._run(work(generator)) == "done"
     assert time.monotonic() - started < gateway.CLEANUP_TIMEOUT + 0.5
+    del generator
+    gc.collect()  # the abandoned tasks are reported now, not in a later test
 
 
 def test_loop_reports_log_a_code_chosen_only_by_the_kind_of_object(caplog):
@@ -456,7 +459,7 @@ def test_loop_reports_log_a_code_chosen_only_by_the_kind_of_object(caplog):
     assert [(r.getMessage(), r.exc_info) for r in caplog.records] == expected
 
 
-def test_one_failing_abort_skips_no_other_transport(monkeypatch):
+def test_one_failing_abort_skips_no_other_transport(monkeypatch, caplog):
     aborted = []
     below = types.SimpleNamespace(abort=lambda: aborted.append("not a transport"))
     tls = types.SimpleNamespace(_transport=below)
@@ -474,6 +477,7 @@ def test_one_failing_abort_skips_no_other_transport(monkeypatch):
     gateway._settle(loop)
     loop.close()
     assert aborted == ["second"]
+    assert caplog.messages == ["LLM gateway loop report: abort-failed"]
 
 
 def test_the_deadline_passed_in_bounds_the_request(serve):
