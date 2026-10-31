@@ -19,11 +19,15 @@ class CallSlot(models.Model):
 
 
 class CallRecord(models.Model):
-    """One counted gateway call, for the rolling quota window."""
+    """One scope's quota row and nullable metrics for a counted gateway call."""
 
     scope = models.CharField(max_length=32)
     key = models.CharField(max_length=64)
     created_at = models.DateTimeField()
+    prompt_tokens = models.PositiveBigIntegerField(null=True)
+    completion_tokens = models.PositiveBigIntegerField(null=True)
+    total_tokens = models.PositiveBigIntegerField(null=True)
+    elapsed_ms = models.PositiveBigIntegerField(null=True)
 
     class Meta:
         indexes = [

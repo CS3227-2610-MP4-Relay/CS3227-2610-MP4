@@ -127,6 +127,55 @@ def test_one_post_carries_separate_parts_and_bearer_key(user, serve, source):
     assert result == Success("ok")
 
 
+@pytest.mark.ac("PLT-3.1", "PLT-3.2", "PLT-3.3", "PLT-3.6")
+@pytest.mark.parametrize(
+    "status, choices, expected",
+    [
+        (200, [{"message": {"content": "ok"}}], Success("ok")),
+        (
+            200,
+            [{"message": {"refusal": "synthetic refusal"}}],
+            Refused("provider-refused"),
+        ),
+        (200, [], Failed("invalid-response")),
+        (429, [], Refused("quota")),
+        (500, [], Failed("transport")),
+    ],
+)
+def test_wire_usage_reaches_both_records_without_raw_metadata(
+    user, serve, status, choices, expected, caplog
+):
+    caplog.set_level(logging.INFO, logger="ai.gateway")
+    body = json.dumps(
+        {
+            "choices": choices,
+            "usage": {
+                "prompt_tokens": 0,
+                "completion_tokens": 2**63,
+                "total_tokens": 19,
+                "unknown": "synthetic metadata must not escape",
+                "details": {"prompt_tokens": 99},
+            },
+        }
+    ).encode()
+    server = serve(respond(http(status, body)))
+    result = complete(user, "", "{}")
+    usage = gateway.Usage(0, None, 19) if status == 200 else None
+    assert type(result) is type(expected)
+    assert result.usage == usage
+    assert getattr(result, "text", None) == getattr(expected, "text", None)
+    assert getattr(result, "code", None) == getattr(expected, "code", None)
+    assert len(server.requests) == 1
+    assert CallRecord.objects.count() == 2
+    for row in CallRecord.objects.all():
+        assert row.elapsed_ms >= 0
+        assert row.completion_tokens is None
+        assert row.prompt_tokens == (0 if status == 200 else None)
+        assert row.total_tokens == (19 if status == 200 else None)
+    code = "success" if isinstance(expected, Success) else expected.code
+    assert caplog.messages == [f"LLM gateway outcome: {code}"]
+
+
 @pytest.mark.ac("RND-8.5")
 def test_a_20000_non_bmp_character_text_is_accepted(user, serve):
     serve(respond(text_reply("\U0001f600" * 20000)))

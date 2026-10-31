@@ -12,6 +12,7 @@ import pytest
 from django.apps import apps
 from django.conf import settings as django_settings
 from django.db import DatabaseError, connection, transaction
+from django.db.models.query import QuerySet
 from django.views.debug import ExceptionReporter
 
 from accounts.models import User
@@ -433,7 +434,9 @@ def test_chat_metadata_and_later_choices_are_not_feature_text():
             {"message": {"content": "ignored"}},
         ],
     }
-    assert gateway._envelope(json.dumps(value).encode()) == Success("first")
+    assert gateway._envelope(json.dumps(value).encode()) == Success(
+        "first", usage=gateway.Usage(12, 3)
+    )
 
 
 @pytest.mark.ac("RND-8.4")
@@ -576,7 +579,7 @@ def test_reservation_expires_after_the_bound_plus_margin(user):
 
 
 def test_a_late_release_keeps_a_later_reservation(user):
-    reserved, _ = gateway._reserve(user)
+    reserved, _, _ = gateway._reserve(user)
     later = gateway.timezone.now() + gateway.timedelta(minutes=5)
     CallSlot.objects.filter(expires_at__gt=gateway.timezone.now()).update(
         expires_at=later
@@ -655,6 +658,305 @@ def test_the_unused_usage_table_is_removed(db):
     with pytest.raises(LookupError):
         apps.get_model("ai", "Usage")
     assert "ai_usage" not in connection.introspection.table_names()
+
+
+@pytest.mark.ac("PLT-3.1", "PLT-3.3")
+@pytest.mark.parametrize("duration, expected_ms", [(0, 0), (0.1259, 125)])
+def test_usage_completes_both_rows_with_elapsed_before_storage(
+    user, monkeypatch, duration, expected_ms
+):
+    clock = [100.0]
+    monkeypatch.setattr(gateway.time, "monotonic", lambda: clock[0])
+    real_update = gateway._record_metrics
+
+    def update(*args):
+        clock[0] = 999.0
+        return real_update(*args)
+
+    def provider(instructions, data):
+        clock[0] = 100.0 + duration
+        return Success("ok", usage=gateway.Usage(2, 3, 99))
+
+    monkeypatch.setattr(gateway, "_record_metrics", update)
+    result = complete(user, "", "{}", provider=FakeProvider(provider))
+    assert result == Success("ok", usage=gateway.Usage(2, 3, 99))
+    rows = list(CallRecord.objects.order_by("scope"))
+    assert {row.scope for row in rows} == {
+        gateway.USER_CALLS_SCOPE,
+        gateway.DEPLOYMENT_CALLS_SCOPE,
+    }
+    assert len(rows) == 2
+    for row in rows:
+        assert (row.prompt_tokens, row.completion_tokens, row.total_tokens) == (
+            2,
+            3,
+            99,
+        )
+        assert row.elapsed_ms == expected_ms
+    assert sum(row.total_tokens for row in rows if row.scope == "user-calls") == 99
+
+
+@pytest.mark.ac("PLT-3.2")
+@pytest.mark.parametrize(
+    "field", ["prompt_tokens", "completion_tokens", "total_tokens"]
+)
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        (None, None),
+        (0, 0),
+        (1, 1),
+        (2**63 - 1, 2**63 - 1),
+        (-1, None),
+        (2**63, None),
+        (True, None),
+        (False, None),
+        (1.0, None),
+        ("1", None),
+        ([], None),
+        ({}, None),
+    ],
+)
+def test_each_usage_count_is_validated_independently(field, value, expected):
+    counts = {"prompt_tokens": 4, "completion_tokens": 5, "total_tokens": 20}
+    counts[field] = value
+    checked = gateway._checked_result(Success("ok", usage=gateway.Usage(**counts)))
+    counts[field] = expected
+    assert checked == Success("ok", usage=gateway.Usage(**counts))
+
+
+@pytest.mark.ac("PLT-3.2", "PLT-3.6")
+@pytest.mark.parametrize("usage", [None, "synthetic raw metadata", {}, [], True])
+def test_malformed_fake_usage_is_unavailable_and_not_logged(user, usage, caplog):
+    caplog.set_level(logging.INFO, logger="ai.gateway")
+    result = complete(user, "", "{}", provider=FakeProvider(Success("ok", usage=usage)))
+    assert result == Success("ok")
+    assert caplog.messages == ["LLM gateway outcome: success"]
+    for row in CallRecord.objects.all():
+        assert row.prompt_tokens is row.completion_tokens is row.total_tokens is None
+        assert row.elapsed_ms >= 0
+
+
+@pytest.mark.ac("PLT-3.1", "PLT-3.2")
+def test_bad_fake_counts_cannot_reach_database_and_total_is_not_inferred(user):
+    result = complete(
+        user,
+        "",
+        "{}",
+        provider=FakeProvider(
+            Success("ok", usage=gateway.Usage(True, 2**63, "synthetic raw metadata"))
+        ),
+    )
+    assert result == Success("ok")
+    for row in CallRecord.objects.all():
+        assert row.prompt_tokens is row.completion_tokens is row.total_tokens is None
+    result = complete(
+        user,
+        "",
+        "{}",
+        provider=FakeProvider(Refused("provider-refused", usage=gateway.Usage(2, 3))),
+    )
+    assert result.usage == gateway.Usage(2, 3)
+    assert (
+        CallRecord.objects.filter(
+            prompt_tokens=2, completion_tokens=3, total_tokens__isnull=True
+        ).count()
+        == 2
+    )
+
+
+@pytest.mark.ac("PLT-3.2")
+@pytest.mark.parametrize(
+    "field", ["prompt_tokens", "completion_tokens", "total_tokens"]
+)
+@pytest.mark.parametrize(
+    "value", [None, 0, 2**63 - 1, -1, 2**63, True, 1.0, "2", [], {}]
+)
+def test_wire_usage_uses_only_independent_bounded_counts(field, value):
+    usage = {"prompt_tokens": 4, "completion_tokens": 5, "total_tokens": 30}
+    usage[field] = value
+    body = {"choices": [{"message": {"content": "ok"}}], "usage": usage}
+    result = gateway._envelope(json.dumps(body).encode())
+    expected = value if type(value) is int and 0 <= value < 2**63 else None
+    usage[field] = expected
+    assert result == Success("ok", usage=gateway.Usage(**usage))
+
+
+@pytest.mark.ac("PLT-3.2", "PLT-3.6")
+@pytest.mark.parametrize("usage", [None, [], "synthetic raw usage", 3, True, {}])
+def test_wire_missing_counts_are_unavailable(usage):
+    value = {"choices": [{"message": {"content": "ok"}}], "usage": usage}
+    assert gateway._envelope(json.dumps(value).encode()) == Success("ok")
+
+
+@pytest.mark.ac("PLT-3.2", "PLT-3.3")
+@pytest.mark.parametrize(
+    "choice, outcome",
+    [
+        ({"message": {"content": "ok"}}, Success("ok")),
+        ({"message": {"refusal": "synthetic refusal"}}, Refused("provider-refused")),
+        (
+            {"message": {"content": "partial"}, "finish_reason": "length"},
+            Failed("invalid-response"),
+        ),
+        ({}, Failed("invalid-response")),
+    ],
+)
+def test_decoded_usage_survives_each_envelope_outcome(choice, outcome):
+    body = {"choices": [choice], "usage": {"prompt_tokens": 7}}
+    result = gateway._envelope(json.dumps(body).encode())
+    assert type(result) is type(outcome)
+    assert result.usage == gateway.Usage(7, None, None)
+    assert getattr(result, "text", None) == getattr(outcome, "text", None)
+    assert getattr(result, "code", None) == getattr(outcome, "code", None)
+
+
+@pytest.mark.ac("PLT-3.3", "PLT-3.4")
+@pytest.mark.parametrize(
+    "outcome",
+    [
+        Success("ok"),
+        Refused("provider-refused"),
+        Refused("not-configured"),
+        Failed("invalid-response"),
+        Failed("transport"),
+        Failed("timeout"),
+        Failed("provider-error"),
+    ],
+)
+def test_every_reserved_result_has_latency_without_invented_usage(user, outcome):
+    assert complete(user, "", "{}", provider=FakeProvider(outcome)) == outcome
+    assert CallRecord.objects.count() == 2
+    for row in CallRecord.objects.all():
+        assert row.elapsed_ms >= 0
+        assert row.prompt_tokens is row.completion_tokens is row.total_tokens is None
+
+
+@pytest.mark.ac("PLT-3.3")
+@pytest.mark.parametrize("error", [TimeoutError, RuntimeError, _Escape])
+def test_provider_exception_metrics(user, error):
+    def fail(instructions, data):
+        raise error("synthetic error")
+
+    if error is _Escape:
+        with pytest.raises(_Escape):
+            complete(user, "", "{}", provider=FakeProvider(fail))
+    else:
+        expected = "timeout" if error is TimeoutError else "provider-error"
+        assert complete(user, "", "{}", provider=FakeProvider(fail)) == Failed(expected)
+    for row in CallRecord.objects.all():
+        assert (row.elapsed_ms is None) is (error is _Escape)
+        assert row.total_tokens is None
+    assert not CallSlot.objects.filter(expires_at__gt=gateway.timezone.now()).exists()
+
+
+@pytest.mark.ac("PLT-3.4")
+@pytest.mark.parametrize("reason", ["live-off", "input-too-large", "busy-or-quota"])
+def test_early_refusals_create_no_metrics(user, reason, settings, monkeypatch):
+    fake = FakeProvider(Success("ok"))
+    provider, instructions = fake, ""
+    if reason == "live-off":
+        settings.SOC_LLM_LIVE = False
+        provider = None
+        monkeypatch.setattr(gateway, "_transport", lambda *args: pytest.fail("network"))
+    elif reason == "input-too-large":
+        instructions = "x" * (gateway.INPUT_LIMIT + 1)
+    else:
+        CallSlot.objects.create(
+            scope="user",
+            key=str(user.pk),
+            expires_at=gateway.timezone.now() + gateway.timedelta(minutes=1),
+        )
+    assert complete(user, instructions, "", provider=provider) == Refused(reason)
+    assert not CallRecord.objects.exists()
+    assert fake.calls == []
+
+
+@pytest.mark.ac("PLT-3.5")
+def test_metrics_failure_is_atomic_releases_and_never_retries(user, monkeypatch):
+    real_update = QuerySet.update
+
+    def fail(queryset, **kwargs):
+        updated = real_update(queryset, **kwargs)
+        if queryset.model is CallRecord:
+            raise DatabaseError("synthetic storage failure")
+        return updated
+
+    monkeypatch.setattr(QuerySet, "update", fail)
+    fake = FakeProvider(Success("ok", usage=gateway.Usage(2, 3, 5)))
+    with pytest.raises(DatabaseError, match="synthetic storage failure"):
+        complete(user, "", "{}", provider=fake)
+    assert len(fake.calls) == 1
+    assert CallRecord.objects.count() == 2
+    for row in CallRecord.objects.all():
+        assert row.elapsed_ms is row.prompt_tokens is row.completion_tokens is None
+    assert not CallSlot.objects.filter(expires_at__gt=gateway.timezone.now()).exists()
+
+
+@pytest.mark.ac("PLT-3.5", "PLT-3.6")
+def test_metrics_storage_error_report_hides_reply_text(user, monkeypatch):
+    real_update = QuerySet.update
+
+    def fail(queryset, **kwargs):
+        if queryset.model is CallRecord:
+            raise DatabaseError("synthetic failure")
+        return real_update(queryset, **kwargs)
+
+    monkeypatch.setattr(QuerySet, "update", fail)
+    with pytest.raises(DatabaseError) as info:
+        complete(
+            user,
+            "synthetic private instructions",
+            "synthetic private data",
+            provider=FakeProvider(Success("synthetic private reply")),
+        )
+    frames = ExceptionReporter(
+        None, info.type, info.value, info.tb
+    ).get_traceback_frames()
+    own = [
+        frame
+        for frame in frames
+        if Path(frame["filename"]).as_posix().endswith("/ai/gateway.py")
+    ]
+    assert "_record_metrics" in [frame["function"] for frame in own]
+    shown = repr([frame["vars"] for frame in own])
+    for text in (
+        "synthetic private instructions",
+        "synthetic private data",
+        "synthetic private reply",
+    ):
+        assert text not in shown
+
+
+@pytest.mark.ac("PLT-3.1", "PLT-3.6")
+def test_metrics_keep_lazy_cleanup_and_do_not_update_other_calls(user, monkeypatch):
+    now = gateway.timezone.now()
+    monkeypatch.setattr(gateway.timezone, "now", lambda: now)
+    old = CallRecord.objects.create(
+        scope="user-calls",
+        key=str(user.pk),
+        created_at=now - gateway.USER_WINDOW,
+        total_tokens=8,
+    )
+    inactive = CallRecord.objects.create(
+        scope="user-calls",
+        key="inactive",
+        created_at=now - gateway.USER_WINDOW,
+        total_tokens=9,
+    )
+    recent = CallRecord.objects.create(
+        scope="deployment-calls", key="all", created_at=now
+    )
+    assert recent.elapsed_ms is recent.total_tokens is None
+    complete(
+        user, "", "{}", provider=FakeProvider(Success("ok", usage=gateway.Usage(1)))
+    )
+    assert not CallRecord.objects.filter(pk=old.pk).exists()
+    inactive.refresh_from_db()
+    recent.refresh_from_db()
+    assert inactive.total_tokens == 9
+    assert recent.total_tokens is recent.elapsed_ms is None
+    assert CallRecord.objects.filter(prompt_tokens=1).count() == 2
 
 
 def test_the_transport_itself_refuses_while_live_is_off(monkeypatch):
@@ -787,6 +1089,43 @@ def test_three_racing_users_share_two_deployment_slots(
     gate_quota(monkeypatch, 3)
     results = run_together([user, tester, third], SlowProvider())
     assert outcomes(results) == ["Refused", "Success", "Success"]
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.ac("PLT-3.1")
+def test_overlapping_calls_write_only_their_own_metrics(user, tester):
+    barrier = threading.Barrier(2)
+    results = []
+
+    def run(caller, count):
+        def reply(instructions, data):
+            barrier.wait(timeout=5)
+            return Success("ok", usage=gateway.Usage(count))
+
+        try:
+            results.append(complete(caller, "", "{}", provider=FakeProvider(reply)))
+        finally:
+            connection.close()
+
+    threads = [
+        threading.Thread(target=run, args=(caller, count))
+        for caller, count in [(user, 11), (tester, 22)]
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=10)
+    assert sorted(result.usage.prompt_tokens for result in results) == [11, 22]
+    for caller, count in [(user, 11), (tester, 22)]:
+        row = CallRecord.objects.get(scope="user-calls", key=str(caller.pk))
+        assert row.prompt_tokens == count
+        assert row.elapsed_ms >= 0
+        assert (
+            CallRecord.objects.filter(
+                scope="deployment-calls", prompt_tokens=count, elapsed_ms=row.elapsed_ms
+            ).count()
+            == 1
+        )
 
 
 @pytest.mark.django_db(transaction=True)
