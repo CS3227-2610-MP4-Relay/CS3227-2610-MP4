@@ -66,6 +66,8 @@ python src/manage.py check --settings=relay.settings.test
 ruff check . && ruff format --check . && pytest
 ```
 
+Run `pytest -m prompt_injection -q` in the same test environment for deterministic drafting and observation-feedback [injection regressions](../workflow/specs/SECURITY-SPEC.md#ai-features-and-prompt-injection). They use synthetic source text and scripted replies to check application boundaries; they do not establish live-model resistance or advice quality. CI's existing `verify` job runs this selection and then `pytest -m 'not prompt_injection'`, covering the complete suite without repeating the selected tests. Live evaluation remains separate in the [drafting](../workflow/specs/ai/test-drafting.md#live-evaluation) and [feedback](../workflow/specs/ai/observation-feedback.md#evaluation) contracts.
+
 Pytest creates and destroys `test_relay_test`, applying all migrations; it never selects the normal local database. Test settings use a fast password hasher; other settings keep Django's default. Stop the optional test container with `docker stop relay-test-db`. CI provisions its own PostgreSQL service and runs the same checks. The workflow's own tests under `workflow/scripts/` still need no database. A local pass does not establish that hosted CI has run.
 
 To run only the browser journeys against the same test database:
