@@ -197,5 +197,5 @@ def main(prefixes):
 
 if __name__ == "__main__":
     # By default every counted run: the comparison, the ideal-setup runs, their
-    # references and task 2. Smoke tests are left out.
-    main(sys.argv[1:] or ["r1-", "r2-", "r3-", "i", "ref-", "t2-"])
+    # references and tasks 2 to 4. Smoke tests and cut-short runs are left out.
+    main(sys.argv[1:] or ["r1-", "r2-", "r3-", "i", "ref-", "t2-", "t3-", "t4-"])

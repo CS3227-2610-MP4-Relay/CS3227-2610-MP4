@@ -288,7 +288,11 @@ Added on 2026-10-31, after every task-2 and task-3 run had passed its whole hidd
     - v7's Haiku run skipped the display tests SECURITY-SPEC requires for each rendered text.
   - **Wait for what you start.** Never end the turn while a started session or command is still running. This is the cause of the cut-short runs.
   - **Show the arithmetic.** Write out the arithmetic behind any estimate. One run understated its storage estimate by about 11 times.
-- **Outside access.** Each counted access outside a run's own folder was read in its transcript; none reached another run's work or the hidden suites.
+- **Exposed run.** The first task-3 Haiku run of v6 (`t3-ideal-v6-haiku-1`) searched the whole session folder.
+  - **What it saw:** two lines of a backup of the original RES-2 code, left among the coordinator's scratch files: the module docstring and the stale-build message.
+  - **Fix:** at about 17:47 UTC every such scratch file moved into the unlistable private folder.
+  - **Result:** the run is kept under a `leak-` prefix, left out of the comparison and rerun as `t3-ideal-v6-haiku-2`.
+- **Outside access.** Each counted access outside a run's own folder in the later runs was read in its transcript; none reached another run's work or the hidden suites.
   - **Haiku reruns:** the clean task-3 Haiku rerun searched the session folder for docs and patches five times, finding nothing.
   - **Library code:** an mp3 run read Django's own source in the main checkout's virtual environment.
   - **Refused or own files:** the other accesses were refused or reached the run's own files.
