@@ -13,7 +13,7 @@ import os
 import ssl
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import timedelta
 from urllib.parse import urlsplit
 
@@ -45,12 +45,38 @@ USER_CALLS_SCOPE = "user-calls"
 DEPLOYMENT_SCOPE = "deployment"
 DEPLOYMENT_CALLS_SCOPE = "deployment-calls"
 
+TOKEN_FIELDS = ("prompt_tokens", "completion_tokens", "total_tokens")
+MAX_COUNT = 2**63 - 1
+
+
+@dataclass(frozen=True)
+class Usage:
+    """Optional provider counts; the gateway validates each before use."""
+
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    total_tokens: int | None = None
+
+
+def _count(value):
+    return value if type(value) is int and 0 <= value <= MAX_COUNT else None
+
+
+@sensitive_variables("usage")
+def _checked_usage(usage):
+    """Keep only bounded numeric fields from a typed usage value."""
+    if type(usage) is not Usage:
+        return None
+    counts = [_count(getattr(usage, name)) for name in TOKEN_FIELDS]
+    return Usage(*counts) if any(value is not None for value in counts) else None
+
 
 @dataclass(frozen=True)
 class Success:
     """A provider reply that passed the gateway envelope."""
 
     text: str
+    usage: Usage | None = None
 
 
 @dataclass(frozen=True)
@@ -58,6 +84,7 @@ class Refused:
     """A request the gateway declined or a provider refusal."""
 
     code: str
+    usage: Usage | None = None
 
 
 @dataclass(frozen=True)
@@ -65,6 +92,7 @@ class Failed:
     """A transport, timeout or malformed-response failure."""
 
     code: str
+    usage: Usage | None = None
 
 
 def _valid_reply_text(text):
@@ -80,7 +108,12 @@ def _valid_reply_text(text):
 def _checked_result(result):
     """Reject malformed provider results before returning or logging them."""
     if type(result) is Success:
-        return result if _valid_reply_text(result.text) else Failed("invalid-response")
+        usage = _checked_usage(result.usage)
+        return (
+            Success(result.text, usage)
+            if _valid_reply_text(result.text)
+            else Failed("invalid-response", usage)
+        )
     if type(result) is Refused:
         codes = {
             "live-off",
@@ -96,7 +129,7 @@ def _checked_result(result):
         return Failed("provider-error")
     if type(result.code) is not str or result.code not in codes:
         return Failed("provider-error")
-    return result
+    return replace(result, usage=_checked_usage(result.usage))
 
 
 def _user_key(user):
@@ -110,8 +143,7 @@ def _quota(scope, key, limit, window, now):
     ).delete()
     if CallRecord.objects.filter(scope=scope, key=key).count() >= limit:
         return False
-    CallRecord.objects.create(scope=scope, key=key, created_at=now)
-    return True
+    return CallRecord.objects.create(scope=scope, key=key, created_at=now)
 
 
 def _reserve(user):
@@ -119,7 +151,8 @@ def _reserve(user):
 
     The reservation moment is taken once the slot locks are held. Returns the
     user slot, the deployment slot and the expiry they now hold, and the
-    monotonic time of that moment, where the call's deadline starts.
+    monotonic time of that moment, where the call's deadline starts, and both
+    quota record IDs for completing metrics after the provider returns.
     """
     with transaction.atomic():
         user_slot, _ = CallSlot.objects.select_for_update().get_or_create(
@@ -140,19 +173,38 @@ def _reserve(user):
         free = [slot for slot in deployment if slot.expires_at <= now]
         if not free:
             return None
-        if not _quota(USER_CALLS_SCOPE, _user_key(user), USER_CALLS, USER_WINDOW, now):
+        user_record = _quota(
+            USER_CALLS_SCOPE, _user_key(user), USER_CALLS, USER_WINDOW, now
+        )
+        if not user_record:
             transaction.set_rollback(True)
             return None
-        if not _quota(
+        deployment_record = _quota(
             DEPLOYMENT_CALLS_SCOPE, "all", DEPLOYMENT_CALLS, DEPLOYMENT_WINDOW, now
-        ):
+        )
+        if not deployment_record:
             transaction.set_rollback(True)
             return None
         expires = now + timedelta(seconds=TOTAL_TIMEOUT + RELEASE_MARGIN)
         CallSlot.objects.filter(pk__in=[user_slot.pk, free[0].pk]).update(
             expires_at=expires
         )
-        return (user_slot, free[0], expires), started
+        return (
+            (user_slot, free[0], expires),
+            started,
+            (user_record.pk, deployment_record.pk),
+        )
+
+
+@sensitive_variables("result")
+def _record_metrics(record_ids, result, elapsed_ms):
+    """Update this call's two quota rows together; null means unavailable."""
+    usage = result.usage or Usage()
+    metrics = {name: getattr(usage, name) for name in TOKEN_FIELDS}
+    with transaction.atomic():
+        CallRecord.objects.filter(pk__in=record_ids).update(
+            **metrics, elapsed_ms=elapsed_ms
+        )
 
 
 def _release(user_slot, deployment_slot, expires):
@@ -354,7 +406,7 @@ def _reject_constant(value):
     raise ValueError(value)
 
 
-@sensitive_variables("body", "value", "choices", "choice", "message", "refusal", "text")
+@sensitive_variables("body", "value", "raw_usage", "usage")
 def _envelope(body):
     """Map a 2xx body to Success, a refusal or an invalid-response failure."""
     try:
@@ -367,6 +419,18 @@ def _envelope(body):
         return Failed("invalid-response")
     if type(value) is not dict:
         return Failed("invalid-response")
+    raw_usage = value.get("usage")
+    usage = (
+        _checked_usage(Usage(*(raw_usage.get(name) for name in TOKEN_FIELDS)))
+        if type(raw_usage) is dict
+        else None
+    )
+    return replace(_reply(value), usage=usage)
+
+
+@sensitive_variables("value", "choices", "choice", "message", "refusal", "text")
+def _reply(value):
+    """Validate the first choice independently of optional usage metadata."""
     choices = value.get("choices")
     if type(choices) is not list or not choices or type(choices[0]) is not dict:
         return Failed("invalid-response")
@@ -449,7 +513,8 @@ def complete(user, instructions, data, provider=None):
     `provider` is a test seam exposing `complete(instructions, data)` that
     returns Success, Refused or Failed; without it the call uses the HTTPS
     transport, which refuses while live calls are off. A storage error while
-    reserving or releasing is raised for the feature's own error handling.
+    reserving, recording metrics or releasing is raised for the feature's own
+    error handling.
     """
     if provider is None and not settings.SOC_LLM_LIVE:
         logger.info("LLM gateway outcome: %s", "live-off")
@@ -459,7 +524,7 @@ def complete(user, instructions, data, provider=None):
     reserved = _reserve(user)
     if reserved is None:
         return Refused("busy-or-quota")
-    slots, started = reserved
+    slots, started, record_ids = reserved
     deadline = started + TOTAL_TIMEOUT
     try:
         # No transaction or round lock is open here; do not hold a database
@@ -478,6 +543,8 @@ def complete(user, instructions, data, provider=None):
         else:
             result = _transport(instructions, data, deadline)
         result = _checked_result(result)
+        elapsed_ms = int(max(0, time.monotonic() - started) * 1000)
+        _record_metrics(record_ids, result, elapsed_ms)
         code = "success" if isinstance(result, Success) else result.code
         logger.info("LLM gateway outcome: %s", code)
         return result
