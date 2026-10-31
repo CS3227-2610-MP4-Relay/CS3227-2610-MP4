@@ -1,6 +1,6 @@
 # Observation feedback
 
-AI questions for a Beta Tester's saved draft; product behaviour and exact messages are [RES-4](../product/results.md#res-4-suggest-missing-details-in-a-draft-observation). This contract specifies slice 23 before implementation. Shared model, live switch, time, quota and transport rules belong to the [gateway](llm-gateway.md); no live evaluation is implied by local tests.
+AI questions for a Beta Tester's saved draft; product behaviour and exact messages are [RES-4](../product/results.md#res-4-suggest-missing-details-in-a-draft-observation). The pages and contract checks are built and tested with a fake gateway. Shared model, live switch, time, quota and transport rules belong to the [gateway](llm-gateway.md); no live evaluation is implied by local tests.
 
 ## Inputs and authorship
 
