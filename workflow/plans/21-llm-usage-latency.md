@@ -24,7 +24,20 @@ Record validated provider token counts and elapsed gateway time on existing quot
 
 - Minimal design: keep the existing two per-scope rows, add four nullable numeric columns, and reuse result types with optional validated usage. No outcomes/history schema or telemetry subsystem. Expected source diff about 150–250 lines, migration about 30–50, tests about 350–500, specs/plan/docs/log about 120–180; monitor total against the confirmed estimate.
 - Existing ambiguity raised to coordinator: the technical AI-gateway introduction says limits are proposals pending confirmation while the gateway contract says they are implemented. Preserve that approval/status wording for now; this slice neither infers approval nor changes quota limits.
-- Checkpoint 1 committed as `a1c93a7`; checkpoint 2 is ready for coordinator review/commit. Next is the separately assigned Developer Guide/integrated-verification checkpoint with a fresh scope snapshot. Real-provider availability and smoke/evaluation remain outside this slice.
+- Checkpoints 1 and 2 committed as `a1c93a7` and `fe0852b`; checkpoint 3 updates only the Developer Guide and this evidence. Next is coordinator commit and independent frozen-candidate review. Real-provider availability and smoke/evaluation remain outside this slice.
+
+## Criterion-to-check mapping
+
+All named checks below are in `src/ai/tests/test_gateway.py`, except the transport integration check in `src/ai/tests/test_transport.py`.
+
+| Criterion | Regression evidence |
+| --- | --- |
+| PLT-3.1 | `test_usage_completes_both_rows_with_elapsed_before_storage`, `test_overlapping_calls_write_only_their_own_metrics`, `test_metrics_keep_lazy_cleanup_and_do_not_update_other_calls` |
+| PLT-3.2 | `test_each_usage_count_is_validated_independently`, `test_wire_usage_uses_only_independent_bounded_counts`, `test_wire_missing_counts_are_unavailable`, `test_bad_fake_counts_cannot_reach_database_and_total_is_not_inferred` |
+| PLT-3.3 | `test_usage_completes_both_rows_with_elapsed_before_storage`, `test_every_reserved_result_has_latency_without_invented_usage`, `test_provider_exception_metrics`, `test_decoded_usage_survives_each_envelope_outcome` |
+| PLT-3.4 | `test_early_refusals_create_no_metrics`, `test_every_reserved_result_has_latency_without_invented_usage`; existing quota, deadline and transport regressions |
+| PLT-3.5 | `test_metrics_failure_is_atomic_releases_and_never_retries`, `test_metrics_storage_error_report_hides_reply_text`; existing reservation/release storage-error tests |
+| PLT-3.6 | `test_metrics_keep_lazy_cleanup_and_do_not_update_other_calls`, `test_malformed_fake_usage_is_unavailable_and_not_logged`, `test_metrics_storage_error_report_hides_reply_text`, transport `test_wire_usage_reaches_both_records_without_raw_metadata` |
 
 ## Checkpoint 2 evidence
 
@@ -33,3 +46,11 @@ Record validated provider token counts and elapsed gateway time on existing quot
 - Implemented four nullable big-integer fields and migration `0005`; typed optional usage on existing outcomes; independently bounded wire/fake counts; reservation record IDs; elapsed time before final writes; one atomic metrics update; existing finally release. Existing assertion changes: metadata test now expects validated usage, and late-release test unpacks the added record-ID return value; no removed/weakened assertions.
 - Initial gateway/transport green: `pytest src/ai/tests/test_gateway.py src/ai/tests/test_transport.py -q --tb=short --show-capture=no -p no:cacheprovider` → 316 passed in 31.49s. Additional zero-latency, malformed-fake DB, report-redaction and overlapping-call assertions were added during verification, after the core implementation; their no-prior-red exception is that they check invariants of the implemented path. The report-redaction test passed under existing caller protection before adding explicit helper sensitivity; no artificial failure was introduced.
 - Final focused candidate: `.venv` Git Bash `ruff check src/ai` and `ruff format --check src/ai` passed; `pytest src/ai -q --tb=short --show-capture=no -p no:cacheprovider` → 526 passed in 34.38s. `python src/manage.py check --settings=relay.settings.test` → no issues; `python src/manage.py makemigrations --check --dry-run --settings=relay.settings.test` → no changes. Builder snapshot scope and `git diff --check` passed. Non-test/non-migration source is 99 inserted/deleted lines. No open implementation finding or repair round; full-suite evidence belongs to checkpoint 3 and retains the coordinator's known three Windows idle-timeout baseline failures.
+
+## Checkpoint 3 evidence
+
+- Builder `gpt-6.1-sol` / medium resumed against `fe0852b` and private `relay-21-builder-3.json` snapshot; used the repository maintain-docs skill. Added one SoC accounting bullet to `docs/DeveloperGuide.md`, linking the contract and explaining reading one quota scope. Read the section back and checked its target against implemented code/specs. No runtime/test changes, new commands, dependency changes or real-provider calls.
+- Full verification from repository root, Git Bash with `.venv`: `ruff check . && ruff format --check . && pytest -q -ra --tb=short --show-capture=no -p no:cacheprovider --basetemp=C:/Users/limbe/AppData/Local/Temp/relay-21-builder-3-full` → Ruff passed; format passed (121 files); pytest **3 failed, 2,501 passed, 1 skipped, 231 subtests passed in 360.82s**. This is not a green full-suite result.
+- Exact failures: `src/accounts/tests/test_limit_views.py::test_timeout_inside_a_limited_transaction_gives_503[wrong password-idle]`, `[correct password-idle]` and `[demo-idle]`, all line 564 expecting `idle-in-transaction timeout` in captured logs. These match coordinator-confirmed pre-change Windows baseline failures; left unchanged. The skip is `workflow/scripts/test_check_scope.py:267`, directory symlink unavailable because Windows privilege is not held. No new failure or repair identified.
+- Coordinator-reported runtime-head Linux [CI run 41185962168](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/actions/runs/41185962168) at `fe0852b`: verify/site passed, deployments skipped; verify reported 2,502 passed, 3 skipped in 240.57s. This is evidence for that runtime head only; final documentation/summary HEAD still needs its own hosted result.
+- Reused checkpoint-2 system/migration checks because source, inputs and environment are unchanged. Guide readback, snapshot scope and diff whitespace checks passed. Source budget remains 99 changed non-test/non-migration lines. Coordinator owns final usage report, docs commit, frozen-candidate independent verification/security review and hosted validation results; no human approval or completed security review is inferred.
