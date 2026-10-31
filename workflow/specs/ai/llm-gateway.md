@@ -58,4 +58,6 @@ The rules below are implemented; the historical "proposed" headings remain for e
 
 `ai.fakes.FakeProvider` is scriptable with an exact reply, refusal, failure or timeout and records the instructions and data it was given. Tests pass it to `complete` instead of using the transport; the live switch does not apply to it. The [test configuration](../TECHNICAL-SPEC.md#configuration) keeps every other test away from the transport and the network.
 
+The test seam does not bypass the shared result boundary: `Success.text` must satisfy the transport's content type, character and surrogate rules, otherwise it becomes `Failed("invalid-response")`. `Refused.code` and `Failed.code` must be strings from their respective fixed gateway outcomes above (also `Failed("provider-error")` for a test-provider exception or malformed result); an unknown code or malformed result becomes `Failed("provider-error")` before returning or logging. No provider-supplied text becomes an outcome code.
+
 The live check is an operator step, not CI, and needs the live switch on: configure the endpoint, model and key, run the drafting [live evaluation](test-drafting.md#live-evaluation), and record results in a log.
