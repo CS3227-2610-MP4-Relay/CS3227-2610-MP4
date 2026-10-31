@@ -1,0 +1,41 @@
+{
+  "run": "t4-superpowers-1",
+  "notes": "limits.py holds a LIMITS dict of (threshold, window) tuples per scope; the threshold is read only by limits.exhausted, so M1 and M5 change the first element of the SIGN_IN and DEMO tuples and leave the windows and the overall DEMO_ALL limit alone. views.sign_in locks the address's counter (an upsert) inside one transaction, asks exhausted(), then validates, authenticates and either starts the session or records a failure: M2 authenticates first and refuses only a failure at the limit, and M4 zeroes the locked counter with save(update_fields) on success, inside the transaction, before the session is cycled (record() then treats the zero count as a new window). M3 reads the first X-Forwarded-For entry, falling back to REMOTE_ADDR, in limits.client_key, the one client-address function both per-address limits use.",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/accounts/limits.py",
+        "old": "    Scope.SIGN_IN: (30, timedelta(minutes=15)),\n",
+        "new": "    Scope.SIGN_IN: (31, timedelta(minutes=15)),\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/accounts/views.py",
+        "old": "        if limits.exhausted(counter):\n            error, status = \"Too many sign-in attempts. Try again later.\", 429\n        else:\n            form = SignInForm(request.POST)\n            user = form.is_valid() and authenticate(request, **form.cleaned_data)\n            if user:\n",
+        "new": "        form = SignInForm(request.POST)\n        user = form.is_valid() and authenticate(request, **form.cleaned_data)\n        if not user and limits.exhausted(counter):\n            error, status = \"Too many sign-in attempts. Try again later.\", 429\n        else:\n            if user:\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/accounts/limits.py",
+        "old": "    value = _address(request.META.get(\"REMOTE_ADDR\", \"\"))\n",
+        "new": "    forwarded = request.META.get(\"HTTP_X_FORWARDED_FOR\", \"\").split(\",\")[0].strip()\n    value = _address(forwarded or request.META.get(\"REMOTE_ADDR\", \"\"))\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/accounts/views.py",
+        "old": "            if user:\n                # login() keeps the identifier when the same user signs in again\n",
+        "new": "            if user:\n                counter.count = 0\n                counter.save(update_fields=[\"count\"])\n                # login() keeps the identifier when the same user signs in again\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/accounts/limits.py",
+        "old": "    Scope.DEMO: (10, timedelta(hours=1)),\n",
+        "new": "    Scope.DEMO: (11, timedelta(hours=1)),\n"
+      }
+    ]
+  }
+}
