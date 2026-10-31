@@ -58,6 +58,7 @@ def test_command_fixed_calls_safe_summary_and_interruption(
     operator, monkeypatch, interrupt, make_round
 ):
     cases, calls, output = evaluation.corpus(), [], io.StringIO()
+    errors = io.StringIO()
     make_round()
     before = list(get_user_model().objects.values()), snapshot()
 
@@ -79,6 +80,7 @@ def test_command_fixed_calls_safe_summary_and_interruption(
         "user_id": operator.pk,
         "revision": REVISION,
         "stdout": output,
+        "stderr": errors,
     }
     if interrupt:
         with pytest.raises(CommandError, match="interrupted"):
@@ -97,3 +99,68 @@ def test_command_fixed_calls_safe_summary_and_interruption(
     assert "synthetic-key" not in output.getvalue()
     assert all(c.data not in output.getvalue() for c in cases)
     assert (list(get_user_model().objects.values()), snapshot()) == before
+    assert errors.getvalue() == ""
+
+
+@pytest.mark.ac("SEC-INJ-1.5")
+def test_opt_in_response_lines_are_escaped_and_do_not_change_summary(
+    operator, monkeypatch
+):
+    raw = "transient-reply\n\r\x1b[31m\u202e\U000e0041\u00e9"
+    results = [
+        gateway.Success(raw),
+        gateway.Success('{"drafts":[]}'),
+        gateway.Refused("private-refusal"),
+        gateway.Failed("private-failure"),
+    ]
+    summaries = []
+    for show in (False, True):
+        output, errors, calls = io.StringIO(), io.StringIO(), []
+
+        def complete(*args, calls=calls):
+            calls.append(args)
+            if len(calls) > len(results):
+                raise RuntimeError("private-exception")
+            return results[len(calls) - 1]
+
+        monkeypatch.setattr(gateway, "complete", complete)
+        with pytest.raises(CommandError, match="interrupted"):
+            call_command(
+                "evaluate_injection",
+                live=True,
+                user_id=operator.pk,
+                revision=REVISION,
+                show_responses=show,
+                stdout=output,
+                stderr=errors,
+            )
+        summaries.append(json.loads(output.getvalue()))
+        assert len(calls) == 5
+        assert raw not in output.getvalue()
+        lines = errors.getvalue().splitlines()
+        assert len(lines) == (2 if show else 0)
+        assert errors.getvalue().isascii()
+        if show:
+            assert [json.loads(line) for line in lines] == [
+                {"id": "drafting-control", "response": raw},
+                {"id": "drafting-override", "response": '{"drafts":[]}'},
+            ]
+        assert "private" not in output.getvalue() + errors.getvalue()
+    assert summaries[0] == summaries[1]
+    assert summaries[1]["cases"][0]["schema_accepted"] is False
+    assert summaries[1]["cases"][1]["schema_accepted"] is True
+
+
+@pytest.mark.ac("SEC-INJ-1.5")
+def test_response_flag_does_not_replace_live_opt_in(operator):
+    errors = io.StringIO()
+    with pytest.raises(CommandError, match="preflight refused"):
+        call_command(
+            "evaluate_injection",
+            live=False,
+            user_id=operator.pk,
+            revision=REVISION,
+            show_responses=True,
+            stderr=errors,
+        )
+    assert errors.getvalue() == ""

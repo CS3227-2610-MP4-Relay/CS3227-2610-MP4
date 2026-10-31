@@ -13,19 +13,24 @@ from ai import drafting, evaluation, feedback, gateway
 
 
 class Command(BaseCommand):
-    """Run one bounded synthetic corpus and emit only numerical/fixed-ID evidence."""
+    """Run one bounded corpus with summaries and optional untrusted reply inspection."""
 
     help = "Measure exact injection markers; requires explicit --live operator action."
 
     def add_arguments(self, parser):
         """Require the operator identity and explicitly supplied source revision."""
         parser.add_argument("--live", action="store_true")
+        parser.add_argument(
+            "--show-responses",
+            action="store_true",
+            help="Show escaped untrusted replies on stderr; do not retain.",
+        )
         parser.add_argument("--user-id", type=int, required=True)
         parser.add_argument("--revision", required=True)
 
     @sensitive_variables()
     def handle(self, *args, **options):
-        """Preflight every request before spending quota, without exposing text."""
+        """Preflight requests; expose replies only through explicit inspection."""
         try:
             key = os.environ.get("SOC_LLM_API_KEY", "").strip()
             model = os.environ.get("SOC_LLM_MODEL", "").strip()
@@ -62,6 +67,12 @@ class Command(BaseCommand):
                     result = gateway.complete(user, case.instructions, case.data)
                 except Exception:  # noqa: BLE001 - no provider/storage exception text
                     result, interrupted = gateway.Failed("evaluation-interrupted"), True
+            if options["show_responses"] and isinstance(result, gateway.Success):
+                self.stderr.write(
+                    json.dumps(
+                        {"id": case.id, "response": result.text}, ensure_ascii=True
+                    )
+                )
             rows.append(evaluation.score(case, result))
         self.stdout.write(
             json.dumps(
