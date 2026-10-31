@@ -1,0 +1,11 @@
+solo t4-solo-1 TASK=4 PROMPT_FILE=$EXP/task-prompt-4.md
+openspec t4-openspec-1 TASK=4 PROMPT_FILE=$EXP/task-prompt-4.md
+ponytail t4-ponytail-1 TASK=4 PROMPT_FILE=$EXP/task-prompt-4.md
+mp4-sonnet t4-mp4-sonnet-1 TASK=4 PROMPT_FILE=$EXP/task-prompt-4.md MODEL_OVERRIDE=claude-sonnet-5-5
+mp4 t4-mp4-1 TASK=4 PROMPT_FILE=$EXP/task-prompt-4.md
+headroom t4-headroom-1 TASK=4 PROMPT_FILE=$EXP/task-prompt-4.md
+mp4-haiku t4-mp4-haiku-1 TASK=4 PROMPT_FILE=$EXP/task-prompt-4.md MODEL_OVERRIDE=claude-haiku-5-5
+caveman t4-caveman-1 TASK=4 PROMPT_FILE=$EXP/task-prompt-4.md
+mp3 t4-mp3-1 TASK=4 PROMPT_FILE=$EXP/task-prompt-4.md
+spec-kit t4-spec-kit-1 TASK=4 PROMPT_FILE=$EXP/task-prompt-4.md
+superpowers t4-superpowers-1 TASK=4 PROMPT_FILE=$EXP/task-prompt-4.md

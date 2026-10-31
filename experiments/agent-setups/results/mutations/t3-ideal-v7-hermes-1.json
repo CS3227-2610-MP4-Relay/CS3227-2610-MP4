@@ -1,0 +1,76 @@
+{
+  "run": "t3-ideal-v7-hermes-1",
+  "notes": "Rules are enforced twice: tester.result (GET and POST guards, rendering tester_result.html) and services.record_result (under the round lock). Both read the result filtered by tester, refuse non-Open rounds and refuse a submitted result, so M1, M3 and M4 edit both; M4 also lets tester_result.html show the form, with the true status, for a submitted result. ResultForm.clean requires a Fail observation (no database constraint) and RoundTextField(max_length=2000) limits it; M5 raises only the field's max_length, so its fixed message is unchanged. M3 leaves the tester round page's Open-only 'Record result' link in place (navigation, not a guard). M5 also widens the model field and its column in migration 0005 to 2001, together, because the varchar(2000) column would otherwise refuse the save (a 503) and a model-only change would fail the candidate's makemigrations --check test; pytest-django builds the test database from migrations on every run (no --reuse-db), so the migration edit is seen consistently.",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/tester.py",
+        "old": "    return Result.objects.filter(case=case, build=build, tester=user).first()\n",
+        "new": "    return Result.objects.filter(case=case, build=build).first()\n"
+      },
+      {
+        "file": "src/rounds/services.py",
+        "old": "    result = Result.objects.filter(case=case, build=build, tester=tester).first()\n",
+        "new": "    result = Result.objects.filter(case=case, build=build).first()\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if data.get(\"outcome\") == Result.Outcome.FAIL and not data.get(\"observation\"):\n",
+        "new": "        if False:\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/tester.py",
+        "old": "    if round_.state != Round.State.OPEN:\n        return state_conflict(request, round_)\n",
+        "new": "    if round_.state not in (Round.State.OPEN, Round.State.CLOSED):\n        return state_conflict(request, round_)\n"
+      },
+      {
+        "file": "src/rounds/services.py",
+        "old": "    if not Round.objects.filter(pk=round_.pk, state=Round.State.OPEN).exists():\n        raise RoundNotOpen\n    current = current_build(case)\n",
+        "new": "    if not Round.objects.filter(\n        pk=round_.pk, state__in=[Round.State.OPEN, Round.State.CLOSED]\n    ).exists():\n        raise RoundNotOpen\n    current = current_build(case)\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/tester.py",
+        "old": "    if stored is not None and stored.submitted_at is not None:\n        return conflict_page(request, services.ALREADY_SUBMITTED)\n",
+        "new": ""
+      },
+      {
+        "file": "src/rounds/services.py",
+        "old": "    if result is not None and result.submitted_at is not None:\n        raise ResultRefused(ALREADY_SUBMITTED)\n",
+        "new": ""
+      },
+      {
+        "file": "src/rounds/templates/rounds/tester_result.html",
+        "old": "{% if result.submitted_at %}\n",
+        "new": "{% if result.submitted_at and not form %}\n"
+      },
+      {
+        "file": "src/rounds/templates/rounds/tester_result.html",
+        "old": "{% if result %}<p>Status: Draft</p>{% endif %}\n",
+        "new": "{% if result %}<p>Status: {% if result.submitted_at %}Submitted{% else %}Draft{% endif %}</p>{% endif %}\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    observation = RoundTextField(\n        max_length=2000,\n",
+        "new": "    observation = RoundTextField(\n        max_length=2001,\n"
+      },
+      {
+        "file": "src/rounds/models.py",
+        "old": "    observation = models.CharField(max_length=2000, blank=True)\n",
+        "new": "    observation = models.CharField(max_length=2001, blank=True)\n"
+      },
+      {
+        "file": "src/rounds/migrations/0005_result.py",
+        "old": "                ('observation', models.CharField(blank=True, max_length=2000)),\n",
+        "new": "                ('observation', models.CharField(blank=True, max_length=2001)),\n"
+      }
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "run": "i3-haiku-opusreview-1",
+  "notes": "Check is one `if` line in RoundTextField.clean (charin on DIRECTION_CONTROLS).",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if any(char in DIRECTION_CONTROLS for char in value):\n",
+        "new": "        if False:\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if any(char in DIRECTION_CONTROLS for char in value):\n",
+        "new": "        if any(char in DIRECTION_CONTROLS and char != chr(0x2069) for char in value):\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if any(char in DIRECTION_CONTROLS for char in value):\n",
+        "new": "        if any(char in DIRECTION_CONTROLS and char != chr(0x202B) for char in value):\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if any(char in DIRECTION_CONTROLS for char in value):\n",
+        "new": "        if any(char in DIRECTION_CONTROLS or char == chr(0x200E) for char in value):\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if any(char in DIRECTION_CONTROLS for char in value):\n",
+        "new": "        if any(char in DIRECTION_CONTROLS for char in value) and self.label != \"Build label\":\n"
+      }
+    ]
+  }
+}

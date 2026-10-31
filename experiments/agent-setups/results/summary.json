@@ -1,0 +1,5772 @@
+{
+  "1": {
+    "caveman": {
+      "cost_usd": {
+        "median": 6.135,
+        "min": 5.45,
+        "max": 6.82,
+        "n": 2
+      },
+      "wall_min": {
+        "median": 23.9,
+        "min": 23.2,
+        "max": 24.6,
+        "n": 2
+      },
+      "turns": {
+        "median": 34.0,
+        "min": 29,
+        "max": 39,
+        "n": 2
+      },
+      "subagent_runs": {
+        "median": 6.0,
+        "min": 6,
+        "max": 6,
+        "n": 2
+      },
+      "output_tokens": {
+        "median": 107443.0,
+        "min": 94201,
+        "max": 120685,
+        "n": 2
+      },
+      "cache_read_tokens": {
+        "median": 7237156.5,
+        "min": 5893878,
+        "max": 8580435,
+        "n": 2
+      },
+      "cache_write_tokens": {
+        "median": 441768.0,
+        "min": 414360,
+        "max": 469176,
+        "n": 2
+      },
+      "orchestrator_cache_read": {
+        "median": 2337380.0,
+        "min": 1992949,
+        "max": 2681811,
+        "n": 2
+      },
+      "subagent_cache_read": {
+        "median": 4551293.0,
+        "min": 3573527,
+        "max": 5529059,
+        "n": 2
+      },
+      "orchestrator_cache_write": {
+        "median": 108800.0,
+        "min": 104551,
+        "max": 113049,
+        "n": 2
+      },
+      "subagent_cache_write": {
+        "median": 328379.5,
+        "min": 305034,
+        "max": 351725,
+        "n": 2
+      },
+      "hidden_refusal": {
+        "median": 108.0,
+        "min": 108,
+        "max": 108,
+        "n": 2
+      },
+      "hidden_allowed": {
+        "median": 24.0,
+        "min": 24,
+        "max": 24,
+        "n": 2
+      },
+      "hidden_passed": {
+        "median": 132.0,
+        "min": 132,
+        "max": 132,
+        "n": 2
+      },
+      "hidden_failed": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "pytest_passed": {
+        "median": 930.5,
+        "min": 844,
+        "max": 1017,
+        "n": 2
+      },
+      "mutants_killed": {
+        "median": 5.0,
+        "min": 5,
+        "max": 5,
+        "n": 2
+      },
+      "review_high": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "review_medium": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "review_low": {
+        "median": 3.5,
+        "min": 3,
+        "max": 4,
+        "n": 2
+      },
+      "review_score": {
+        "median": 4.5,
+        "min": 4.4,
+        "max": 4.6,
+        "n": 2
+      },
+      "commits": {
+        "median": 6.5,
+        "min": 6,
+        "max": 7,
+        "n": 2
+      },
+      "code_lines": {
+        "median": 14.0,
+        "min": 10,
+        "max": 18,
+        "n": 2
+      },
+      "test_lines": {
+        "median": 351.0,
+        "min": 199,
+        "max": 503,
+        "n": 2
+      },
+      "spec_lines": {
+        "median": 9.5,
+        "min": 9,
+        "max": 10,
+        "n": 2
+      },
+      "doc_lines": {
+        "median": 8.0,
+        "min": 8,
+        "max": 8,
+        "n": 2
+      },
+      "plan_lines": {
+        "median": 59.5,
+        "min": 57,
+        "max": 62,
+        "n": 2
+      },
+      "other_lines": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "outside_access": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "denied_actions": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "runs": [
+        "r1-caveman",
+        "r2-caveman"
+      ],
+      "verify_passed": [
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true
+      ],
+      "mergeable": [
+        "yes",
+        "yes"
+      ]
+    },
+    "headroom": {
+      "cost_usd": {
+        "median": 5.845000000000001,
+        "min": 5.21,
+        "max": 6.48,
+        "n": 2
+      },
+      "wall_min": {
+        "median": 24.2,
+        "min": 22.9,
+        "max": 25.5,
+        "n": 2
+      },
+      "turns": {
+        "median": 42.5,
+        "min": 38,
+        "max": 47,
+        "n": 2
+      },
+      "subagent_runs": {
+        "median": 6.0,
+        "min": 6,
+        "max": 6,
+        "n": 2
+      },
+      "output_tokens": {
+        "median": 103655.0,
+        "min": 91914,
+        "max": 115396,
+        "n": 2
+      },
+      "cache_read_tokens": {
+        "median": 7521565.0,
+        "min": 6465846,
+        "max": 8577284,
+        "n": 2
+      },
+      "cache_write_tokens": {
+        "median": 391010.0,
+        "min": 363130,
+        "max": 418890,
+        "n": 2
+      },
+      "orchestrator_cache_read": {
+        "median": 2854310.0,
+        "min": 2330335,
+        "max": 3378285,
+        "n": 2
+      },
+      "subagent_cache_read": {
+        "median": 4527813.5,
+        "min": 3856628,
+        "max": 5198999,
+        "n": 2
+      },
+      "orchestrator_cache_write": {
+        "median": 104252.5,
+        "min": 88136,
+        "max": 120369,
+        "n": 2
+      },
+      "subagent_cache_write": {
+        "median": 281551.0,
+        "min": 266341,
+        "max": 296761,
+        "n": 2
+      },
+      "hidden_refusal": {
+        "median": 108.0,
+        "min": 108,
+        "max": 108,
+        "n": 2
+      },
+      "hidden_allowed": {
+        "median": 24.0,
+        "min": 24,
+        "max": 24,
+        "n": 2
+      },
+      "hidden_passed": {
+        "median": 132.0,
+        "min": 132,
+        "max": 132,
+        "n": 2
+      },
+      "hidden_failed": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "pytest_passed": {
+        "median": 872.5,
+        "min": 872,
+        "max": 873,
+        "n": 2
+      },
+      "mutants_killed": {
+        "median": 5.0,
+        "min": 5,
+        "max": 5,
+        "n": 2
+      },
+      "review_high": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "review_medium": {
+        "median": 0.5,
+        "min": 0,
+        "max": 1,
+        "n": 2
+      },
+      "review_low": {
+        "median": 4.0,
+        "min": 4,
+        "max": 4,
+        "n": 2
+      },
+      "review_score": {
+        "median": 4.4,
+        "min": 4.4,
+        "max": 4.4,
+        "n": 2
+      },
+      "commits": {
+        "median": 8.5,
+        "min": 7,
+        "max": 10,
+        "n": 2
+      },
+      "code_lines": {
+        "median": 14.0,
+        "min": 14,
+        "max": 14,
+        "n": 2
+      },
+      "test_lines": {
+        "median": 211.0,
+        "min": 162,
+        "max": 260,
+        "n": 2
+      },
+      "spec_lines": {
+        "median": 8.5,
+        "min": 7,
+        "max": 10,
+        "n": 2
+      },
+      "doc_lines": {
+        "median": 8.0,
+        "min": 8,
+        "max": 8,
+        "n": 2
+      },
+      "plan_lines": {
+        "median": 58.5,
+        "min": 53,
+        "max": 64,
+        "n": 2
+      },
+      "other_lines": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "outside_access": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "denied_actions": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "runs": [
+        "r1-headroom",
+        "r2-headroom"
+      ],
+      "verify_passed": [
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true
+      ],
+      "mergeable": [
+        "yes",
+        "after-fixes"
+      ]
+    },
+    "ideal-v1": {
+      "cost_usd": {
+        "median": 0.68,
+        "min": 0.13,
+        "max": 4.23,
+        "n": 9
+      },
+      "wall_min": {
+        "median": 12.8,
+        "min": 8.5,
+        "max": 25.9,
+        "n": 9
+      },
+      "turns": {
+        "median": 81,
+        "min": 1,
+        "max": 106,
+        "n": 9
+      },
+      "subagent_runs": {
+        "median": 2,
+        "min": 1,
+        "max": 3,
+        "n": 9
+      },
+      "output_tokens": {
+        "median": 97627,
+        "min": 42591,
+        "max": 231351,
+        "n": 9
+      },
+      "cache_read_tokens": {
+        "median": 9857280,
+        "min": 3140449,
+        "max": 14280437,
+        "n": 9
+      },
+      "cache_write_tokens": {
+        "median": 157003,
+        "min": 0,
+        "max": 489414,
+        "n": 9
+      },
+      "orchestrator_cache_read": {
+        "median": 5718716,
+        "min": 2775890,
+        "max": 11396526,
+        "n": 5
+      },
+      "subagent_cache_read": {
+        "median": 1087778,
+        "min": 364559,
+        "max": 2799915,
+        "n": 5
+      },
+      "orchestrator_cache_write": {
+        "median": 133743,
+        "min": 104149,
+        "max": 197740,
+        "n": 5
+      },
+      "subagent_cache_write": {
+        "median": 104779,
+        "min": 52854,
+        "max": 291674,
+        "n": 5
+      },
+      "hidden_refusal": {
+        "median": 108,
+        "min": 108,
+        "max": 108,
+        "n": 9
+      },
+      "hidden_allowed": {
+        "median": 24,
+        "min": 24,
+        "max": 24,
+        "n": 9
+      },
+      "hidden_passed": {
+        "median": 132,
+        "min": 132,
+        "max": 132,
+        "n": 9
+      },
+      "hidden_failed": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 9
+      },
+      "pytest_passed": {
+        "median": 867,
+        "min": 837,
+        "max": 971,
+        "n": 9
+      },
+      "mutants_killed": {
+        "median": 5,
+        "min": 5,
+        "max": 5,
+        "n": 9
+      },
+      "review_high": {
+        "median": 0,
+        "min": 0,
+        "max": 1,
+        "n": 9
+      },
+      "review_medium": {
+        "median": 0,
+        "min": 0,
+        "max": 1,
+        "n": 9
+      },
+      "review_low": {
+        "median": 5,
+        "min": 3,
+        "max": 6,
+        "n": 9
+      },
+      "review_score": {
+        "median": 4.2,
+        "min": 4,
+        "max": 4.4,
+        "n": 9
+      },
+      "commits": {
+        "median": 9,
+        "min": 5,
+        "max": 10,
+        "n": 9
+      },
+      "code_lines": {
+        "median": 16,
+        "min": 10,
+        "max": 28,
+        "n": 9
+      },
+      "test_lines": {
+        "median": 181,
+        "min": 124,
+        "max": 300,
+        "n": 9
+      },
+      "spec_lines": {
+        "median": 9,
+        "min": 7,
+        "max": 18,
+        "n": 9
+      },
+      "doc_lines": {
+        "median": 8,
+        "min": 8,
+        "max": 8,
+        "n": 9
+      },
+      "plan_lines": {
+        "median": 62,
+        "min": 31,
+        "max": 127,
+        "n": 9
+      },
+      "other_lines": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 9
+      },
+      "outside_access": {
+        "median": 0,
+        "min": 0,
+        "max": 9,
+        "n": 9
+      },
+      "denied_actions": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 9
+      },
+      "runs": [
+        "i1-codex-1",
+        "i1-codex-2",
+        "i1-haiku-1",
+        "i1-haiku-2",
+        "i1-hermes-1",
+        "i1-hermes-2",
+        "i1-opus-1",
+        "i1-sonnet-1",
+        "i1-sonnet-2"
+      ],
+      "verify_passed": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "mergeable": [
+        "yes",
+        "yes",
+        "after-fixes",
+        "after-fixes",
+        "yes",
+        "after-fixes",
+        "after-fixes",
+        "yes",
+        "after-fixes"
+      ]
+    },
+    "ideal-v2": {
+      "cost_usd": {
+        "median": 0.975,
+        "min": 0.21,
+        "max": 4.47,
+        "n": 10
+      },
+      "wall_min": {
+        "median": 20.5,
+        "min": 10.8,
+        "max": 39.5,
+        "n": 10
+      },
+      "turns": {
+        "median": 70.5,
+        "min": 1,
+        "max": 148,
+        "n": 10
+      },
+      "subagent_runs": {
+        "median": 2.0,
+        "min": 1,
+        "max": 3,
+        "n": 10
+      },
+      "output_tokens": {
+        "median": 118880.5,
+        "min": 57983,
+        "max": 378645,
+        "n": 10
+      },
+      "cache_read_tokens": {
+        "median": 16412321.5,
+        "min": 3986925,
+        "max": 30842384,
+        "n": 10
+      },
+      "cache_write_tokens": {
+        "median": 107147.5,
+        "min": 0,
+        "max": 703261,
+        "n": 10
+      },
+      "orchestrator_cache_read": {
+        "median": 5310175,
+        "min": 2687847,
+        "max": 25468914,
+        "n": 5
+      },
+      "subagent_cache_read": {
+        "median": 1577106,
+        "min": 1134476,
+        "max": 4971351,
+        "n": 5
+      },
+      "orchestrator_cache_write": {
+        "median": 136553,
+        "min": 92240,
+        "max": 296693,
+        "n": 5
+      },
+      "subagent_cache_write": {
+        "median": 127856,
+        "min": 116864,
+        "max": 392999,
+        "n": 5
+      },
+      "hidden_refusal": {
+        "median": 108.0,
+        "min": 108,
+        "max": 108,
+        "n": 10
+      },
+      "hidden_allowed": {
+        "median": 24.0,
+        "min": 24,
+        "max": 24,
+        "n": 10
+      },
+      "hidden_passed": {
+        "median": 132.0,
+        "min": 132,
+        "max": 132,
+        "n": 10
+      },
+      "hidden_failed": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 10
+      },
+      "pytest_passed": {
+        "median": 867.0,
+        "min": 827,
+        "max": 900,
+        "n": 10
+      },
+      "mutants_killed": {
+        "median": 5.0,
+        "min": 4,
+        "max": 5,
+        "n": 10
+      },
+      "review_high": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 10
+      },
+      "review_medium": {
+        "median": 0.0,
+        "min": 0,
+        "max": 1,
+        "n": 10
+      },
+      "review_low": {
+        "median": 4.5,
+        "min": 3,
+        "max": 8,
+        "n": 10
+      },
+      "review_score": {
+        "median": 4.300000000000001,
+        "min": 4,
+        "max": 4.4,
+        "n": 10
+      },
+      "commits": {
+        "median": 10.5,
+        "min": 7,
+        "max": 14,
+        "n": 10
+      },
+      "code_lines": {
+        "median": 18.0,
+        "min": 9,
+        "max": 33,
+        "n": 10
+      },
+      "test_lines": {
+        "median": 163.5,
+        "min": 105,
+        "max": 267,
+        "n": 10
+      },
+      "spec_lines": {
+        "median": 11.5,
+        "min": 8,
+        "max": 22,
+        "n": 10
+      },
+      "doc_lines": {
+        "median": 8.0,
+        "min": 8,
+        "max": 10,
+        "n": 10
+      },
+      "plan_lines": {
+        "median": 60.0,
+        "min": 30,
+        "max": 157,
+        "n": 10
+      },
+      "other_lines": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 10
+      },
+      "outside_access": {
+        "median": 0.0,
+        "min": 0,
+        "max": 30,
+        "n": 10
+      },
+      "denied_actions": {
+        "median": 0.0,
+        "min": 0,
+        "max": 1,
+        "n": 10
+      },
+      "runs": [
+        "i2-codex-1",
+        "i2-codex-2",
+        "i2-codex-auto-1",
+        "i2-haiku-1",
+        "i2-haiku-2",
+        "i2-hermes-1",
+        "i2-hermes-2",
+        "i2-opus-1",
+        "i2-sonnet-1",
+        "i2-sonnet-2"
+      ],
+      "verify_passed": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "mergeable": [
+        "yes",
+        "yes",
+        "yes",
+        "yes",
+        "after-fixes",
+        "after-fixes",
+        "yes",
+        "yes",
+        "yes",
+        "yes"
+      ]
+    },
+    "ideal-v3": {
+      "cost_usd": {
+        "median": 0.92,
+        "min": 0.15,
+        "max": 2.55,
+        "n": 6
+      },
+      "wall_min": {
+        "median": 14.7,
+        "min": 12.7,
+        "max": 21.0,
+        "n": 6
+      },
+      "turns": {
+        "median": 91.0,
+        "min": 1,
+        "max": 106,
+        "n": 6
+      },
+      "subagent_runs": {
+        "median": 1.5,
+        "min": 1,
+        "max": 3,
+        "n": 6
+      },
+      "output_tokens": {
+        "median": 128417.5,
+        "min": 56434,
+        "max": 181309,
+        "n": 6
+      },
+      "cache_read_tokens": {
+        "median": 11246408.5,
+        "min": 4724080,
+        "max": 12841664,
+        "n": 6
+      },
+      "cache_write_tokens": {
+        "median": 273078.0,
+        "min": 0,
+        "max": 388583,
+        "n": 6
+      },
+      "orchestrator_cache_read": {
+        "median": 9105921.0,
+        "min": 3775963,
+        "max": 11296481,
+        "n": 4
+      },
+      "subagent_cache_read": {
+        "median": 1533850.0,
+        "min": 948117,
+        "max": 1706202,
+        "n": 4
+      },
+      "orchestrator_cache_write": {
+        "median": 194929.0,
+        "min": 107957,
+        "max": 221065,
+        "n": 4
+      },
+      "subagent_cache_write": {
+        "median": 141052.5,
+        "min": 91419,
+        "max": 175187,
+        "n": 4
+      },
+      "hidden_refusal": {
+        "median": 108.0,
+        "min": 108,
+        "max": 108,
+        "n": 6
+      },
+      "hidden_allowed": {
+        "median": 24.0,
+        "min": 24,
+        "max": 24,
+        "n": 6
+      },
+      "hidden_passed": {
+        "median": 132.0,
+        "min": 132,
+        "max": 132,
+        "n": 6
+      },
+      "hidden_failed": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 6
+      },
+      "pytest_passed": {
+        "median": 885.0,
+        "min": 830,
+        "max": 992,
+        "n": 6
+      },
+      "mutants_killed": {
+        "median": 5.0,
+        "min": 5,
+        "max": 5,
+        "n": 6
+      },
+      "review_high": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 6
+      },
+      "review_medium": {
+        "median": 0.0,
+        "min": 0,
+        "max": 1,
+        "n": 6
+      },
+      "review_low": {
+        "median": 6.0,
+        "min": 3,
+        "max": 6,
+        "n": 6
+      },
+      "review_score": {
+        "median": 4.4,
+        "min": 4,
+        "max": 4.6,
+        "n": 6
+      },
+      "commits": {
+        "median": 7.5,
+        "min": 7,
+        "max": 12,
+        "n": 6
+      },
+      "code_lines": {
+        "median": 21.0,
+        "min": 7,
+        "max": 29,
+        "n": 6
+      },
+      "test_lines": {
+        "median": 184.5,
+        "min": 129,
+        "max": 221,
+        "n": 6
+      },
+      "spec_lines": {
+        "median": 10.0,
+        "min": 7,
+        "max": 18,
+        "n": 6
+      },
+      "doc_lines": {
+        "median": 8.0,
+        "min": 8,
+        "max": 8,
+        "n": 6
+      },
+      "plan_lines": {
+        "median": 67.5,
+        "min": 41,
+        "max": 86,
+        "n": 6
+      },
+      "other_lines": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 6
+      },
+      "outside_access": {
+        "median": 0.0,
+        "min": 0,
+        "max": 7,
+        "n": 6
+      },
+      "denied_actions": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 6
+      },
+      "runs": [
+        "i3-codex-1",
+        "i3-haiku-1",
+        "i3-haiku-2",
+        "i3-haiku-opusreview-1",
+        "i3-hermes-1",
+        "i3-sonnet-1"
+      ],
+      "verify_passed": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "mergeable": [
+        "yes",
+        "yes",
+        "yes",
+        "yes",
+        "yes",
+        "after-fixes"
+      ]
+    },
+    "ideal-v4": {
+      "cost_usd": {
+        "median": 0.545,
+        "min": 0.13,
+        "max": 1.75,
+        "n": 4
+      },
+      "wall_min": {
+        "median": 16.85,
+        "min": 9.8,
+        "max": 20.5,
+        "n": 4
+      },
+      "turns": {
+        "median": 69.5,
+        "min": 1,
+        "max": 103,
+        "n": 4
+      },
+      "subagent_runs": {
+        "median": 1.5,
+        "min": 1,
+        "max": 2,
+        "n": 4
+      },
+      "output_tokens": {
+        "median": 103653.0,
+        "min": 60747,
+        "max": 191380,
+        "n": 4
+      },
+      "cache_read_tokens": {
+        "median": 10978817.5,
+        "min": 4315422,
+        "max": 14052319,
+        "n": 4
+      },
+      "cache_write_tokens": {
+        "median": 108611.0,
+        "min": 0,
+        "max": 377089,
+        "n": 4
+      },
+      "orchestrator_cache_read": {
+        "median": 5987952.0,
+        "min": 3565786,
+        "max": 8410118,
+        "n": 2
+      },
+      "subagent_cache_read": {
+        "median": 986460.5,
+        "min": 749636,
+        "max": 1223285,
+        "n": 2
+      },
+      "orchestrator_cache_write": {
+        "median": 147553.5,
+        "min": 109573,
+        "max": 185534,
+        "n": 2
+      },
+      "subagent_cache_write": {
+        "median": 149602.0,
+        "min": 107649,
+        "max": 191555,
+        "n": 2
+      },
+      "hidden_refusal": {
+        "median": 108.0,
+        "min": 108,
+        "max": 108,
+        "n": 4
+      },
+      "hidden_allowed": {
+        "median": 24.0,
+        "min": 24,
+        "max": 24,
+        "n": 4
+      },
+      "hidden_passed": {
+        "median": 132.0,
+        "min": 132,
+        "max": 132,
+        "n": 4
+      },
+      "hidden_failed": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 4
+      },
+      "pytest_passed": {
+        "median": 908.5,
+        "min": 859,
+        "max": 977,
+        "n": 4
+      },
+      "mutants_killed": {
+        "median": 5.0,
+        "min": 5,
+        "max": 5,
+        "n": 4
+      },
+      "review_high": {
+        "median": 0.0,
+        "min": 0,
+        "max": 1,
+        "n": 4
+      },
+      "review_medium": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 4
+      },
+      "review_low": {
+        "median": 5.0,
+        "min": 3,
+        "max": 6,
+        "n": 4
+      },
+      "review_score": {
+        "median": 4.4,
+        "min": 4,
+        "max": 4.6,
+        "n": 4
+      },
+      "commits": {
+        "median": 8.0,
+        "min": 6,
+        "max": 8,
+        "n": 4
+      },
+      "code_lines": {
+        "median": 21.0,
+        "min": 10,
+        "max": 33,
+        "n": 4
+      },
+      "test_lines": {
+        "median": 208.0,
+        "min": 122,
+        "max": 250,
+        "n": 4
+      },
+      "spec_lines": {
+        "median": 10.0,
+        "min": 9,
+        "max": 19,
+        "n": 4
+      },
+      "doc_lines": {
+        "median": 8.0,
+        "min": 8,
+        "max": 10,
+        "n": 4
+      },
+      "plan_lines": {
+        "median": 72.5,
+        "min": 39,
+        "max": 109,
+        "n": 4
+      },
+      "other_lines": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 4
+      },
+      "outside_access": {
+        "median": 1.5,
+        "min": 0,
+        "max": 33,
+        "n": 4
+      },
+      "denied_actions": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 4
+      },
+      "runs": [
+        "i4-codex-auto-1",
+        "i4-haiku-1",
+        "i4-hermes-auto-1",
+        "i4-sonnet-1"
+      ],
+      "verify_passed": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "mergeable": [
+        "yes",
+        "after-fixes",
+        "yes",
+        "yes"
+      ]
+    },
+    "ideal-v5": {
+      "cost_usd": {
+        "median": 1.47,
+        "min": 1.46,
+        "max": 4.96,
+        "n": 3
+      },
+      "wall_min": {
+        "median": 19.3,
+        "min": 10.0,
+        "max": 26.6,
+        "n": 3
+      },
+      "turns": {
+        "median": 86,
+        "min": 46,
+        "max": 128,
+        "n": 3
+      },
+      "subagent_runs": {
+        "median": 2,
+        "min": 2,
+        "max": 3,
+        "n": 3
+      },
+      "output_tokens": {
+        "median": 79416,
+        "min": 47404,
+        "max": 265947,
+        "n": 3
+      },
+      "cache_read_tokens": {
+        "median": 7003916,
+        "min": 3703347,
+        "max": 15410559,
+        "n": 3
+      },
+      "cache_write_tokens": {
+        "median": 308946,
+        "min": 186633,
+        "max": 548318,
+        "n": 3
+      },
+      "orchestrator_cache_read": {
+        "median": 5449240,
+        "min": 3099621,
+        "max": 11012825,
+        "n": 3
+      },
+      "subagent_cache_read": {
+        "median": 1388762,
+        "min": 603726,
+        "max": 4397734,
+        "n": 3
+      },
+      "orchestrator_cache_write": {
+        "median": 142611,
+        "min": 108332,
+        "max": 246931,
+        "n": 3
+      },
+      "subagent_cache_write": {
+        "median": 159852,
+        "min": 78301,
+        "max": 301387,
+        "n": 3
+      },
+      "hidden_refusal": {
+        "median": 108,
+        "min": 108,
+        "max": 108,
+        "n": 3
+      },
+      "hidden_allowed": {
+        "median": 24,
+        "min": 24,
+        "max": 24,
+        "n": 3
+      },
+      "hidden_passed": {
+        "median": 132,
+        "min": 132,
+        "max": 132,
+        "n": 3
+      },
+      "hidden_failed": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 3
+      },
+      "pytest_passed": {
+        "median": 966,
+        "min": 952,
+        "max": 997,
+        "n": 3
+      },
+      "mutants_killed": {
+        "median": 5,
+        "min": 5,
+        "max": 5,
+        "n": 3
+      },
+      "review_high": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 3
+      },
+      "review_medium": {
+        "median": 0,
+        "min": 0,
+        "max": 1,
+        "n": 3
+      },
+      "review_low": {
+        "median": 4,
+        "min": 4,
+        "max": 5,
+        "n": 3
+      },
+      "review_score": {
+        "median": 4.2,
+        "min": 4,
+        "max": 4.2,
+        "n": 3
+      },
+      "commits": {
+        "median": 8,
+        "min": 8,
+        "max": 8,
+        "n": 3
+      },
+      "code_lines": {
+        "median": 16,
+        "min": 13,
+        "max": 18,
+        "n": 3
+      },
+      "test_lines": {
+        "median": 232,
+        "min": 188,
+        "max": 274,
+        "n": 3
+      },
+      "spec_lines": {
+        "median": 16,
+        "min": 10,
+        "max": 20,
+        "n": 3
+      },
+      "doc_lines": {
+        "median": 8,
+        "min": 8,
+        "max": 12,
+        "n": 3
+      },
+      "plan_lines": {
+        "median": 43,
+        "min": 37,
+        "max": 55,
+        "n": 3
+      },
+      "other_lines": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 3
+      },
+      "outside_access": {
+        "median": 0,
+        "min": 0,
+        "max": 12,
+        "n": 3
+      },
+      "denied_actions": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 3
+      },
+      "runs": [
+        "i5-haiku-1",
+        "i5-opus-1",
+        "i5-sonnet-1"
+      ],
+      "verify_passed": [
+        true,
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true,
+        true
+      ],
+      "mergeable": [
+        "yes",
+        "yes",
+        "after-fixes"
+      ]
+    },
+    "mp3": {
+      "cost_usd": {
+        "median": 5.77,
+        "min": 5.5,
+        "max": 6.04,
+        "n": 2
+      },
+      "wall_min": {
+        "median": 22.0,
+        "min": 21.2,
+        "max": 22.8,
+        "n": 2
+      },
+      "turns": {
+        "median": 46.5,
+        "min": 36,
+        "max": 57,
+        "n": 2
+      },
+      "subagent_runs": {
+        "median": 9.5,
+        "min": 9,
+        "max": 10,
+        "n": 2
+      },
+      "output_tokens": {
+        "median": 102513.0,
+        "min": 97802,
+        "max": 107224,
+        "n": 2
+      },
+      "cache_read_tokens": {
+        "median": 6444249.5,
+        "min": 6347273,
+        "max": 6541226,
+        "n": 2
+      },
+      "cache_write_tokens": {
+        "median": 423279.0,
+        "min": 391855,
+        "max": 454703,
+        "n": 2
+      },
+      "orchestrator_cache_read": {
+        "median": 2959692.5,
+        "min": 2580852,
+        "max": 3338533,
+        "n": 2
+      },
+      "subagent_cache_read": {
+        "median": 3147910.5,
+        "min": 2704234,
+        "max": 3591587,
+        "n": 2
+      },
+      "orchestrator_cache_write": {
+        "median": 104225.5,
+        "min": 103551,
+        "max": 104900,
+        "n": 2
+      },
+      "subagent_cache_write": {
+        "median": 306621.0,
+        "min": 278047,
+        "max": 335195,
+        "n": 2
+      },
+      "hidden_refusal": {
+        "median": 108.0,
+        "min": 108,
+        "max": 108,
+        "n": 2
+      },
+      "hidden_allowed": {
+        "median": 24.0,
+        "min": 24,
+        "max": 24,
+        "n": 2
+      },
+      "hidden_passed": {
+        "median": 132.0,
+        "min": 132,
+        "max": 132,
+        "n": 2
+      },
+      "hidden_failed": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "pytest_passed": {
+        "median": 983.5,
+        "min": 869,
+        "max": 1098,
+        "n": 2
+      },
+      "mutants_killed": {
+        "median": 5.0,
+        "min": 5,
+        "max": 5,
+        "n": 2
+      },
+      "review_high": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "review_medium": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "review_low": {
+        "median": 5.0,
+        "min": 4,
+        "max": 6,
+        "n": 2
+      },
+      "review_score": {
+        "median": 4.2,
+        "min": 4,
+        "max": 4.4,
+        "n": 2
+      },
+      "commits": {
+        "median": 8.5,
+        "min": 8,
+        "max": 9,
+        "n": 2
+      },
+      "code_lines": {
+        "median": 20.5,
+        "min": 19,
+        "max": 22,
+        "n": 2
+      },
+      "test_lines": {
+        "median": 410.0,
+        "min": 224,
+        "max": 596,
+        "n": 2
+      },
+      "spec_lines": {
+        "median": 8.0,
+        "min": 8,
+        "max": 8,
+        "n": 2
+      },
+      "doc_lines": {
+        "median": 8.0,
+        "min": 8,
+        "max": 8,
+        "n": 2
+      },
+      "plan_lines": {
+        "median": 29.5,
+        "min": 25,
+        "max": 34,
+        "n": 2
+      },
+      "other_lines": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "outside_access": {
+        "median": 3.0,
+        "min": 3,
+        "max": 3,
+        "n": 2
+      },
+      "denied_actions": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "runs": [
+        "r1-mp3",
+        "r2-mp3"
+      ],
+      "verify_passed": [
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true
+      ],
+      "mergeable": [
+        "yes",
+        "yes"
+      ]
+    },
+    "mp4": {
+      "cost_usd": {
+        "median": 8.97,
+        "min": 7.26,
+        "max": 9.23,
+        "n": 3
+      },
+      "wall_min": {
+        "median": 30.0,
+        "min": 27.0,
+        "max": 30.5,
+        "n": 3
+      },
+      "turns": {
+        "median": 57,
+        "min": 43,
+        "max": 57,
+        "n": 3
+      },
+      "subagent_runs": {
+        "median": 9,
+        "min": 8,
+        "max": 10,
+        "n": 3
+      },
+      "output_tokens": {
+        "median": 159822,
+        "min": 123719,
+        "max": 172688,
+        "n": 3
+      },
+      "cache_read_tokens": {
+        "median": 11015554,
+        "min": 9239047,
+        "max": 11310394,
+        "n": 3
+      },
+      "cache_write_tokens": {
+        "median": 626468,
+        "min": 504025,
+        "max": 629103,
+        "n": 3
+      },
+      "orchestrator_cache_read": {
+        "median": 4569018,
+        "min": 3268157,
+        "max": 4577960,
+        "n": 3
+      },
+      "subagent_cache_read": {
+        "median": 6446536,
+        "min": 4661087,
+        "max": 7685073,
+        "n": 3
+      },
+      "orchestrator_cache_write": {
+        "median": 138628,
+        "min": 125463,
+        "max": 141961,
+        "n": 3
+      },
+      "subagent_cache_write": {
+        "median": 487142,
+        "min": 365397,
+        "max": 488397,
+        "n": 3
+      },
+      "hidden_refusal": {
+        "median": 108,
+        "min": 108,
+        "max": 108,
+        "n": 3
+      },
+      "hidden_allowed": {
+        "median": 24,
+        "min": 24,
+        "max": 24,
+        "n": 3
+      },
+      "hidden_passed": {
+        "median": 132,
+        "min": 132,
+        "max": 132,
+        "n": 3
+      },
+      "hidden_failed": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 3
+      },
+      "pytest_passed": {
+        "median": 862,
+        "min": 853,
+        "max": 878,
+        "n": 3
+      },
+      "mutants_killed": {
+        "median": 5,
+        "min": 5,
+        "max": 5,
+        "n": 3
+      },
+      "review_high": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 3
+      },
+      "review_medium": {
+        "median": 0,
+        "min": 0,
+        "max": 1,
+        "n": 3
+      },
+      "review_low": {
+        "median": 4,
+        "min": 4,
+        "max": 5,
+        "n": 3
+      },
+      "review_score": {
+        "median": 4.2,
+        "min": 4.2,
+        "max": 4.2,
+        "n": 3
+      },
+      "commits": {
+        "median": 11,
+        "min": 10,
+        "max": 12,
+        "n": 3
+      },
+      "code_lines": {
+        "median": 18,
+        "min": 16,
+        "max": 18,
+        "n": 3
+      },
+      "test_lines": {
+        "median": 240,
+        "min": 204,
+        "max": 284,
+        "n": 3
+      },
+      "spec_lines": {
+        "median": 10,
+        "min": 10,
+        "max": 12,
+        "n": 3
+      },
+      "doc_lines": {
+        "median": 8,
+        "min": 8,
+        "max": 8,
+        "n": 3
+      },
+      "plan_lines": {
+        "median": 66,
+        "min": 53,
+        "max": 75,
+        "n": 3
+      },
+      "other_lines": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 3
+      },
+      "outside_access": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 3
+      },
+      "denied_actions": {
+        "median": 1,
+        "min": 1,
+        "max": 2,
+        "n": 3
+      },
+      "runs": [
+        "r1-mp4",
+        "r2-mp4",
+        "r3-mp4"
+      ],
+      "verify_passed": [
+        true,
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true,
+        true
+      ],
+      "mergeable": [
+        "yes",
+        "yes",
+        "after-fixes"
+      ]
+    },
+    "mp4-haiku": {
+      "cost_usd": {
+        "median": 0.97,
+        "min": 0.97,
+        "max": 0.97,
+        "n": 1
+      },
+      "wall_min": {
+        "median": 18.2,
+        "min": 18.2,
+        "max": 18.2,
+        "n": 1
+      },
+      "turns": {
+        "median": 109,
+        "min": 109,
+        "max": 109,
+        "n": 1
+      },
+      "subagent_runs": {
+        "median": 3,
+        "min": 3,
+        "max": 3,
+        "n": 1
+      },
+      "output_tokens": {
+        "median": 163758,
+        "min": 163758,
+        "max": 163758,
+        "n": 1
+      },
+      "cache_read_tokens": {
+        "median": 15794094,
+        "min": 15794094,
+        "max": 15794094,
+        "n": 1
+      },
+      "cache_write_tokens": {
+        "median": 443050,
+        "min": 443050,
+        "max": 443050,
+        "n": 1
+      },
+      "orchestrator_cache_read": {
+        "median": 11462548,
+        "min": 11462548,
+        "max": 11462548,
+        "n": 1
+      },
+      "subagent_cache_read": {
+        "median": 4331546,
+        "min": 4331546,
+        "max": 4331546,
+        "n": 1
+      },
+      "orchestrator_cache_write": {
+        "median": 164083,
+        "min": 164083,
+        "max": 164083,
+        "n": 1
+      },
+      "subagent_cache_write": {
+        "median": 278967,
+        "min": 278967,
+        "max": 278967,
+        "n": 1
+      },
+      "hidden_refusal": {
+        "median": 108,
+        "min": 108,
+        "max": 108,
+        "n": 1
+      },
+      "hidden_allowed": {
+        "median": 24,
+        "min": 24,
+        "max": 24,
+        "n": 1
+      },
+      "hidden_passed": {
+        "median": 132,
+        "min": 132,
+        "max": 132,
+        "n": 1
+      },
+      "hidden_failed": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "pytest_passed": {
+        "median": 1076,
+        "min": 1076,
+        "max": 1076,
+        "n": 1
+      },
+      "mutants_killed": {
+        "median": 5,
+        "min": 5,
+        "max": 5,
+        "n": 1
+      },
+      "review_high": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "review_medium": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "review_low": {
+        "median": 7,
+        "min": 7,
+        "max": 7,
+        "n": 1
+      },
+      "review_score": {
+        "median": 4.2,
+        "min": 4.2,
+        "max": 4.2,
+        "n": 1
+      },
+      "commits": {
+        "median": 7,
+        "min": 7,
+        "max": 7,
+        "n": 1
+      },
+      "code_lines": {
+        "median": 19,
+        "min": 19,
+        "max": 19,
+        "n": 1
+      },
+      "test_lines": {
+        "median": 250,
+        "min": 250,
+        "max": 250,
+        "n": 1
+      },
+      "spec_lines": {
+        "median": 5,
+        "min": 5,
+        "max": 5,
+        "n": 1
+      },
+      "doc_lines": {
+        "median": 8,
+        "min": 8,
+        "max": 8,
+        "n": 1
+      },
+      "plan_lines": {
+        "median": 44,
+        "min": 44,
+        "max": 44,
+        "n": 1
+      },
+      "other_lines": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "outside_access": {
+        "median": 3,
+        "min": 3,
+        "max": 3,
+        "n": 1
+      },
+      "denied_actions": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "runs": [
+        "ref-haiku-mp4-1"
+      ],
+      "verify_passed": [
+        true
+      ],
+      "spec_first": [
+        true
+      ],
+      "mergeable": [
+        "yes"
+      ]
+    },
+    "mp4-inherit": {
+      "cost_usd": {
+        "median": 0.26,
+        "min": 0.19,
+        "max": 0.33,
+        "n": 2
+      },
+      "wall_min": {
+        "median": 41.85,
+        "min": 16.2,
+        "max": 67.5,
+        "n": 2
+      },
+      "turns": {
+        "median": 37.5,
+        "min": 1,
+        "max": 74,
+        "n": 2
+      },
+      "subagent_runs": {
+        "median": 3.5,
+        "min": 2,
+        "max": 5,
+        "n": 2
+      },
+      "output_tokens": {
+        "median": 204633.5,
+        "min": 97868,
+        "max": 311399,
+        "n": 2
+      },
+      "cache_read_tokens": {
+        "median": 17403519.5,
+        "min": 15426446,
+        "max": 19380593,
+        "n": 2
+      },
+      "cache_write_tokens": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "orchestrator_cache_read": null,
+      "subagent_cache_read": null,
+      "orchestrator_cache_write": null,
+      "subagent_cache_write": null,
+      "hidden_refusal": {
+        "median": 108.0,
+        "min": 108,
+        "max": 108,
+        "n": 2
+      },
+      "hidden_allowed": {
+        "median": 24.0,
+        "min": 24,
+        "max": 24,
+        "n": 2
+      },
+      "hidden_passed": {
+        "median": 132.0,
+        "min": 132,
+        "max": 132,
+        "n": 2
+      },
+      "hidden_failed": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "pytest_passed": {
+        "median": 826.5,
+        "min": 820,
+        "max": 833,
+        "n": 2
+      },
+      "mutants_killed": {
+        "median": 5.0,
+        "min": 5,
+        "max": 5,
+        "n": 2
+      },
+      "review_high": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "review_medium": {
+        "median": 0.5,
+        "min": 0,
+        "max": 1,
+        "n": 2
+      },
+      "review_low": {
+        "median": 5.0,
+        "min": 5,
+        "max": 5,
+        "n": 2
+      },
+      "review_score": {
+        "median": 4.1,
+        "min": 4,
+        "max": 4.2,
+        "n": 2
+      },
+      "commits": {
+        "median": 6.5,
+        "min": 3,
+        "max": 10,
+        "n": 2
+      },
+      "code_lines": {
+        "median": 14.5,
+        "min": 13,
+        "max": 16,
+        "n": 2
+      },
+      "test_lines": {
+        "median": 128.0,
+        "min": 103,
+        "max": 153,
+        "n": 2
+      },
+      "spec_lines": {
+        "median": 9.0,
+        "min": 8,
+        "max": 10,
+        "n": 2
+      },
+      "doc_lines": {
+        "median": 8.0,
+        "min": 8,
+        "max": 8,
+        "n": 2
+      },
+      "plan_lines": {
+        "median": 45.0,
+        "min": 32,
+        "max": 58,
+        "n": 2
+      },
+      "other_lines": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "outside_access": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "denied_actions": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "runs": [
+        "ref-codex-mp4-1",
+        "ref-hermes-mp4-1"
+      ],
+      "verify_passed": [
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true
+      ],
+      "mergeable": [
+        "after-fixes",
+        "yes"
+      ]
+    },
+    "mp4-sonnet": {
+      "cost_usd": {
+        "median": 2.245,
+        "min": 1.99,
+        "max": 2.5,
+        "n": 2
+      },
+      "wall_min": {
+        "median": 14.3,
+        "min": 12.4,
+        "max": 16.2,
+        "n": 2
+      },
+      "turns": {
+        "median": 36.0,
+        "min": 35,
+        "max": 37,
+        "n": 2
+      },
+      "subagent_runs": {
+        "median": 5.0,
+        "min": 4,
+        "max": 6,
+        "n": 2
+      },
+      "output_tokens": {
+        "median": 82154.5,
+        "min": 71735,
+        "max": 92574,
+        "n": 2
+      },
+      "cache_read_tokens": {
+        "median": 4458777.0,
+        "min": 3904798,
+        "max": 5012756,
+        "n": 2
+      },
+      "cache_write_tokens": {
+        "median": 323830.0,
+        "min": 283953,
+        "max": 363707,
+        "n": 2
+      },
+      "orchestrator_cache_read": {
+        "median": 2305569.0,
+        "min": 2206040,
+        "max": 2405098,
+        "n": 2
+      },
+      "subagent_cache_read": {
+        "median": 2153208.0,
+        "min": 1698758,
+        "max": 2607658,
+        "n": 2
+      },
+      "orchestrator_cache_write": {
+        "median": 112460.5,
+        "min": 110076,
+        "max": 114845,
+        "n": 2
+      },
+      "subagent_cache_write": {
+        "median": 211369.5,
+        "min": 169108,
+        "max": 253631,
+        "n": 2
+      },
+      "hidden_refusal": {
+        "median": 108.0,
+        "min": 108,
+        "max": 108,
+        "n": 2
+      },
+      "hidden_allowed": {
+        "median": 24.0,
+        "min": 24,
+        "max": 24,
+        "n": 2
+      },
+      "hidden_passed": {
+        "median": 132.0,
+        "min": 132,
+        "max": 132,
+        "n": 2
+      },
+      "hidden_failed": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "pytest_passed": {
+        "median": 1069.5,
+        "min": 1010,
+        "max": 1129,
+        "n": 2
+      },
+      "mutants_killed": {
+        "median": 5.0,
+        "min": 5,
+        "max": 5,
+        "n": 2
+      },
+      "review_high": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "review_medium": {
+        "median": 0.5,
+        "min": 0,
+        "max": 1,
+        "n": 2
+      },
+      "review_low": {
+        "median": 4.5,
+        "min": 4,
+        "max": 5,
+        "n": 2
+      },
+      "review_score": {
+        "median": 4.3,
+        "min": 4,
+        "max": 4.6,
+        "n": 2
+      },
+      "commits": {
+        "median": 7.0,
+        "min": 4,
+        "max": 10,
+        "n": 2
+      },
+      "code_lines": {
+        "median": 15.0,
+        "min": 14,
+        "max": 16,
+        "n": 2
+      },
+      "test_lines": {
+        "median": 363.0,
+        "min": 345,
+        "max": 381,
+        "n": 2
+      },
+      "spec_lines": {
+        "median": 11.0,
+        "min": 10,
+        "max": 12,
+        "n": 2
+      },
+      "doc_lines": {
+        "median": 8.0,
+        "min": 8,
+        "max": 8,
+        "n": 2
+      },
+      "plan_lines": {
+        "median": 45.0,
+        "min": 42,
+        "max": 48,
+        "n": 2
+      },
+      "other_lines": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "outside_access": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "denied_actions": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "runs": [
+        "r1-mp4-sonnet",
+        "r2-mp4-sonnet"
+      ],
+      "verify_passed": [
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true
+      ],
+      "mergeable": [
+        "yes",
+        "after-fixes"
+      ]
+    },
+    "mp4-sonnet-builder": {
+      "cost_usd": {
+        "median": 5.725,
+        "min": 4.17,
+        "max": 7.28,
+        "n": 2
+      },
+      "wall_min": {
+        "median": 22.1,
+        "min": 17.2,
+        "max": 27.0,
+        "n": 2
+      },
+      "turns": {
+        "median": 47.5,
+        "min": 34,
+        "max": 61,
+        "n": 2
+      },
+      "subagent_runs": {
+        "median": 8.5,
+        "min": 6,
+        "max": 11,
+        "n": 2
+      },
+      "output_tokens": {
+        "median": 124844.0,
+        "min": 91418,
+        "max": 158270,
+        "n": 2
+      },
+      "cache_read_tokens": {
+        "median": 7263497.0,
+        "min": 5129434,
+        "max": 9397560,
+        "n": 2
+      },
+      "cache_write_tokens": {
+        "median": 487725.5,
+        "min": 378022,
+        "max": 597429,
+        "n": 2
+      },
+      "orchestrator_cache_read": {
+        "median": 3184632.0,
+        "min": 2067757,
+        "max": 4301507,
+        "n": 2
+      },
+      "subagent_cache_read": {
+        "median": 3903675.5,
+        "min": 2793412,
+        "max": 5013939,
+        "n": 2
+      },
+      "orchestrator_cache_write": {
+        "median": 118414.0,
+        "min": 108864,
+        "max": 127964,
+        "n": 2
+      },
+      "subagent_cache_write": {
+        "median": 359924.0,
+        "min": 255364,
+        "max": 464484,
+        "n": 2
+      },
+      "hidden_refusal": {
+        "median": 108.0,
+        "min": 108,
+        "max": 108,
+        "n": 2
+      },
+      "hidden_allowed": {
+        "median": 24.0,
+        "min": 24,
+        "max": 24,
+        "n": 2
+      },
+      "hidden_passed": {
+        "median": 132.0,
+        "min": 132,
+        "max": 132,
+        "n": 2
+      },
+      "hidden_failed": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "pytest_passed": {
+        "median": 857.5,
+        "min": 852,
+        "max": 863,
+        "n": 2
+      },
+      "mutants_killed": {
+        "median": 5.0,
+        "min": 5,
+        "max": 5,
+        "n": 2
+      },
+      "review_high": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "review_medium": {
+        "median": 1.0,
+        "min": 1,
+        "max": 1,
+        "n": 2
+      },
+      "review_low": {
+        "median": 3.0,
+        "min": 3,
+        "max": 3,
+        "n": 2
+      },
+      "review_score": {
+        "median": 4.2,
+        "min": 4,
+        "max": 4.4,
+        "n": 2
+      },
+      "commits": {
+        "median": 9.5,
+        "min": 7,
+        "max": 12,
+        "n": 2
+      },
+      "code_lines": {
+        "median": 18.5,
+        "min": 12,
+        "max": 25,
+        "n": 2
+      },
+      "test_lines": {
+        "median": 344.5,
+        "min": 332,
+        "max": 357,
+        "n": 2
+      },
+      "spec_lines": {
+        "median": 8.5,
+        "min": 8,
+        "max": 9,
+        "n": 2
+      },
+      "doc_lines": {
+        "median": 9.0,
+        "min": 8,
+        "max": 10,
+        "n": 2
+      },
+      "plan_lines": {
+        "median": 60.5,
+        "min": 53,
+        "max": 68,
+        "n": 2
+      },
+      "other_lines": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "outside_access": {
+        "median": 6.0,
+        "min": 3,
+        "max": 9,
+        "n": 2
+      },
+      "denied_actions": {
+        "median": 0.5,
+        "min": 0,
+        "max": 1,
+        "n": 2
+      },
+      "runs": [
+        "r1-mp4-sonnet-builder",
+        "r2-mp4-sonnet-builder"
+      ],
+      "verify_passed": [
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true
+      ],
+      "mergeable": [
+        "after-fixes",
+        "after-fixes"
+      ]
+    },
+    "ponytail": {
+      "cost_usd": {
+        "median": 4.535,
+        "min": 3.93,
+        "max": 5.14,
+        "n": 2
+      },
+      "wall_min": {
+        "median": 16.7,
+        "min": 13.2,
+        "max": 20.2,
+        "n": 2
+      },
+      "turns": {
+        "median": 34.5,
+        "min": 30,
+        "max": 39,
+        "n": 2
+      },
+      "subagent_runs": {
+        "median": 6.0,
+        "min": 6,
+        "max": 6,
+        "n": 2
+      },
+      "output_tokens": {
+        "median": 80097.5,
+        "min": 69189,
+        "max": 91006,
+        "n": 2
+      },
+      "cache_read_tokens": {
+        "median": 5053516.5,
+        "min": 3895841,
+        "max": 6211192,
+        "n": 2
+      },
+      "cache_write_tokens": {
+        "median": 326782.0,
+        "min": 292596,
+        "max": 360968,
+        "n": 2
+      },
+      "orchestrator_cache_read": {
+        "median": 2103085.5,
+        "min": 1895560,
+        "max": 2310611,
+        "n": 2
+      },
+      "subagent_cache_read": {
+        "median": 2701255.0,
+        "min": 1786735,
+        "max": 3615775,
+        "n": 2
+      },
+      "orchestrator_cache_write": {
+        "median": 96515.5,
+        "min": 91838,
+        "max": 101193,
+        "n": 2
+      },
+      "subagent_cache_write": {
+        "median": 223376.0,
+        "min": 187744,
+        "max": 259008,
+        "n": 2
+      },
+      "hidden_refusal": {
+        "median": 108.0,
+        "min": 108,
+        "max": 108,
+        "n": 2
+      },
+      "hidden_allowed": {
+        "median": 24.0,
+        "min": 24,
+        "max": 24,
+        "n": 2
+      },
+      "hidden_passed": {
+        "median": 132.0,
+        "min": 132,
+        "max": 132,
+        "n": 2
+      },
+      "hidden_failed": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "pytest_passed": {
+        "median": 844.5,
+        "min": 840,
+        "max": 849,
+        "n": 2
+      },
+      "mutants_killed": {
+        "median": 5.0,
+        "min": 5,
+        "max": 5,
+        "n": 2
+      },
+      "review_high": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "review_medium": {
+        "median": 0.5,
+        "min": 0,
+        "max": 1,
+        "n": 2
+      },
+      "review_low": {
+        "median": 4.0,
+        "min": 4,
+        "max": 4,
+        "n": 2
+      },
+      "review_score": {
+        "median": 4.300000000000001,
+        "min": 4.2,
+        "max": 4.4,
+        "n": 2
+      },
+      "commits": {
+        "median": 6.5,
+        "min": 5,
+        "max": 8,
+        "n": 2
+      },
+      "code_lines": {
+        "median": 13.0,
+        "min": 11,
+        "max": 15,
+        "n": 2
+      },
+      "test_lines": {
+        "median": 126.5,
+        "min": 124,
+        "max": 129,
+        "n": 2
+      },
+      "spec_lines": {
+        "median": 8.0,
+        "min": 8,
+        "max": 8,
+        "n": 2
+      },
+      "doc_lines": {
+        "median": 9.0,
+        "min": 8,
+        "max": 10,
+        "n": 2
+      },
+      "plan_lines": {
+        "median": 61.5,
+        "min": 56,
+        "max": 67,
+        "n": 2
+      },
+      "other_lines": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "outside_access": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "denied_actions": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "runs": [
+        "r1-ponytail",
+        "r2-ponytail"
+      ],
+      "verify_passed": [
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true
+      ],
+      "mergeable": [
+        "yes",
+        "after-fixes"
+      ]
+    },
+    "solo": {
+      "cost_usd": {
+        "median": 3.355,
+        "min": 3.27,
+        "max": 3.44,
+        "n": 2
+      },
+      "wall_min": {
+        "median": 12.6,
+        "min": 11.5,
+        "max": 13.7,
+        "n": 2
+      },
+      "turns": {
+        "median": 92.0,
+        "min": 84,
+        "max": 100,
+        "n": 2
+      },
+      "subagent_runs": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "output_tokens": {
+        "median": 46466.5,
+        "min": 46351,
+        "max": 46582,
+        "n": 2
+      },
+      "cache_read_tokens": {
+        "median": 6152419.0,
+        "min": 5932253,
+        "max": 6372585,
+        "n": 2
+      },
+      "cache_write_tokens": {
+        "median": 148940.0,
+        "min": 143594,
+        "max": 154286,
+        "n": 2
+      },
+      "orchestrator_cache_read": {
+        "median": 6152419.0,
+        "min": 5932253,
+        "max": 6372585,
+        "n": 2
+      },
+      "subagent_cache_read": null,
+      "orchestrator_cache_write": {
+        "median": 148940.0,
+        "min": 143594,
+        "max": 154286,
+        "n": 2
+      },
+      "subagent_cache_write": null,
+      "hidden_refusal": {
+        "median": 108.0,
+        "min": 108,
+        "max": 108,
+        "n": 2
+      },
+      "hidden_allowed": {
+        "median": 24.0,
+        "min": 24,
+        "max": 24,
+        "n": 2
+      },
+      "hidden_passed": {
+        "median": 132.0,
+        "min": 132,
+        "max": 132,
+        "n": 2
+      },
+      "hidden_failed": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "pytest_passed": {
+        "median": 885.0,
+        "min": 880,
+        "max": 890,
+        "n": 2
+      },
+      "mutants_killed": {
+        "median": 5.0,
+        "min": 5,
+        "max": 5,
+        "n": 2
+      },
+      "review_high": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "review_medium": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "review_low": {
+        "median": 4.0,
+        "min": 3,
+        "max": 5,
+        "n": 2
+      },
+      "review_score": {
+        "median": 4.4,
+        "min": 4.4,
+        "max": 4.4,
+        "n": 2
+      },
+      "commits": {
+        "median": 5.5,
+        "min": 5,
+        "max": 6,
+        "n": 2
+      },
+      "code_lines": {
+        "median": 12.5,
+        "min": 12,
+        "max": 13,
+        "n": 2
+      },
+      "test_lines": {
+        "median": 186.5,
+        "min": 180,
+        "max": 193,
+        "n": 2
+      },
+      "spec_lines": {
+        "median": 9.0,
+        "min": 8,
+        "max": 10,
+        "n": 2
+      },
+      "doc_lines": {
+        "median": 9.0,
+        "min": 8,
+        "max": 10,
+        "n": 2
+      },
+      "plan_lines": {
+        "median": 44.0,
+        "min": 42,
+        "max": 46,
+        "n": 2
+      },
+      "other_lines": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "outside_access": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "denied_actions": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "runs": [
+        "r1-solo",
+        "r2-solo"
+      ],
+      "verify_passed": [
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true
+      ],
+      "mergeable": [
+        "yes",
+        "yes"
+      ]
+    },
+    "spec-kit": {
+      "cost_usd": {
+        "median": 4.4,
+        "min": 3.96,
+        "max": 4.84,
+        "n": 2
+      },
+      "wall_min": {
+        "median": 11.95,
+        "min": 11.0,
+        "max": 12.9,
+        "n": 2
+      },
+      "turns": {
+        "median": 104.5,
+        "min": 94,
+        "max": 115,
+        "n": 2
+      },
+      "subagent_runs": {
+        "median": 0.5,
+        "min": 0,
+        "max": 1,
+        "n": 2
+      },
+      "output_tokens": {
+        "median": 62005.0,
+        "min": 56246,
+        "max": 67764,
+        "n": 2
+      },
+      "cache_read_tokens": {
+        "median": 8045296.5,
+        "min": 7326126,
+        "max": 8764467,
+        "n": 2
+      },
+      "cache_write_tokens": {
+        "median": 204264.0,
+        "min": 171233,
+        "max": 237295,
+        "n": 2
+      },
+      "orchestrator_cache_read": {
+        "median": 7895366.0,
+        "min": 7326126,
+        "max": 8464606,
+        "n": 2
+      },
+      "subagent_cache_read": {
+        "median": 299861,
+        "min": 299861,
+        "max": 299861,
+        "n": 1
+      },
+      "orchestrator_cache_write": {
+        "median": 176477.0,
+        "min": 171233,
+        "max": 181721,
+        "n": 2
+      },
+      "subagent_cache_write": {
+        "median": 55574,
+        "min": 55574,
+        "max": 55574,
+        "n": 1
+      },
+      "hidden_refusal": {
+        "median": 108.0,
+        "min": 108,
+        "max": 108,
+        "n": 2
+      },
+      "hidden_allowed": {
+        "median": 24.0,
+        "min": 24,
+        "max": 24,
+        "n": 2
+      },
+      "hidden_passed": {
+        "median": 132.0,
+        "min": 132,
+        "max": 132,
+        "n": 2
+      },
+      "hidden_failed": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "pytest_passed": {
+        "median": 854.0,
+        "min": 849,
+        "max": 859,
+        "n": 2
+      },
+      "mutants_killed": {
+        "median": 5.0,
+        "min": 5,
+        "max": 5,
+        "n": 2
+      },
+      "review_high": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "review_medium": {
+        "median": 0.5,
+        "min": 0,
+        "max": 1,
+        "n": 2
+      },
+      "review_low": {
+        "median": 3.5,
+        "min": 3,
+        "max": 4,
+        "n": 2
+      },
+      "review_score": {
+        "median": 4.300000000000001,
+        "min": 4.2,
+        "max": 4.4,
+        "n": 2
+      },
+      "commits": {
+        "median": 8.0,
+        "min": 7,
+        "max": 9,
+        "n": 2
+      },
+      "code_lines": {
+        "median": 13.5,
+        "min": 11,
+        "max": 16,
+        "n": 2
+      },
+      "test_lines": {
+        "median": 203.0,
+        "min": 195,
+        "max": 211,
+        "n": 2
+      },
+      "spec_lines": {
+        "median": 7.0,
+        "min": 6,
+        "max": 8,
+        "n": 2
+      },
+      "doc_lines": {
+        "median": 9.0,
+        "min": 8,
+        "max": 10,
+        "n": 2
+      },
+      "plan_lines": {
+        "median": 164.0,
+        "min": 0,
+        "max": 328,
+        "n": 2
+      },
+      "other_lines": {
+        "median": 256.5,
+        "min": 83,
+        "max": 430,
+        "n": 2
+      },
+      "outside_access": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "denied_actions": {
+        "median": 1.5,
+        "min": 1,
+        "max": 2,
+        "n": 2
+      },
+      "runs": [
+        "r1-spec-kit",
+        "r2-spec-kit"
+      ],
+      "verify_passed": [
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true
+      ],
+      "mergeable": [
+        "after-fixes",
+        "yes"
+      ]
+    },
+    "stack": {
+      "cost_usd": {
+        "median": 5.52,
+        "min": 5.16,
+        "max": 5.88,
+        "n": 2
+      },
+      "wall_min": {
+        "median": 19.95,
+        "min": 18.9,
+        "max": 21.0,
+        "n": 2
+      },
+      "turns": {
+        "median": 37.5,
+        "min": 34,
+        "max": 41,
+        "n": 2
+      },
+      "subagent_runs": {
+        "median": 6.0,
+        "min": 6,
+        "max": 6,
+        "n": 2
+      },
+      "output_tokens": {
+        "median": 97026.0,
+        "min": 91418,
+        "max": 102634,
+        "n": 2
+      },
+      "cache_read_tokens": {
+        "median": 6306274.0,
+        "min": 5978620,
+        "max": 6633928,
+        "n": 2
+      },
+      "cache_write_tokens": {
+        "median": 395860.0,
+        "min": 367359,
+        "max": 424361,
+        "n": 2
+      },
+      "orchestrator_cache_read": {
+        "median": 2640729.5,
+        "min": 2309176,
+        "max": 2972283,
+        "n": 2
+      },
+      "subagent_cache_read": {
+        "median": 3373392.5,
+        "min": 3357538,
+        "max": 3389247,
+        "n": 2
+      },
+      "orchestrator_cache_write": {
+        "median": 112167.5,
+        "min": 97709,
+        "max": 126626,
+        "n": 2
+      },
+      "subagent_cache_write": {
+        "median": 274836.0,
+        "min": 262881,
+        "max": 286791,
+        "n": 2
+      },
+      "hidden_refusal": {
+        "median": 108.0,
+        "min": 108,
+        "max": 108,
+        "n": 2
+      },
+      "hidden_allowed": {
+        "median": 24.0,
+        "min": 24,
+        "max": 24,
+        "n": 2
+      },
+      "hidden_passed": {
+        "median": 132.0,
+        "min": 132,
+        "max": 132,
+        "n": 2
+      },
+      "hidden_failed": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "pytest_passed": {
+        "median": 848.0,
+        "min": 846,
+        "max": 850,
+        "n": 2
+      },
+      "mutants_killed": {
+        "median": 5.0,
+        "min": 5,
+        "max": 5,
+        "n": 2
+      },
+      "review_high": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "review_medium": {
+        "median": 0.5,
+        "min": 0,
+        "max": 1,
+        "n": 2
+      },
+      "review_low": {
+        "median": 3.0,
+        "min": 3,
+        "max": 3,
+        "n": 2
+      },
+      "review_score": {
+        "median": 4.4,
+        "min": 4.2,
+        "max": 4.6,
+        "n": 2
+      },
+      "commits": {
+        "median": 8.5,
+        "min": 7,
+        "max": 10,
+        "n": 2
+      },
+      "code_lines": {
+        "median": 14.0,
+        "min": 13,
+        "max": 15,
+        "n": 2
+      },
+      "test_lines": {
+        "median": 170.0,
+        "min": 155,
+        "max": 185,
+        "n": 2
+      },
+      "spec_lines": {
+        "median": 10.0,
+        "min": 6,
+        "max": 14,
+        "n": 2
+      },
+      "doc_lines": {
+        "median": 8.0,
+        "min": 8,
+        "max": 8,
+        "n": 2
+      },
+      "plan_lines": {
+        "median": 74.0,
+        "min": 58,
+        "max": 90,
+        "n": 2
+      },
+      "other_lines": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "outside_access": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "denied_actions": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "runs": [
+        "r1-stack",
+        "r2-stack"
+      ],
+      "verify_passed": [
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true
+      ],
+      "mergeable": [
+        "yes",
+        "after-fixes"
+      ]
+    },
+    "superpowers": {
+      "cost_usd": {
+        "median": 4.145,
+        "min": 3.99,
+        "max": 4.3,
+        "n": 2
+      },
+      "wall_min": {
+        "median": 12.5,
+        "min": 11.2,
+        "max": 13.8,
+        "n": 2
+      },
+      "turns": {
+        "median": 101.5,
+        "min": 97,
+        "max": 106,
+        "n": 2
+      },
+      "subagent_runs": {
+        "median": 1.0,
+        "min": 1,
+        "max": 1,
+        "n": 2
+      },
+      "output_tokens": {
+        "median": 55433.5,
+        "min": 53188,
+        "max": 57679,
+        "n": 2
+      },
+      "cache_read_tokens": {
+        "median": 7591171.0,
+        "min": 7043669,
+        "max": 8138673,
+        "n": 2
+      },
+      "cache_write_tokens": {
+        "median": 213546.5,
+        "min": 213072,
+        "max": 214021,
+        "n": 2
+      },
+      "orchestrator_cache_read": {
+        "median": 6998168.5,
+        "min": 6440176,
+        "max": 7556161,
+        "n": 2
+      },
+      "subagent_cache_read": {
+        "median": 530714.5,
+        "min": 521295,
+        "max": 540134,
+        "n": 2
+      },
+      "orchestrator_cache_write": {
+        "median": 150277.5,
+        "min": 149836,
+        "max": 150719,
+        "n": 2
+      },
+      "subagent_cache_write": {
+        "median": 62288.0,
+        "min": 61217,
+        "max": 63359,
+        "n": 2
+      },
+      "hidden_refusal": {
+        "median": 108.0,
+        "min": 108,
+        "max": 108,
+        "n": 2
+      },
+      "hidden_allowed": {
+        "median": 24.0,
+        "min": 24,
+        "max": 24,
+        "n": 2
+      },
+      "hidden_passed": {
+        "median": 132.0,
+        "min": 132,
+        "max": 132,
+        "n": 2
+      },
+      "hidden_failed": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "pytest_passed": {
+        "median": 852.5,
+        "min": 845,
+        "max": 860,
+        "n": 2
+      },
+      "mutants_killed": {
+        "median": 5.0,
+        "min": 5,
+        "max": 5,
+        "n": 2
+      },
+      "review_high": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "review_medium": {
+        "median": 1.0,
+        "min": 0,
+        "max": 2,
+        "n": 2
+      },
+      "review_low": {
+        "median": 2.5,
+        "min": 2,
+        "max": 3,
+        "n": 2
+      },
+      "review_score": {
+        "median": 4.300000000000001,
+        "min": 4.2,
+        "max": 4.4,
+        "n": 2
+      },
+      "commits": {
+        "median": 7.0,
+        "min": 6,
+        "max": 8,
+        "n": 2
+      },
+      "code_lines": {
+        "median": 12.0,
+        "min": 10,
+        "max": 14,
+        "n": 2
+      },
+      "test_lines": {
+        "median": 154.0,
+        "min": 127,
+        "max": 181,
+        "n": 2
+      },
+      "spec_lines": {
+        "median": 8.0,
+        "min": 8,
+        "max": 8,
+        "n": 2
+      },
+      "doc_lines": {
+        "median": 8.0,
+        "min": 8,
+        "max": 8,
+        "n": 2
+      },
+      "plan_lines": {
+        "median": 107.0,
+        "min": 100,
+        "max": 114,
+        "n": 2
+      },
+      "other_lines": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "outside_access": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "denied_actions": {
+        "median": 1.0,
+        "min": 1,
+        "max": 1,
+        "n": 2
+      },
+      "runs": [
+        "r1-superpowers",
+        "r2-superpowers"
+      ],
+      "verify_passed": [
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true
+      ],
+      "mergeable": [
+        "after-fixes",
+        "yes"
+      ]
+    }
+  },
+  "2": {
+    "caveman": {
+      "cost_usd": {
+        "median": 10.85,
+        "min": 10.85,
+        "max": 10.85,
+        "n": 1
+      },
+      "wall_min": {
+        "median": 41.2,
+        "min": 41.2,
+        "max": 41.2,
+        "n": 1
+      },
+      "turns": {
+        "median": 50,
+        "min": 50,
+        "max": 50,
+        "n": 1
+      },
+      "subagent_runs": {
+        "median": 9,
+        "min": 9,
+        "max": 9,
+        "n": 1
+      },
+      "output_tokens": {
+        "median": 200198,
+        "min": 200198,
+        "max": 200198,
+        "n": 1
+      },
+      "cache_read_tokens": {
+        "median": 12788642,
+        "min": 12788642,
+        "max": 12788642,
+        "n": 1
+      },
+      "cache_write_tokens": {
+        "median": 766845,
+        "min": 766845,
+        "max": 766845,
+        "n": 1
+      },
+      "orchestrator_cache_read": {
+        "median": 3741383,
+        "min": 3741383,
+        "max": 3741383,
+        "n": 1
+      },
+      "subagent_cache_read": {
+        "median": 8697012,
+        "min": 8697012,
+        "max": 8697012,
+        "n": 1
+      },
+      "orchestrator_cache_write": {
+        "median": 150362,
+        "min": 150362,
+        "max": 150362,
+        "n": 1
+      },
+      "subagent_cache_write": {
+        "median": 612114,
+        "min": 612114,
+        "max": 612114,
+        "n": 1
+      },
+      "hidden_refusal": {
+        "median": 23,
+        "min": 23,
+        "max": 23,
+        "n": 1
+      },
+      "hidden_allowed": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 1
+      },
+      "hidden_passed": {
+        "median": 27,
+        "min": 27,
+        "max": 27,
+        "n": 1
+      },
+      "hidden_failed": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "pytest_passed": {
+        "median": 696,
+        "min": 696,
+        "max": 696,
+        "n": 1
+      },
+      "mutants_killed": {
+        "median": 5,
+        "min": 5,
+        "max": 5,
+        "n": 1
+      },
+      "review_high": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "review_medium": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "review_low": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 1
+      },
+      "review_score": {
+        "median": 4.2,
+        "min": 4.2,
+        "max": 4.2,
+        "n": 1
+      },
+      "commits": {
+        "median": 16,
+        "min": 16,
+        "max": 16,
+        "n": 1
+      },
+      "code_lines": {
+        "median": 138,
+        "min": 138,
+        "max": 138,
+        "n": 1
+      },
+      "test_lines": {
+        "median": 1143,
+        "min": 1143,
+        "max": 1143,
+        "n": 1
+      },
+      "spec_lines": {
+        "median": 19,
+        "min": 19,
+        "max": 19,
+        "n": 1
+      },
+      "doc_lines": {
+        "median": 30,
+        "min": 30,
+        "max": 30,
+        "n": 1
+      },
+      "plan_lines": {
+        "median": 96,
+        "min": 96,
+        "max": 96,
+        "n": 1
+      },
+      "other_lines": {
+        "median": 2,
+        "min": 2,
+        "max": 2,
+        "n": 1
+      },
+      "outside_access": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "denied_actions": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "runs": [
+        "t2-caveman-1"
+      ],
+      "verify_passed": [
+        true
+      ],
+      "spec_first": [
+        true
+      ],
+      "mergeable": [
+        "yes"
+      ]
+    },
+    "headroom": {
+      "cost_usd": {
+        "median": 12.55,
+        "min": 12.55,
+        "max": 12.55,
+        "n": 1
+      },
+      "wall_min": {
+        "median": 43.6,
+        "min": 43.6,
+        "max": 43.6,
+        "n": 1
+      },
+      "turns": {
+        "median": 62,
+        "min": 62,
+        "max": 62,
+        "n": 1
+      },
+      "subagent_runs": {
+        "median": 12,
+        "min": 12,
+        "max": 12,
+        "n": 1
+      },
+      "output_tokens": {
+        "median": 253360,
+        "min": 253360,
+        "max": 253360,
+        "n": 1
+      },
+      "cache_read_tokens": {
+        "median": 12964455,
+        "min": 12964455,
+        "max": 12964455,
+        "n": 1
+      },
+      "cache_write_tokens": {
+        "median": 868635,
+        "min": 868635,
+        "max": 868635,
+        "n": 1
+      },
+      "orchestrator_cache_read": {
+        "median": 5507914,
+        "min": 5507914,
+        "max": 5507914,
+        "n": 1
+      },
+      "subagent_cache_read": {
+        "median": 7096351,
+        "min": 7096351,
+        "max": 7096351,
+        "n": 1
+      },
+      "orchestrator_cache_write": {
+        "median": 181901,
+        "min": 181901,
+        "max": 181901,
+        "n": 1
+      },
+      "subagent_cache_write": {
+        "median": 679170,
+        "min": 679170,
+        "max": 679170,
+        "n": 1
+      },
+      "hidden_refusal": {
+        "median": 23,
+        "min": 23,
+        "max": 23,
+        "n": 1
+      },
+      "hidden_allowed": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 1
+      },
+      "hidden_passed": {
+        "median": 27,
+        "min": 27,
+        "max": 27,
+        "n": 1
+      },
+      "hidden_failed": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "pytest_passed": {
+        "median": 693,
+        "min": 693,
+        "max": 693,
+        "n": 1
+      },
+      "mutants_killed": {
+        "median": 5,
+        "min": 5,
+        "max": 5,
+        "n": 1
+      },
+      "review_high": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "review_medium": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "review_low": {
+        "median": 5,
+        "min": 5,
+        "max": 5,
+        "n": 1
+      },
+      "review_score": {
+        "median": 4.2,
+        "min": 4.2,
+        "max": 4.2,
+        "n": 1
+      },
+      "commits": {
+        "median": 16,
+        "min": 16,
+        "max": 16,
+        "n": 1
+      },
+      "code_lines": {
+        "median": 116,
+        "min": 116,
+        "max": 116,
+        "n": 1
+      },
+      "test_lines": {
+        "median": 1078,
+        "min": 1078,
+        "max": 1078,
+        "n": 1
+      },
+      "spec_lines": {
+        "median": 12,
+        "min": 12,
+        "max": 12,
+        "n": 1
+      },
+      "doc_lines": {
+        "median": 20,
+        "min": 20,
+        "max": 20,
+        "n": 1
+      },
+      "plan_lines": {
+        "median": 114,
+        "min": 114,
+        "max": 114,
+        "n": 1
+      },
+      "other_lines": {
+        "median": 2,
+        "min": 2,
+        "max": 2,
+        "n": 1
+      },
+      "outside_access": {
+        "median": 3,
+        "min": 3,
+        "max": 3,
+        "n": 1
+      },
+      "denied_actions": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "runs": [
+        "t2-headroom-1"
+      ],
+      "verify_passed": [
+        true
+      ],
+      "spec_first": [
+        true
+      ],
+      "mergeable": [
+        "yes"
+      ]
+    },
+    "ideal-v1": {
+      "cost_usd": {
+        "median": 6.35,
+        "min": 6.35,
+        "max": 6.35,
+        "n": 1
+      },
+      "wall_min": {
+        "median": 24.7,
+        "min": 24.7,
+        "max": 24.7,
+        "n": 1
+      },
+      "turns": {
+        "median": 67,
+        "min": 67,
+        "max": 67,
+        "n": 1
+      },
+      "subagent_runs": {
+        "median": 3,
+        "min": 3,
+        "max": 3,
+        "n": 1
+      },
+      "output_tokens": {
+        "median": 113397,
+        "min": 113397,
+        "max": 113397,
+        "n": 1
+      },
+      "cache_read_tokens": {
+        "median": 8751207,
+        "min": 8751207,
+        "max": 8751207,
+        "n": 1
+      },
+      "cache_write_tokens": {
+        "median": 355211,
+        "min": 355211,
+        "max": 355211,
+        "n": 1
+      },
+      "orchestrator_cache_read": {
+        "median": 7079819,
+        "min": 7079819,
+        "max": 7079819,
+        "n": 1
+      },
+      "subagent_cache_read": {
+        "median": 1501717,
+        "min": 1501717,
+        "max": 1501717,
+        "n": 1
+      },
+      "orchestrator_cache_write": {
+        "median": 186338,
+        "min": 186338,
+        "max": 186338,
+        "n": 1
+      },
+      "subagent_cache_write": {
+        "median": 161033,
+        "min": 161033,
+        "max": 161033,
+        "n": 1
+      },
+      "hidden_refusal": {
+        "median": 23,
+        "min": 23,
+        "max": 23,
+        "n": 1
+      },
+      "hidden_allowed": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 1
+      },
+      "hidden_passed": {
+        "median": 27,
+        "min": 27,
+        "max": 27,
+        "n": 1
+      },
+      "hidden_failed": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "pytest_passed": {
+        "median": 668,
+        "min": 668,
+        "max": 668,
+        "n": 1
+      },
+      "mutants_killed": {
+        "median": 5,
+        "min": 5,
+        "max": 5,
+        "n": 1
+      },
+      "review_high": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "review_medium": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "review_low": {
+        "median": 5,
+        "min": 5,
+        "max": 5,
+        "n": 1
+      },
+      "review_score": {
+        "median": 4.4,
+        "min": 4.4,
+        "max": 4.4,
+        "n": 1
+      },
+      "commits": {
+        "median": 14,
+        "min": 14,
+        "max": 14,
+        "n": 1
+      },
+      "code_lines": {
+        "median": 103,
+        "min": 103,
+        "max": 103,
+        "n": 1
+      },
+      "test_lines": {
+        "median": 1008,
+        "min": 1008,
+        "max": 1008,
+        "n": 1
+      },
+      "spec_lines": {
+        "median": 10,
+        "min": 10,
+        "max": 10,
+        "n": 1
+      },
+      "doc_lines": {
+        "median": 22,
+        "min": 22,
+        "max": 22,
+        "n": 1
+      },
+      "plan_lines": {
+        "median": 63,
+        "min": 63,
+        "max": 63,
+        "n": 1
+      },
+      "other_lines": {
+        "median": 2,
+        "min": 2,
+        "max": 2,
+        "n": 1
+      },
+      "outside_access": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "denied_actions": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "runs": [
+        "t2-ideal-v1-opus-1"
+      ],
+      "verify_passed": [
+        true
+      ],
+      "spec_first": [
+        true
+      ],
+      "mergeable": [
+        "yes"
+      ]
+    },
+    "ideal-v5": {
+      "cost_usd": {
+        "median": 4.115,
+        "min": 2.18,
+        "max": 6.0,
+        "n": 4
+      },
+      "wall_min": {
+        "median": 19.05,
+        "min": 14.4,
+        "max": 29.1,
+        "n": 4
+      },
+      "turns": {
+        "median": 78.5,
+        "min": 47,
+        "max": 178,
+        "n": 4
+      },
+      "subagent_runs": {
+        "median": 2.5,
+        "min": 2,
+        "max": 3,
+        "n": 4
+      },
+      "output_tokens": {
+        "median": 103751.0,
+        "min": 87961,
+        "max": 293559,
+        "n": 4
+      },
+      "cache_read_tokens": {
+        "median": 8624902.0,
+        "min": 5181768,
+        "max": 29274067,
+        "n": 4
+      },
+      "cache_write_tokens": {
+        "median": 335895.5,
+        "min": 266298,
+        "max": 536964,
+        "n": 4
+      },
+      "orchestrator_cache_read": {
+        "median": 6673377.0,
+        "min": 4482050,
+        "max": 26859572,
+        "n": 4
+      },
+      "subagent_cache_read": {
+        "median": 1776435.0,
+        "min": 699718,
+        "max": 2414495,
+        "n": 4
+      },
+      "orchestrator_cache_write": {
+        "median": 163143.5,
+        "min": 148867,
+        "max": 300042,
+        "n": 4
+      },
+      "subagent_cache_write": {
+        "median": 167726.0,
+        "min": 117431,
+        "max": 236922,
+        "n": 4
+      },
+      "hidden_refusal": {
+        "median": 23.0,
+        "min": 23,
+        "max": 23,
+        "n": 4
+      },
+      "hidden_allowed": {
+        "median": 4.0,
+        "min": 4,
+        "max": 4,
+        "n": 4
+      },
+      "hidden_passed": {
+        "median": 27.0,
+        "min": 27,
+        "max": 27,
+        "n": 4
+      },
+      "hidden_failed": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 4
+      },
+      "pytest_passed": {
+        "median": 692.0,
+        "min": 669,
+        "max": 1027,
+        "n": 4
+      },
+      "mutants_killed": {
+        "median": 5.0,
+        "min": 5,
+        "max": 5,
+        "n": 4
+      },
+      "review_high": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 4
+      },
+      "review_medium": {
+        "median": 0.5,
+        "min": 0,
+        "max": 1,
+        "n": 4
+      },
+      "review_low": {
+        "median": 4.0,
+        "min": 4,
+        "max": 5,
+        "n": 4
+      },
+      "review_score": {
+        "median": 4.2,
+        "min": 4,
+        "max": 4.4,
+        "n": 4
+      },
+      "commits": {
+        "median": 13.0,
+        "min": 9,
+        "max": 17,
+        "n": 4
+      },
+      "code_lines": {
+        "median": 116.5,
+        "min": 105,
+        "max": 136,
+        "n": 4
+      },
+      "test_lines": {
+        "median": 1037.5,
+        "min": 883,
+        "max": 1201,
+        "n": 4
+      },
+      "spec_lines": {
+        "median": 12.0,
+        "min": 10,
+        "max": 13,
+        "n": 4
+      },
+      "doc_lines": {
+        "median": 25.0,
+        "min": 22,
+        "max": 33,
+        "n": 4
+      },
+      "plan_lines": {
+        "median": 72.5,
+        "min": 60,
+        "max": 100,
+        "n": 4
+      },
+      "other_lines": {
+        "median": 2.0,
+        "min": 2,
+        "max": 2,
+        "n": 4
+      },
+      "outside_access": {
+        "median": 0.0,
+        "min": 0,
+        "max": 21,
+        "n": 4
+      },
+      "denied_actions": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 4
+      },
+      "runs": [
+        "t2-ideal-v5-haiku-1",
+        "t2-ideal-v5-opus-1",
+        "t2-ideal-v5-opus-2",
+        "t2-ideal-v5-sonnet-1"
+      ],
+      "verify_passed": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "mergeable": [
+        "after-fixes",
+        "yes",
+        "yes",
+        "after-fixes"
+      ]
+    },
+    "ideal-v6": {
+      "cost_usd": {
+        "median": 2.0250000000000004,
+        "min": 1.85,
+        "max": 2.2,
+        "n": 2
+      },
+      "wall_min": {
+        "median": 24.3,
+        "min": 12.4,
+        "max": 36.2,
+        "n": 2
+      },
+      "turns": {
+        "median": 94.0,
+        "min": 53,
+        "max": 135,
+        "n": 2
+      },
+      "subagent_runs": {
+        "median": 2.5,
+        "min": 1,
+        "max": 4,
+        "n": 2
+      },
+      "output_tokens": {
+        "median": 212009.5,
+        "min": 80441,
+        "max": 343578,
+        "n": 2
+      },
+      "cache_read_tokens": {
+        "median": 13594447.0,
+        "min": 5816164,
+        "max": 21372730,
+        "n": 2
+      },
+      "cache_write_tokens": {
+        "median": 465277.0,
+        "min": 233345,
+        "max": 697209,
+        "n": 2
+      },
+      "orchestrator_cache_read": {
+        "median": 11217380.0,
+        "min": 5341169,
+        "max": 17093591,
+        "n": 2
+      },
+      "subagent_cache_read": {
+        "median": 1801883.0,
+        "min": 474995,
+        "max": 3128771,
+        "n": 2
+      },
+      "orchestrator_cache_write": {
+        "median": 217572.5,
+        "min": 154407,
+        "max": 280738,
+        "n": 2
+      },
+      "subagent_cache_write": {
+        "median": 227194.0,
+        "min": 78938,
+        "max": 375450,
+        "n": 2
+      },
+      "hidden_refusal": {
+        "median": 23.0,
+        "min": 23,
+        "max": 23,
+        "n": 2
+      },
+      "hidden_allowed": {
+        "median": 4.0,
+        "min": 4,
+        "max": 4,
+        "n": 2
+      },
+      "hidden_passed": {
+        "median": 27.0,
+        "min": 27,
+        "max": 27,
+        "n": 2
+      },
+      "hidden_failed": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "pytest_passed": {
+        "median": 683.0,
+        "min": 662,
+        "max": 704,
+        "n": 2
+      },
+      "mutants_killed": {
+        "median": 5.0,
+        "min": 5,
+        "max": 5,
+        "n": 2
+      },
+      "review_high": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "review_medium": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "review_low": {
+        "median": 5.5,
+        "min": 5,
+        "max": 6,
+        "n": 2
+      },
+      "review_score": {
+        "median": 4.2,
+        "min": 4.2,
+        "max": 4.2,
+        "n": 2
+      },
+      "commits": {
+        "median": 10.5,
+        "min": 8,
+        "max": 13,
+        "n": 2
+      },
+      "code_lines": {
+        "median": 120.0,
+        "min": 116,
+        "max": 124,
+        "n": 2
+      },
+      "test_lines": {
+        "median": 1037.5,
+        "min": 837,
+        "max": 1238,
+        "n": 2
+      },
+      "spec_lines": {
+        "median": 12.0,
+        "min": 10,
+        "max": 14,
+        "n": 2
+      },
+      "doc_lines": {
+        "median": 20.0,
+        "min": 18,
+        "max": 22,
+        "n": 2
+      },
+      "plan_lines": {
+        "median": 72.5,
+        "min": 63,
+        "max": 82,
+        "n": 2
+      },
+      "other_lines": {
+        "median": 2.0,
+        "min": 2,
+        "max": 2,
+        "n": 2
+      },
+      "outside_access": {
+        "median": 0.5,
+        "min": 0,
+        "max": 1,
+        "n": 2
+      },
+      "denied_actions": {
+        "median": 0.5,
+        "min": 0,
+        "max": 1,
+        "n": 2
+      },
+      "runs": [
+        "t2-ideal-v6-haiku-1",
+        "t2-ideal-v6-sonnet-1"
+      ],
+      "verify_passed": [
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true
+      ],
+      "mergeable": [
+        "yes",
+        "yes"
+      ]
+    },
+    "mp3": {
+      "cost_usd": {
+        "median": 11.88,
+        "min": 11.88,
+        "max": 11.88,
+        "n": 1
+      },
+      "wall_min": {
+        "median": 36.8,
+        "min": 36.8,
+        "max": 36.8,
+        "n": 1
+      },
+      "turns": {
+        "median": 71,
+        "min": 71,
+        "max": 71,
+        "n": 1
+      },
+      "subagent_runs": {
+        "median": 14,
+        "min": 14,
+        "max": 14,
+        "n": 1
+      },
+      "output_tokens": {
+        "median": 211707,
+        "min": 211707,
+        "max": 211707,
+        "n": 1
+      },
+      "cache_read_tokens": {
+        "median": 14414346,
+        "min": 14414346,
+        "max": 14414346,
+        "n": 1
+      },
+      "cache_write_tokens": {
+        "median": 849376,
+        "min": 849376,
+        "max": 849376,
+        "n": 1
+      },
+      "orchestrator_cache_read": {
+        "median": 7032543,
+        "min": 7032543,
+        "max": 7032543,
+        "n": 1
+      },
+      "subagent_cache_read": {
+        "median": 6956060,
+        "min": 6956060,
+        "max": 6956060,
+        "n": 1
+      },
+      "orchestrator_cache_write": {
+        "median": 172995,
+        "min": 172995,
+        "max": 172995,
+        "n": 1
+      },
+      "subagent_cache_write": {
+        "median": 668424,
+        "min": 668424,
+        "max": 668424,
+        "n": 1
+      },
+      "hidden_refusal": {
+        "median": 23,
+        "min": 23,
+        "max": 23,
+        "n": 1
+      },
+      "hidden_allowed": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 1
+      },
+      "hidden_passed": {
+        "median": 27,
+        "min": 27,
+        "max": 27,
+        "n": 1
+      },
+      "hidden_failed": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "pytest_passed": {
+        "median": 704,
+        "min": 704,
+        "max": 704,
+        "n": 1
+      },
+      "mutants_killed": {
+        "median": 5,
+        "min": 5,
+        "max": 5,
+        "n": 1
+      },
+      "review_high": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "review_medium": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "review_low": {
+        "median": 6,
+        "min": 6,
+        "max": 6,
+        "n": 1
+      },
+      "review_score": {
+        "median": 4.2,
+        "min": 4.2,
+        "max": 4.2,
+        "n": 1
+      },
+      "commits": {
+        "median": 12,
+        "min": 12,
+        "max": 12,
+        "n": 1
+      },
+      "code_lines": {
+        "median": 118,
+        "min": 118,
+        "max": 118,
+        "n": 1
+      },
+      "test_lines": {
+        "median": 1381,
+        "min": 1381,
+        "max": 1381,
+        "n": 1
+      },
+      "spec_lines": {
+        "median": 12,
+        "min": 12,
+        "max": 12,
+        "n": 1
+      },
+      "doc_lines": {
+        "median": 26,
+        "min": 26,
+        "max": 26,
+        "n": 1
+      },
+      "plan_lines": {
+        "median": 44,
+        "min": 44,
+        "max": 44,
+        "n": 1
+      },
+      "other_lines": {
+        "median": 2,
+        "min": 2,
+        "max": 2,
+        "n": 1
+      },
+      "outside_access": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "denied_actions": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "runs": [
+        "t2-mp3-1"
+      ],
+      "verify_passed": [
+        true
+      ],
+      "spec_first": [
+        true
+      ],
+      "mergeable": [
+        "yes"
+      ]
+    },
+    "mp4": {
+      "cost_usd": {
+        "median": 11.46,
+        "min": 10.92,
+        "max": 12.0,
+        "n": 2
+      },
+      "wall_min": {
+        "median": 37.85,
+        "min": 36.2,
+        "max": 39.5,
+        "n": 2
+      },
+      "turns": {
+        "median": 53.5,
+        "min": 53,
+        "max": 54,
+        "n": 2
+      },
+      "subagent_runs": {
+        "median": 10.5,
+        "min": 9,
+        "max": 12,
+        "n": 2
+      },
+      "output_tokens": {
+        "median": 223093.0,
+        "min": 207605,
+        "max": 238581,
+        "n": 2
+      },
+      "cache_read_tokens": {
+        "median": 12558990.5,
+        "min": 12357324,
+        "max": 12760657,
+        "n": 2
+      },
+      "cache_write_tokens": {
+        "median": 805143.5,
+        "min": 754186,
+        "max": 856101,
+        "n": 2
+      },
+      "orchestrator_cache_read": {
+        "median": 4617070.0,
+        "min": 4552673,
+        "max": 4681467,
+        "n": 2
+      },
+      "subagent_cache_read": {
+        "median": 7572739.0,
+        "min": 7395448,
+        "max": 7750030,
+        "n": 2
+      },
+      "orchestrator_cache_write": {
+        "median": 154006.5,
+        "min": 149215,
+        "max": 158798,
+        "n": 2
+      },
+      "subagent_cache_write": {
+        "median": 641355.5,
+        "min": 591257,
+        "max": 691454,
+        "n": 2
+      },
+      "hidden_refusal": {
+        "median": 23.0,
+        "min": 23,
+        "max": 23,
+        "n": 2
+      },
+      "hidden_allowed": {
+        "median": 4.0,
+        "min": 4,
+        "max": 4,
+        "n": 2
+      },
+      "hidden_passed": {
+        "median": 27.0,
+        "min": 27,
+        "max": 27,
+        "n": 2
+      },
+      "hidden_failed": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "pytest_passed": {
+        "median": 683.0,
+        "min": 682,
+        "max": 684,
+        "n": 2
+      },
+      "mutants_killed": {
+        "median": 5.0,
+        "min": 5,
+        "max": 5,
+        "n": 2
+      },
+      "review_high": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "review_medium": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "review_low": {
+        "median": 5.0,
+        "min": 4,
+        "max": 6,
+        "n": 2
+      },
+      "review_score": {
+        "median": 4.2,
+        "min": 4.2,
+        "max": 4.2,
+        "n": 2
+      },
+      "commits": {
+        "median": 16.0,
+        "min": 14,
+        "max": 18,
+        "n": 2
+      },
+      "code_lines": {
+        "median": 127.0,
+        "min": 122,
+        "max": 132,
+        "n": 2
+      },
+      "test_lines": {
+        "median": 1128.5,
+        "min": 1122,
+        "max": 1135,
+        "n": 2
+      },
+      "spec_lines": {
+        "median": 13.0,
+        "min": 12,
+        "max": 14,
+        "n": 2
+      },
+      "doc_lines": {
+        "median": 19.5,
+        "min": 19,
+        "max": 20,
+        "n": 2
+      },
+      "plan_lines": {
+        "median": 93.5,
+        "min": 84,
+        "max": 103,
+        "n": 2
+      },
+      "other_lines": {
+        "median": 2.0,
+        "min": 2,
+        "max": 2,
+        "n": 2
+      },
+      "outside_access": {
+        "median": 0.0,
+        "min": 0,
+        "max": 0,
+        "n": 2
+      },
+      "denied_actions": {
+        "median": 0.5,
+        "min": 0,
+        "max": 1,
+        "n": 2
+      },
+      "runs": [
+        "t2-mp4-1",
+        "t2-mp4-2"
+      ],
+      "verify_passed": [
+        true,
+        true
+      ],
+      "spec_first": [
+        true,
+        true
+      ],
+      "mergeable": [
+        "yes",
+        "yes"
+      ]
+    },
+    "mp4-haiku": {
+      "cost_usd": {
+        "median": 1.95,
+        "min": 1.95,
+        "max": 1.95,
+        "n": 1
+      },
+      "wall_min": {
+        "median": 56.4,
+        "min": 56.4,
+        "max": 56.4,
+        "n": 1
+      },
+      "turns": {
+        "median": 70,
+        "min": 70,
+        "max": 70,
+        "n": 1
+      },
+      "subagent_runs": {
+        "median": 12,
+        "min": 12,
+        "max": 12,
+        "n": 1
+      },
+      "output_tokens": {
+        "median": 679235,
+        "min": 679235,
+        "max": 679235,
+        "n": 1
+      },
+      "cache_read_tokens": {
+        "median": 24048100,
+        "min": 24048100,
+        "max": 24048100,
+        "n": 1
+      },
+      "cache_write_tokens": {
+        "median": 1424443,
+        "min": 1424443,
+        "max": 1424443,
+        "n": 1
+      },
+      "orchestrator_cache_read": {
+        "median": 8599330,
+        "min": 8599330,
+        "max": 8599330,
+        "n": 1
+      },
+      "subagent_cache_read": {
+        "median": 15448770,
+        "min": 15448770,
+        "max": 15448770,
+        "n": 1
+      },
+      "orchestrator_cache_write": {
+        "median": 227425,
+        "min": 227425,
+        "max": 227425,
+        "n": 1
+      },
+      "subagent_cache_write": {
+        "median": 1197018,
+        "min": 1197018,
+        "max": 1197018,
+        "n": 1
+      },
+      "hidden_refusal": {
+        "median": 23,
+        "min": 23,
+        "max": 23,
+        "n": 1
+      },
+      "hidden_allowed": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 1
+      },
+      "hidden_passed": {
+        "median": 27,
+        "min": 27,
+        "max": 27,
+        "n": 1
+      },
+      "hidden_failed": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "pytest_passed": {
+        "median": 698,
+        "min": 698,
+        "max": 698,
+        "n": 1
+      },
+      "mutants_killed": {
+        "median": 5,
+        "min": 5,
+        "max": 5,
+        "n": 1
+      },
+      "review_high": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "review_medium": {
+        "median": 1,
+        "min": 1,
+        "max": 1,
+        "n": 1
+      },
+      "review_low": {
+        "median": 5,
+        "min": 5,
+        "max": 5,
+        "n": 1
+      },
+      "review_score": {
+        "median": 3.8,
+        "min": 3.8,
+        "max": 3.8,
+        "n": 1
+      },
+      "commits": {
+        "median": 13,
+        "min": 13,
+        "max": 13,
+        "n": 1
+      },
+      "code_lines": {
+        "median": 147,
+        "min": 147,
+        "max": 147,
+        "n": 1
+      },
+      "test_lines": {
+        "median": 1323,
+        "min": 1323,
+        "max": 1323,
+        "n": 1
+      },
+      "spec_lines": {
+        "median": 12,
+        "min": 12,
+        "max": 12,
+        "n": 1
+      },
+      "doc_lines": {
+        "median": 28,
+        "min": 28,
+        "max": 28,
+        "n": 1
+      },
+      "plan_lines": {
+        "median": 114,
+        "min": 114,
+        "max": 114,
+        "n": 1
+      },
+      "other_lines": {
+        "median": 2,
+        "min": 2,
+        "max": 2,
+        "n": 1
+      },
+      "outside_access": {
+        "median": 27,
+        "min": 27,
+        "max": 27,
+        "n": 1
+      },
+      "denied_actions": {
+        "median": 1,
+        "min": 1,
+        "max": 1,
+        "n": 1
+      },
+      "runs": [
+        "t2-mp4-haiku-1"
+      ],
+      "verify_passed": [
+        true
+      ],
+      "spec_first": [
+        true
+      ],
+      "mergeable": [
+        "after-fixes"
+      ]
+    },
+    "ponytail": {
+      "cost_usd": {
+        "median": 9.32,
+        "min": 9.32,
+        "max": 9.32,
+        "n": 1
+      },
+      "wall_min": {
+        "median": 30.7,
+        "min": 30.7,
+        "max": 30.7,
+        "n": 1
+      },
+      "turns": {
+        "median": 57,
+        "min": 57,
+        "max": 57,
+        "n": 1
+      },
+      "subagent_runs": {
+        "median": 10,
+        "min": 10,
+        "max": 10,
+        "n": 1
+      },
+      "output_tokens": {
+        "median": 180571,
+        "min": 180571,
+        "max": 180571,
+        "n": 1
+      },
+      "cache_read_tokens": {
+        "median": 9867668,
+        "min": 9867668,
+        "max": 9867668,
+        "n": 1
+      },
+      "cache_write_tokens": {
+        "median": 661815,
+        "min": 661815,
+        "max": 661815,
+        "n": 1
+      },
+      "orchestrator_cache_read": {
+        "median": 4445213,
+        "min": 4445213,
+        "max": 4445213,
+        "n": 1
+      },
+      "subagent_cache_read": {
+        "median": 5113532,
+        "min": 5113532,
+        "max": 5113532,
+        "n": 1
+      },
+      "orchestrator_cache_write": {
+        "median": 140918,
+        "min": 140918,
+        "max": 140918,
+        "n": 1
+      },
+      "subagent_cache_write": {
+        "median": 513949,
+        "min": 513949,
+        "max": 513949,
+        "n": 1
+      },
+      "hidden_refusal": {
+        "median": 23,
+        "min": 23,
+        "max": 23,
+        "n": 1
+      },
+      "hidden_allowed": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 1
+      },
+      "hidden_passed": {
+        "median": 27,
+        "min": 27,
+        "max": 27,
+        "n": 1
+      },
+      "hidden_failed": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "pytest_passed": {
+        "median": 654,
+        "min": 654,
+        "max": 654,
+        "n": 1
+      },
+      "mutants_killed": {
+        "median": 5,
+        "min": 5,
+        "max": 5,
+        "n": 1
+      },
+      "review_high": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "review_medium": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "review_low": {
+        "median": 5,
+        "min": 5,
+        "max": 5,
+        "n": 1
+      },
+      "review_score": {
+        "median": 4.2,
+        "min": 4.2,
+        "max": 4.2,
+        "n": 1
+      },
+      "commits": {
+        "median": 16,
+        "min": 16,
+        "max": 16,
+        "n": 1
+      },
+      "code_lines": {
+        "median": 100,
+        "min": 100,
+        "max": 100,
+        "n": 1
+      },
+      "test_lines": {
+        "median": 934,
+        "min": 934,
+        "max": 934,
+        "n": 1
+      },
+      "spec_lines": {
+        "median": 17,
+        "min": 17,
+        "max": 17,
+        "n": 1
+      },
+      "doc_lines": {
+        "median": 27,
+        "min": 27,
+        "max": 27,
+        "n": 1
+      },
+      "plan_lines": {
+        "median": 95,
+        "min": 95,
+        "max": 95,
+        "n": 1
+      },
+      "other_lines": {
+        "median": 2,
+        "min": 2,
+        "max": 2,
+        "n": 1
+      },
+      "outside_access": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "denied_actions": {
+        "median": 1,
+        "min": 1,
+        "max": 1,
+        "n": 1
+      },
+      "runs": [
+        "t2-ponytail-1"
+      ],
+      "verify_passed": [
+        true
+      ],
+      "spec_first": [
+        true
+      ],
+      "mergeable": [
+        "yes"
+      ]
+    },
+    "spec-kit": {
+      "cost_usd": {
+        "median": 5.48,
+        "min": 5.48,
+        "max": 5.48,
+        "n": 1
+      },
+      "wall_min": {
+        "median": 23.2,
+        "min": 23.2,
+        "max": 23.2,
+        "n": 1
+      },
+      "turns": {
+        "median": 115,
+        "min": 115,
+        "max": 115,
+        "n": 1
+      },
+      "subagent_runs": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "output_tokens": {
+        "median": 81434,
+        "min": 81434,
+        "max": 81434,
+        "n": 1
+      },
+      "cache_read_tokens": {
+        "median": 10679061,
+        "min": 10679061,
+        "max": 10679061,
+        "n": 1
+      },
+      "cache_write_tokens": {
+        "median": 214830,
+        "min": 214830,
+        "max": 214830,
+        "n": 1
+      },
+      "orchestrator_cache_read": {
+        "median": 10679061,
+        "min": 10679061,
+        "max": 10679061,
+        "n": 1
+      },
+      "subagent_cache_read": null,
+      "orchestrator_cache_write": {
+        "median": 214830,
+        "min": 214830,
+        "max": 214830,
+        "n": 1
+      },
+      "subagent_cache_write": null,
+      "hidden_refusal": {
+        "median": 23,
+        "min": 23,
+        "max": 23,
+        "n": 1
+      },
+      "hidden_allowed": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 1
+      },
+      "hidden_passed": {
+        "median": 27,
+        "min": 27,
+        "max": 27,
+        "n": 1
+      },
+      "hidden_failed": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "pytest_passed": {
+        "median": 669,
+        "min": 669,
+        "max": 669,
+        "n": 1
+      },
+      "mutants_killed": {
+        "median": 5,
+        "min": 5,
+        "max": 5,
+        "n": 1
+      },
+      "review_high": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "review_medium": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "review_low": {
+        "median": 3,
+        "min": 3,
+        "max": 3,
+        "n": 1
+      },
+      "review_score": {
+        "median": 4.4,
+        "min": 4.4,
+        "max": 4.4,
+        "n": 1
+      },
+      "commits": {
+        "median": 8,
+        "min": 8,
+        "max": 8,
+        "n": 1
+      },
+      "code_lines": {
+        "median": 104,
+        "min": 104,
+        "max": 104,
+        "n": 1
+      },
+      "test_lines": {
+        "median": 1027,
+        "min": 1027,
+        "max": 1027,
+        "n": 1
+      },
+      "spec_lines": {
+        "median": 12,
+        "min": 12,
+        "max": 12,
+        "n": 1
+      },
+      "doc_lines": {
+        "median": 22,
+        "min": 22,
+        "max": 22,
+        "n": 1
+      },
+      "plan_lines": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "other_lines": {
+        "median": 414,
+        "min": 414,
+        "max": 414,
+        "n": 1
+      },
+      "outside_access": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "denied_actions": {
+        "median": 1,
+        "min": 1,
+        "max": 1,
+        "n": 1
+      },
+      "runs": [
+        "t2-spec-kit-1"
+      ],
+      "verify_passed": [
+        true
+      ],
+      "spec_first": [
+        true
+      ],
+      "mergeable": [
+        "yes"
+      ]
+    },
+    "superpowers": {
+      "cost_usd": {
+        "median": 5.6,
+        "min": 5.6,
+        "max": 5.6,
+        "n": 1
+      },
+      "wall_min": {
+        "median": 16.9,
+        "min": 16.9,
+        "max": 16.9,
+        "n": 1
+      },
+      "turns": {
+        "median": 82,
+        "min": 82,
+        "max": 82,
+        "n": 1
+      },
+      "subagent_runs": {
+        "median": 1,
+        "min": 1,
+        "max": 1,
+        "n": 1
+      },
+      "output_tokens": {
+        "median": 88954,
+        "min": 88954,
+        "max": 88954,
+        "n": 1
+      },
+      "cache_read_tokens": {
+        "median": 8770867,
+        "min": 8770867,
+        "max": 8770867,
+        "n": 1
+      },
+      "cache_write_tokens": {
+        "median": 298309,
+        "min": 298309,
+        "max": 298309,
+        "n": 1
+      },
+      "orchestrator_cache_read": {
+        "median": 7589671,
+        "min": 7589671,
+        "max": 7589671,
+        "n": 1
+      },
+      "subagent_cache_read": {
+        "median": 1080624,
+        "min": 1080624,
+        "max": 1080624,
+        "n": 1
+      },
+      "orchestrator_cache_write": {
+        "median": 192577,
+        "min": 192577,
+        "max": 192577,
+        "n": 1
+      },
+      "subagent_cache_write": {
+        "median": 100572,
+        "min": 100572,
+        "max": 100572,
+        "n": 1
+      },
+      "hidden_refusal": {
+        "median": 23,
+        "min": 23,
+        "max": 23,
+        "n": 1
+      },
+      "hidden_allowed": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 1
+      },
+      "hidden_passed": {
+        "median": 27,
+        "min": 27,
+        "max": 27,
+        "n": 1
+      },
+      "hidden_failed": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "pytest_passed": {
+        "median": 672,
+        "min": 672,
+        "max": 672,
+        "n": 1
+      },
+      "mutants_killed": {
+        "median": 5,
+        "min": 5,
+        "max": 5,
+        "n": 1
+      },
+      "review_high": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "review_medium": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "review_low": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 1
+      },
+      "review_score": {
+        "median": 4.6,
+        "min": 4.6,
+        "max": 4.6,
+        "n": 1
+      },
+      "commits": {
+        "median": 7,
+        "min": 7,
+        "max": 7,
+        "n": 1
+      },
+      "code_lines": {
+        "median": 113,
+        "min": 113,
+        "max": 113,
+        "n": 1
+      },
+      "test_lines": {
+        "median": 963,
+        "min": 963,
+        "max": 963,
+        "n": 1
+      },
+      "spec_lines": {
+        "median": 11,
+        "min": 11,
+        "max": 11,
+        "n": 1
+      },
+      "doc_lines": {
+        "median": 20,
+        "min": 20,
+        "max": 20,
+        "n": 1
+      },
+      "plan_lines": {
+        "median": 149,
+        "min": 149,
+        "max": 149,
+        "n": 1
+      },
+      "other_lines": {
+        "median": 2,
+        "min": 2,
+        "max": 2,
+        "n": 1
+      },
+      "outside_access": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 1
+      },
+      "denied_actions": {
+        "median": 1,
+        "min": 1,
+        "max": 1,
+        "n": 1
+      },
+      "runs": [
+        "t2-superpowers-1"
+      ],
+      "verify_passed": [
+        true
+      ],
+      "spec_first": [
+        true
+      ],
+      "mergeable": [
+        "yes"
+      ]
+    }
+  }
+}

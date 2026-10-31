@@ -1,0 +1,41 @@
+{
+  "run": "i1-sonnet-2",
+  "notes": "Validator refuse_direction_controls on RoundTextField (translate on BIDI_CONTROLS).",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    if text.translate(BIDI_CONTROLS) != text:\n",
+        "new": "    if False:\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    if text.translate(BIDI_CONTROLS) != text:\n",
+        "new": "    if text.replace(chr(0x2069), \"\").translate(BIDI_CONTROLS) != text.replace(chr(0x2069), \"\"):\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    if text.translate(BIDI_CONTROLS) != text:\n",
+        "new": "    if text.replace(chr(0x202B), \"\").translate(BIDI_CONTROLS) != text.replace(chr(0x202B), \"\"):\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    if text.translate(BIDI_CONTROLS) != text:\n",
+        "new": "    if text.translate(BIDI_CONTROLS) != text or chr(0x200E) in text:\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    return RoundTextField(\n        max_length=100,\n        label=\"Build label\",\n        widget=forms.TextInput(attrs={\"dir\": \"auto\"}),\n    )\n",
+        "new": "    field = RoundTextField(\n        max_length=100,\n        label=\"Build label\",\n        widget=forms.TextInput(attrs={\"dir\": \"auto\"}),\n    )\n    field.validators = [v for v in field.validators if v is not refuse_direction_controls]\n    return field\n"
+      }
+    ]
+  }
+}

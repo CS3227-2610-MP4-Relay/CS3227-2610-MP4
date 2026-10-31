@@ -1,0 +1,41 @@
+{
+  "run": "i4-haiku-1",
+  "notes": "Check is one `if` line in RoundTextField.clean (isdisjoint on DIRECTION_CONTROLS).",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if not DIRECTION_CONTROLS.isdisjoint(value):\n",
+        "new": "        if False:\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if not DIRECTION_CONTROLS.isdisjoint(value):\n",
+        "new": "        if not (DIRECTION_CONTROLS - {chr(0x2069)}).isdisjoint(value):\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if not DIRECTION_CONTROLS.isdisjoint(value):\n",
+        "new": "        if not (DIRECTION_CONTROLS - {chr(0x202B)}).isdisjoint(value):\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if not DIRECTION_CONTROLS.isdisjoint(value):\n",
+        "new": "        if not (DIRECTION_CONTROLS | {chr(0x200E)}).isdisjoint(value):\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if not DIRECTION_CONTROLS.isdisjoint(value):\n",
+        "new": "        if not DIRECTION_CONTROLS.isdisjoint(value) and self.label != \"Build label\":\n"
+      }
+    ]
+  }
+}

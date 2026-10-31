@@ -1,0 +1,41 @@
+{
+  "run": "i2-sonnet-1",
+  "notes": "RegexValidator passed to RoundTextField's validators.",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    r\"[\\u202a-\\u202e\\u2066-\\u2069]\",\n",
+        "new": "    r\"(?!)\",\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    r\"[\\u202a-\\u202e\\u2066-\\u2069]\",\n",
+        "new": "    r\"[\\u202a-\\u202e\\u2066-\\u2068]\",\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    r\"[\\u202a-\\u202e\\u2066-\\u2069]\",\n",
+        "new": "    r\"[\\u202a\\u202c-\\u202e\\u2066-\\u2069]\",\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    r\"[\\u202a-\\u202e\\u2066-\\u2069]\",\n",
+        "new": "    r\"[\\u202a-\\u202e\\u2066-\\u2069\\u200e]\",\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    return RoundTextField(\n        max_length=100,\n        label=\"Build label\",\n        widget=forms.TextInput(attrs={\"dir\": \"auto\"}),\n    )\n",
+        "new": "    field = RoundTextField(\n        max_length=100,\n        label=\"Build label\",\n        widget=forms.TextInput(attrs={\"dir\": \"auto\"}),\n    )\n    field.validators = [v for v in field.validators if v is not refuse_direction_controls]\n    return field\n"
+      }
+    ]
+  }
+}

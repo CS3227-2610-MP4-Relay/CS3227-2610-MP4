@@ -1,0 +1,41 @@
+{
+  "run": "r2-caveman",
+  "notes": "Check is one `if` line in RoundTextField.clean (any on BIDI_CONTROLS).",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if any(ord(char) in BIDI_CONTROLS for char in value):\n",
+        "new": "        if False:\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if any(ord(char) in BIDI_CONTROLS for char in value):\n",
+        "new": "        if any(ord(char) in BIDI_CONTROLS and ord(char) != 0x2069 for char in value):\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if any(ord(char) in BIDI_CONTROLS for char in value):\n",
+        "new": "        if any(ord(char) in BIDI_CONTROLS and ord(char) != 0x202B for char in value):\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if any(ord(char) in BIDI_CONTROLS for char in value):\n",
+        "new": "        if any(ord(char) in BIDI_CONTROLS or ord(char) == 0x200E for char in value):\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if any(ord(char) in BIDI_CONTROLS for char in value):\n",
+        "new": "        if any(ord(char) in BIDI_CONTROLS for char in value) and self.label != \"Build label\":\n"
+      }
+    ]
+  }
+}

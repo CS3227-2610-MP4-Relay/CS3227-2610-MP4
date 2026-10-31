@@ -1,0 +1,56 @@
+{
+  "run": "t3-caveman-1",
+  "notes": "Everything is in rounds/results.py: checked_target (used for GET and again under the round lock for POST) refuses Closed rounds, superseded builds and, on POST, submitted results, and reads only the signed-in tester's result; show() makes a submitted result read-only; ResultForm.clean requires a Fail observation and RoundTextField(max_length=2000) limits it. M1 drops the tester filter, so another tester's result is shown and overwritten; M3 leaves the tester round page's Open-only 'Record result' link in place, as it is navigation, not a guard. M5 also widens the model field and its column in migration 0005 to 2001, together, because the varchar(2000) column would otherwise refuse the save (a 503) and a model-only change would fail the candidate's makemigrations --check test; pytest-django builds the test database from migrations on every run (no --reuse-db), so the migration edit is seen consistently.",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/results.py",
+        "old": "    result = Result.objects.filter(tester=request.user, case=case, build=build)\n",
+        "new": "    result = Result.objects.filter(case=case, build=build)\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if data.get(\"outcome\") == Result.Outcome.FAIL and data.get(\"observation\") == \"\":\n",
+        "new": "        if False:\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/results.py",
+        "old": "    if round_.state != Round.State.OPEN:\n        return CLOSED, case, build, None\n",
+        "new": "    if round_.state not in (Round.State.OPEN, Round.State.CLOSED):\n        return CLOSED, case, build, None\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/results.py",
+        "old": "    if request.method == \"POST\" and result and result.state == Result.State.SUBMITTED:\n        return SUBMITTED, case, build, result\n",
+        "new": ""
+      },
+      {
+        "file": "src/rounds/results.py",
+        "old": "    if result and result.state == Result.State.SUBMITTED:\n        form = None\n",
+        "new": ""
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    observation = RoundTextField(\n        max_length=2000,\n",
+        "new": "    observation = RoundTextField(\n        max_length=2001,\n"
+      },
+      {
+        "file": "src/rounds/models.py",
+        "old": "    observation = models.CharField(max_length=2000, blank=True)\n",
+        "new": "    observation = models.CharField(max_length=2001, blank=True)\n"
+      },
+      {
+        "file": "src/rounds/migrations/0005_results.py",
+        "old": "                ('observation', models.CharField(blank=True, max_length=2000)),\n",
+        "new": "                ('observation', models.CharField(blank=True, max_length=2001)),\n"
+      }
+    ]
+  }
+}

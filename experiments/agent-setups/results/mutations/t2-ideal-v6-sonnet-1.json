@@ -1,0 +1,61 @@
+{
+  "run": "t2-ideal-v6-sonnet-1",
+  "notes": "RetestForm limits cases to the round; services.request_retest checks cap, cases and key; retest_round checks Open before and under the lock; message built inline with format_html and isolated_lines(made.label). M3 also stores the raw label as the key, so labels are compared and stored as typed.",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        self.fields[\"cases\"].queryset = round_.cases.all()\n",
+        "new": "        self.fields[\"cases\"].queryset = Case.objects.all()\n"
+      },
+      {
+        "file": "src/rounds/services.py",
+        "old": "    chosen = list(round_.cases.filter(pk__in=ids))\n",
+        "new": "    chosen = list(Case.objects.filter(pk__in=ids))\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/services.py",
+        "old": "    if round_.builds.count() >= BUILD_LIMIT:\n",
+        "new": "    if round_.builds.count() > BUILD_LIMIT:\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/services.py",
+        "old": "    if round_.builds.filter(key=key).exists():\n",
+        "new": "    if round_.builds.filter(label=label).exists():\n"
+      },
+      {
+        "file": "src/rounds/services.py",
+        "old": "    build = Build.objects.create(round=round_, label=label, key=key)\n",
+        "new": "    build = Build.objects.create(round=round_, label=label, key=label)\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/views.py",
+        "old": "    round_ = own_round(request, round_id)\n    if round_.state != Round.State.OPEN:\n        return state_conflict(request, round_)\n    form = RetestForm(round_, request.POST",
+        "new": "    round_ = own_round(request, round_id)\n    form = RetestForm(round_, request.POST"
+      },
+      {
+        "file": "src/rounds/views.py",
+        "old": "                round_ = own_round(request, round_id, lock=True)\n                if round_.state != Round.State.OPEN:\n                    return state_conflict(request, round_)\n                made = services.request_retest(",
+        "new": "                round_ = own_round(request, round_id, lock=True)\n                made = services.request_retest("
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/views.py",
+        "old": "from django.utils.html import format_html\n",
+        "new": "from django.utils.html import format_html, mark_safe\n"
+      },
+      {
+        "file": "src/rounds/views.py",
+        "old": "                    isolated_lines(made.label),\n",
+        "new": "                    mark_safe(made.label),\n"
+      }
+    ]
+  }
+}

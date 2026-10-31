@@ -1,0 +1,14 @@
+caveman t2-caveman-1 TASK=2 PROMPT_FILE=$EXP/task-prompt-2.md
+ponytail t2-ponytail-1 TASK=2 PROMPT_FILE=$EXP/task-prompt-2.md
+mp4 t2-mp4-1 TASK=2 PROMPT_FILE=$EXP/task-prompt-2.md
+ideal-v1 t2-ideal-v1-opus-1 TASK=2 PROMPT_FILE=$EXP/task-prompt-2.md RELAY_PROFILE=strong
+headroom t2-headroom-1 TASK=2 PROMPT_FILE=$EXP/task-prompt-2.md
+superpowers t2-superpowers-1 TASK=2 PROMPT_FILE=$EXP/task-prompt-2.md
+ideal-v5 t2-ideal-v5-opus-1 TASK=2 PROMPT_FILE=$EXP/task-prompt-2.md AGENT_PROFILE=strong
+spec-kit t2-spec-kit-1 TASK=2 PROMPT_FILE=$EXP/task-prompt-2.md
+mp3 t2-mp3-1 TASK=2 PROMPT_FILE=$EXP/task-prompt-2.md
+ideal-v5 t2-ideal-v5-sonnet-1 TASK=2 PROMPT_FILE=$EXP/task-prompt-2.md MODEL_OVERRIDE=claude-sonnet-5-5 AGENT_PROFILE=strong
+mp4-haiku t2-mp4-haiku-1 TASK=2 PROMPT_FILE=$EXP/task-prompt-2.md MODEL_OVERRIDE=claude-haiku-5-5
+ideal-v5 t2-ideal-v5-haiku-1 TASK=2 PROMPT_FILE=$EXP/task-prompt-2.md MODEL_OVERRIDE=claude-haiku-5-5
+mp4 t2-mp4-2 TASK=2 PROMPT_FILE=$EXP/task-prompt-2.md
+ideal-v5 t2-ideal-v5-opus-2 TASK=2 PROMPT_FILE=$EXP/task-prompt-2.md AGENT_PROFILE=strong
