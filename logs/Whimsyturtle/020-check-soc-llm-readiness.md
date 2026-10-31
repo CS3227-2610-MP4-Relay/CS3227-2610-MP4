@@ -2,26 +2,28 @@
 
 Slice: #6 · Tier: High · Tool: Codex · Orchestrator model: gpt-6-astra/xhigh (observed turn metadata) · Date: 2026-10-31
 
-Tokens: Whole-session totals unavailable. Measured slice subtotal: 42,486,971 input, 126,595 output, 42,613,566 total; earlier enquiry intervals: 341,654 input, 1,841 output, 343,495 total. Cutoff: 2026-10-31 01:15:58 +08:00.
+Tokens: Whole-session totals unavailable. Measured slice and follow-up subtotal: 55,642,172 input, 170,421 output, 55,812,593 total; earlier enquiry intervals: 341,654 input, 1,841 output, 343,495 total. Cutoff: 2026-10-31 12:10:38 +08:00.
 
 | Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | Coordinator, earlier enquiries — gpt-6-astra/xhigh, `codex:47799caa45a5c415dc02e876` | 341,654 | 319,616 | 1,841 | 406 | 343,495 | 111.069 s across two noncontiguous intervals |
-| Coordinator, slice — gpt-6-astra/xhigh, same source | 20,174,126 | 19,859,840 | 57,140 | 21,177 | 20,231,266 | Shared slice span: 4,335.439 s |
+| Coordinator, slice and follow-up — gpt-6-astra/xhigh, same source | 26,852,868 | 26,272,000 | 81,322 | 31,810 | 26,934,190 | Shared span: 43,615.273 s |
 | Earlier automatic approval reviewer — codex-auto-review/low, `codex:36b581e9e4a77350aac079b7` | unavailable | unavailable | unavailable | unavailable | unavailable | unavailable |
 | Slice automatic approval reviewer — codex-auto-review/low, `codex:256f63abe026f89943340187` | 1,071,373 | 999,296 | 2,229 | 991 | 1,073,602 | Within shared slice span |
-| Builder — gpt-6.1-sol/medium, `codex:4302e2aa1874878676e6aae3` | 15,296,308 | 15,133,952 | 48,903 | 8,430 | 15,345,211 | Within shared slice span |
-| Verifier — gpt-6.1-sol/high, `codex:103712ded2ddf2bbce0ae9ab` | 2,559,777 | 2,449,792 | 8,333 | 2,195 | 2,568,110 | Within shared slice span |
-| Security-reviewer — gpt-6.1-sol/high, `codex:085c668b2a57eb7c22f443ad` | 2,308,543 | 2,200,960 | 7,733 | 2,585 | 2,316,276 | Within shared slice span |
-| Later automatic approval reviewer — codex-auto-review/low, `codex:e084a8d52ac9c2799698bf6d` | 1,076,844 | 957,184 | 2,257 | 828 | 1,079,101 | Within shared slice span |
+| Builder — gpt-6.1-sol/medium, `codex:4302e2aa1874878676e6aae3` | 19,686,925 | 19,311,232 | 63,201 | 12,582 | 19,750,126 | Within shared span |
+| Verifier — gpt-6.1-sol/high, `codex:103712ded2ddf2bbce0ae9ab` | 3,223,316 | 2,976,128 | 10,617 | 3,159 | 3,233,933 | Within shared span |
+| Security-reviewer — gpt-6.1-sol/high, `codex:085c668b2a57eb7c22f443ad` | 2,998,553 | 2,636,032 | 9,744 | 3,211 | 3,008,297 | Within shared span |
+| Later automatic approval reviewer — codex-auto-review/low, `codex:e084a8d52ac9c2799698bf6d` | 1,668,785 | 1,421,056 | 2,752 | 941 | 1,671,537 | Within shared span |
+| Follow-up automatic approval reviewer — codex-auto-review/low, `codex:f02e3bd1218eeffc17047c45` | 140,352 | 104,192 | 556 | 222 | 140,908 | Within shared span |
 
-Three delegated role sessions, reused across checkpoints/reviews, plus three observed automatic approval sources. Role model/effort configuration matched observed execution. The slice span includes waits, from 00:03:42 to the cutoff; whole-session elapsed time is unavailable. The first enquiry baseline was late, enquiry windows have gaps, and the earlier approval source lacked a task-start baseline. Strict totals are unavailable; six sources were measured and one was unavailable. Recorded cache-write tokens were zero for measured sources; one initial-enquiry retry and two slice CI repair rounds were recorded, but slice-wide retries are unavailable. Final summary edits, delivery and CI waiting after the cutoff are excluded. See [token reporting](../../workflow/README.md#token-reporting).
+Three delegated role sessions, reused across checkpoints/reviews, plus four observed automatic approval sources. Role model/effort configuration matched observed execution, including the dotenv follow-up. The shared span includes overnight idle time and waits, from 00:03:42 to the cutoff; whole-session elapsed time is unavailable. The first enquiry baseline was late, enquiry windows have gaps, and the earlier approval source lacked a task-start baseline. Strict totals are unavailable; seven sources were measured and one was unavailable. Recorded cache-write tokens were zero for measured sources; one initial-enquiry retry and two adapter CI repair rounds were recorded, with no dotenv review repair; slice-wide retries are unavailable. Follow-up-only baseline was late, so this table continues the original slice baseline. Final summary edits, delivery and CI waiting after the cutoff are excluded. See [token reporting](../../workflow/README.md#token-reporting).
 
 ## Requests
 
 - Determine whether #6 is complete and whether an existing SoC key only needs environment configuration.
 - Compare the working MP3 repository, then create a branch and draft PR aiming to close #6.
 - The human supplied provider retention/training and current default-limit confirmations; their factual home is the [gateway contract](../../workflow/specs/ai/llm-gateway.md#live-switch). These were not independent policy verification or human review of this candidate.
+- Follow-up: read the existing local SoC key from `.env`; preserve the private file and continue the authorized branch/draft PR.
 
 ## Agent runs
 
@@ -35,6 +37,11 @@ Three delegated role sessions, reused across checkpoints/reviews, plus three obs
 - **Base integration and final review:** main advanced through #78 to `a1e8f5e4ec8a8eabbc030029a21011c389080102` during delivery, preventing CI on `7fd4f20`. Builder resolved documentation/spec conflicts (`42e4c04`), synchronized the built disclosure and Windows redaction-test path (`2e31ae6`), and updated guides (`9633aa3`). Coordinator revised README. Verifier and security-reviewer both reviewed fixed range `a1e8f5e4..9633aa3` with inherited caller, authorization, cleaned selection, strict reply validation and reviewed adoption; each independently ran 65 pure drafting tests. No new implementation/security finding; scope and unchanged-candidate checks passed for both read-only roles. Previous gateway checks stayed valid because its code was unchanged.
 - **Final repair review:** CI repair 2 (`1711c7fa5860a6f11b0b62caa47e7096899de4af`) synchronizes two additional inherited notice assertions. Builder's targeted route matrix/browser suite passed 161 tests in 62.35 seconds; access, CSRF, unavailable-message, retained-selection and manual-fallback assertions remain. Both independent roles inspected fixed delta `9633aa3..1711c7f`, reported no finding and did not repeat unchanged tests; coordinator verified scope and unchanged snapshots. Browser coverage now explicitly checks the visible disclosure. Full final-candidate validation is the pending latest-head Linux CI, reported in PR #94; the last local full run is not green. Runtime diff against advanced main is 62 lines, with one existing requirement affected.
 
+- **Dotenv follow-up — coordinator and builder done; delivery pending at cutoff.** Prior delivery finished at `e7305d8`, with [CI 41097739370](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/actions/runs/41097739370) passing 2,150 tests, 3 skipped, plus site. Continued the same branch for the distinct High-tier PLT-1 configuration follow-up, supplying the builder local settings/probes, relevant contracts, file ownership, 120-runtime/~200–350-total budget and fresh scope snapshots. Builder committed specs first (`bf9f58c`) then implementation/tests/setup (`3c4f432`) via coordinator; role hashes remain those above. Scope/staged checks passed; 68 runtime and 319 overall changed lines before summaries. [Follow-up plan](../../workflow/plans/6-local-dotenv.md) owns detailed evidence. No real `.env` read, provider call or new dependency; temporary test PostgreSQL stopped after checks.
+- **Dotenv builder checks.** Missing-behaviour run: 1 failed/4 passed; final synthetic configuration/parser suite: 72 passed in 59.30 seconds, including isolated WSGI and driver destination probes; Ruff passed for 8 Python files. Initial 70-case pass preceded the added NUL/UTF-8 boundaries. Full final-head Linux CI is the remaining High-tier validation; no new full Windows pass is claimed.
+- **Dotenv verifier — done, read-only.** Reviewed exact `e7305d8edbde7b53dbd8f5ca6edc9783c7ce2711..3c4f432728df040b32beb1ee9b4d09c8d69f8cc6`, supplied criteria/contracts, changed source/assertions, focused results and fixed snapshot. Independently confirmed path, precedence, parsing, probe isolation, scope and spec-first history; no actionable defect. Reused unchanged 72-test evidence; no tests rerun. Coordinator confirmed unchanged snapshot and verifier scope.
+- **Dotenv security-reviewer — done, read-only.** Same candidate and evidence with security controls; independently checked allowlist, literal parsing, safe failures, sensitive-variable marking and all three isolated probes. No security finding or repair required; scope and unchanged snapshot passed. Reused focused execution evidence. Actual key/provider success and final-head full CI remain unverified at this cutoff; prior endpoint P3 remains deferred.
+
 ## Decisions and corrections
 
 - Environment variables alone could not fix the original proposed wire format. Implemented MP3-compatible handling and enabled the existing shared code switch within the integration request; test settings disable it. Provider facts are human-confirmed, with no claim that the current key/model was tested. Setup is in the [Developer Guide](../../docs/DeveloperGuide.md#soc-llm).
@@ -45,6 +52,8 @@ Three delegated role sessions, reused across checkpoints/reviews, plus three obs
 - Next: finish authorized summary commit/push and final-head CI, update the draft PR, and present this log for its author to check. Operator setup, real-provider smoke check, feature evaluation, human review and merge/release remain pending. No issue edit, review request, ready-for-review change or merge was performed.
 
 ## Problems
+
+- Follow-up measurement initially used unsupported `--output`, then correctly redirected JSON; initial metadata read hit a file-sharing error and succeeded with shared reading. Test-server shutdown needed authorized elevation after a permission error. These failures did not expose credentials or alter scope.
 
 - Official SoC DocHub was inaccessible; MP3 and human confirmations supplied evidence instead. The connector initially returned issue text without author association; read-only CLI subsequently confirmed `MEMBER`. No issue comments were read.
 - GitHub connector PR creation returned HTTP 403; authenticated `gh pr create --draft --body-file` succeeded. Sandbox network restrictions were resolved through authorized escalation. Git emitted a harmless global-ignore permission warning.
