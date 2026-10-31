@@ -2,6 +2,7 @@
 
 from django.urls import path
 
+from ai.feedback_views import feedback_page
 from rounds import tester
 
 from . import views
@@ -22,6 +23,11 @@ urlpatterns = [
         "tester/rounds/<int:round_id>/cases/<int:case_id>/builds/<int:build_id>/result/",
         tester.result_entry,
         name="tester-result",
+    ),
+    path(
+        "tester/rounds/<int:round_id>/cases/<int:case_id>/builds/<int:build_id>/result/feedback/",
+        feedback_page,
+        name="tester-feedback",
     ),
     path("demo/", views.create_demo, name="demo"),
 ]
