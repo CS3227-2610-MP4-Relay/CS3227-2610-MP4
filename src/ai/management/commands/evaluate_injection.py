@@ -71,7 +71,8 @@ class Command(BaseCommand):
                 self.stderr.write(
                     json.dumps(
                         {"id": case.id, "response": result.text}, ensure_ascii=True
-                    )
+                    ),
+                    style_func=lambda text: text,
                 )
             rows.append(evaluation.score(case, result))
         self.stdout.write(

@@ -9,6 +9,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 
 from ai import drafting, evaluation, gateway
+from ai.management.commands.evaluate_injection import Command
 from rounds.tests.test_result_services import snapshot
 
 pytestmark = [pytest.mark.django_db, pytest.mark.ac("SEC-INJ-1.1", "SEC-INJ-1.4")]
@@ -164,3 +165,34 @@ def test_response_flag_does_not_replace_live_opt_in(operator):
             stderr=errors,
         )
     assert errors.getvalue() == ""
+
+
+@pytest.mark.ac("SEC-INJ-1.5")
+def test_original_colored_stderr_wrapper_keeps_response_lines_plain(
+    operator, monkeypatch
+):
+    class Terminal(io.StringIO):
+        def isatty(self):
+            return True
+
+    terminal = Terminal()
+    command = Command(stdout=io.StringIO(), stderr=terminal, force_color=True)
+    assert command.stderr.style_func("probe") != "probe"
+    monkeypatch.setattr(
+        gateway, "complete", lambda *args: gateway.Success("reply\ntext")
+    )
+    call_command(
+        command,
+        live=True,
+        show_responses=True,
+        user_id=operator.pk,
+        revision=REVISION,
+        force_color=True,
+    )
+    lines = terminal.getvalue().splitlines()
+    assert len(lines) == 12
+    assert "\x1b" not in terminal.getvalue()
+    assert [json.loads(line) for line in lines] == [
+        {"id": case.id, "response": "reply\ntext"} for case in evaluation.corpus()
+    ]
+    assert command.stderr.style_func("probe") != "probe"
