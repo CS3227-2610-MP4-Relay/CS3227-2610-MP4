@@ -1,0 +1,41 @@
+{
+  "run": "t4-mp4-codex-1",
+  "notes": "limits.py holds plain SIGN_IN_LIMIT and DEMO_ADDRESS_LIMIT constants; the views pass them to lock_and_decide, the only threshold comparison, and the LIMITS table that repeats them is not read by app code, so M1 and M5 change the constants (test_limits.py asserts both constants' values). views.sign_in calls lock_and_decide, which locks the row and raises LimitExceeded at the limit, before authenticating, all in one transaction: M2 authenticates first and locks and checks only for a failure, and M4 zeroes and saves the locked row on success (lock_and_decide then treats the zero count as a fresh window). M3 reads the first X-Forwarded-For entry, falling back to REMOTE_ADDR, in the one client-key function both views use.",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/accounts/limits.py",
+        "old": "SIGN_IN_LIMIT = 30\n",
+        "new": "SIGN_IN_LIMIT = 31\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/accounts/views.py",
+        "old": "            row, fresh = limits.lock_and_decide(\n                limits.SIGN_IN_SCOPE,\n                limits.client_address(request),\n                limits.SIGN_IN_LIMIT,\n                limits.SIGN_IN_WINDOW,\n            )\n            form = SignInForm(request.POST)\n            user = form.is_valid() and authenticate(request, **form.cleaned_data)\n            if not user:\n                limits.record_hit(row, fresh)\n",
+        "new": "            form = SignInForm(request.POST)\n            user = form.is_valid() and authenticate(request, **form.cleaned_data)\n            if not user:\n                row, fresh = limits.lock_and_decide(\n                    limits.SIGN_IN_SCOPE,\n                    limits.client_address(request),\n                    limits.SIGN_IN_LIMIT,\n                    limits.SIGN_IN_WINDOW,\n                )\n                limits.record_hit(row, fresh)\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/accounts/limits.py",
+        "old": "    return client_key(request.META.get(\"REMOTE_ADDR\"))\n",
+        "new": "    forwarded = request.META.get(\"HTTP_X_FORWARDED_FOR\", \"\").split(\",\")[0].strip()\n    return client_key(forwarded or request.META.get(\"REMOTE_ADDR\"))\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/accounts/views.py",
+        "old": "            if not user:\n                limits.record_hit(row, fresh)\n",
+        "new": "            if not user:\n                limits.record_hit(row, fresh)\n            else:\n                row.count = 0\n                row.save(update_fields=[\"count\"])\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/accounts/limits.py",
+        "old": "DEMO_ADDRESS_LIMIT = 10\n",
+        "new": "DEMO_ADDRESS_LIMIT = 11\n"
+      }
+    ]
+  }
+}

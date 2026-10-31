@@ -1,0 +1,41 @@
+{
+  "run": "t4-mp4-1",
+  "notes": "limits.py holds the SIGN_IN and DEMO Limit dataclasses, whose `allowed` is read only by Count.refused, so M1 and M5 change the constants; M5 thereby reaches both the unlocked peek pre-check and the locked check in create_demo. client_key parses REMOTE_ADDR and is used by both views. views.check_sign_in locks the count, checks it, authenticates and records a failure in one transaction: M2 authenticates first and checks the limit only for a failure, and M4 zeroes the locked row's count with an update before returning the user (a zero count starts no window, so the next failure starts a fresh one). M3 reads the first X-Forwarded-For entry, falling back to REMOTE_ADDR, in the one client-key function both views use.",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/accounts/limits.py",
+        "old": "SIGN_IN = Limit(\"sign-in\", 30, timedelta(minutes=15))\n",
+        "new": "SIGN_IN = Limit(\"sign-in\", 31, timedelta(minutes=15))\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/accounts/views.py",
+        "old": "            limits.check(count)\n            form = SignInForm(request.POST)\n            user = form.is_valid() and authenticate(request, **form.cleaned_data)\n            if user:\n                return user\n            limits.record(count)\n",
+        "new": "            form = SignInForm(request.POST)\n            user = form.is_valid() and authenticate(request, **form.cleaned_data)\n            if user:\n                return user\n            limits.check(count)\n            limits.record(count)\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/accounts/limits.py",
+        "old": "        address = ipaddress.ip_address(request.META.get(\"REMOTE_ADDR\", \"\"))\n",
+        "new": "        forwarded = request.META.get(\"HTTP_X_FORWARDED_FOR\", \"\").split(\",\")[0].strip()\n        address = ipaddress.ip_address(forwarded or request.META.get(\"REMOTE_ADDR\", \"\"))\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/accounts/views.py",
+        "old": "            if user:\n                return user\n",
+        "new": "            if user:\n                limits.LimitCounter.objects.filter(\n                    scope=count.limit.scope, key=count.key\n                ).update(count=0)\n                return user\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/accounts/limits.py",
+        "old": "DEMO = Limit(\"demo\", 10, timedelta(hours=1))\n",
+        "new": "DEMO = Limit(\"demo\", 11, timedelta(hours=1))\n"
+      }
+    ]
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "run": "t3-mp4-sonnet-1",
+  "notes": "Rules are enforced twice: tester.result (GET and POST guards, rendering tester_result.html) and services.record_result (under the round lock). Both read only the signed-in tester's result (the service through _own_result), refuse Closed rounds and refuse a submitted result (the service by updating only a Draft row), so M1, M3 and M4 edit both; M4 also lets tester_result.html show the form, with the true status, for a submitted result, and the GET then fills it from the saved values. ResultForm.clean requires a Fail observation (no database constraint backs it) and RoundTextField(max_length=2000) limits it, so M5's length message also says 2001. M3 leaves the tester round page's Open-only 'Record result' link in place (navigation, not a guard). M5 also widens the model field and its column in migration 0005 to 2001, together, because the varchar(2000) column would otherwise refuse the save (a 503) and a model-only change would fail the candidate's makemigrations --check test; pytest-django builds the test database from migrations on every run (no --reuse-db), so the migration edit is seen consistently.",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/tester.py",
+        "old": "    saved = Result.objects.filter(tester=request.user, case=case, build=build).first()\n",
+        "new": "    saved = Result.objects.filter(case=case, build=build).first()\n"
+      },
+      {
+        "file": "src/rounds/services.py",
+        "old": "        .filter(tester=tester, case=case, build=build)\n",
+        "new": "        .filter(case=case, build=build)\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if fail and cleaned.get(\"observation\") == \"\":\n",
+        "new": "        if False:\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/tester.py",
+        "old": "    if round_.state != Round.State.OPEN:\n        return state_conflict(request, round_)\n",
+        "new": "    if round_.state not in (Round.State.OPEN, Round.State.CLOSED):\n        return state_conflict(request, round_)\n"
+      },
+      {
+        "file": "src/rounds/services.py",
+        "old": "    if not Round.objects.filter(pk=round_.pk, state=Round.State.OPEN).exists():\n        raise RoundNotOpen\n    current = Build.objects.filter(round=round_, cases=case)",
+        "new": "    if not Round.objects.filter(\n        pk=round_.pk, state__in=[Round.State.OPEN, Round.State.CLOSED]\n    ).exists():\n        raise RoundNotOpen\n    current = Build.objects.filter(round=round_, cases=case)"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/tester.py",
+        "old": "    submitted = saved is not None and saved.state == Result.State.SUBMITTED\n",
+        "new": "    submitted = False\n"
+      },
+      {
+        "file": "src/rounds/services.py",
+        "old": "    changed = Result.objects.filter(pk=result.pk, state=Result.State.DRAFT).update(\n",
+        "new": "    changed = Result.objects.filter(pk=result.pk).update(\n"
+      },
+      {
+        "file": "src/rounds/templates/rounds/tester_result.html",
+        "old": "{% if result.state == \"submitted\" %}\n",
+        "new": "{% if result.state == \"submitted\" and not form %}\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    observation = RoundTextField(max_length=2000, required=False, widget=text_area())\n",
+        "new": "    observation = RoundTextField(max_length=2001, required=False, widget=text_area())\n"
+      },
+      {
+        "file": "src/rounds/models.py",
+        "old": "    observation = models.CharField(max_length=2000, blank=True)\n",
+        "new": "    observation = models.CharField(max_length=2001, blank=True)\n"
+      },
+      {
+        "file": "src/rounds/migrations/0005_results.py",
+        "old": "                ('observation', models.CharField(blank=True, max_length=2000)),\n",
+        "new": "                ('observation', models.CharField(blank=True, max_length=2001)),\n"
+      }
+    ]
+  }
+}

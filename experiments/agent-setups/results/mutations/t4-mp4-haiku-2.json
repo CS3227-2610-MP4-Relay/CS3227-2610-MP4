@@ -1,0 +1,41 @@
+{
+  "run": "t4-mp4-haiku-2",
+  "notes": "limits.py holds plain SIGN_IN_LIMIT and DEMO_ADDRESS_LIMIT constants, read only by the threshold comparisons in views._check_credentials and views.create_demo, so M1 and M5 change the constants. _check_credentials locks the address's counter, compares its windowed count with the limit, authenticates and records a failure in one transaction, and sign_in starts the session afterwards: M2 authenticates first and refuses only a failure at the limit, and M4 zeroes and saves the locked counter on success before returning the user (the window start is kept, so the next failure counts 1). M3 reads the first X-Forwarded-For entry, falling back to REMOTE_ADDR, in limits._normalized_address, called by client_key,, the one client-address function both per-address limits use.",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/accounts/limits.py",
+        "old": "SIGN_IN_LIMIT = 30\n",
+        "new": "SIGN_IN_LIMIT = 31\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/accounts/views.py",
+        "old": "        window = limits.count_in_window(counter, limits.SIGN_IN_WINDOW)\n        if window >= limits.SIGN_IN_LIMIT:\n            raise limits.Refused\n        form = SignInForm(request.POST)\n        user = form.is_valid() and authenticate(request, **form.cleaned_data)\n",
+        "new": "        window = limits.count_in_window(counter, limits.SIGN_IN_WINDOW)\n        form = SignInForm(request.POST)\n        user = form.is_valid() and authenticate(request, **form.cleaned_data)\n        if not user and window >= limits.SIGN_IN_LIMIT:\n            raise limits.Refused\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/accounts/limits.py",
+        "old": "    value = request.META.get(\"REMOTE_ADDR\")\n",
+        "new": "    forwarded = request.META.get(\"HTTP_X_FORWARDED_FOR\", \"\").split(\",\")[0].strip()\n    value = forwarded or request.META.get(\"REMOTE_ADDR\")\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/accounts/views.py",
+        "old": "            limits.record(counter, limits.SIGN_IN_WINDOW)\n            return None\n        return user\n",
+        "new": "            limits.record(counter, limits.SIGN_IN_WINDOW)\n            return None\n        counter.count = 0\n        counter.save(update_fields=[\"count\"])\n        return user\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/accounts/limits.py",
+        "old": "DEMO_ADDRESS_LIMIT = 10\n",
+        "new": "DEMO_ADDRESS_LIMIT = 11\n"
+      }
+    ]
+  }
+}
