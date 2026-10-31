@@ -123,6 +123,105 @@ def test_invalid_provider_result_is_a_failure(user):
     )
 
 
+@pytest.mark.ac("RND-8.5")
+@pytest.mark.parametrize(
+    "text",
+    [
+        None,
+        1,
+        [],
+        {},
+        b"text",
+        pytest.param("\ud800", id="high-surrogate"),
+        pytest.param("\udfff", id="low-surrogate"),
+    ],
+)
+def test_invalid_provider_success_is_rejected_and_releases_slots(user, text, caplog):
+    caplog.set_level(logging.INFO, logger="ai.gateway")
+    assert complete(user, "", "{}", provider=FakeProvider(Success(text))) == Failed(
+        "invalid-response"
+    )
+    assert caplog.messages == ["LLM gateway outcome: invalid-response"]
+    assert CallRecord.objects.filter(scope=gateway.USER_CALLS_SCOPE).count() == 1
+    assert not CallSlot.objects.filter(expires_at__gt=gateway.timezone.now()).exists()
+
+
+@pytest.mark.ac("RND-8.5")
+@pytest.mark.parametrize("size", [0, 19999, 20000, 20001])
+@pytest.mark.parametrize("character", ["a", "\U0001f600"])
+def test_provider_success_character_boundary(user, size, character):
+    text = character * size
+    expected = Success(text) if size <= 20000 else Failed("invalid-response")
+    assert complete(user, "", "{}", provider=FakeProvider(Success(text))) == expected
+
+
+@pytest.mark.ac("RND-8.5")
+@pytest.mark.parametrize("outcome", [Refused, Failed])
+@pytest.mark.parametrize(
+    "code", ["synthetic provider text", "", None, 1, [], {}, b"transport"]
+)
+def test_invalid_provider_code_never_reaches_result_or_logs(
+    user, outcome, code, caplog
+):
+    caplog.set_level(logging.INFO, logger="ai.gateway")
+    assert complete(user, "", "{}", provider=FakeProvider(outcome(code))) == Failed(
+        "provider-error"
+    )
+    assert caplog.messages == ["LLM gateway outcome: provider-error"]
+    assert CallRecord.objects.filter(scope=gateway.USER_CALLS_SCOPE).count() == 1
+    assert not CallSlot.objects.filter(expires_at__gt=gateway.timezone.now()).exists()
+
+
+@pytest.mark.ac("RND-8.5")
+@pytest.mark.parametrize(
+    "result",
+    [
+        Refused("live-off"),
+        Refused("input-too-large"),
+        Refused("busy-or-quota"),
+        Refused("not-configured"),
+        Refused("provider-refused"),
+        Refused("quota"),
+        Failed("timeout"),
+        Failed("transport"),
+        Failed("invalid-response"),
+        Failed("provider-error"),
+    ],
+)
+def test_fixed_provider_codes_pass_through(user, result, caplog):
+    caplog.set_level(logging.INFO, logger="ai.gateway")
+    assert complete(user, "", "{}", provider=FakeProvider(result)) == result
+    assert caplog.messages == [f"LLM gateway outcome: {result.code}"]
+
+
+@pytest.mark.ac("RND-8.5")
+@pytest.mark.parametrize(
+    "result", [Refused("transport"), Failed("quota"), Failed("success")]
+)
+def test_fixed_code_for_another_outcome_is_rejected(user, result, caplog):
+    caplog.set_level(logging.INFO, logger="ai.gateway")
+    assert complete(user, "", "{}", provider=FakeProvider(result)) == Failed(
+        "provider-error"
+    )
+    assert caplog.messages == ["LLM gateway outcome: provider-error"]
+
+
+@pytest.mark.ac("RND-8.4")
+@pytest.mark.parametrize("size", [7999, 8000, 8001])
+@pytest.mark.parametrize("character", ["a", "\U0001f600"])
+def test_combined_input_character_boundary(user, size, character):
+    instructions, data = character * 4000, character * (size - 4000)
+    fake = FakeProvider(Success("ok"))
+    result = complete(user, instructions, data, provider=fake)
+    if size <= 8000:
+        assert result == Success("ok")
+        assert fake.calls == [(instructions, data)]
+    else:
+        assert result == Refused("input-too-large")
+        assert fake.calls == []
+        assert not CallRecord.objects.exists()
+
+
 def test_releasing_one_call_does_not_release_another(user):
     first = CallSlot.objects.get(scope=gateway.DEPLOYMENT_SCOPE, key="0")
     second = CallSlot.objects.get(scope=gateway.DEPLOYMENT_SCOPE, key="1")
