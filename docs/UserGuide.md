@@ -74,6 +74,17 @@ Results belong to the build shown when you opened the entry page. After the coor
 
 You can view your submitted result through **Record result** while its build is current and the round is Open. Once the round closes, an entry page says "This action is not available while the round is Closed." and saves nothing. The round's instructions remain available. If storage fails, the page says "Relay is temporarily unavailable. Try again later." and no part of the result change is saved.
 
+## Observation feedback
+
+1. On **Record result**, choose **Save draft**, then **Observation feedback**. The link is available for your saved draft while its round is Open and its build is current.
+2. Review **Saved observation**, **Test case**, **Steps**, **Expected result**, **Linked acceptance criteria** and **Current build**. The page says "AI receives your saved observation, this test case and its linked acceptance criteria. Suggestions may be wrong. Review them and edit your result yourself. Unsaved edits are not included."
+3. Choose **Suggest missing details** to request questions. Any suggestions appear under **Questions to consider**, beside the original source. They do not change your outcome, observation or submission.
+4. Choose **Back to result**, edit **Observation** yourself and choose **Save draft** or **Submit** when ready.
+
+An empty reply says "No missing details were suggested. You can still edit your result yourself." If the source is too long, the page says "This observation and test case are too long for feedback. You can still edit your result yourself." If feedback is unavailable, it says "Feedback is unavailable right now. You can still edit your result yourself." You can still choose **Back to result** and continue manually.
+
+Questions are not saved. Opening the feedback page again clears them; resubmitting its request asks for new feedback. If your saved source changes during a request, the page says "Your saved draft or test case changed. Reload before requesting feedback." A missing draft says "Save a draft before requesting feedback." Submission, a newer build or a closed round prevents feedback with the same messages described under [Save and submit a result](#save-and-submit-a-result).
+
 ## Review my results
 
 1. Open an Open or Closed round from **Tester home**, then choose **My results**.

@@ -687,6 +687,7 @@ def expect_tester_round(caller, kind, state, *, names_a_round=True):
 # The TECHNICAL-SPEC tester routes and RES-2: result entry takes GET and POST,
 # and only for the tester's own row of a case's current build in an Open round.
 TESTER_RESULT = "accounts:tester-result"
+TESTER_FEEDBACK = "accounts:tester-feedback"
 RESULT_MARKS = ("RES-2.3", "RES-2.4", "RES-2.6", "RES-2.7")
 RESULT_SLOTS = ("round_id", "case_id", "build_id")
 
@@ -942,7 +943,12 @@ def get_or_post(route):
 def test_every_route_has_a_matrix_entry():
     names = list(route_names(get_resolver().url_patterns))
     assert len(names) == len(set(names))
-    expected = set(ACCOUNTS) | set(ROUNDS) | set(TESTER_READ_ONLY) | {TESTER_RESULT}
+    expected = (
+        set(ACCOUNTS)
+        | set(ROUNDS)
+        | set(TESTER_READ_ONLY)
+        | {TESTER_RESULT, TESTER_FEEDBACK}
+    )
     assert set(names) == expected
 
 
@@ -1176,6 +1182,67 @@ def test_forged_tester_result_ids_get_the_404_page(name, state, slot, variant):
                     caller, kind, state, forged, names_own=False
                 )
             exchange(world, caller, kind, forged, result_data(world), expect, failures)
+    failures.assert_none()
+
+
+@pytest.mark.ac("RES-4.5", "RES-4.7")
+@pytest.mark.parametrize("caller", CALLERS)
+@pytest.mark.parametrize("state", STATES)
+@pytest.mark.parametrize("situation", ["draft", "missing", "submitted", "stale"])
+def test_feedback_access_matrix(caller, state, situation):
+    entry = result_world(state, STALE if situation == "stale" else FRESH)
+    world = entry.world
+    if situation != "missing":
+        Result.objects.create(
+            tester=world.users[TESTER_A],
+            case=world.target.case,
+            build_id=entry.own["build_id"],
+            outcome="fail",
+            observation=f"Own {A_MARK}",
+            submitted_at=timezone.now() if situation == "submitted" else None,
+        )
+    target = url(TESTER_FEEDBACK, entry.own)
+    failures = Failures()
+    for kind in KINDS:
+        expected = expect_tester_result(
+            caller, kind, state, target, STALE if situation == "stale" else FRESH
+        )
+        if expected.outcome in (OK, DONE):
+            if situation in ("submitted", "missing"):
+                expected.outcome = CONFLICT
+                expected.message = (
+                    "This result has already been submitted."
+                    if situation == "submitted"
+                    else "Save a draft before requesting feedback."
+                )
+            else:
+                expected.outcome = OK
+        exchange(world, caller, kind, target, {}, expected, failures)
+    failures.assert_none()
+
+
+@pytest.mark.ac("RES-4.5", "RES-4.7")
+@pytest.mark.parametrize(
+    ("slot", "variant"),
+    [
+        (slot, variant)
+        for slot, variants in RESULT_VARIANTS.items()
+        for variant in variants
+    ],
+)
+def test_forged_feedback_ids_are_refused_before_context(slot, variant):
+    entry = result_world(OPEN)
+    world = entry.world
+    target = url(TESTER_FEEDBACK, entry.forged(slot, variant))
+    failures = Failures()
+    for caller in (ANON, TESTER_A, COORD_A):
+        for kind in (GET, POST):
+            expected = (
+                Expect(NOT_FOUND_PAGE, scoped=True)
+                if variant in STATELESS
+                else expect_tester_result(caller, kind, OPEN, target, names_own=False)
+            )
+            exchange(world, caller, kind, target, {}, expected, failures)
     failures.assert_none()
 
 
