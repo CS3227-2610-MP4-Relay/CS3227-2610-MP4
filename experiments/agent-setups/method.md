@@ -238,3 +238,57 @@ Added on 2026-10-31, during the task-3 runs, after the human's feedback on v6. I
   - DeepSeek v4.1 Flash in Codex and in Hermes, through OpenRouter.
 
   The order is in [`inputs/queue-ideal-v7-task3.txt`](inputs/queue-ideal-v7-task3.txt). Later versions follow the same pattern, each fixing what the previous version's runs showed.
+
+## Fourth task, cut-short runs and ideal setup v8
+
+Added on 2026-10-31, after every task-2 and task-3 run had passed its whole hidden suite. These points were fixed before any task-4 or v8 run ended.
+
+- **Why.** Every run on tasks 2 and 3 passed its hidden suite, so neither task separates the setups on correctness. The human asked for a harder task if task 3 was at the ceiling.
+- **Task 4:** issue #4, "Limit abuse of sign-in and demo workspace creation" (ACC-3).
+  - **Start:** `ec1a951`, the main-branch commit before the original slice merged, plus the same test-database harness commit (`0035dab`).
+  - **Harder:** ACC-3 is already specified, so the prompt, [`inputs/task-prompt-4.md`](inputs/task-prompt-4.md), says to build to the specs as they stand. The difficulty is in the behaviour:
+    - per-address windows, with IPv6 grouped by /64 and a forged `X-Forwarded-For` ignored;
+    - which requests count;
+    - a correct password refused at the limit;
+    - counts that stay right under simultaneous requests.
+
+    The original slice added about 260 lines of non-test code.
+  - **Environment:** the starting commit has no browser tests, so task 4 uses the first virtual environment.
+- **Hidden suite, task 4 (26 tests):** written from ACC-3 and the technical spec's accounts notes only, before any task-4 run started.
+  - **Checked against the original implementation (`302efbe`):** all 26 pass, in seven full runs and twenty runs of the two concurrency tests alone.
+  - **Checked against the starting commit:** 23 fail and 3 pass. The 3 assert things already true at the start: the 30th failure is normal, viewing the sign-in page is never limited, and the 10th creation succeeds.
+  - **How it judges:** it drives `/sign-in/` and `/demo/` from chosen client addresses and judges by status codes, the ACC-3 messages, whether a session started and the rows created. Two tests send simultaneous requests from threads, each with its own connection.
+  - **Left out:**
+    - the window's end (ACC-3.2) and the rule that a refused sign-in does not extend its window, because both need the clock;
+    - storage failures (ACC-3.7), which need fault injection specific to each implementation.
+  - **Planted bugs:** each of the five task-4 bugs, planted in the reference, fails at least one test. A sixth, a lock that takes no row lock, fails both concurrency tests in five of five runs.
+- **Mutants, task 4:**
+  - M1, the sign-in limit off by one: a 31st failure is allowed;
+  - M2, a correct password at the limit signs in;
+  - M3, the first `X-Forwarded-For` address trusted as the client;
+  - M4, a successful sign-in resets the count;
+  - M5, the demo limit off by one: an 11th creation is allowed.
+- **Task 4 runs:** 11, up to three at a time, in the seeded order of [`inputs/queue-task4.txt`](inputs/queue-task4.txt) (`random.Random(4)`):
+  - one each of mp4, mp3, solo, superpowers, spec-kit, OpenSpec, caveman, ponytail and headroom on Opus;
+  - mp4 on Sonnet;
+  - mp4 on Haiku.
+- **Cut-short runs.** Three task-3 runs ended in the middle of the slice:
+  - mp4 on Opus (`t3-mp4-1`);
+  - ponytail (`t3-ponytail-1`);
+  - mp4 on Haiku (`t3-mp4-haiku-1`).
+
+  In each, the main session ended its turn while a builder subagent it had started in the background was still working. A non-interactive run ends with the turn. Their output is kept under a `trunc-` prefix and left out of the comparison, and each setup gets one more task-3 run ([`inputs/queue-task3-reruns.txt`](inputs/queue-task3-reruns.txt)). How often this happens is reported as a finding about those setups.
+- **Ideal setup v8:** v7 plus four rules from v7's and v6's task-3 reviews. Its runs are task 4 and task 3, one each on Opus, Sonnet and Haiku in Claude Code, and on DeepSeek v4.1 Flash in Codex and in Hermes ([`inputs/queue-ideal-v8.txt`](inputs/queue-ideal-v8.txt)). The rules:
+  - **Earlier requirements.** An existing statement addressed to the change is part of the request: meet it, or ask before changing it.
+    - Five task-3 runs turned SECURITY-SPEC's "RES must cap results" into an open risk.
+    - One dropped the race tests SECURITY-SPEC assigned to RES.
+    - One left RND-4.1's submission time unmet.
+  - **Project test rules.** Write every test the project's rules require, before applying "test each behaviour once at the lowest level".
+    - v7's Opus run skipped the browser test the repository requires for a new journey.
+    - v7's Haiku run skipped the display tests SECURITY-SPEC requires for each rendered text.
+  - **Wait for what you start.** Never end the turn while a started session or command is still running. This is the cause of the cut-short runs.
+  - **Show the arithmetic.** Write out the arithmetic behind any estimate. One run understated its storage estimate by about 11 times.
+- **Outside access.** Each counted access outside a run's own folder was read in its transcript; none reached another run's work or the hidden suites.
+  - **Haiku reruns:** the clean task-3 Haiku rerun searched the session folder for docs and patches five times, finding nothing.
+  - **Library code:** an mp3 run read Django's own source in the main checkout's virtual environment.
+  - **Refused or own files:** the other accesses were refused or reached the run's own files.
