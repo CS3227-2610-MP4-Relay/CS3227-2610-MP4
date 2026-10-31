@@ -100,6 +100,76 @@ def test_rolling_quota_expires_individual_calls(user):
     assert CallRecord.objects.filter(scope=gateway.USER_CALLS_SCOPE).count() == 1
 
 
+@pytest.mark.ac("RND-8.4")
+@pytest.mark.parametrize(
+    "scope", [gateway.USER_CALLS_SCOPE, gateway.DEPLOYMENT_CALLS_SCOPE]
+)
+@pytest.mark.parametrize("offset", [-1, 0, 1], ids=["before", "at", "after"])
+def test_rolling_quota_cutoff_for_each_scope(user, monkeypatch, scope, offset):
+    now = gateway.timezone.now()
+    monkeypatch.setattr(gateway.timezone, "now", lambda: now)
+    is_user = scope == gateway.USER_CALLS_SCOPE
+    key = str(user.pk) if is_user else "all"
+    limit = gateway.USER_CALLS if is_user else gateway.DEPLOYMENT_CALLS
+    window = gateway.USER_WINDOW if is_user else gateway.DEPLOYMENT_WINDOW
+    boundary = CallRecord.objects.create(
+        scope=scope,
+        key=key,
+        created_at=now - window + gateway.timedelta(microseconds=offset),
+    )
+    CallRecord.objects.bulk_create(
+        CallRecord(scope=scope, key=key, created_at=now) for _ in range(limit - 1)
+    )
+    fake = FakeProvider(Success("{}"))
+    allowed = offset <= 0
+    expected = Success("{}") if allowed else Refused("busy-or-quota")
+    assert complete(user, "", "{}", provider=fake) == expected
+    assert len(fake.calls) == int(allowed)
+    assert CallRecord.objects.filter(pk=boundary.pk).exists() is not allowed
+    assert CallRecord.objects.filter(scope=scope, key=key).count() == limit
+    other_scope = (
+        gateway.DEPLOYMENT_CALLS_SCOPE if is_user else gateway.USER_CALLS_SCOPE
+    )
+    assert CallRecord.objects.filter(scope=other_scope).count() == int(allowed)
+    assert not CallSlot.objects.filter(expires_at__gt=now).exists()
+
+
+@pytest.mark.ac("RND-8.4")
+@pytest.mark.parametrize(
+    "scope", [gateway.USER_CALLS_SCOPE, gateway.DEPLOYMENT_CALLS_SCOPE]
+)
+def test_quota_refusal_rolls_back_accounting_and_slots(user, monkeypatch, scope):
+    now = gateway.timezone.now()
+    monkeypatch.setattr(gateway.timezone, "now", lambda: now)
+    is_user = scope == gateway.USER_CALLS_SCOPE
+    key = str(user.pk) if is_user else "all"
+    limit = gateway.USER_CALLS if is_user else gateway.DEPLOYMENT_CALLS
+    CallRecord.objects.bulk_create(
+        CallRecord(scope=scope, key=key, created_at=now) for _ in range(limit)
+    )
+    # A deployment refusal must undo the earlier user's cleanup and tentative call.
+    other_scope = (
+        gateway.DEPLOYMENT_CALLS_SCOPE if is_user else gateway.USER_CALLS_SCOPE
+    )
+    CallRecord.objects.create(
+        scope=other_scope,
+        key="all" if is_user else str(user.pk),
+        created_at=now - gateway.timedelta(hours=2),
+    )
+    CallSlot.objects.create(
+        scope=gateway.USER_SCOPE,
+        key=str(user.pk),
+        expires_at=now - gateway.timedelta(seconds=1),
+    )
+    records_before = list(CallRecord.objects.order_by("pk").values())
+    slots_before = list(CallSlot.objects.order_by("pk").values())
+    fake = FakeProvider(Success("{}"))
+    assert complete(user, "", "{}", provider=fake) == Refused("busy-or-quota")
+    assert fake.calls == []
+    assert list(CallRecord.objects.order_by("pk").values()) == records_before
+    assert list(CallSlot.objects.order_by("pk").values()) == slots_before
+
+
 @pytest.mark.parametrize(
     "result",
     [Refused("provider-refused"), Failed("timeout"), Failed("transport")],
