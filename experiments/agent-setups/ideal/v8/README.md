@@ -1,6 +1,8 @@
 # Portable agent workflow
 
-A small workflow for coding agents that you can drop into any repository, new or existing. It runs the same way in Claude Code, Codex, Hermes or any tool that reads `AGENTS.md`, on any model. It came out of the [agent-setups experiment](../../README.md), which compared twelve setups on real tasks and then tuned this one over eight versions on Opus, Sonnet, Haiku and DeepSeek v4.1 Flash. This is version 8.
+A small workflow for coding agents that you can drop into any repository, new or existing. It runs the same way in Claude Code, Codex, Hermes or any tool that reads `AGENTS.md`, on any model. It came out of the [agent-setups experiment](../../README.md). This is version 8.
+
+**Tested and not adopted: use [version 7](../v7/README.md).** Version 8 is version 7 plus four rules. On task 3 it cost more than version 7 on every model, and its reviews found no fewer problems; the [version 7 README](../v7/README.md#version-8-tested-and-not-adopted) gives the figures. It is kept as it ran.
 
 ## How it works
 
