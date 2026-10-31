@@ -1,0 +1,56 @@
+{
+  "run": "t3-mp4-3",
+  "notes": "services.own_result, called by the result view for GET and POST and again by save_result under the round lock, reads only the signed-in tester's result and refuses non-Open rounds, superseded builds and, when writing, submitted results; result_page shows no form for a submitted result. ResultForm.clean requires a Fail observation (no database constraint backs it) and RoundTextField(max_length=2000) limits the observation with an explicit message, which M5 leaves saying 2000. M3 leaves the tester round page's Open-only 'Record result' link in place (navigation, not a guard); M4 keeps a submitted result Submitted when it is saved again, as save_result only ever sets the state on submit. M5 also widens the model field and its column in migration 0005 to 2001, together, because the varchar(2000) column would otherwise refuse the save (a 503) and a model-only change would fail the candidate's makemigrations --check test; pytest-django builds the test database from migrations on every run (no --reuse-db), so the migration edit is seen consistently.",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/services.py",
+        "old": "    results = Result.objects.filter(tester=tester, case=case, build=build)\n",
+        "new": "    results = Result.objects.filter(case=case, build=build)\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if failed and data.get(\"observation\") == \"\":\n",
+        "new": "        if False:\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/services.py",
+        "old": "    if round_.state != Round.State.OPEN:\n        raise RoundNotOpen\n    builds = Build.objects.filter(round=round_, cases=case).order_by(\"-id\")\n",
+        "new": "    if round_.state not in (Round.State.OPEN, Round.State.CLOSED):\n        raise RoundNotOpen\n    builds = Build.objects.filter(round=round_, cases=case).order_by(\"-id\")\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/services.py",
+        "old": "    if writing and result is not None and result.state == Result.State.SUBMITTED:\n        raise ResultConflict(SUBMITTED)\n",
+        "new": ""
+      },
+      {
+        "file": "src/rounds/tester.py",
+        "old": "    elif found is None or found.state == Result.State.DRAFT:\n",
+        "new": "    elif found is None or found.state in (Result.State.DRAFT, Result.State.SUBMITTED):\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    observation = RoundTextField(\n        max_length=2000,\n",
+        "new": "    observation = RoundTextField(\n        max_length=2001,\n"
+      },
+      {
+        "file": "src/rounds/models.py",
+        "old": "    observation = models.CharField(max_length=2000, blank=True)\n",
+        "new": "    observation = models.CharField(max_length=2001, blank=True)\n"
+      },
+      {
+        "file": "src/rounds/migrations/0005_result.py",
+        "old": "                (\"observation\", models.CharField(blank=True, max_length=2000)),\n",
+        "new": "                (\"observation\", models.CharField(blank=True, max_length=2001)),\n"
+      }
+    ]
+  }
+}

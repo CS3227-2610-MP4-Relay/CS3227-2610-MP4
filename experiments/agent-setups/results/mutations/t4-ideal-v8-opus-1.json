@@ -1,0 +1,41 @@
+{
+  "run": "t4-ideal-v8-opus-1",
+  "notes": "limits.py holds the SIGN_IN and DEMO Limit tuples, whose `maximum` is read by claim (the locked check) and, for demo creation, also by the unlocked reached() pre-check, so M1 and M5 change the constants and M5 reaches both; client_key parses REMOTE_ADDR and is used by both views. views.sign_in calls limits.claim, which locks and raises LimitReached at the limit, before authenticating: M2 authenticates first and claims only for a failure, so a correct password never meets the limit, and M4 zeroes the row's count with an update on success, still inside the transaction. M3 reads the first X-Forwarded-For entry, falling back to REMOTE_ADDR, in the one client-key function both views use.",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/accounts/limits.py",
+        "old": "SIGN_IN = Limit(\"sign-in\", 30, timedelta(minutes=15))\n",
+        "new": "SIGN_IN = Limit(\"sign-in\", 31, timedelta(minutes=15))\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/accounts/views.py",
+        "old": "            count_failure = limits.claim(limits.SIGN_IN, limits.client_key(request))\n            form = SignInForm(request.POST)\n            user = form.is_valid() and authenticate(request, **form.cleaned_data)\n            if not user:\n                count_failure()\n",
+        "new": "            form = SignInForm(request.POST)\n            user = form.is_valid() and authenticate(request, **form.cleaned_data)\n            if not user:\n                key = limits.client_key(request)\n                count_failure = limits.claim(limits.SIGN_IN, key)\n                count_failure()\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/accounts/limits.py",
+        "old": "        address = ipaddress.ip_address(request.META.get(\"REMOTE_ADDR\") or \"\")\n",
+        "new": "        forwarded = request.META.get(\"HTTP_X_FORWARDED_FOR\", \"\").split(\",\")[0].strip()\n        address = ipaddress.ip_address(\n            forwarded or request.META.get(\"REMOTE_ADDR\") or \"\"\n        )\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/accounts/views.py",
+        "old": "            # login() keeps the identifier when the same user signs in again.\n",
+        "new": "            limits.LimitCounter.objects.filter(\n                scope=limits.SIGN_IN.scope, key=limits.client_key(request)\n            ).update(count=0)\n            # login() keeps the identifier when the same user signs in again.\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/accounts/limits.py",
+        "old": "DEMO = Limit(\"demo\", 10, timedelta(hours=1))\n",
+        "new": "DEMO = Limit(\"demo\", 11, timedelta(hours=1))\n"
+      }
+    ]
+  }
+}
