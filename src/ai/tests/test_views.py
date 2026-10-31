@@ -3,6 +3,7 @@
 import json
 import logging
 import re
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -20,9 +21,9 @@ from rounds.models import Case, Criterion, Round
 from rounds.tests.conftest import csrf_token, signed_in
 
 INTRO = (
-    "Select 1 to 5 acceptance criteria. AI suggestions are switched off for now, "
-    "so nothing is sent to the AI service. Suggestions are not saved; review each "
-    "one before adding it."
+    "Select 1 to 5 acceptance criteria. The selected criteria are sent to the SoC "
+    "AI service to suggest test cases. Suggestions are not saved; review each one "
+    "before adding it."
 )
 
 
@@ -467,7 +468,11 @@ def test_error_reports_hide_covered_criterion_text(coord_client, round_):
     frames = ExceptionReporter(
         None, info.type, info.value, info.tb
     ).get_traceback_frames()
-    views = [frame for frame in frames if frame["filename"].endswith("ai/views.py")]
+    views = [
+        frame
+        for frame in frames
+        if Path(frame["filename"]).as_posix().endswith("ai/views.py")
+    ]
     assert [frame["function"] for frame in views] == ["draft_page"]
     assert "Secret criterion text" not in repr([frame["vars"] for frame in views])
 

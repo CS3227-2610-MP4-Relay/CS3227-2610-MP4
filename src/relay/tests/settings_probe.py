@@ -4,6 +4,8 @@ import importlib
 import json
 import os
 import sys
+from pathlib import Path
+from runpy import run_path
 
 import django
 from django.conf import global_settings
@@ -58,6 +60,9 @@ def production_checks(module):
 
 def main():
     """Print the selected settings for configuration assertions."""
+    run_path(str(Path(__file__).with_name("dotenv_probe.py")))["isolate_dotenv"](
+        sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else None
+    )
     settings = importlib.import_module(sys.argv[1])
     runtime = (
         production_checks(sys.argv[1]) if sys.argv[1].endswith(".production") else {}

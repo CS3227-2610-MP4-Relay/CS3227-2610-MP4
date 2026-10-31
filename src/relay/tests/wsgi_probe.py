@@ -3,7 +3,10 @@
 import importlib.util
 import io
 import json
+import os
 import sys
+from pathlib import Path
+from runpy import run_path
 from unittest.mock import patch
 from wsgiref.util import setup_testing_defaults
 
@@ -13,6 +16,9 @@ from django.db.backends.base.base import BaseDatabaseWrapper
 
 def main():
     """Load the hosted entrypoint and request its anonymous start page."""
+    run_path(str(Path(__file__).with_name("dotenv_probe.py")))["isolate_dotenv"](
+        os.environ.get("DJANGO_SETTINGS_MODULE", "relay.settings.local")
+    )
     spec = importlib.util.spec_from_file_location("hosted_wsgi", sys.argv[1])
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module

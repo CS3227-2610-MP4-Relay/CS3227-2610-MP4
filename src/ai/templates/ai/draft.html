@@ -3,7 +3,7 @@
 {% block title %}Draft test cases with AI{% endblock %}
 {% block content %}
 <h1>Draft test cases with AI</h1>
-<p>Select 1 to 5 acceptance criteria. AI suggestions are switched off for now, so nothing is sent to the AI service. Suggestions are not saved; review each one before adding it.</p>
+<p>Select 1 to 5 acceptance criteria. The selected criteria are sent to the SoC AI service to suggest test cases. Suggestions are not saved; review each one before adding it.</p>
 <form method="post">{% csrf_token %}
 <fieldset>
   <legend>{{ form.criteria.label }}</legend>

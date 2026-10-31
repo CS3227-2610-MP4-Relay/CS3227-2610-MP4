@@ -1,10 +1,13 @@
-"""Local-only settings loaded from the process environment, never dotenv files."""
+"""Local-only settings with optional dotenv defaults below process values."""
 
 import os
 
 from django.core.exceptions import ImproperlyConfigured
 
 from .base import *
+from .dotenv import load_dotenv
+
+load_dotenv()
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
 if not SECRET_KEY.strip():
