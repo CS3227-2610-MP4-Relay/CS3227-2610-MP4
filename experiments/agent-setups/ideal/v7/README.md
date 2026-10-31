@@ -96,7 +96,7 @@ Version 8 added four rules, each from a version 7 or version 6 review finding on
 - never end the turn while something you started is still running;
 - write out the arithmetic behind any estimate.
 
-On task 3, where both versions ran, version 8 cost more on every model: $12.72 against $9.78 on Opus, $5.32 against $2.39 on Sonnet, $2.85 against $2.63 on Haiku and $0.44 against $0.30 in Codex. Its Sonnet run took 166 turns against version 7's 51. Its reviews were no better: the problem its first rule targeted, an existing "results must be capped" requirement left open, still appeared on Opus and Sonnet, and its Codex run had a High finding. On task 4, every version 8 run drew at least one Medium finding. These are one run per model and task, and blind reviewers disagreed on one task-4 rule, so the evidence shows the extra rules cost something, not that they make things worse.
+On task 3, where both versions ran, version 8 cost more on every model: $12.72 against $9.78 on Opus, $5.32 against $2.39 on Sonnet, $2.85 against $2.63 on Haiku and $0.44 against $0.30 in Codex. Its Sonnet run took 166 turns against version 7's 51. Its reviews were no better overall: the problem its first rule targeted, an existing "results must be capped" requirement left open, still appeared on Opus and Sonnet, and its Codex run had a High finding. Only its Haiku run came back with no Medium finding, where version 7's had one. On task 4, every version 8 run drew at least one Medium finding. These are one run per model and task, and blind reviewers disagreed on one task-4 rule, so the evidence shows the extra rules cost something, not that they make things worse.
 
 ## Limits
 

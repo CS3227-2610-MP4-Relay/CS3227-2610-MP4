@@ -171,7 +171,7 @@ Cost followed how many subagents the coordinator started more than the add-on: t
 | Sonnet · 4 | 4.83 · 25 · 1/1 · bugs 5/5 · 0 / 0 | v8: 3.71 · 24 · 1/1 · bugs 5/5 · 0 / 1 |
 | Haiku · 1 | 0.97 · 18 · 1/1 · bugs 5/5 · 0 / 0 | v5: 1.46 · 27 · 1/1 · bugs 5/5 · 0 / 0 |
 | Haiku · 2 | 1.95 · 56 · 1/1 · bugs 5/5 · 0 / 1 | v6: 1.85 · 36 · 1/1 · bugs 5/5 · 0 / 0 |
-| Haiku · 3 | 2.29 · 21 · 1/1 · bugs — · 0 / 1 | v8: 2.85 · 40 · 1/1 · bugs — · 0 / 0 |
+| Haiku · 3 | 2.29 · 21 · 1/1 · bugs 5/5 · 0 / 1 | v8: 2.85 · 40 · 1/1 · bugs 5/5 · 0 / 0 |
 | Haiku · 4 | 1.24 · 42 · 1/1 · bugs 5/5 · 0 / 1 | v8: 1.59 · 26 · 1/1 · bugs 5/5 · 1 / 1 |
 | DeepSeek · Codex · 1 | 0.19 · 16 · 1/1 · bugs 5/5 · 0 / 1 | v4: 0.21 · 20 · 1/1 · bugs 5/5 · 0 / 0 |
 | DeepSeek · Codex · 3 | 0.65 · 52 · 1/1 · bugs 5/5 · 0 / 0 | v8: 0.44 · 36 · 1/1 · bugs 5/5 · 1 / 2 |
@@ -247,10 +247,10 @@ The same scoring as the comparison, on five model and tool combinations, each wi
 | Haiku · 2 | MP4 workflow | 1 | 1.95 | 56 | 1/1 · bugs 5/5 · 0 / 1 |
 | Haiku · 2 | Ideal v5 | 1 | 2.18 | 29 | 1/1 · bugs 5/5 · 0 / 1 |
 | Haiku · 2 | Ideal v6 | 1 | 1.85 | 36 | 1/1 · bugs 5/5 · 0 / 0 |
-| Haiku · 3 | MP4 workflow | 1 | 2.29 | 21 | 1/1 · bugs — · 0 / 1 |
+| Haiku · 3 | MP4 workflow | 1 | 2.29 | 21 | 1/1 · bugs 5/5 · 0 / 1 |
 | Haiku · 3 | Ideal v6 | 1 | 3.25 | 43 | 1/1 · bugs 5/5 · 0 / 1 |
 | Haiku · 3 | Ideal v7 | 1 | 2.63 | 43 | 1/1 · bugs 5/5 · 0 / 1 |
-| Haiku · 3 | Ideal v8 | 1 | 2.85 | 40 | 1/1 · bugs — · 0 / 0 |
+| Haiku · 3 | Ideal v8 | 1 | 2.85 | 40 | 1/1 · bugs 5/5 · 0 / 0 |
 | Haiku · 4 | MP4 workflow | 1 | 1.24 | 42 | 1/1 · bugs 5/5 · 0 / 1 |
 | Haiku · 4 | Ideal v8 | 1 | 1.59 | 26 | 1/1 · bugs 5/5 · 1 / 1 |
 | DeepSeek · Codex · 1 | MP4 workflow | 1 | 0.19 | 16 | 1/1 · bugs 5/5 · 0 / 1 |
@@ -285,7 +285,7 @@ A further v3 Haiku run with an Opus reviewer cost $2.55, against about $0.90 wit
 - **v4 → v5:** portable. Commands, folders, homes, high-risk areas and the size budget moved into `project.md`, with an installer for any Git repository.
 - **v5 → v6:** accept only what the human decided; claims about tests point to a test; mock only outside the change.
 - **v6 → v7:** one workflow for every model, with no profiles, because a setup can't tell which model is weak; a set-up step for new projects; the requirement delta, the consistency read, "test each behaviour once" and terse working notes, borrowed from the compared tools.
-- **v7 → v8, not adopted:** look for existing requirements addressed to the change; follow the project's own test rules; never end the turn while something you started is running; show the arithmetic of estimates. On task 3, v8 cost more than v7 on every model (Opus $12.72 against $9.78, Sonnet $5.32 against $2.39, Haiku $2.85 against $2.63, Codex $0.44 against $0.30), and the problem its first rule targeted still appeared on Opus and Sonnet.
+- **v7 → v8, not adopted:** look for existing requirements addressed to the change; follow the project's own test rules; never end the turn while something you started is running; show the arithmetic of estimates. On task 3, v8 cost more than v7 on every model (Opus $12.72 against $9.78, Sonnet $5.32 against $2.39, Haiku $2.85 against $2.63, Codex $0.44 against $0.30), and the problem its first rule targeted still appeared on Opus and Sonnet. Its Haiku run was the one with a cleaner review than version 7's.
 
 ## Deviations from the frozen method
 
