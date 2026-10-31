@@ -25,6 +25,8 @@ All pytest execution uses fixed test settings and the existing loopback PostgreS
 
 ## Evidence and next step
 
-Coordinator supplied inherited injection baseline: `pytest -m prompt_injection -q` passed 95 tests, 2438 deselected, in 4.28s. This is offline evidence, not a live-model result. No implementation or live evaluation has run for this slice.
+Coordinator supplied inherited injection baseline: `pytest -m prompt_injection -q` passed 95 tests, 2438 deselected, in 4.28s. This is offline evidence, not a live-model result.
 
-Next: coordinator reviews/commits the specification checkpoint and supplies a new snapshot before assigning corpus/scoring. Live configuration availability and actual provider outcomes remain unverified. Record actual checks, revisions, review limits and summarized measurements here or in the coordinator's session log as they occur; never claim pending checks passed.
+Spec-before-code checkpoint: `0b49be444ee62b2b20fa5b2ad5ccbd40a827be6c`. Corpus/scoring tests first failed collection because the new `ai.evaluation` module did not exist, establishing missing implementation rather than provider/database failure. The red run also warned that the inherited temporary pytest cache was unwritable; subsequent runs used a separate temporary cache. After implementation, evaluation plus both feature-parser suites passed 134 tests in 0.33s; focused Ruff lint/format passed. Tests cover isolated feedback attack fields, raw versus parsed/cleaned marker observations, schema rejection/empty acceptance, unavailable outcomes and mixed denominators. No production prompt or network guard changed; marker quotation/refusal false positives are now explicit alongside semantic false negatives.
+
+Next: coordinator checks/commits corpus/scoring and supplies a fresh snapshot before assigning the operator command. Local configuration presence and isolated synthetic operator setup were reported by the coordinator; live provider outcomes remain unverified. No live calls have run.
