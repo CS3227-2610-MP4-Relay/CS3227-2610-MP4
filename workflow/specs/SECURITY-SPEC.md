@@ -76,6 +76,8 @@ Exact prompts, schemas, limits and failure rules belong in [`ai/`](ai/llm-gatewa
 
 Threat: oversized inputs, repeated calls or incorrect cache reuse spend the shared allowance or expose another user's context.
 
+- Usage metadata is untrusted: retain only independently validated numeric counts and monotonic elapsed time on existing quota rows under the [gateway accounting contract](ai/llm-gateway.md#usage-and-latency). Never persist or log raw usage objects, prompts, source, replies or credentials; missing values remain unavailable and metrics introduce no retry or new retention subsystem.
+
 - Bound context, replies, time, calls and retries according to verified SoC limits. Make AI failure or refusal leave the manual workflow usable.
 - If result reuse is implemented, isolate it by access scope and source version; authorize before lookup and invalidate on relevant changes. Do not add a cache merely to fill out the scaffold.
 - Residual gap, pending confirmation (#6): a name lookup blocked in the operating system's resolver cannot be cancelled, so each counted gateway call can leave at most one daemon thread running, and at most 20 per user and 200 per deployment can be started per rolling hour, with no overall cap while the resolver never returns; the human chose this on 2026-10-30 over adding aiodns ([after the call](ai/llm-gateway.md#transport-contract-proposed)).

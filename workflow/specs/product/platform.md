@@ -28,6 +28,15 @@ Platform area `PLT`; see the [product spec](../PRODUCT-SPEC.md).
 - **PLT-2.5:** Publication permissions are confined to the Pages deployment job, which uses the `github-pages` environment and publishes the artifact from its own workflow run. Validation retains read-only repository access; the existing Django verification and application behaviour are preserved.
 - **PLT-2.6:** After operator-authorized Pages setup and release, an anonymous visitor can open the configured HTTPS site and follow its landing-page, Reflections and theme-asset links. Record the deployed commit, URL and actual results separately from build evidence. Hosted verification remains pending until setup and release; a passing build alone does not meet it.
 
+## PLT-3: Record LLM usage and latency
+
+- **PLT-3.1:** Every successfully reserved gateway call retains its existing quota records and records the same elapsed milliseconds and available provider token counts on both scope rows when the call returns a gateway result. These rows represent one call, not two; readings use one scope only. Existing rows and unfinished calls have unavailable metrics.
+- **PLT-3.2:** Provider-reported prompt, completion and total token counts are validated independently under the [gateway accounting contract](../ai/llm-gateway.md#usage-and-latency). A reported zero stays zero; absent, null, malformed or out-of-range values remain unavailable, with no estimation or inferred total. Optional usage cannot change a valid reply or refusal into a failure.
+- **PLT-3.3:** Elapsed time uses a monotonic clock from the existing reservation moment until a checked gateway result is available, excluding metric persistence and slot release. Success, provider refusal, invalid response, transport failure, timeout and test-provider failure record latency even when usage is unavailable.
+- **PLT-3.4:** Live-off, oversized-input and busy/quota refusals before successful reservation create no call records or metrics and do not invoke the provider. Refusals after reservation retain the existing quota charge and record latency. Usage recording preserves existing outcomes, quotas, deadlines, cleanup and transport controls.
+- **PLT-3.5:** A metrics storage failure propagates as a storage error to the feature, with no provider retry and no success returned; neither scope row receives a partial metrics update. Slot release is still attempted. Reservation and release storage errors retain their existing feature handling.
+- **PLT-3.6:** Persist only numeric usage and latency on the existing records, with no prompt, source, reply, credentials or raw metadata in records or logs. Existing lazy quota cleanup governs these metrics; inactive users' old rows remain until their next call. There is no new viewer, export, service or cleanup subsystem.
+
 ## Planned work
 
 - Shared storage, authorization and bounded SoC LLM access.
