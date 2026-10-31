@@ -19,6 +19,7 @@ import pytest
 
 from ai import gateway
 from ai.gateway import Failed, Refused, Success, complete
+from ai.models import CallRecord, CallSlot
 
 from .tls_server import Server, hold, make_certificate, respond, trickle
 
@@ -216,10 +217,14 @@ def test_an_incomplete_reply_on_a_held_connection_times_out(
 
 @pytest.mark.ac("RND-8.4")
 def test_a_server_that_never_answers_times_out(user, serve, short_deadline):
-    serve(hold(b"", 6))
+    server = serve(hold(b"", 6))
     result, elapsed = timed(user)
     assert result == Failed("timeout")
     assert elapsed < 3
+    assert len(server.requests) == 1
+    assert CallRecord.objects.filter(scope=gateway.USER_CALLS_SCOPE).count() == 1
+    assert CallRecord.objects.filter(scope=gateway.DEPLOYMENT_CALLS_SCOPE).count() == 1
+    assert not CallSlot.objects.filter(expires_at__gt=gateway.timezone.now()).exists()
 
 
 @pytest.mark.ac("RND-8.4")
@@ -653,9 +658,14 @@ def test_a_compressed_body_is_not_decompressed(user, serve):
         (503, Failed("transport")),
     ],
 )
+@pytest.mark.ac("RND-8.4")
 def test_status_codes_map_to_fixed_outcomes(user, serve, status, expected):
-    serve(respond(http(status, b"synthetic provider body")))
+    server = serve(respond(http(status, b"synthetic provider body")))
     assert complete(user, "", "{}") == expected
+    assert len(server.requests) == 1
+    assert CallRecord.objects.filter(scope=gateway.USER_CALLS_SCOPE).count() == 1
+    assert CallRecord.objects.filter(scope=gateway.DEPLOYMENT_CALLS_SCOPE).count() == 1
+    assert not CallSlot.objects.filter(expires_at__gt=gateway.timezone.now()).exists()
 
 
 @pytest.mark.ac("RND-8.4")
