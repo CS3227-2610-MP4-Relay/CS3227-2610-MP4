@@ -36,7 +36,7 @@ python src/manage.py runserver 127.0.0.1:8000
 
 Open <http://127.0.0.1:8000/>. Stop Django with Ctrl+C. If you started the optional database container above, stop it with `docker stop relay-local-db`; its contents are discarded, so run `migrate` again after restarting it. Run `migrate` whenever a pull request adds migrations; the first ones create workspaces, accounts and database sessions.
 
-Settings read exported environment variables, not `.env` files; [`.env.example`](../.env.example) lists local variable names. Debug defaults off; set `DJANGO_DEBUG=true` only for local debugging. Never use production credentials for development or tests. Separate production setup is in the [deployment checklist](#production-deployment).
+Local settings read the optional repository-root `.env`; you can put `DJANGO_SECRET_KEY=throwaway-local-development-only` there instead of exporting it above. Exported values, including empty ones, take precedence. Restart Django after editing the file. Use literal single-line `KEY=value` assignments, optionally quoted; there is no interpolation, escape decoding or inline-comment processing (`#` in a value is literal). Supported names and syntax are in the [configuration contract](../workflow/specs/TECHNICAL-SPEC.md#configuration); [`.env.example`](../.env.example) lists local names. Test and production settings never load this file. Debug defaults off; set `DJANGO_DEBUG=true` only for local debugging. Never use production credentials for development or tests. Separate production setup is in the [deployment checklist](#production-deployment).
 
 ### Create accounts for manual testing
 
@@ -231,10 +231,17 @@ SoC LLM is the provider; its account setup and service guidance are on [SoC DocH
 
 - **Live switch.** `SOC_LLM_LIVE=True` in shared settings permits provider calls; it is code-level, not an environment flag. Fixed test settings override it to `False`. Missing provider configuration returns `Refused("not-configured")`; an explicit false override returns `Refused("live-off")` before quota or transport work.
 - **Wire format.** One POST sends fixed instructions as the system message and source JSON text as the user message, with the configured model, `temperature=0` and `stream=false`. The adapter reads `choices[0].message.content`; the [contract](../workflow/specs/ai/llm-gateway.md#transport-contract-proposed) defines refusals, malformed replies and limits.
-- **Settings.** The gateway reads `SOC_LLM_ENDPOINT`, `SOC_LLM_MODEL` and `SOC_LLM_API_KEY` from exported environment variables at each call ([configuration](../workflow/specs/TECHNICAL-SPEC.md#configuration)). `.env` files are not automatically read; `.env.example` lists the names only. Never commit a real key.
+- **Settings.** The gateway reads `SOC_LLM_ENDPOINT`, `SOC_LLM_MODEL` and `SOC_LLM_API_KEY` from the process environment at each call. Local settings fill absent values from the repository-root `.env` at startup ([configuration](../workflow/specs/TECHNICAL-SPEC.md#configuration)); test and production settings do not. Never commit a real key.
 - **Tests.** No test reaches a provider, even if your shell sets `SOC_LLM_*`; the fixture in `src/conftest.py` that ensures this is described under [configuration](../workflow/specs/TECHNICAL-SPEC.md#configuration). Gateway tests pass `ai.fakes.FakeProvider` to `gateway.complete`, and the drafting view tests replace `gateway.complete`. Tests marked `llm_transport` (`src/ai/tests/test_transport.py`) run the real transport, which sends requests through aiohttp, against a local HTTPS server; they generate a throwaway certificate with the `openssl` command-line tool, which must be on `PATH` (macOS and Linux include it; on Windows, Git Bash provides it).
 
-For an authorized operator session, use the MP3-compatible endpoint/model below in Git Bash, with `.venv` active. Enter the key at the hidden prompt so it does not appear in command history:
+For local development, keep your existing `SOC_LLM_API_KEY` in the untracked repository-root `.env` and add the endpoint/model below if missing. Local startup also needs `DJANGO_SECRET_KEY` as described above. Restart Django after changes; unset previously exported provider values if you want the file's defaults to apply.
+
+```dotenv
+SOC_LLM_ENDPOINT=https://soclaas-api.comp.nus.edu.sg/v1/chat/completions
+SOC_LLM_MODEL=llama3.1:8b
+```
+
+Alternatively, for an authorized operator session, export these values in Git Bash with `.venv` active. Enter the key at the hidden prompt so it does not appear in command history:
 
 ```bash
 set +x

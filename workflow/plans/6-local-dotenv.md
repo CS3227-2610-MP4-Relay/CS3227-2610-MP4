@@ -21,4 +21,9 @@ Load existing local configuration from optional repository-root `.env` without e
 
 - No agent may open or print the real `.env`; no new dependencies or external configuration changes are authorized. Test data and probe output must remain synthetic. Provider smoke/evaluation is separate and remains pending.
 - Usage baseline `%TEMP%/relay-dotenv-usage-baseline.json` was captured after initial inspection; coordinator-owned reporting must retain that coverage limitation, not treat missing usage as zero.
-- **Next:** coordinator reviews/commits checkpoint 1, then assigns checkpoint 2 with a fresh scope snapshot and isolated test setup.
+- **Next:** coordinator commits checkpoint 2, then obtains exact-head full Linux CI and independent verifier/security review before final delivery. No default-local check against the real file; provider validation remains separate.
+
+## Checkpoint 2 evidence
+
+- Spec committed first as `bf9f58c`. Isolated all three probes through a shared test-only loader preload/path override before enabling local auto-loading; `-I` WSGI startup remains independent of project `PYTHONPATH`. Test/production probes make any loader invocation fail. Real `.env` contents were never inspected, and no default-local startup was run against them.
+- Red: synthetic file configuration test failed against old settings (file secret ignored); 4 precedence/validation cases already passed. Implemented allowlisted literal loading only in local settings, including pre-merge NUL rejection, and updated setup/SoC guide instructions. Final Ruff check/format for the 8 changed Python files passed; `pytest src/relay/tests/test_configuration.py src/relay/tests/test_dotenv.py -q -p no:cacheprovider --basetemp=C:/Users/limbe/AppData/Local/Temp/relay-dotenv-focused-final --tb=short` passed 72 tests in 59.30 seconds. Diff/scope checks and guide readback passed. Coordinator owns full CI/reviews; no dependencies, real provider calls or production configuration changes.

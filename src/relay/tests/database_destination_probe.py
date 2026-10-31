@@ -2,12 +2,17 @@
 
 import os
 import sys
+from pathlib import Path
+from runpy import run_path
 
 from django.db import connections
 
 
 def main():
     """Connect with Django's driver parameters and report the resolved address."""
+    run_path(str(Path(__file__).with_name("dotenv_probe.py")))["isolate_dotenv"](
+        sys.argv[1]
+    )
     os.environ["DJANGO_SETTINGS_MODULE"] = sys.argv[1]
     wrapper = connections["default"]
     parameters = wrapper.get_connection_params()

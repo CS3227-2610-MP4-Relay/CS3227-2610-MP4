@@ -50,7 +50,7 @@ def test_wsgi_file_import_starts_without_pythonpath(tmp_path, production):
     assert "A beta-testing portal for small software teams." in response["body"]
 
 
-def probe(module, **values):
+def probe(module, dotenv=None, **values):
     """Inspect settings without inheriting any runtime configuration."""
     environment = {
         key: value
@@ -59,7 +59,7 @@ def probe(module, **values):
     }
     environment.update(PYTHONPATH=str(SRC), **values)
     return subprocess.run(
-        [sys.executable, str(PROBE), module],
+        [sys.executable, str(PROBE), module, *([str(dotenv)] if dotenv else [])],
         env=environment,
         capture_output=True,
         text=True,
@@ -208,12 +208,52 @@ def test_local_settings_require_key_and_default_debug_off():
     assert json.loads(result.stdout)["debug"] is False
 
 
+@pytest.mark.ac("PLT-1.4")
+def test_dotenv_file_supplies_local_configuration(tmp_path):
+    path = tmp_path / "synthetic.env"
+    path.write_text("DJANGO_SECRET_KEY=synthetic-file-key\nDJANGO_DEBUG=true\n")
+    result = probe("relay.settings.local", dotenv=path)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["secret"] == "synthetic-file-key"
+    assert json.loads(result.stdout)["debug"] is True
+
+
+@pytest.mark.ac("PLT-1.4")
+@pytest.mark.parametrize("value", ["synthetic-env-key", ""])
+def test_dotenv_file_does_not_override_process_values(tmp_path, value):
+    path = tmp_path / "synthetic.env"
+    path.write_text("DJANGO_SECRET_KEY=synthetic-file-key\n")
+    result = probe("relay.settings.local", dotenv=path, DJANGO_SECRET_KEY=value)
+    assert (result.returncode == 0) is bool(value)
+    if value:
+        assert json.loads(result.stdout)["secret"] == value
+
+
+@pytest.mark.ac("PLT-1.4")
+@pytest.mark.parametrize("line", ["DJANGO_DEBUG=yes", "POSTGRES_HOST=foreign.invalid"])
+def test_dotenv_file_keeps_local_validation(tmp_path, line):
+    path = tmp_path / "synthetic.env"
+    path.write_text(f"DJANGO_SECRET_KEY=synthetic-file-key\n{line}\n")
+    result = probe("relay.settings.local", dotenv=path)
+    assert result.returncode != 0
+    assert "ImproperlyConfigured" in result.stderr
+
+
 PRODUCTION = {
     "DJANGO_SECRET_KEY": "synthetic-production-key-long-enough-for-checks-123456789",
     "DJANGO_PRODUCTION_HOST": "relay.example.com",
     "DATABASE_URL": "postgresql://user:p%40ss@ep-synthetic-pooler.neon.tech/relay",
     "DJANGO_TRUST_PROXY_SSL_HEADER": "true",
 }
+
+
+@pytest.mark.ac("PLT-1.5", "PLT-1.8")
+@pytest.mark.parametrize("module", ["relay.settings.test", "relay.settings.production"])
+def test_nonlocal_settings_never_invoke_dotenv_loader(tmp_path, module):
+    path = tmp_path / "synthetic.env"
+    path.write_text("DJANGO_SECRET_KEY='synthetic-malformed\n")
+    result = probe(module, dotenv=path, **PRODUCTION)
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.ac("PLT-1.8")
