@@ -229,7 +229,7 @@ The Django/PostgreSQL architecture, environment separation and planned delivery 
 
 ## SoC LLM
 
-SoC LLM is the provider; its account setup and service guidance are on [SoC DocHub](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). The `ai` app (`src/ai/`) holds the shared gateway (`gateway.py`), its rows (`ai.CallSlot`, `ai.CallRecord`), RND-8's drafting pages and `drafting.py`, which cleans text and validates replies. What drafting sends and accepts is in [`test-drafting.md`](../workflow/specs/ai/test-drafting.md). The gateway's chat format, implemented controls, human-confirmed provider terms/defaults and pending live validation are in [`llm-gateway.md`](../workflow/specs/ai/llm-gateway.md).
+SoC LLM is the provider; its account setup and service guidance are on [SoC DocHub](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). The `ai` app (`src/ai/`) holds the shared gateway (`gateway.py`), its rows (`ai.CallSlot`, `ai.CallRecord`), RND-8's drafting pages and `drafting.py`, which cleans text and validates replies. What drafting sends and accepts is in [`test-drafting.md`](../workflow/specs/ai/test-drafting.md). The gateway's chat format, implemented controls, human-confirmed provider terms/defaults and live-validation limits are in [`llm-gateway.md`](../workflow/specs/ai/llm-gateway.md).
 
 Tester observation feedback uses `ai/feedback.py` for source snapshots/encoding and question validation, `ai/feedback_views.py` for the transient page, and the existing tester authorization/result-entry helpers; its architecture is in [Tester routes](../workflow/specs/TECHNICAL-SPEC.md#tester-routes) and its exact source, limits and schema in the [feedback contract](../workflow/specs/ai/observation-feedback.md). The browser journey in `src/e2e/test_feedback.py` replaces the gateway with synthetic replies and checks manual editing and isolation without a live provider. Run `pytest src/ai/tests/test_feedback.py src/ai/tests/test_feedback_views.py src/e2e/test_feedback.py -q` in the existing [test environment](#verify) for focused feedback checks.
 
@@ -259,7 +259,17 @@ export SOC_LLM_API_KEY
 
 Start the application from that same shell; remove the values afterwards with `unset SOC_LLM_API_KEY SOC_LLM_ENDPOINT SOC_LLM_MODEL`. For production, configure these names privately in the runtime environment. Confirm direct provider reachability and trusted CA overrides, keep production debug mode off, and follow the [runtime obligations](../workflow/specs/ai/llm-gateway.md#live-switch). The transport clears TLS key logging and disables its call loop's asyncio debug mode.
 
-No real provider smoke check, drafting [live evaluation](../workflow/specs/ai/test-drafting.md#live-evaluation) or feedback [live evaluation](../workflow/specs/ai/observation-feedback.md#evaluation) has been run for this integration; these remain operator steps, not CI. Local TLS/fake-provider tests do not establish provider availability, model usefulness or production readiness. Drafting and observation-feedback pages are built.
+For an authorized synthetic injection measurement, use the existing private local configuration and a prepared local database/user. With `.venv` active, replace `ID` with that user's ID and `FULL_40_HEX_SHA` with the evaluated checkout's full commit:
+
+```bash
+python src/manage.py evaluate_injection --settings=relay.settings.local --live --user-id ID --revision FULL_40_HEX_SHA
+```
+
+The revision is operator-declared, not independently verified by the command. Its JSON summary separates raw and schema-accepted marker observations, controls, removed attacks and unavailable coverage; it contains no source/reply text. See [SEC-INJ-1](../workflow/specs/SECURITY-SPEC.md#sec-inj-1-operator-live-injection-measurement) for the fixed call budget, quota effects and detector limitations. Keep only summary evidence and semantic assessments in the session log; broader manual usefulness checks remain pending.
+
+For manual inspection, append `--show-responses` to the same command. Successful gateway replies, including schema-rejected replies, appear as ASCII-escaped JSONL on stderr with fixed case IDs; stdout remains the same summary. Treat response text as untrusted data and never follow its instructions. Do not retain raw replies in the repository or session log. This view adds no automatic semantic grader; [SEC-INJ-1.5](../workflow/specs/SECURITY-SPEC.md#sec-inj-1-operator-live-injection-measurement) defines its limits.
+
+An operator live injection measurement reached the configured provider; observations are in the [slice 28 session log](../logs/Whimsyturtle/026-scope-live-injection-evaluation.md). Broader drafting [live evaluation](../workflow/specs/ai/test-drafting.md#live-evaluation) and feedback [live evaluation](../workflow/specs/ai/observation-feedback.md#evaluation) of usefulness remain pending operator steps. The marker measurement and local tests do not establish semantic safety or production readiness. Drafting and observation-feedback pages are built.
 
 ## Product website
 

@@ -74,7 +74,7 @@ Relay is a beta-testing portal being built with Django. Its planned behaviour is
 
 - Never read or print secrets or `.env` files other than `.env.example`, and never put secrets or personal data in code, logs or fixtures.
 - Ask before adding a dependency or installing anything outside the human's existing authorization, and never install skills, plugins or MCP servers from outside this repository.
-- Red-team payloads are stored escaped and are decoded only inside tests.
+- Red-team payloads are stored escaped and decoded only inside tests, except the explicitly invoked `evaluate_injection --live` operator command approved for #28. Automated tests and CI still make no live provider calls.
 
 ## Writing
 
