@@ -59,6 +59,7 @@ FINDING_KINDS = {
     "claims": "spec text claiming more than the code or tests do",
     "decisions": "a decision or accepted risk missing or misrecorded",
     "tests": "an old test weakened, or a coverage gap",
+    "earlier": "an earlier requirement dropped, left unmet or contradicted",
     "false": "a reviewer false positive",
 }
 FINDINGS = {
@@ -86,6 +87,13 @@ FINDINGS = {
     ("t2-ideal-v5-sonnet-1", "The new SECURITY-SPEC residual"): "decisions",
     ("t2-ideal-v5-haiku-1", "The retest storage-failure test"): "tests",
     ("t2-mp4-haiku-1", "rounds.md RND-5 says a round closed"): "claims",
+    ("t3-ideal-v6-haiku-2", "Result stores no submission"): "earlier",
+    ("t3-ideal-v6-opus-1", "SECURITY-SPEC drops the earlier"): "earlier",
+    ("t3-ideal-v6-opus-2", "SECURITY-SPEC records result storage"): "earlier",
+    ("t3-ideal-v6-sonnet-opusreview-1", "The result storage limit"): "earlier",
+    ("t3-ideal-v7-haiku-1", "The result page's case title"): "tests",
+    ("t3-ideal-v7-opus-1", "The new Record result journey"): "tests",
+    ("t3-openspec-1", "SECURITY-SPEC adds a per-round"): "earlier",
 }
 
 

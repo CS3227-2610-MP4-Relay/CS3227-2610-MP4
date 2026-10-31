@@ -288,6 +288,11 @@ Added on 2026-10-31, after every task-2 and task-3 run had passed its whole hidd
     - v7's Haiku run skipped the display tests SECURITY-SPEC requires for each rendered text.
   - **Wait for what you start.** Never end the turn while a started session or command is still running. This is the cause of the cut-short runs.
   - **Show the arithmetic.** Write out the arithmetic behind any estimate. One run understated its storage estimate by about 11 times.
+- **Pause.** At the human's request, every run was stopped at about 05:00 UTC on 2026-10-31, and the remaining runs were resumed at 16:18 UTC, up to four at a time.
+  - **Interrupted runs:** six runs were cut off by the stop:
+    - task 4's headroom, caveman, and mp4 on Haiku;
+    - task 3's v8 on Opus and in Codex, and mp4's Haiku rerun.
+  - **How they are handled:** their partial output is kept under a `paused-` prefix and left out. Each was rerun from the start under its own name, with the runs not yet started ([`inputs/queue-resume.txt`](inputs/queue-resume.txt)).
 - **Exposed run.** The first task-3 Haiku run of v6 (`t3-ideal-v6-haiku-1`) searched the whole session folder.
   - **What it saw:** two lines of a backup of the original RES-2 code, left among the coordinator's scratch files: the module docstring and the stale-build message.
   - **Fix:** at about 17:47 UTC every such scratch file moved into the unlistable private folder.
