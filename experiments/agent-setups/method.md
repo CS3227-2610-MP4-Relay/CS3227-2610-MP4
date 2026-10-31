@@ -293,6 +293,11 @@ Added on 2026-10-31, after every task-2 and task-3 run had passed its whole hidd
     - task 4's headroom, caveman, and mp4 on Haiku;
     - task 3's v8 on Opus and in Codex, and mp4's Haiku rerun.
   - **How they are handled:** their partial output is kept under a `paused-` prefix and left out. Each was rerun from the start under its own name, with the runs not yet started ([`inputs/queue-resume.txt`](inputs/queue-resume.txt)).
+- **Same-model references.** Added on 2026-11-01 at the human's request: a comparison between setups means something only on the same model. Six runs of the MP4 workflow fill the gaps where our setup ran on a model and task without an MP4 run on that model ([`inputs/queue-same-model.txt`](inputs/queue-same-model.txt)):
+  - on Sonnet, tasks 2 and 3;
+  - on DeepSeek v4.1 Flash in Codex and in Hermes, tasks 3 and 4.
+
+  The comparison charts now show only Opus setups against MP4 on Opus, and every other comparison holds the setup fixed and changes only the model.
 - **Exposed run.** The first task-3 Haiku run of v6 (`t3-ideal-v6-haiku-1`) searched the whole session folder.
   - **What it saw:** two lines of a backup of the original RES-2 code, left among the coordinator's scratch files: the module docstring and the stale-build message.
   - **Fix:** at about 17:47 UTC every such scratch file moved into the unlistable private folder.

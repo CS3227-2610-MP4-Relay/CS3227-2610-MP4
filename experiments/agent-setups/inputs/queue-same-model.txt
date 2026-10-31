@@ -1,0 +1,6 @@
+mp4-inherit t4-mp4-codex-1 TASK=4 PROMPT_FILE=$EXP/task-prompt-4.md TOOL=codex
+mp4-sonnet t3-mp4-sonnet-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md
+mp4-inherit t4-mp4-hermes-1 TASK=4 PROMPT_FILE=$EXP/task-prompt-4.md TOOL=hermes
+mp4-inherit t3-mp4-codex-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md TOOL=codex
+mp4-sonnet t2-mp4-sonnet-1 TASK=2 PROMPT_FILE=$EXP/task-prompt-2.md
+mp4-inherit t3-mp4-hermes-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md TOOL=hermes
