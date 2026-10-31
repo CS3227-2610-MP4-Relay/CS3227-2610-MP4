@@ -259,6 +259,14 @@ export SOC_LLM_API_KEY
 
 Start the application from that same shell; remove the values afterwards with `unset SOC_LLM_API_KEY SOC_LLM_ENDPOINT SOC_LLM_MODEL`. For production, configure these names privately in the runtime environment. Confirm direct provider reachability and trusted CA overrides, keep production debug mode off, and follow the [runtime obligations](../workflow/specs/ai/llm-gateway.md#live-switch). The transport clears TLS key logging and disables its call loop's asyncio debug mode.
 
+For an authorized synthetic injection measurement, use the existing private local configuration and a prepared local database/user. With `.venv` active, replace `ID` with that user's ID and `FULL_40_HEX_SHA` with the evaluated checkout's full commit:
+
+```bash
+python src/manage.py evaluate_injection --settings=relay.settings.local --live --user-id ID --revision FULL_40_HEX_SHA
+```
+
+The revision is operator-declared, not independently verified by the command. Its JSON summary separates raw and schema-accepted marker observations, controls, removed attacks and unavailable coverage; it contains no source/reply text. See [SEC-INJ-1](../workflow/specs/SECURITY-SPEC.md#sec-inj-1-operator-live-injection-measurement) for the fixed call budget, quota effects and detector limitations. Keep only summary evidence in the session log; broader manual usefulness checks remain pending.
+
 No real provider smoke check, drafting [live evaluation](../workflow/specs/ai/test-drafting.md#live-evaluation) or feedback [live evaluation](../workflow/specs/ai/observation-feedback.md#evaluation) has been run for this integration; these remain operator steps, not CI. Local TLS/fake-provider tests do not establish provider availability, model usefulness or production readiness. Drafting and observation-feedback pages are built.
 
 ## Product website
