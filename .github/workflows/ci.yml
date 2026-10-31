@@ -135,6 +135,7 @@ jobs:
           npm install --global vercel@64.3.1
       - name: Check and migrate
         env:
+          SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DJANGO_PRODUCTION_HOST: ${{ vars.DJANGO_PRODUCTION_HOST }}
