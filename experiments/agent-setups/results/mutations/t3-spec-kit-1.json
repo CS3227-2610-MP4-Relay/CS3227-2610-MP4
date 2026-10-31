@@ -1,0 +1,56 @@
+{
+  "run": "t3-spec-kit-1",
+  "notes": "Everything is in rounds/tester.py: checked_result (run for GET and again under the round lock for POST) refuses non-Open rounds and superseded builds, reads only the signed-in tester's result and, on POST, refuses a submitted one; the view writes the result itself, with no service layer. M4 also lets tester_result.html show the form for a submitted result, whose status line already reads 'Submitted'. ResultForm.clean requires a Fail observation (no database constraint) and RoundTextField(max_length=2000) limits it, so M5's message also says 2001. M3 leaves the tester round page's Open-only 'Record result' link in place (navigation, not a guard). M5 also widens the model field and its column in migration 0005 to 2001, together, because the varchar(2000) column would otherwise refuse the save (a 503) and a model-only change would fail the candidate's makemigrations --check test; pytest-django builds the test database from migrations on every run (no --reuse-db), so the migration edit is seen consistently.",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/tester.py",
+        "old": "    result = Result.objects.filter(tester=request.user, case=case, build=build).first()\n",
+        "new": "    result = Result.objects.filter(case=case, build=build).first()\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if data.get(\"outcome\") == Result.Outcome.FAIL and data.get(\"observation\") == \"\":\n",
+        "new": "        if False:\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/tester.py",
+        "old": "    if round_.state != Round.State.OPEN:\n        return state_conflict(request, round_), None\n",
+        "new": "    if round_.state not in (Round.State.OPEN, Round.State.CLOSED):\n        return state_conflict(request, round_), None\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/tester.py",
+        "old": "    if request.method == \"POST\" and result is not None and result.submitted_at:\n        return conflict(request, SUBMITTED), result\n",
+        "new": ""
+      },
+      {
+        "file": "src/rounds/templates/rounds/tester_result.html",
+        "old": "{% if result.submitted_at %}<p>Outcome: {{ result.get_outcome_display }}</p>\n",
+        "new": "{% if result.submitted_at and not form %}<p>Outcome: {{ result.get_outcome_display }}</p>\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    observation = RoundTextField(max_length=2000, required=False, widget=text_area())\n",
+        "new": "    observation = RoundTextField(max_length=2001, required=False, widget=text_area())\n"
+      },
+      {
+        "file": "src/rounds/models.py",
+        "old": "    observation = models.CharField(max_length=2000, blank=True)\n",
+        "new": "    observation = models.CharField(max_length=2001, blank=True)\n"
+      },
+      {
+        "file": "src/rounds/migrations/0005_result.py",
+        "old": "                ('observation', models.CharField(blank=True, max_length=2000)),\n",
+        "new": "                ('observation', models.CharField(blank=True, max_length=2001)),\n"
+      }
+    ]
+  }
+}

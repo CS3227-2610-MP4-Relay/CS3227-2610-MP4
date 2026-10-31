@@ -1,0 +1,41 @@
+{
+  "run": "r1-openspec",
+  "notes": "The check is one `if` line in the shared validator prohibit_direction_controls, attached to every RoundTextField. M5 skips the validator in RoundTextField.__init__ for the field labelled 'Build label' (the validator sees only the text).",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    if any(ord(char) in BIDI_CONTROLS for char in text):\n",
+        "new": "    if False:\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    if any(ord(char) in BIDI_CONTROLS for char in text):\n",
+        "new": "    if any(ord(char) in BIDI_CONTROLS and ord(char) != 0x2069 for char in text):\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    if any(ord(char) in BIDI_CONTROLS for char in text):\n",
+        "new": "    if any(ord(char) in BIDI_CONTROLS and ord(char) != 0x202B for char in text):\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    if any(ord(char) in BIDI_CONTROLS for char in text):\n",
+        "new": "    if any(ord(char) in BIDI_CONTROLS or ord(char) == 0x200E for char in text):\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "            validators=[prohibit_direction_controls],\n",
+        "new": "            validators=(\n                [] if kwargs.get(\"label\") == \"Build label\" else [prohibit_direction_controls]\n            ),\n"
+      }
+    ]
+  }
+}

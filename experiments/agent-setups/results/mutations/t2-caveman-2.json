@@ -1,0 +1,61 @@
+{
+  "run": "t2-caveman-2",
+  "notes": "RetestForm limits cases to the round; services.retest re-reads the round's state (RoundNotOpen), then checks cap, cases and key, with an IntegrityError backstop; retest_round checks Open before and under the lock, so M4 removes all three Open checks. The message is built inline with format_html and isolated_lines. M3 sets key = label, so labels are compared and stored as typed, which also defeats the unique (round, key) constraint.",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        self.fields[\"cases\"].queryset = round_.cases.all()\n",
+        "new": "        self.fields[\"cases\"].queryset = Case.objects.all()\n"
+      },
+      {
+        "file": "src/rounds/services.py",
+        "old": "    cases = list(round_.cases.filter(pk__in=ids))\n",
+        "new": "    cases = list(Case.objects.filter(pk__in=ids))\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/services.py",
+        "old": "    if round_.builds.count() >= BUILD_LIMIT:\n",
+        "new": "    if round_.builds.count() > BUILD_LIMIT:\n"
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/services.py",
+        "old": "    key = build_key(label)\n    if round_.builds.filter(key=key).exists():\n",
+        "new": "    key = label\n    if round_.builds.filter(key=key).exists():\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/views.py",
+        "old": "    round_ = own_round(request, round_id)\n    if round_.state != Round.State.OPEN:\n        return state_conflict(request, round_)\n    if request.method == \"GET\":\n",
+        "new": "    round_ = own_round(request, round_id)\n    if request.method == \"GET\":\n"
+      },
+      {
+        "file": "src/rounds/views.py",
+        "old": "            round_ = own_round(request, round_id, lock=True)\n            if round_.state != Round.State.OPEN:\n                return state_conflict(request, round_)\n            services.retest(round_, [case.pk for case in cases], label)\n",
+        "new": "            round_ = own_round(request, round_id, lock=True)\n            services.retest(round_, [case.pk for case in cases], label)\n"
+      },
+      {
+        "file": "src/rounds/services.py",
+        "old": "    state = Round.objects.filter(pk=round_.pk).values_list(\"state\", flat=True).get()\n    if state != Round.State.OPEN:\n        raise RoundNotOpen(\"get a retest\")\n",
+        "new": ""
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/views.py",
+        "old": "from django.utils.html import format_html\n",
+        "new": "from django.utils.html import format_html, mark_safe\n"
+      },
+      {
+        "file": "src/rounds/views.py",
+        "old": "    messages.success(request, format_html(message, noun, isolated_lines(label)))\n",
+        "new": "    messages.success(request, format_html(message, noun, mark_safe(label)))\n"
+      }
+    ]
+  }
+}

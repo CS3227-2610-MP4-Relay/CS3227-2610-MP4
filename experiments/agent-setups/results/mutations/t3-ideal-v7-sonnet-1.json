@@ -1,0 +1,86 @@
+{
+  "run": "t3-ideal-v7-sonnet-1",
+  "notes": "Rules are enforced twice: tester.result (GET and POST guards, rendering tester_result.html) and services.save_result (under the round lock). Both read the result filtered by tester, refuse non-Open rounds and refuse a submitted result, so M1, M3 and M4 edit both; M4 also lets tester_result.html show the form, with the true status, for a submitted result. ResultForm.clean requires a Fail observation, backed by the CheckConstraint rounds_result_fail_observed, which M2 removes from the model and migration 0005 together (otherwise the save fails with a 503); M5 raises only the field's max_length, so its fixed message is unchanged. M3 leaves the tester round page's Open-only 'Record result' link in place (navigation, not a guard). M5 also widens the model field and its column in migration 0005 to 2001, together, because the varchar(2000) column would otherwise refuse the save (a 503) and a model-only change would fail the candidate's makemigrations --check test; pytest-django builds the test database from migrations on every run (no --reuse-db), so the migration edit is seen consistently.",
+  "mutants": {
+    "M1": [
+      {
+        "file": "src/rounds/tester.py",
+        "old": "    mine = Result.objects.filter(tester=request.user, case=case, build=build).first()\n",
+        "new": "    mine = Result.objects.filter(case=case, build=build).first()\n"
+      },
+      {
+        "file": "src/rounds/services.py",
+        "old": "        .filter(tester=tester, case=case, build=build)\n",
+        "new": "        .filter(case=case, build=build)\n"
+      }
+    ],
+    "M2": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "        if fail and cleaned.get(\"observation\") == \"\":\n",
+        "new": "        if False:\n"
+      },
+      {
+        "file": "src/rounds/models.py",
+        "old": "            models.CheckConstraint(\n                condition=~models.Q(outcome=\"fail\", observation=\"\"),\n                name=\"rounds_result_fail_observed\",\n            ),\n",
+        "new": ""
+      },
+      {
+        "file": "src/rounds/migrations/0005_results.py",
+        "old": ", models.CheckConstraint(condition=models.Q(('observation', ''), ('outcome', 'fail'), _negated=True), name='rounds_result_fail_observed')",
+        "new": ""
+      }
+    ],
+    "M3": [
+      {
+        "file": "src/rounds/tester.py",
+        "old": "    if round_.state != Round.State.OPEN:\n        state = round_.get_state_display()\n",
+        "new": "    if round_.state not in (Round.State.OPEN, Round.State.CLOSED):\n        state = round_.get_state_display()\n"
+      },
+      {
+        "file": "src/rounds/services.py",
+        "old": "    if round_.state != Round.State.OPEN:\n        raise RoundNotOpen\n    if current_build(case) != build:\n",
+        "new": "    if round_.state not in (Round.State.OPEN, Round.State.CLOSED):\n        raise RoundNotOpen\n    if current_build(case) != build:\n"
+      }
+    ],
+    "M4": [
+      {
+        "file": "src/rounds/tester.py",
+        "old": "    if request.method == \"POST\" and mine and mine.submitted_at:\n        return conflict(request, SUBMITTED)\n",
+        "new": ""
+      },
+      {
+        "file": "src/rounds/services.py",
+        "old": "    if result.submitted_at:\n        raise AlreadySubmitted\n",
+        "new": ""
+      },
+      {
+        "file": "src/rounds/templates/rounds/tester_result.html",
+        "old": "{% if result.submitted_at %}<p>Status: Submitted</p>\n",
+        "new": "{% if result.submitted_at and not form %}<p>Status: Submitted</p>\n"
+      },
+      {
+        "file": "src/rounds/templates/rounds/tester_result.html",
+        "old": "{% else %}{% if result %}<p>Status: Draft</p>\n",
+        "new": "{% else %}{% if result %}<p>Status: {% if result.submitted_at %}Submitted{% else %}Draft{% endif %}</p>\n"
+      }
+    ],
+    "M5": [
+      {
+        "file": "src/rounds/forms.py",
+        "old": "    observation = RoundTextField(\n        max_length=2000,\n",
+        "new": "    observation = RoundTextField(\n        max_length=2001,\n"
+      },
+      {
+        "file": "src/rounds/models.py",
+        "old": "    observation = models.CharField(max_length=2000, blank=True)\n",
+        "new": "    observation = models.CharField(max_length=2001, blank=True)\n"
+      },
+      {
+        "file": "src/rounds/migrations/0005_results.py",
+        "old": "                ('observation', models.CharField(blank=True, max_length=2000)),\n",
+        "new": "                ('observation', models.CharField(blank=True, max_length=2001)),\n"
+      }
+    ]
+  }
+}
