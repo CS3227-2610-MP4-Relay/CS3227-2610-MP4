@@ -302,6 +302,10 @@ Added on 2026-10-31, after every task-2 and task-3 run had passed its whole hidd
   - **What it saw:** two lines of a backup of the original RES-2 code, left among the coordinator's scratch files: the module docstring and the stale-build message.
   - **Fix:** at about 17:47 UTC every such scratch file moved into the unlistable private folder.
   - **Result:** the run is kept under a `leak-` prefix, left out of the comparison and rerun as `t3-ideal-v6-haiku-2`.
+- **Second exposed run.** mp4 on Haiku, task 4 (`t4-mp4-haiku-1`), searched the coordinator's scratch folder at about 16:40 UTC on 2026-10-31.
+  - **What it saw:** the paths, not the contents, of other candidates' copies left there by the planted-bug checks. That includes their task-4 file names, such as `src/accounts/limits.py`.
+  - **Fix:** every such copy moved into the private folder at 16:43 UTC.
+  - **Result:** the run is kept under a `leak-` prefix, left out of the comparison and rerun as `t4-mp4-haiku-2`. No other run's transcript mentions those copies.
 - **Outside access.** Each counted access outside a run's own folder in the later runs was read in its transcript; none reached another run's work or the hidden suites.
   - **Haiku reruns:** the clean task-3 Haiku rerun searched the session folder for docs and patches five times, finding nothing.
   - **Library code:** an mp3 run read Django's own source in the main checkout's virtual environment.
