@@ -62,6 +62,8 @@ def test_five_drafts_and_empty_list_are_accepted():
         '{"drafts": ["\\ud800"]}',
     ],
 )
+@pytest.mark.prompt_injection
+@pytest.mark.ac("RND-8.5")
 def test_invalid_replies_are_rejected_whole(value):
     with pytest.raises(InvalidReply):
         parse(value, ["C1"])
@@ -93,6 +95,7 @@ def test_thousands_digit_number_is_rejected():
 
 
 @pytest.mark.ac("RND-8.5")
+@pytest.mark.prompt_injection
 def test_instructions_are_exact_spec_text():
     spec_path = (
         Path(__file__).resolve().parents[3] / "workflow/specs/ai/test-drafting.md"
@@ -156,6 +159,7 @@ def test_instructions_are_fixed_text():
         "criterion-text",
     ],
 )
+@pytest.mark.prompt_injection
 def test_unauthorized_labels_are_refused(label):
     with pytest.raises(InvalidReply) as info:
         parse(reply(draft(criteria=["C1", label])), ["C1", "C2", "C3"])
