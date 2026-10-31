@@ -1,0 +1,32 @@
+# Slice 24: prompt-injection CI coverage
+
+Goal: make deterministic regression coverage of the existing [AI security boundaries](../specs/SECURITY-SPEC.md#ai-features-and-prompt-injection) explicit in the existing `verify` CI job.
+
+Why: existing drafting and feedback adversarial tests run in full pytest already, but have no selectable injection suite and combine some attacker-controlled fields in a single case.
+
+## Scope and decisions
+
+- High tier; branch `slice/24-prompt-injection-ci`, starting HEAD `446f470965cc531ce25be280e51f1c9d8ed90ffb`. Human `/slice 24` authorizes normal branch/draft-PR delivery; only the coordinator changes Git/GitHub state.
+- Zero product requirements or acceptance criteria added/changed. Reuse eight existing criteria: RND-8.5/.6/.7/.8/.9 and RES-4.5/.7/.8. Existing [drafting evaluation](../specs/ai/test-drafting.md#automated-tests-with-a-fake-provider) and [feedback evaluation](../specs/ai/observation-feedback.md#evaluation) own expected behavior. The security-spec addition identifies automated verification of existing controls.
+- Register `prompt_injection`; mark relevant existing parser, source-selection, authorization, CSRF, prefill and escaped-output regressions. Strengthen drafting request/reply attacks and vary feedback observation, case fields and linked criteria independently, using existing helpers and fake gateway/provider patterns. Assert exact authorized data and fixed instructions, strict rejection of attack-induced reply fields/labels, escaped accepted text, excluded foreign context and unchanged domain rows.
+- Keep attack payloads escaped in source and decode only inside tests. Valid but misleading suggestions may remain visible for human review: do not assert semantic model resistance using scripted replies.
+- CI runs `pytest -m prompt_injection` and `pytest -m 'not prompt_injection'` as separate named steps in `verify`, with the same test settings and temporary diagnostics directory. Both steps must pass; together they run the complete suite without duplicate selected tests. Retain existing lint, format, Django checks, permissions, pinned actions and diagnostics retention.
+- Estimate total diff: 250–380 inserted/deleted lines across tests, pytest configuration, CI, security spec, plan and Developer Guide; zero non-test/non-migration `src` lines. Budget remains at most one requirement and 400 non-test/non-migration source lines. No dependency, service, credential, live-provider evaluation, UI journey or additional defense subsystem. Stop affected work if confirmed scope/estimate needs expansion.
+- Builder owns the assigned role-allowed paths, does not delegate, and preserves others' edits. Coordinator checks scope and commits each checkpoint before providing a new snapshot.
+
+## Commit checkpoints
+
+1. **Specs and plan** — `spec: Define deterministic injection CI coverage (#24)` (`Agent: builder`; body starts with `Why:`). Paths: `workflow/specs/SECURITY-SPEC.md`, this plan. Read changed section back, `git diff --check`, and `python workflow/scripts/check_scope.py builder --since <supplied snapshot>`. Yield before implementation.
+2. **Injection regressions and selection** — `test: Cover drafting and feedback injection boundaries (#24)`. Paths: relevant `src/ai/tests/test_drafting.py`, `test_views.py`, `test_feedback.py`, `test_feedback_views.py`, and `pytest.ini`. Capture existing focused-test baseline; add marker and strengthen distinct cases before any runtime change. Existing behavior is expected to pass: no manufactured red run; document how assertions catch data framing, unauthorized context, schema, rendering and state-write regressions. Run `pytest --collect-only -q -m prompt_injection`, `pytest -q -m prompt_injection`, focused Ruff for changed Python files, and `ruff format --check` for those files. Yield before coordinator commit.
+3. **Explicit CI execution** — `ci: Run injection regressions explicitly in verify (#24)`. Path: `.github/workflows/ci.yml`. Inspect named steps, selectors, unchanged read-only validation permissions and failure diagnostics; locally run both selector commands with `--collect-only -q` and confirm disjoint union equals unfiltered collection. Run `git diff --check`. Coordinator later records actual hosted `verify` result; local collection is not hosted execution. Yield before commit.
+4. **Guide and integrated evidence** — `docs: Explain deterministic injection verification (#24)`. Paths: `docs/DeveloperGuide.md`, this plan; apply maintain-docs when assigned. Link to security/AI contracts and explain focused command and fake-provider limits without duplicating requirements or test counts. Read changed section back. Run `python src/manage.py check --settings=relay.settings.test` and full `ruff check . && ruff format --check . && pytest`, with `.venv` active in Git Bash. Report exact failures and no broader success claim if required checks fail; coordinator freezes candidate for independent review and delivery.
+
+All pytest commands run from the repository root in Git Bash with `.venv` active and the existing loopback test PostgreSQL. No package installation is required.
+
+## Inspection and next step
+
+Inspected at the starting HEAD: CI already invokes unfiltered pytest; strict markers are enabled; `src/conftest.py` strips `SOC_LLM_*` and blocks unmarked gateway transport attempts. Existing drafting tests cover framing, invalid replies/labels, foreign selections, prefill and rendering; feedback tests cover saved-source isolation, authorization, invalid replies and a combined direct/coordinator injection case. No runtime defect or conflicting contract was identified by inspection. No tests have run at this specs/plan checkpoint.
+
+Checkpoint checks: changed sections read back; `git diff --check` passed; `python workflow/scripts/check_scope.py builder --since <supplied snapshot>` reported all changes within builder scope. Implementation has not started.
+
+Open decisions: none within confirmed scope. Assumption: named CI selection plus stronger deterministic coverage satisfies issue #24 without live-model evaluation. Next: coordinator reviews/commits this checkpoint and assigns regression implementation with a fresh snapshot.
