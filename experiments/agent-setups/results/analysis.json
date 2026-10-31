@@ -143,6 +143,211 @@
       "severity": "Medium",
       "area": "specs",
       "summary": "rounds.md RND-5 says a round closed while its form is being filled out shows invalid-field messages at 200, contradicting its own preceding sentence, the view's state check before the form, and the User Guide; only a close committing mid-request behaves that way."
+    },
+    {
+      "run": "t3-ideal-v6-haiku-2",
+      "severity": "Medium",
+      "area": "code",
+      "area_note": "",
+      "summary": "Result stores no submission timestamp although RND-4.1 requires each submitted result's submission time, and the edited RND-4 intro now says RES-2 defines those fields, so the specs contradict each other and immutable submitted rows can never gain a true time."
+    },
+    {
+      "run": "t3-ideal-v6-opus-1",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "SECURITY-SPEC drops the earlier 'RES must cap results' requirement and records an ~18 GiB/day result-storage gap as open and not accepted, so a human must accept it or ask for a cap before merge."
+    },
+    {
+      "run": "t3-ideal-v6-opus-2",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "SECURITY-SPEC records result storage (~4.8 billion characters, ~18 GiB a day, about 11x the accepted gap) as an open risk awaiting a human decision, so it needs explicit acceptance or a result cap before merge, given the earlier 'RES must cap results' requirement."
+    },
+    {
+      "run": "t3-ideal-v6-sonnet-opusreview-1",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "The result storage limit is stated twice and the copies disagree: SECURITY-SPEC calls it 'Proposed with RES-2, not yet confirmed by the human' while TECHNICAL-SPEC states it as settled, which breaks one home per fact and leaves the replaced 'RES must cap results' requirement ambiguous."
+    },
+    {
+      "run": "t3-ideal-v7-haiku-1",
+      "severity": "Medium",
+      "area": "tests",
+      "summary": "The result page's case title (in <title> and <h1>) and build label have no markup, direction-control or line-break display tests, and RES-2 has no RES-1.7-style criterion, although SECURITY-SPEC requires each slice to test the text its pages render."
+    },
+    {
+      "run": "t3-ideal-v7-opus-1",
+      "severity": "Medium",
+      "area": "tests",
+      "summary": "The new Record result journey (radio outcome, Save draft, Submit, read-only view) has no Playwright end-to-end test, although builder.md requires browser tests for new UI journeys and src/e2e/test_tester.py was not extended."
+    },
+    {
+      "run": "t3-ideal-v8-codex-1",
+      "severity": "High",
+      "area": "code",
+      "summary": "The GET builds ResultForm with result_initial(existing) as submitted data, and an empty dict still counts as submitted, so a fresh record page shows \"Choose Pass or Fail.\" before the tester enters anything."
+    },
+    {
+      "run": "t3-ideal-v8-codex-1",
+      "severity": "Medium",
+      "area": "tests",
+      "summary": "No unit or e2e test checks that the fresh record page has no validation error, so the bound-form bug passes the suite."
+    },
+    {
+      "run": "t3-ideal-v8-codex-1",
+      "severity": "Medium",
+      "area": "docs",
+      "summary": "The User Guide says opening a result page again after submission shows \"This result has already been submitted.\", but a GET shows the read-only result and only a POST gets that 409."
+    },
+    {
+      "run": "t3-ideal-v8-opus-1",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "SECURITY-SPEC leaves an unaccepted open storage gap (results add ~17.9 GiB/day at the demo-creation cap, with no result write rate limit) that a human must accept or mitigate before merge."
+    },
+    {
+      "run": "t3-ideal-v8-sonnet-1",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "SECURITY-SPEC replaces 'RES must cap results' with a per-workspace bound but omits the ~4.8 billion characters/day it allows at the 200-workspace daily cap (about 12x the accepted round residual) and leaves it 'open' instead of recording a decision or residual for the human."
+    },
+    {
+      "run": "t3-mp4-haiku-2",
+      "severity": "Medium",
+      "area": "tests",
+      "summary": "RES-2.6 claims saves racing a retest are serialised, but only close races are tested, the security spec's 'submit racing a retest' test commitment was deleted rather than met, and a concurrent double submit is untested."
+    },
+    {
+      "run": "t3-mp4-sonnet-1",
+      "severity": "Medium",
+      "area": "tests",
+      "summary": "No test exercises the view's round lock: the close/retest tests commit before the POST so only the pre-lock check runs, and both race tests would still pass with select_for_update removed because the unique-index wait plus IntegrityError re-read gives the same 302/409, while the earlier spec promise of submit-racing-close/retest tests was dropped."
+    },
+    {
+      "run": "t3-openspec-1",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "SECURITY-SPEC adds a per-round 1.2M-character results figure to a per-day 419M estimate, understating the daily increase by about 11 times (about 4.8 billion characters), and replaces 'RES must cap results' with a risk the agent accepted itself."
+    },
+    {
+      "run": "t4-ideal-v8-codex-1",
+      "severity": "Medium",
+      "area": "code",
+      "summary": "IPv4-mapped IPv6 REMOTE_ADDR values (::ffff:a.b.c.d) all normalise to ::/64, so every IPv4 client on a dual-stack server shares one counter, contrary to 'IPv4 addresses count individually' and enabling a global sign-in lockout."
+    },
+    {
+      "run": "t4-ideal-v8-codex-1",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "The TECHNICAL-SPEC limit-counter note was rewritten to fit the implementation (on-demand insert, separate lock, 'unstarted' window) instead of building to the note as it stood ('inserted or updated in one statement'), without confirmation."
+    },
+    {
+      "run": "t4-ideal-v8-codex-1",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "SECURITY-SPEC lists three new residual gaps as 'accepted' that no human accepted, and leaves a 'Not accepted, awaiting a human decision from the #4 review' paragraph instead of applying the smallest option and recording it in the report."
+    },
+    {
+      "run": "t4-ideal-v8-codex-1",
+      "severity": "Medium",
+      "area": "tests",
+      "summary": "ACC-3.7's lock/statement-timeout path is never exercised end to end and the timeout test calls set_timeouts directly, so removing it from either view, or a failure while recording or committing, would go undetected."
+    },
+    {
+      "run": "t4-ideal-v8-haiku-1",
+      "severity": "High",
+      "area": "code",
+      "summary": "TECHNICAL-SPEC says that after ACC-3 any accounts route that cannot reach storage gives the 503, but only the limit transactions do; /, GET /sign-in/, /coordinator/, /tester/, /demo/'s signed-in check and sign-in's post-commit session writes still give the generic 500 (rounds/tests/test_views.py:500 still asserts 500, and spec lines 55 and 84 were not reconciled)."
+    },
+    {
+      "run": "t4-ideal-v8-haiku-1",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "Against the decision to build to the technical notes as they stand, the change adds an IPv4-mapped-IPv6 client-address rule and rewrites the counter-insert note in TECHNICAL-SPEC instead of raising them as decisions."
+    },
+    {
+      "run": "t4-ideal-v8-hermes-1",
+      "severity": "Medium",
+      "area": "code",
+      "summary": "canonical_address groups IPv4-mapped IPv6 addresses (::ffff:a.b.c.d) into ::/64, so on a dual-stack listener every IPv4 client shares one sign-in and demo counter, contrary to 'IPv4 addresses count individually'."
+    },
+    {
+      "run": "t4-ideal-v8-opus-1",
+      "severity": "Medium",
+      "area": "docs",
+      "summary": "The new User Guide storage-failure line claims the start page, sign-in, sign-out and home pages all show the 503 and nothing changes, but a signed-out start page needs no storage, the accepted sign-out residual gives a 500 after ending the session, and a failed session save after sign-in gives a 400."
+    },
+    {
+      "run": "t4-ideal-v8-sonnet-1",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "The accounts-routes rule still says any route that cannot reach storage gives the 503, but the rewritten delivery-order sentence narrows it to three places, and sign-in's post-transaction session writes, /tester/ and / still give the generic 500."
+    },
+    {
+      "run": "t4-mp3-1",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "TECHNICAL-SPEC requirement text was rewritten without human confirmation (sign-out storage exception widened to any failure, new logging rule, new IPv4-mapped rule), against the decision to build to the specs as they stand."
+    },
+    {
+      "run": "t4-mp4-1",
+      "severity": "Medium",
+      "area": "code",
+      "summary": "A storage failure while starting the session after a correct sign-in gives the generic 500 instead of the required 503, and the candidate rewrote TECHNICAL-SPEC to allow it, although SessionMiddleware already saves nothing for any status of 500 or above, so a 503 would be equally safe."
+    },
+    {
+      "run": "t4-mp4-1",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "The new sign-in exception in TECHNICAL-SPEC 'Accounts routes' changes the confirmed requirement instead of being raised, which makes the User Guide's storage-failure sentence for the sign-in page inaccurate on the success path."
+    },
+    {
+      "run": "t4-mp4-codex-1",
+      "severity": "High",
+      "area": "code",
+      "summary": "The changed technical spec says ACC-3 makes every accounts-route storage failure give the 503, but sign-in's session writes (cycle_key/login), sign-in GET and the role homes still give the 500, and an existing test (rounds/tests/test_views.py:500) still asserts that 500."
+    },
+    {
+      "run": "t4-mp4-codex-1",
+      "severity": "Medium",
+      "area": "code",
+      "summary": "ACC-3.1 requires a 429 sign-in page, but the view renders the generic 429.html (titled Relay, no sign-in form), and the tests check only the status and message."
+    },
+    {
+      "run": "t4-mp4-codex-1",
+      "severity": "Medium",
+      "area": "code",
+      "summary": "The technical note says per-address rows are inserted or updated in one statement, but _locked_row uses get_or_create plus a separate SELECT FOR UPDATE, so code and spec disagree and the race on a row's first insert is untested."
+    },
+    {
+      "run": "t4-mp4-haiku-2",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "The ACC-3 technical notes were rewritten to fit the implementation (the one-statement insert-or-update replaced by insert-if-absent, select-for-update and update; a new IPv4-mapped rule; a new claim about timeout verification) instead of being built to as they stood, with no human decision."
+    },
+    {
+      "run": "t4-mp4-hermes-1",
+      "severity": "Medium",
+      "area": "code",
+      "summary": "Per-address counter rows are created and updated with get_or_create plus select_for_update plus save, not 'inserted or updated in one statement' as the unchanged TECHNICAL-SPEC limit-counter note requires."
+    },
+    {
+      "run": "t4-mp4-hermes-1",
+      "severity": "Medium",
+      "area": "tests",
+      "summary": "ACC-3.7's lock/statement-timeout path is never exercised; storage failure is only simulated by mocking select_for_update, and the timeouts are only checked via SHOW."
+    },
+    {
+      "run": "t4-superpowers-1",
+      "severity": "Medium",
+      "area": "code",
+      "summary": "unavailable_on_storage_failure turns storage errors on /, sign-in GET, /coordinator/, /tester/ and /demo/'s signed-in check into 503, beyond ACC-3.7 and TECHNICAL-SPEC's Data model rule that such routes keep their existing error page (generic 500), and the existing rounds test asserting 500 was flipped."
+    },
+    {
+      "run": "t4-superpowers-1",
+      "severity": "Medium",
+      "area": "specs",
+      "summary": "The candidate rewrote TECHNICAL-SPEC's delivery-order sentence to make every accounts route give the 503 with an unexplained sign-out exception, changing the spec rather than building to it as it stood and leaving it inconsistent with the Data model storage-exhaustion note."
     }
   ],
   "headroom": {
@@ -165,19 +370,35 @@
     "t2-headroom-1": {
       "requests": 241,
       "wire_percent": 1.07
+    },
+    "t2-headroom-2": {
+      "requests": 256,
+      "wire_percent": 0.86
+    },
+    "t2-headroom-3": {
+      "requests": 206,
+      "wire_percent": 1.35
+    },
+    "t3-headroom-1": {
+      "requests": 293,
+      "wire_percent": 2.6
+    },
+    "t4-headroom-1": {
+      "requests": 367,
+      "wire_percent": 0.74
     }
   },
   "opus_cost_split": {
-    "runs": 19,
+    "runs": 21,
     "per_million": {
-      "cache_read": 0.29136260047793666,
-      "cache_write": 6.219705479067216,
-      "output": 12.000261008015128
+      "cache_read": 0.28543047312372416,
+      "cache_write": 5.978922907538681,
+      "output": 13.324778694627023
     },
     "mean_share": {
-      "cache_read": 0.40562202992505564,
-      "cache_write": 0.3961243719644286,
-      "output": 0.1982535981105158
+      "cache_read": 0.40902768324491195,
+      "cache_write": 0.374263622093246,
+      "output": 0.216708694661842
     },
     "note": "Fitted to Claude Code's reported costs, not published prices."
   },
@@ -510,6 +731,13 @@
       "measured": 863,
       "match": true
     },
+    "r1-openspec": {
+      "claims": [
+        844
+      ],
+      "measured": 844,
+      "match": true
+    },
     "r1-ponytail": {
       "claims": [],
       "measured": 849,
@@ -584,6 +812,11 @@
       ],
       "measured": 852,
       "match": true
+    },
+    "r2-openspec": {
+      "claims": [],
+      "measured": 857,
+      "match": null
     },
     "r2-ponytail": {
       "claims": [
@@ -662,11 +895,38 @@
       "measured": 696,
       "match": true
     },
+    "t2-caveman-2": {
+      "claims": [
+        695
+      ],
+      "measured": 695,
+      "match": true
+    },
+    "t2-caveman-3": {
+      "claims": [],
+      "measured": 690,
+      "match": null
+    },
     "t2-headroom-1": {
       "claims": [
         693
       ],
       "measured": 693,
+      "match": true
+    },
+    "t2-headroom-2": {
+      "claims": [
+        680
+      ],
+      "measured": 680,
+      "match": true
+    },
+    "t2-headroom-3": {
+      "claims": [
+        673,
+        670
+      ],
+      "measured": 673,
       "match": true
     },
     "t2-ideal-v1-opus-1": {
@@ -712,6 +972,27 @@
       "measured": 662,
       "match": true
     },
+    "t2-ideal-v6-opus-1": {
+      "claims": [
+        691
+      ],
+      "measured": 691,
+      "match": true
+    },
+    "t2-ideal-v6-opus-2": {
+      "claims": [
+        671
+      ],
+      "measured": 671,
+      "match": true
+    },
+    "t2-ideal-v6-opus-3": {
+      "claims": [
+        707
+      ],
+      "measured": 707,
+      "match": true
+    },
     "t2-ideal-v6-sonnet-1": {
       "claims": [],
       "measured": 704,
@@ -737,6 +1018,13 @@
       "measured": 684,
       "match": null
     },
+    "t2-mp4-3": {
+      "claims": [
+        683
+      ],
+      "measured": 683,
+      "match": true
+    },
     "t2-mp4-haiku-1": {
       "claims": [
         698,
@@ -745,6 +1033,33 @@
       "measured": 698,
       "match": true
     },
+    "t2-mp4-sonnet-1": {
+      "claims": [
+        694
+      ],
+      "measured": 694,
+      "match": true
+    },
+    "t2-openspec-1": {
+      "claims": [
+        661
+      ],
+      "measured": 661,
+      "match": true
+    },
+    "t2-openspec-2": {
+      "claims": [
+        679,
+        5
+      ],
+      "measured": 679,
+      "match": true
+    },
+    "t2-openspec-3": {
+      "claims": [],
+      "measured": 661,
+      "match": null
+    },
     "t2-ponytail-1": {
       "claims": [
         654
@@ -752,15 +1067,381 @@
       "measured": 654,
       "match": true
     },
+    "t2-ponytail-2": {
+      "claims": [
+        667
+      ],
+      "measured": 667,
+      "match": true
+    },
+    "t2-ponytail-3": {
+      "claims": [
+        654,
+        658
+      ],
+      "measured": 658,
+      "match": true
+    },
     "t2-spec-kit-1": {
       "claims": [],
       "measured": 669,
       "match": null
     },
+    "t2-spec-kit-2": {
+      "claims": [],
+      "measured": 682,
+      "match": null
+    },
+    "t2-spec-kit-3": {
+      "claims": [
+        691
+      ],
+      "measured": 691,
+      "match": true
+    },
     "t2-superpowers-1": {
       "claims": [],
       "measured": 672,
       "match": null
+    },
+    "t2-superpowers-2": {
+      "claims": [],
+      "measured": 672,
+      "match": null
+    },
+    "t2-superpowers-3": {
+      "claims": [
+        661,
+        4
+      ],
+      "measured": 661,
+      "match": true
+    },
+    "t3-caveman-1": {
+      "claims": [
+        1292
+      ],
+      "measured": 1292,
+      "match": true
+    },
+    "t3-headroom-1": {
+      "claims": [
+        1230,
+        1256,
+        1256
+      ],
+      "measured": 1256,
+      "match": true
+    },
+    "t3-ideal-v6-haiku-2": {
+      "claims": [
+        1184,
+        4
+      ],
+      "measured": 1184,
+      "match": true
+    },
+    "t3-ideal-v6-opus-1": {
+      "claims": [
+        1294
+      ],
+      "measured": 1294,
+      "match": true
+    },
+    "t3-ideal-v6-opus-2": {
+      "claims": [
+        1240
+      ],
+      "measured": 1240,
+      "match": true
+    },
+    "t3-ideal-v6-sonnet-1": {
+      "claims": [
+        1228
+      ],
+      "measured": 1228,
+      "match": true
+    },
+    "t3-ideal-v6-sonnet-opusreview-1": {
+      "claims": [
+        1240
+      ],
+      "measured": 1240,
+      "match": true
+    },
+    "t3-ideal-v7-codex-1": {
+      "claims": [
+        1161
+      ],
+      "measured": 1161,
+      "match": true
+    },
+    "t3-ideal-v7-haiku-1": {
+      "claims": [
+        1100,
+        1163
+      ],
+      "measured": 1163,
+      "match": true
+    },
+    "t3-ideal-v7-hermes-1": {
+      "claims": [
+        1,
+        49,
+        9,
+        913,
+        1,
+        1156,
+        1159
+      ],
+      "measured": 1159,
+      "match": true
+    },
+    "t3-ideal-v7-opus-1": {
+      "claims": [
+        2,
+        1205
+      ],
+      "measured": 1205,
+      "match": true
+    },
+    "t3-ideal-v7-sonnet-1": {
+      "claims": [
+        1219,
+        22
+      ],
+      "measured": 1219,
+      "match": true
+    },
+    "t3-ideal-v8-codex-1": {
+      "claims": [
+        1162,
+        919,
+        2
+      ],
+      "measured": 1162,
+      "match": true
+    },
+    "t3-ideal-v8-haiku-1": {
+      "claims": [
+        1206
+      ],
+      "measured": 1206,
+      "match": true
+    },
+    "t3-ideal-v8-opus-1": {
+      "claims": [
+        0,
+        165,
+        1266
+      ],
+      "measured": 1266,
+      "match": true
+    },
+    "t3-ideal-v8-sonnet-1": {
+      "claims": [
+        1248,
+        19
+      ],
+      "measured": 1248,
+      "match": true
+    },
+    "t3-mp3-1": {
+      "claims": [
+        1335,
+        1097
+      ],
+      "measured": 1335,
+      "match": true
+    },
+    "t3-mp4-2": {
+      "claims": [
+        5,
+        1280
+      ],
+      "measured": 1280,
+      "match": true
+    },
+    "t3-mp4-3": {
+      "claims": [
+        1242
+      ],
+      "measured": 1242,
+      "match": true
+    },
+    "t3-mp4-codex-1": {
+      "claims": [
+        1166
+      ],
+      "measured": 1166,
+      "match": true
+    },
+    "t3-mp4-haiku-2": {
+      "claims": [
+        1176
+      ],
+      "measured": 1176,
+      "match": true
+    },
+    "t3-mp4-sonnet-1": {
+      "claims": [
+        1303
+      ],
+      "measured": 1303,
+      "match": true
+    },
+    "t3-openspec-1": {
+      "claims": [
+        1224
+      ],
+      "measured": 1224,
+      "match": true
+    },
+    "t3-ponytail-2": {
+      "claims": [
+        1201,
+        24
+      ],
+      "measured": 1201,
+      "match": true
+    },
+    "t3-spec-kit-1": {
+      "claims": [
+        2,
+        1179
+      ],
+      "measured": 1179,
+      "match": true
+    },
+    "t3-superpowers-1": {
+      "claims": [],
+      "measured": 1179,
+      "match": null
+    },
+    "t4-caveman-1": {
+      "claims": [
+        872
+      ],
+      "measured": 872,
+      "match": true
+    },
+    "t4-headroom-1": {
+      "claims": [],
+      "measured": 858,
+      "match": null
+    },
+    "t4-ideal-v8-codex-1": {
+      "claims": [
+        766,
+        34
+      ],
+      "measured": 766,
+      "match": true
+    },
+    "t4-ideal-v8-haiku-1": {
+      "claims": [],
+      "measured": 766,
+      "match": null
+    },
+    "t4-ideal-v8-hermes-1": {
+      "claims": [
+        795,
+        63,
+        172
+      ],
+      "measured": 795,
+      "match": true
+    },
+    "t4-ideal-v8-opus-1": {
+      "claims": [
+        809,
+        732
+      ],
+      "measured": 809,
+      "match": true
+    },
+    "t4-ideal-v8-sonnet-1": {
+      "claims": [
+        812
+      ],
+      "measured": 812,
+      "match": true
+    },
+    "t4-mp3-1": {
+      "claims": [
+        834
+      ],
+      "measured": 834,
+      "match": true
+    },
+    "t4-mp4-1": {
+      "claims": [
+        841
+      ],
+      "measured": 841,
+      "match": true
+    },
+    "t4-mp4-codex-1": {
+      "claims": [
+        781,
+        732
+      ],
+      "measured": 781,
+      "match": true
+    },
+    "t4-mp4-haiku-2": {
+      "claims": [
+        791
+      ],
+      "measured": 791,
+      "match": true
+    },
+    "t4-mp4-hermes-1": {
+      "claims": [
+        772
+      ],
+      "measured": 772,
+      "match": true
+    },
+    "t4-mp4-sonnet-1": {
+      "claims": [
+        804
+      ],
+      "measured": 804,
+      "match": true
+    },
+    "t4-openspec-1": {
+      "claims": [],
+      "measured": 789,
+      "match": null
+    },
+    "t4-ponytail-1": {
+      "claims": [
+        787
+      ],
+      "measured": 787,
+      "match": true
+    },
+    "t4-solo-1": {
+      "claims": [
+        815
+      ],
+      "measured": 815,
+      "match": true
+    },
+    "t4-spec-kit-1": {
+      "claims": [
+        796
+      ],
+      "measured": 796,
+      "match": true
+    },
+    "t4-superpowers-1": {
+      "claims": [
+        789
+      ],
+      "measured": 789,
+      "match": true
     }
   }
 }
