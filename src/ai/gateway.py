@@ -67,6 +67,38 @@ class Failed:
     code: str
 
 
+def _valid_reply_text(text):
+    """Check the shared reply type, character limit and Unicode validity."""
+    return (
+        type(text) is str
+        and len(text) <= REPLY_LIMIT
+        and not any(0xD800 <= ord(char) <= 0xDFFF for char in text)
+    )
+
+
+@sensitive_variables("result")
+def _checked_result(result):
+    """Reject malformed provider results before returning or logging them."""
+    if type(result) is Success:
+        return result if _valid_reply_text(result.text) else Failed("invalid-response")
+    if type(result) is Refused:
+        codes = {
+            "live-off",
+            "input-too-large",
+            "busy-or-quota",
+            "not-configured",
+            "provider-refused",
+            "quota",
+        }
+    elif type(result) is Failed:
+        codes = {"timeout", "transport", "invalid-response", "provider-error"}
+    else:
+        return Failed("provider-error")
+    if type(result.code) is not str or result.code not in codes:
+        return Failed("provider-error")
+    return result
+
+
 def _user_key(user):
     return str(user.pk)
 
@@ -357,11 +389,7 @@ def _envelope(body):
     if choice.get("finish_reason") == "length":
         return Failed("invalid-response")
     text = message.get("content")
-    if (
-        type(text) is not str
-        or len(text) > REPLY_LIMIT
-        or any(0xD800 <= ord(char) <= 0xDFFF for char in text)
-    ):
+    if not _valid_reply_text(text):
         return Failed("invalid-response")
     return Success(text)
 
@@ -449,8 +477,7 @@ def complete(user, instructions, data, provider=None):
                 result = Failed("provider-error")
         else:
             result = _transport(instructions, data, deadline)
-        if not isinstance(result, (Success, Refused, Failed)):
-            result = Failed("provider-error")
+        result = _checked_result(result)
         code = "success" if isinstance(result, Success) else result.code
         logger.info("LLM gateway outcome: %s", code)
         return result
