@@ -13,10 +13,10 @@ A round moves Draft → Open → Closed and never back. Nothing deletes a round.
 | State | The coordinator can | Results ([RES](results.md)) |
 | --- | --- | --- |
 | Draft | Edit the title, criteria and cases; publish | None. On tester pages, a Draft round is the same 404 as a missing round |
-| Open | Review results, request retests, close | Provisional: new results for a case are recorded against its current build |
+| Open | Review results, request retests, close | New results for a case are recorded against its current build ([RES-2](results.md#res-2-save-and-submit-an-outcome-with-observations)) |
 | Closed | View the round and review results | No new or changed results |
 
-A build is a label naming a version of the software under test. Publishing creates the round's first build, which covers every case; each retest creates a build covering the selected cases. A case's current build is the newest build covering it. Criteria, cases and their links are frozen from publication, and earlier results stay tied to their build. The Results column is enforced by [RES](results.md); rules marked provisional hold until `results.md` specifies them.
+A build is a label naming a version of the software under test. Publishing creates the round's first build, which covers every case; each retest creates a build covering the selected cases. A case's current build is the newest build covering it. Criteria, cases and their links are frozen from publication, and earlier results stay tied to their build. The Results column is enforced by [RES](results.md).
 
 ## Rules for every round action
 
@@ -91,7 +91,7 @@ While the round is Open or Closed, the round page has a "Review results" link di
 
 ## RND-5 Request a retest
 
-While the round is Open, the coordinator can ask for selected cases to be tested again on a new build. Provisionally, testers then record new results against that build ([RES](results.md)).
+While the round is Open, the coordinator can ask for selected cases to be tested again on a new build. Testers then record new results against that build ([RES-2](results.md#res-2-save-and-submit-an-outcome-with-observations)).
 
 While the round is Open, the round page has a "Request a retest" link directly under the "Builds" heading, before the first build; a Draft or Closed round's page has no such link. The "Request a retest" page has a "Test cases to retest" group with a checkbox for each of the round's cases, labelled with its title, in creation order, none selected; then a "Build label" field, a "Request retest" button and a "Back to round" link. Requesting opens the round page, which shows the RND-5.1 message once, directly under its heading, where only the label is user text. Invalid input shows the page again with the selected cases still selected and the entered label kept. Its checks run in this order after rules 1 to 4: both fields are checked, each on its own, so an invalid selection and an invalid label both get their message; then, once both are valid, the round's state is checked again (rule 4), followed by the build limit (RND-5.4), the selected cases again (RND-5.6) and the label's uniqueness (RND-5.3), in that order, against the round as it is at that moment; only the first refusal shows. The RND-5.2 selection message and the RND-5.6 message appear next to "Test cases to retest"; the RND-5.2 label message and the RND-5.3 and RND-5.4 messages appear next to "Build label".
 
