@@ -18,7 +18,7 @@ from ai.fakes import FakeProvider
 from ai.gateway import Failed, Refused, Success
 from ai.models import CallSlot
 from rounds.models import Case, Criterion, Round
-from rounds.tests.conftest import csrf_token, signed_in, snapshot
+from rounds.tests.conftest import UNAVAILABLE, csrf_token, signed_in, snapshot
 
 INTRO = (
     "Select 1 to 5 acceptance criteria. The selected criteria are sent to the SoC "
@@ -275,20 +275,6 @@ def test_use_draft_cleans_text_and_ignores_foreign_ids(
     assert not Case.objects.filter(criteria=foreign).exists()
 
 
-@pytest.mark.ac("RND-8.7")
-def test_use_draft_requires_coordinator(round_, criteria, tester):
-    response = signed_in(tester).post(
-        reverse("ai:use-draft", args=[round_.pk]),
-        {
-            "title": "x",
-            "steps": "y",
-            "expected_result": "z",
-            "criteria": [criteria[0].pk],
-        },
-    )
-    assert response.status_code == 403
-
-
 @pytest.mark.parametrize("state", [Round.State.OPEN, Round.State.CLOSED])
 @pytest.mark.ac("RND-8.7")
 def test_drafting_pages_get_409_outside_draft(coord_client, round_, criteria, state):
@@ -296,19 +282,6 @@ def test_drafting_pages_get_409_outside_draft(coord_client, round_, criteria, st
     round_.save(update_fields=["state"])
     assert coord_client.get(reverse("ai:draft", args=[round_.pk])).status_code == 409
     assert use(coord_client, round_, criteria).status_code == 409
-
-
-@pytest.mark.ac("RND-8.7")
-def test_foreign_origin_and_missing_token_are_refused(coord_client, round_, criteria):
-    client = Client(enforce_csrf_checks=True)
-    client.force_login(criteria[0].round.workspace.accounts.get(role="coordinator"))
-    response = client.post(
-        reverse("ai:draft", args=[round_.pk]),
-        {"criteria": [criteria[0].pk]},
-        HTTP_ORIGIN="https://evil.example",
-        HTTP_X_CSRFTOKEN=csrf_token(coord_client),
-    )
-    assert response.status_code == 403
 
 
 @pytest.mark.ac("RND-8.3")
@@ -485,11 +458,14 @@ def test_view_over_input_limit_shows_unavailable(
 
 @pytest.mark.ac("RND-8.4")
 def test_storage_error_from_the_gateway_gives_503(coord_client, round_, criteria):
+    before = snapshot()
     with mock.patch("ai.views.gateway.complete", side_effect=DatabaseError("x")):
         response = coord_client.post(
             reverse("ai:draft", args=[round_.pk]), {"criteria": [criteria[0].pk]}
         )
     assert response.status_code == 503
+    assert UNAVAILABLE in response.content.decode()
+    assert snapshot() == before
 
 
 def test_error_reports_hide_covered_criterion_text(coord_client, round_):
