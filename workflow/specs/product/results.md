@@ -55,6 +55,6 @@ A Beta Tester explicitly requests transient AI questions about their own saved d
 - **RES-4.7** (adversarial) Feedback accepts GET and POST only; other methods including HEAD get 405. Django's CSRF middleware first refuses unsafe requests without a valid token or with a foreign Origin as for RES-2.7, without an AI call. View responses, redirects, 405, 409 and storage failures use `Cache-Control: private, no-store`. Storage failures, including gateway accounting and post-call reads, return the fixed ACC-2.5 503 without partial source/reply content. Existing session-save behaviour remains unchanged; request fields, source, reply and exception text are never logged.
 - **RES-4.8** (adversarial) Tester observation and coordinator-authored source are untrusted data separate from fixed instructions, limited to the authorized tuple and its round's linked criteria. Direct and coordinator-to-tester injection cannot select other records, supply tools, set outcomes or bypass strict reply validation. Every displayed source and accepted question uses the existing escaped plain-text and direction-isolation rules, preserving source line breaks. URLs remain text. Accepted questions are cleaned and bounded under the AI contract; a schema-valid misleading question may still be shown for human review and is never treated as authority.
 
-## Planned work
+## Coordinator review
 
-Later requirements will define coordinator result review.
+The Test Coordinator reads submitted results, never drafts, under [RND-4](rounds.md#rnd-4-review-submitted-results).
