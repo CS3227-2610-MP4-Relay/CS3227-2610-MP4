@@ -1,17 +1,18 @@
-"""Private result entry and persistence under the shared round lock (RES-2)."""
+"""Tester round reads and private result entry under the round lock (RES)."""
 
 from contextlib import contextmanager
 from dataclasses import dataclass
 
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
 from accounts.models import User
 from accounts.workspaces import workspace_records
 
-from .models import Build, Case, Result, Round
+from .models import Build, Case, Criterion, Result, Round
 
 STALE = "This build is no longer current. Reload the round to record a result."
 SUBMITTED = "This result has already been submitted."
@@ -19,6 +20,40 @@ SUBMITTED = "This result has already been submitted."
 
 class Conflict(Exception):
     """A fixed-text state/build/submission refusal, rendered by entry as 409."""
+
+
+class StateConflict(Conflict):
+    """The round is not Open; `state` is its display name for the conflict page."""
+
+    def __init__(self, state):
+        super().__init__(f"This action is not available while the round is {state}.")
+        self.state = state
+
+
+def available_rounds(user):
+    """Return the tester's workspace's published rounds, newest first."""
+    return workspace_records(user, Round).filter(
+        state__in=[Round.State.OPEN, Round.State.CLOSED]
+    )
+
+
+def cases_with_current_builds(round_):
+    """Return the round's cases, each with its `current_build` (newest covering).
+
+    Linked criteria and covering builds are limited to the round, since the
+    link tables do not tie them to it.
+    """
+    cases = list(
+        round_.cases.prefetch_related(
+            Prefetch("criteria", queryset=Criterion.objects.filter(round=round_)),
+            Prefetch(
+                "builds", queryset=Build.objects.filter(round=round_).order_by("-id")
+            ),
+        )
+    )
+    for case in cases:
+        case.current_build = next(iter(case.builds.all()), None)
+    return cases
 
 
 @dataclass
@@ -43,17 +78,14 @@ def entry(tester, round_id, case_id, build_id, *, write=False):
     if not tester.is_authenticated or tester.role != User.Role.TESTER:
         raise PermissionDenied
     with transaction.atomic():
-        rounds = workspace_records(tester, Round).exclude(state=Round.State.DRAFT)
+        rounds = available_rounds(tester)
         if write:
             rounds = rounds.select_for_update()
         round_ = get_object_or_404(rounds, pk=round_id)
         case = get_object_or_404(round_.cases, pk=case_id)
         build = get_object_or_404(round_.builds.filter(cases=case), pk=build_id)
         if round_.state != Round.State.OPEN:
-            raise Conflict(
-                "This action is not available while the round is "
-                f"{round_.get_state_display()}."
-            )
+            raise StateConflict(round_.get_state_display())
         if round_.builds.filter(cases=case).order_by("-pk").first().pk != build.pk:
             raise Conflict(STALE)
         result = Result.objects.filter(tester=tester, case=case, build=build).first()

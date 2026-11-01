@@ -17,7 +17,8 @@ from accounts.workspaces import workspace_records
 
 from . import services
 from .forms import CaseForm, CriterionForm, PublishForm, RetestForm, RoundForm
-from .models import Build, Case, Criterion, Result, Round
+from .models import Case, Criterion, Result, Round
+from .results import cases_with_current_builds
 from .services import RoundLimitReached, create_round
 from .templatetags.rounds_text import retest_message
 
@@ -307,14 +308,7 @@ def results_page(request, round_id):
     round_ = own_round(request, round_id)
     if round_.state == Round.State.DRAFT:
         return state_conflict(request, round_)
-    cases = list(
-        round_.cases.prefetch_related(
-            Prefetch("criteria", queryset=Criterion.objects.filter(round=round_)),
-            Prefetch(
-                "builds", queryset=Build.objects.filter(round=round_).order_by("-id")
-            ),
-        )
-    )
+    cases = cases_with_current_builds(round_)
     submitted = (
         Result.objects.filter(
             submitted_at__isnull=False,
@@ -330,7 +324,6 @@ def results_page(request, round_id):
     for result in submitted:
         by_case.setdefault(result.case_id, []).append(result)
     for case in cases:
-        case.current_build = next(iter(case.builds.all()), None)
         current = getattr(case.current_build, "pk", None)
         rows = by_case.get(case.pk, [])
         case.current_results = [row for row in rows if row.build_id == current]

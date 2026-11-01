@@ -306,7 +306,7 @@ def test_storage_errors_return_fixed_uncached_503(tester, target, failure, caplo
             return original_fetch(query)
 
         path = {
-            "lookup": "rounds.tester.workspace_records",
+            "lookup": "rounds.results.workspace_records",
             "rows": "django.db.models.query.QuerySet._fetch_all",
             "criteria": "django.db.models.query.QuerySet._fetch_all",
             "render": "rounds.tester.render",

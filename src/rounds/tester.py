@@ -11,17 +11,25 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 
 from accounts.models import User
-from accounts.workspaces import workspace_records
 
 from . import results
-from .models import Build, Criterion, Result, Round
+from .models import Criterion, Result
 from .result_forms import ResultForm
+from .results import available_rounds
 
 logger = logging.getLogger(__name__)
 
 
 def tester_view(view=None, *, methods=("GET",)):
-    """Check method and tester role before reads, including lazy authentication."""
+    """Make a tester view accepting `methods`, with every shared layer in order.
+
+    Outermost, `never_cache` marks every response, 405s included; then the
+    method check (405); then sign-in and the tester role before any lookup.
+    Any storage failure, including loading the session or user, gives the 503.
+    It logs a fixed message without the traceback, because a database error's
+    text can carry a tester's observation or request fields, which must never
+    be logged (RES-2); the coordinator's views log the traceback instead.
+    """
     if view is None:
         return lambda wrapped: tester_view(wrapped, methods=methods)
 
@@ -40,13 +48,6 @@ def tester_view(view=None, *, methods=("GET",)):
     return never_cache(require_http_methods(methods)(checked))
 
 
-def available_rounds(user):
-    """Return the tester's workspace's published rounds, newest first."""
-    return workspace_records(user, Round).filter(
-        state__in=[Round.State.OPEN, Round.State.CLOSED]
-    )
-
-
 @tester_view
 def home(request):
     """List the rounds this tester can read."""
@@ -61,17 +62,7 @@ def home(request):
 def detail(request, round_id):
     """Show cases and latest covering builds in one authorized published round."""
     round_ = get_object_or_404(available_rounds(request.user), pk=round_id)
-    cases = list(
-        round_.cases.prefetch_related(
-            Prefetch("criteria", queryset=Criterion.objects.filter(round=round_)),
-            Prefetch(
-                "builds",
-                queryset=Build.objects.filter(round=round_).order_by("-id"),
-            ),
-        )
-    )
-    for case in cases:
-        case.current_build = next(iter(case.builds.all()), None)
+    cases = results.cases_with_current_builds(round_)
     return render(
         request, "rounds/tester_round.html", {"round": round_, "cases": cases}
     )
@@ -124,11 +115,10 @@ def result_entry(request, round_id, case_id, build_id):
             return render(
                 request, "rounds/tester_result.html", {"entry": current, "form": form}
             )
+    except results.StateConflict as conflict:
+        context = {"state": conflict.state}
+        return render(request, "rounds/conflict.html", context, status=409)
     except results.Conflict as conflict:
-        if str(conflict) == "This action is not available while the round is Closed.":
-            return render(
-                request, "rounds/conflict.html", {"state": "Closed"}, status=409
-            )
         return render(
             request,
             "rounds/tester_result.html",

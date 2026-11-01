@@ -342,13 +342,17 @@ def test_conflicts_precede_invalid_form_and_preserve_rows(tester, target, confli
         message = results.STALE
     else:
         message = results.SUBMITTED
+    # State conflicts reuse the round conflict page; the others do not.
+    template = "conflict" if conflict == "closed" else "tester_result"
     before = snapshot()
     response = client.post(url(target), {})
     assert response.status_code == 409 and message in page(response)
+    assert response.templates[0].name == f"rounds/{template}.html"
     no_store(response)
     if conflict != "submitted":
         response = client.get(url(target))
         assert response.status_code == 409 and message in page(response)
+        assert response.templates[0].name == f"rounds/{template}.html"
         no_store(response)
     assert snapshot() == before
 
