@@ -2,7 +2,7 @@
 
 Relay's one boundary for SoC LLM calls, using the [configured operator environment](#live-switch).
 
-The chat-completions adapter, runtime safety controls and shared code-level live switch are built. A real provider smoke check and drafting evaluation remain pending; local tests do not establish provider availability or production readiness.
+The chat-completions adapter, runtime safety controls and shared code-level live switch are built. An operator live injection measurement reached the configured provider; its observations are recorded in the [slice 28 session log](../../../logs/Whimsyturtle/026-scope-live-injection-evaluation.md). Broader manual usefulness evaluation remains pending; neither this measurement nor local tests establish production readiness.
 
 The chat format below adapts the MP3 implementation at commit `97ad991` (`src/deskmate/llm.py` and `src/deskmate/llm_gateway.py`): endpoint `https://soclaas-api.comp.nus.edu.sg/v1/chat/completions`, model `llama3.1:8b`, Bearer authentication and `choices[0].message.content`. This is local implementation evidence, not confirmation of current availability, limits or provider terms; endpoint and model remain configured values. The [integration plan](../../plans/6-soc-chat-completions.md) tracks this change separately from the frozen original gateway plan.
 
@@ -22,7 +22,7 @@ The [security spec](../SECURITY-SPEC.md#ai-features-and-prompt-injection) owns t
 - `ssl.create_default_context()` honours `SSLKEYLOGFILE`, `SSL_CERT_FILE` and `SSL_CERT_DIR`. The transport clears each fresh context's `keylog_filename` before use to prevent TLS key logging. `SSL_CERT_FILE` and `SSL_CERT_DIR`, if set, must name only trusted CA stores; that remains an operator environment obligation.
 - Each call's event loop explicitly disables asyncio debug mode, including when `PYTHONASYNCIODEBUG` or `-X dev` would enable it, to prevent raw asyncio debug reports from bypassing the fixed-code handler. Production debug mode must still remain off.
 - The transport connects directly and ignores `HTTPS_PROXY` and the other proxy variables. Operators must confirm direct provider reachability in the deployment environment; this integration adds no proxy support.
-- RND-8's [notice](../product/rounds.md#rnd-8-draft-test-cases-with-ai) says what is sent. Its drafting UI is built; real provider smoke checks and live evaluation remain pending.
+- RND-8's [notice](../product/rounds.md#rnd-8-draft-test-cases-with-ai) says what is sent. Its drafting UI is built; broader manual usefulness evaluation remains pending.
 
 ## Transport contract (proposed)
 
