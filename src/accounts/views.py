@@ -1,9 +1,13 @@
-"""Sign-in, sign-out, role homes (ACC-1), demo creation (ACC-2) and limits (ACC-3)."""
+"""Sign-in, sign-out, the coordinator home (ACC-1), demo creation (ACC-2), limits.
+
+The abuse limits are ACC-3; the tester home is `rounds.tester.home`.
+"""
 
 import logging
 from datetime import timedelta
 
 from django import db
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import PermissionDenied
@@ -16,7 +20,6 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from rounds import tester
 from rounds.models import Round
 
 from . import demo, limits
@@ -26,7 +29,6 @@ from .workspaces import workspace_records
 
 logger = logging.getLogger(__name__)
 
-SESSION_LIFETIME = timedelta(hours=8)
 HOMES = {
     User.Role.COORDINATOR: "accounts:coordinator",
     User.Role.TESTER: "accounts:tester",
@@ -54,7 +56,8 @@ def sign_in(request):
     # login() keeps the identifier when the same user signs in again (ACC-1.7).
     request.session.cycle_key()
     login(request, user)
-    request.session.set_expiry(timezone.now() + SESSION_LIFETIME)
+    lifetime = timedelta(seconds=settings.SESSION_COOKIE_AGE)
+    request.session.set_expiry(timezone.now() + lifetime)
     return redirect(HOMES[user.role])
 
 
@@ -96,29 +99,19 @@ def sign_out(request):
     return redirect("accounts:sign-in")
 
 
-def _role_home(role, title, template="accounts/home.html", sections=None):
-    """Build a GET-only home page for one role, with optional page sections."""
-
-    @never_cache
-    @require_GET
-    def home(request):
-        if not request.user.is_authenticated:
-            return redirect("accounts:sign-in")
-        if request.user.role != role:
-            raise PermissionDenied
-        context = {"title": title, **(sections(request.user) if sections else {})}
-        return render(request, template, context)
-
-    return home
-
-
-coordinator_home = _role_home(
-    User.Role.COORDINATOR,
-    "Coordinator home",
-    "rounds/coordinator_home.html",
-    lambda user: {"rounds": workspace_records(user, Round)},
-)
-tester_home = tester.home
+@never_cache
+@require_GET
+def coordinator_home(request):
+    """Show the coordinator's home page with their workspace's rounds."""
+    if not request.user.is_authenticated:
+        return redirect("accounts:sign-in")
+    if request.user.role != User.Role.COORDINATOR:
+        raise PermissionDenied
+    context = {
+        "title": "Coordinator home",
+        "rounds": workspace_records(request.user, Round),
+    }
+    return render(request, "rounds/coordinator_home.html", context)
 
 
 def _demo_counts(read, key):
