@@ -45,24 +45,34 @@ Opening a home page while signed out takes you to the sign-in page. Opening the 
 
 ## Sign out
 
-Choose **Sign out** on your home page. The sign-in page shows "You have signed out."
+Choose **Sign out** near the top of your home page, above the round list. The sign-in page shows "You have signed out."
 
 You are also signed out 8 hours after signing in, whatever you do in between; opening a home page after that takes you to the sign-in page.
+
+## Find your way around
+
+Creation links such as **New round**, **Add test case** and **Record result** have a filled primary style. Edit and review links, and links to AI pages, have an outlined secondary style; **Delete criterion**, **Delete test case** and **Close round** have a red outline. **Save draft** and **Sign out** use the secondary style, while **Submit** is primary. Ordinary navigation links are underlined.
+
+Round, result, history, editing and AI pages have **Coordinator home** or **Tester home** near the top, with **Back to round** or **Back to result** where applicable. Return links also remain at the bottom.
+
+Round pages, coordinator results and **My results** have **Contents** links to their sections or records. On a wide desktop, these links appear in a sidebar. On a narrower screen, **Contents** starts collapsed above the details; choose it to show the links.
+
+Choose a case title or saved-result heading to expand or collapse its details. The first record starts expanded and the others collapsed; several can stay open together. Following a record's **Contents** link opens its details and brings them into view. A direct link to that record does the same. Reloading restores the starting layout, unless the address links directly to a record. You can use Tab to focus a heading, then Enter or Space to toggle it.
 
 ## View available tests
 
 1. Sign in as a **Beta Tester**. On **Tester home**, **Available tests** lists your workspace's Open and Closed rounds, newest first. Each title is a link followed by "(Open)" or "(Closed)". If there are none, it says "No tests available."
-2. Choose a round title. The page shows "State: Open" or "State: Closed" and **Test cases**. Each case shows its title, **Steps**, **Expected result**, **Linked acceptance criteria** and **Current build**.
+2. Choose a round title. The page shows "State: Open" or "State: Closed" and **Test cases**. Each case's summary shows its title and **Current build**; expand it for **Steps**, **Expected result** and **Linked acceptance criteria**.
 3. Test the software outside Relay using those instructions and the named build. If the coordinator requests a retest, reload the page: only the selected cases change to the new **Current build**; other cases keep their previous build.
 4. Choose **Tester home** to return to the list, or return there to **Sign out**.
 
-Both Beta Testers in a workspace see the same rounds. Draft rounds stay hidden. An Open round has a **Record result** link beside each case. A Closed round remains available as read-only reference; after the coordinator closes it, reload to see "State: Closed" and "(Closed)" in the list, with the result-entry links removed.
+Both Beta Testers in a workspace see the same rounds. Draft rounds stay hidden. An Open round has a **Record result** link inside each expanded case. A Closed round remains available as read-only reference; after the coordinator closes it, reload to see "State: Closed" and "(Closed)" in the list, with the result-entry links removed.
 
 If reading tests fails, the page says "Relay is temporarily unavailable. Try again later." Opening a Draft, missing or another workspace's round shows "Page not found."
 
 ## Save and submit a result
 
-1. In an Open round, choose **Record result** beside the case you tested. The **Record result** page shows **Test case** and **Current build**.
+1. In an Open round, expand the case you tested and choose **Record result**. The **Record result** page shows **Test case** and **Current build**.
 2. Choose **Pass** or **Fail** under **Outcome** and enter your **Observation**. Fail requires an observation; Pass allows it to be empty.
 3. Choose **Save draft** to keep working later. The page shows "Status: Draft" and your saved fields; they remain when you reload or sign in again. Each tester has a separate private draft for each case and build.
 4. Choose **Submit** when ready. You may submit directly or after saving a draft. The page shows "Status: Submitted", your outcome and your observation as read-only text. An empty observation says "No observation." Submission is final; another attempt to save or submit it says "This result has already been submitted."
@@ -88,7 +98,7 @@ Questions are not saved. Opening the feedback page again clears them; resubmitti
 ## Review my results
 
 1. Open an Open or Closed round from **Tester home**, then choose **My results**.
-2. The **My results** page shows the **Round** and its state, followed by your saved drafts and submissions for current and earlier builds. Each entry shows **Test case**, **Linked acceptance criteria**, the original **Build**, **Outcome**, **Observation** and "Status: Draft" or "Status: Submitted". Submissions also show **Submitted at** in UTC. An empty observation says "No observation."; with no saved results, the page says "No results yet."
+2. The **My results** page shows the **Round** and its state, followed by your saved drafts and submissions for current and earlier builds. Each summary shows **Test case** with the case title, the original **Build**, **Outcome** and "Status: Draft" or "Status: Submitted". Expand an entry for **Linked acceptance criteria**, **Observation** and, for submissions, **Submitted at** in UTC. An empty observation says "No observation."; with no saved results, the page says "No results yet."
 3. Choose **Back to round** to return to the instructions.
 
 Only your own results appear. This page is read-only, including drafts. Reload to see later saves or submissions; retesting and closure retain earlier results with their original build and case details.
@@ -123,7 +133,7 @@ A workspace can have up to 20 rounds, including the sample round of a new demo w
 
 ### Acceptance criteria and test cases
 
-The round page has an **Acceptance criteria** heading, listing each criterion's text, and a **Test cases** heading, where each case shows its title, then **Steps**, **Expected result** and **Linked acceptance criteria** with that text. Both are listed in the order they were added. With none, they say "No acceptance criteria yet." and "No test cases yet."
+The round page has an **Acceptance criteria** heading, listing each criterion's text, and a **Test cases** heading, where you can expand each case to read **Steps**, **Expected result** and **Linked acceptance criteria** with that text. Both are listed in the order they were added. With none, they say "No acceptance criteria yet." and "No test cases yet."
 
 You can add, edit and delete them only while the round is Draft.
 
@@ -134,12 +144,12 @@ To add or edit a criterion:
 
 To add or edit a test case:
 
-1. On the round page, choose **Add test case**, or **Edit test case** under a case.
+1. On the round page, choose **Add test case**, or expand a case and choose **Edit test case**.
 2. Enter the **Title**, **Steps** and **Expected result**, tick one or more of the round's criteria under **Linked acceptance criteria**, then choose **Add test case** or **Save**.
 
 Saving opens the round page. Each of these pages has a **Back to round** link.
 
-To delete, choose **Delete test case** under a case or **Delete criterion** next to a criterion; there is no confirmation. Deleting a case keeps its criteria. A criterion that a case links to cannot be deleted: the round page shows "This criterion is linked to a test case. Unlink it first." under it, so edit those cases first.
+To delete, expand a case and choose **Delete test case**, or choose **Delete criterion** next to a criterion; there is no confirmation. Deleting a case keeps its criteria. A criterion that a case links to cannot be deleted: the round page shows "This criterion is linked to a test case. Unlink it first." under it, so edit those cases first.
 
 ### Criteria and test case limits
 
@@ -164,7 +174,7 @@ A build label has 1 to 100 characters; spaces or line breaks at either end are r
 
 An Open round's page shows "State: Open" and the criteria and cases exactly as they were when it was published. Its title, criteria and cases can no longer be changed, so the page has no **Edit round** link, no add, edit or delete links and buttons, and no **Publish round** button. You can still [review results](#review-results), [request a retest](#request-a-retest) or [close](#close-a-round) the round.
 
-Under each case's linked criteria, **Current build** shows the label of the build the case is tested on. After the test cases, a **Builds** heading lists the round's builds, oldest first: each build's label, then **Covered test cases** with the titles of the cases it covers. A newly published round has one build, covering every case; each [retest](#request-a-retest) adds another.
+Each case's summary shows **Current build** with the label of the build the case is tested on. After the test cases, a **Builds** heading lists the round's builds, oldest first: each build's label, then **Covered test cases** with the titles of the cases it covers. A newly published round has one build, covering every case; each [retest](#request-a-retest) adds another.
 
 ### Request a retest
 
@@ -201,7 +211,7 @@ A Closed round's page still shows its criteria, its cases with their linked crit
 While a round is Open or Closed, its round page has a **Review results** link directly under its state. A Draft round has no results and no link.
 
 1. On the round page, choose **Review results**.
-2. The page is headed "Results: " followed by the round's title, then "State: Open" or "State: Closed". Each test case follows in the order it was added, with its title, **Linked acceptance criteria**, **Current build** and **Results for this build**.
+2. The page is headed "Results: " followed by the round's title, then "State: Open" or "State: Closed". Each test case follows in the order it was added. Its summary shows the title, **Current build** and the testers and outcomes for that build, or "No results for this build yet." Expand it for **Linked acceptance criteria**, **Results for this build** and any **Earlier builds**.
 3. Each submitted result shows "Tester:" with the Beta Tester's username, "Outcome: Pass" or "Outcome: Fail", "Observation:" with the observation, or "Observation: No observation." when it is empty, and "Submitted at:" with the time in UTC. The newest submission comes first. A case with no submitted result for its current build says "No results for this build yet."
 4. Choose **Back to round** to return to the round page.
 
