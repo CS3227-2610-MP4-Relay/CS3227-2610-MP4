@@ -406,10 +406,58 @@ def chat_envelope(message, **choice_fields):
 @pytest.mark.ac("RND-8.5")
 @pytest.mark.parametrize("size", [0, 19999, 20000, 20001])
 @pytest.mark.parametrize("character", ["a", "\U0001f600"])
-def test_chat_content_character_bound(size, character):
+@pytest.mark.parametrize("tool_metadata", [{}, {"tool_calls": []}])
+def test_chat_content_character_bound(size, character, tool_metadata):
     text = character * size
     expected = Success(text) if size <= 20000 else Failed("invalid-response")
-    assert gateway._envelope(chat_envelope({"content": text})) == expected
+    assert (
+        gateway._envelope(chat_envelope({"content": text, **tool_metadata})) == expected
+    )
+
+
+@pytest.mark.ac("RND-8.5")
+@pytest.mark.parametrize(
+    "tool_metadata", [{}, {"tool_calls": None}, {"tool_calls": []}]
+)
+def test_no_tool_calls_metadata_allows_content(tool_metadata):
+    message = {
+        "role": "assistant",
+        "content": "synthetic content",
+        "function_call": None,
+        "refusal": None,
+        **tool_metadata,
+    }
+    assert gateway._envelope(chat_envelope(message, finish_reason="stop")) == Success(
+        "synthetic content"
+    )
+
+
+@pytest.mark.ac("RND-8.5")
+@pytest.mark.parametrize(
+    "tool_calls",
+    [
+        [{"type": "function", "function": {"name": "synthetic", "arguments": "{}"}}],
+        [{}],
+        [None],
+        False,
+        True,
+        0,
+        1,
+        "",
+        "synthetic",
+        {},
+    ],
+)
+def test_actual_or_malformed_tool_calls_are_rejected(tool_calls):
+    message = {"content": "ok", "tool_calls": tool_calls}
+    assert gateway._envelope(chat_envelope(message)) == Failed("invalid-response")
+
+
+@pytest.mark.ac("RND-8.5")
+@pytest.mark.parametrize("function_call", [False, 0, "", [], {}, {"name": "synthetic"}])
+def test_nonnull_legacy_function_call_is_rejected_with_empty_tools(function_call):
+    message = {"content": "ok", "tool_calls": [], "function_call": function_call}
+    assert gateway._envelope(chat_envelope(message)) == Failed("invalid-response")
 
 
 @pytest.mark.ac("RND-8.5")
@@ -467,7 +515,9 @@ def test_chat_metadata_and_later_choices_are_not_feature_text():
         ({"content": "ok", "refusal": []}, "stop", Failed("invalid-response")),
     ],
 )
-def test_chat_refusals_and_truncation(message, reason, expected):
+@pytest.mark.parametrize("tool_metadata", [{}, {"tool_calls": []}])
+def test_chat_refusals_and_truncation(message, reason, expected, tool_metadata):
+    message = {**message, **tool_metadata}
     assert gateway._envelope(chat_envelope(message, finish_reason=reason)) == expected
 
 
@@ -507,11 +557,12 @@ def test_invalid_chat_structure_is_rejected(value):
         {"content": "ok", "role": None},
         {"content": "ok", "role": "user"},
         {"content": "ok", "role": "tool"},
-        {"content": "ok", "tool_calls": []},
         {"content": "ok", "function_call": {"name": "synthetic"}},
     ],
 )
-def test_invalid_chat_message_is_rejected(message):
+@pytest.mark.parametrize("tool_metadata", [{}, {"tool_calls": []}])
+def test_invalid_chat_message_is_rejected(message, tool_metadata):
+    message = {**message, **tool_metadata}
     assert gateway._envelope(chat_envelope(message)) == Failed("invalid-response")
 
 

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from ai import drafting
+from ai import drafting, gateway
 from ai.drafting import Draft, InvalidReply, clean, parse
 
 
@@ -52,6 +52,7 @@ def test_five_drafts_and_empty_list_are_accepted():
         reply(draft(extra="x")),
         reply(*[draft() for _ in range(6)]),
         reply(draft(title=1)),
+        pytest.param(reply(draft(steps=["Open the app."])), id="array-steps"),
         reply(draft(title="")),
         reply(draft(criteria=[])),
         reply(draft(criteria=["C2"])),
@@ -101,11 +102,61 @@ def test_instructions_are_exact_spec_text():
         Path(__file__).resolve().parents[3] / "workflow/specs/ai/test-drafting.md"
     )
     spec = spec_path.read_text(encoding="utf-8")
-    marker = "Version `drafting-1` is the exact constant:"
+    marker = "Version `drafting-2` is the exact constant:"
     quoted = spec.split(marker, 1)[1].strip().split("\n\n", 1)[0]
     assert quoted.startswith("> ")
     assert quoted[2:] == drafting.INSTRUCTIONS
-    assert drafting.INSTRUCTIONS_VERSION == "drafting-1"
+    assert drafting.INSTRUCTIONS_VERSION == "drafting-2"
+
+
+@pytest.mark.ac("RND-8.1", "RND-8.5")
+def test_prompt_supplies_a_parser_accepted_example():
+    assert "Example shape: " in drafting.INSTRUCTIONS
+    example, _ = json.JSONDecoder().raw_decode(
+        drafting.INSTRUCTIONS.split("Example shape: ", 1)[1]
+    )
+    assert parse(json.dumps(example), ["C1"]) == [
+        Draft(
+            "Short title",
+            "1. Perform the action.",
+            "The stated result is visible.",
+            ("C1",),
+        )
+    ]
+
+
+@pytest.mark.ac("RND-8.4")
+def test_prompt_supplies_a_parser_accepted_empty_reply():
+    assert "return exactly " in drafting.INSTRUCTIONS
+    empty, _ = json.JSONDecoder().raw_decode(
+        drafting.INSTRUCTIONS.split("return exactly ", 1)[1]
+    )
+    assert empty == {"drafts": []}
+    assert parse(json.dumps(empty), ["C1"]) == []
+
+
+@pytest.mark.ac("RND-8.5")
+def test_prompt_states_current_numeric_limits():
+    assert len(drafting.INSTRUCTIONS) <= 2500
+    for phrase, limit in (
+        ("title of at most", drafting.TITLE_LIMIT),
+        ("steps in one string of at most", drafting.STEPS_LIMIT),
+        ("expected result of at most", drafting.EXPECTED_LIMIT),
+        ("entire reply at most", drafting.REPLY_LIMIT),
+    ):
+        assert f"{phrase} {limit} characters" in drafting.INSTRUCTIONS
+    assert f"an array of 0 to {drafting.MAX_DRAFTS} objects" in drafting.INSTRUCTIONS
+
+
+@pytest.mark.ac("RND-8.5", "RND-8.6")
+@pytest.mark.parametrize("character", ['"', "\\", "\n", "\t", "界"])
+def test_prompt_leaves_room_for_maximum_encoded_selection(character):
+    criteria = [
+        {"label": f"C{index}", "text": clean(character * 500).strip()}
+        for index in range(1, 6)
+    ]
+    data = json.dumps({"criteria": criteria}, ensure_ascii=False)
+    assert len(drafting.INSTRUCTIONS) + len(data) <= gateway.INPUT_LIMIT
 
 
 def test_reply_over_limit_is_rejected():

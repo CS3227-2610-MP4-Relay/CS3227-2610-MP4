@@ -119,6 +119,13 @@ For step 4, enter these values in the dashboard:
 | `DJANGO_PRODUCTION_HOST` | The single production hostname, lowercase, without scheme, port, slash or wildcard |
 | `DATABASE_URL` | Normalized **pooled** Neon URL from step 1 |
 | `DJANGO_TRUST_PROXY_SSL_HEADER` | `false` for bootstrap; change to `true` only after observing the actual proxy behavior |
+| `SOC_LLM_ENDPOINT` | The endpoint shown in [SoC LLM setup](#soc-llm) |
+| `SOC_LLM_MODEL` | `qwen3.6:35b` |
+| `SOC_LLM_API_KEY` | Existing SoC API key, entered privately as a secret value |
+
+For an existing production project, edit `SOC_LLM_MODEL` in Vercel's **Environment Variables** with **Production** selected. Keep the endpoint and key configured there; these are application runtime values, not GitHub migration-job settings. Neither the local `.env` nor `.env.example` configures production.
+
+Vercel applies environment changes only to new deployments. Deploy a reviewed commit containing the [empty-tool-list compatibility fix](../workflow/plans/103-drafting-schema.md) through the existing [release procedure](#5-complete-the-live-gate-then-approve-public-release). See [Vercel's environment-variable guidance](https://vercel.com/docs/environment-variables/managing-environment-variables).
 
 ### 3. Configure GitHub release access
 
@@ -243,7 +250,7 @@ For local development, keep your existing `SOC_LLM_API_KEY` in the untracked rep
 
 ```dotenv
 SOC_LLM_ENDPOINT=https://soclaas-api.comp.nus.edu.sg/v1/chat/completions
-SOC_LLM_MODEL=llama3.1:8b
+SOC_LLM_MODEL=qwen3.6:35b
 ```
 
 Alternatively, for an authorized operator session, export these values in Git Bash with `.venv` active. Enter the key at the hidden prompt so it does not appear in command history:
@@ -251,13 +258,13 @@ Alternatively, for an authorized operator session, export these values in Git Ba
 ```bash
 set +x
 export SOC_LLM_ENDPOINT='https://soclaas-api.comp.nus.edu.sg/v1/chat/completions'
-export SOC_LLM_MODEL='llama3.1:8b'
+export SOC_LLM_MODEL='qwen3.6:35b'
 read -r -s -p 'SoC LLM API key: ' SOC_LLM_API_KEY
 printf '\n'
 export SOC_LLM_API_KEY
 ```
 
-Start the application from that same shell; remove the values afterwards with `unset SOC_LLM_API_KEY SOC_LLM_ENDPOINT SOC_LLM_MODEL`. For production, configure these names privately in the runtime environment. Confirm direct provider reachability and trusted CA overrides, keep production debug mode off, and follow the [runtime obligations](../workflow/specs/ai/llm-gateway.md#live-switch). The transport clears TLS key logging and disables its call loop's asyncio debug mode.
+Start the application from that same shell; remove the values afterwards with `unset SOC_LLM_API_KEY SOC_LLM_ENDPOINT SOC_LLM_MODEL`. For production, use the [Vercel environment setup](#2-create-and-protect-the-vercel-project) and deploy the reviewed compatibility fix. Confirm direct provider reachability and trusted CA overrides, keep production debug mode off, and follow the [runtime obligations](../workflow/specs/ai/llm-gateway.md#live-switch). The transport clears TLS key logging and disables its call loop's asyncio debug mode.
 
 For an authorized synthetic injection measurement, use the existing private local configuration and a prepared local database/user. With `.venv` active, replace `ID` with that user's ID and `FULL_40_HEX_SHA` with the evaluated checkout's full commit:
 
