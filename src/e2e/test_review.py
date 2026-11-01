@@ -6,6 +6,7 @@ import pytest
 from playwright.sync_api import expect
 
 from accounts.models import User
+from e2e.disclosures import expand_records, result_links
 from rounds.models import Result
 
 ROUND = "Synthetic review round"
@@ -75,7 +76,7 @@ def publish(page, accounts):
 
 def record(page, index, outcome, observation, button):
     """Record a result for the round's `index`th case through its real form."""
-    page.get_by_role("link", name="Record result", exact=True).nth(index).click()
+    result_links(page).nth(index).click()
     page.get_by_label("Outcome", exact=True).select_option(outcome)
     page.get_by_label("Observation", exact=True).fill(observation)
     page.get_by_role("button", name=button, exact=True).click()
@@ -95,6 +96,7 @@ def open_results(page, state):
     """Follow the round page's link and check the results page's frame."""
     expect(page.get_by_text(f"State: {state}", exact=True)).to_be_visible()
     page.get_by_role("link", name="Review results", exact=True).click()
+    expand_records(page)
     expect(page).to_have_title(f"Results: \u2068{ROUND}\u2069")
     expect(
         page.get_by_role("heading", name=f"Results: {ROUND}", exact=True)

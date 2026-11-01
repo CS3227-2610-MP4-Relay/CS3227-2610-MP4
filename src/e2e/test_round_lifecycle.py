@@ -129,7 +129,8 @@ def expect_builds(page, *current):
     for title, label in zip((FIRST_CASE, SECOND_CASE), current, strict=True):
         case = page.get_by_role("heading", name=title, exact=True)
         own = (
-            "xpath=following-sibling::h4[.='Current build'][1]/following-sibling::p[1]"
+            "xpath=following-sibling::span[contains(@class,'record-meta')]"
+            "//span[@dir='auto']"
         )
         expect(case.locator(own)).to_have_text(label)
 

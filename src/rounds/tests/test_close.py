@@ -123,8 +123,8 @@ def test_closed_round_page_shows_the_message_once_and_everything_without_control
     label = '<span dir="auto">Synthetic 1.0</span>'
     for n in range(2):
         case_at = html.index(f'<h3><span dir="auto">Synthetic case {n}</span></h3>')
-        build_at = html.index("<h4>Current build</h4>", case_at)
-        assert html.index("<h4>Linked acceptance criteria</h4>", case_at) < build_at
+        build_at = html.index("<span>Current build</span>", case_at)
+        assert build_at < html.index("<h4>Linked acceptance criteria</h4>", case_at)
         assert html.index(label, build_at) < html.index("<h2>Builds</h2>")
     builds = html[html.index("<h2>Builds</h2>") :]
     assert f"<h3>{label}</h3>" in builds and "<h4>Covered test cases</h4>" in builds
@@ -376,7 +376,8 @@ def test_injected_fields_are_ignored(coord_client, opened, make_round):
 # Heading; criterion in its list and under the case; the case's title, steps,
 # expected result and current build; the build label and the covered case's
 # title in the builds list.
-EVERY_PLACE = 9
+# Both responsive contents versions repeat the case title, with isolation.
+EVERY_PLACE = 11
 
 
 def everywhere(make_round, text):

@@ -5,20 +5,23 @@
 {% include "page_navigation.html" with back=round.get_absolute_url %}
 <h1>Results: {{ round.title|isolated_lines }}</h1>
 <div class="state"><p>State: {{ round.get_state_display }}</p></div>
-{% for case in cases %}<h2>{{ case.title|isolated_lines }}</h2>
+<div class="reading-layout">{% include "rounds/contents.html" %}<div class="records">
+{% for case in cases %}<details class="record"{% if forloop.first %} open{% endif %}><summary><h2>{{ case.title|isolated_lines }}</h2>
+<span class="record-meta"><span>Current build</span> {{ case.current_build.label|isolated_lines }}</span>
+{% for result in case.current_results %}<span class="record-meta">{{ result.tester.username|isolated_lines }} — {{ result.get_outcome_display }}</span>{% empty %}<span class="record-meta">No results for this build yet.</span>{% endfor %}</summary>
+<div class="record-body" id="case-{{ case.pk }}">
 <h3>Linked acceptance criteria</h3>
 <ul>{% for criterion in case.criteria.all %}<li>{{ criterion.text|isolated_lines }}</li>{% endfor %}</ul>
-<h3>Current build</h3>
-<p>{{ case.current_build.label|isolated_lines }}</p>
 <h3>Results for this build</h3>
 {% for result in case.current_results %}{% if forloop.first %}<ul>{% endif %}
 <li>{% include "rounds/result_lines.html" %}</li>
-{% if forloop.last %}</ul>{% endif %}{% empty %}<p>No results for this build yet.</p>
+{% if forloop.last %}</ul>{% endif %}
 {% endfor %}
 {% if case.earlier_results %}<h3>Earlier builds</h3>
 <ul>{% for result in case.earlier_results %}
 <li>{% include "rounds/result_lines.html" with earlier=True %}</li>
 {% endfor %}</ul>
-{% endif %}{% endfor %}
+{% endif %}</div></details>{% endfor %}
 <p><a href="{% url 'rounds:detail' round.pk %}">Back to round</a></p>
+</div></div>
 {% endblock %}

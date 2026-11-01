@@ -1019,7 +1019,7 @@ def test_round_page_shows_only_its_own_rounds_linked_records(
     assert "-mark" not in html
     own_case = html.index('<h3><span dir="auto">Synthetic own case</span></h3>')
     linked = html.index("<h4>Linked acceptance criteria</h4>", own_case)
-    current = html.index("<h4>Current build</h4>", linked)
+    current = html.index("<span>Current build</span>", own_case)
     section = html[linked : html.index("<h2>Builds</h2>")]
     assert '<li><span dir="auto">Synthetic own criterion</span></li></ul>' in section
     assert html.index('<span dir="auto">Synthetic own build</span>', current) < (

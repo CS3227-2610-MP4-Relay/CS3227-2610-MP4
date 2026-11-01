@@ -357,7 +357,7 @@ def test_all_stored_text_is_escaped_and_line_isolated(tester, target):
             f'<span dir="auto">{escape(MARKUP)}\u202e</span><br>'
             '<span dir="auto">Synthetic line\u200b</span>'
         )
-        == 4
+        == 8  # Original fields plus case/build in both responsive contents versions.
     )
     assert (
         f'<span dir="auto">{escape(MARKUP)}\u2069</span><br>'

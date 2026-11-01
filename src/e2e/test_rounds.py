@@ -63,9 +63,7 @@ def test_coordinator_prepares_and_publishes_linked_case(page, browser_accounts):
     expect(page.get_by_text("State: Open", exact=True)).to_be_visible()
     expect(page.get_by_role("heading", name=case_title, exact=True)).to_be_visible()
     expect(page.get_by_text(criterion, exact=True)).to_have_count(2)
-    expect(
-        page.get_by_role("heading", name="Current build", exact=True)
-    ).to_be_visible()
+    expect(page.get_by_text("Current build", exact=True)).to_be_visible()
     expect(page.get_by_role("heading", name="Builds", exact=True)).to_be_visible()
     expect(page.get_by_role("heading", name=build, exact=True)).to_be_visible()
     # The label appears as the case's current build and in the build list.

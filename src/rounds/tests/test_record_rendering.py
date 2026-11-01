@@ -44,8 +44,8 @@ def test_markup_is_escaped_in_content_and_form_values(coord_client, make_round):
     item, made = setup(draft, MARKUP)
     html = pages(coord_client, draft, item, made)
     isolated = f'<span dir="auto">{escape(MARKUP)}</span>'
-    # Criterion text, case title, steps, expected result and the linked criterion.
-    assert html["round"].count(isolated) == 5
+    # Five record fields plus the case title in both responsive contents versions.
+    assert html["round"].count(isolated) == 7
     assert isolated in html["new case"]
     assert isolated in html["edit case"]
     assert f">\n{escape(MARKUP)}</textarea>" in html["edit criterion"]
@@ -86,7 +86,7 @@ def test_line_breaks_become_one_isolated_element_per_line(coord_client, make_rou
     item, made = setup(draft, "first" + LF + "second")
     html = pages(coord_client, draft, item, made)
     lines = '<span dir="auto">first</span><br><span dir="auto">second</span>'
-    assert html["round"].count(lines) == 5
+    assert html["round"].count(lines) == 7
     assert lines in html["new case"]
 
 
@@ -97,10 +97,10 @@ def test_bidi_and_zero_width_characters_stay_inside_their_element(
     item, made = setup(draft, BIDI_AND_INVISIBLE)
     html = pages(coord_client, draft, item, made)
     isolated = f'<span dir="auto">{BIDI_AND_INVISIBLE}</span>'
-    assert html["round"].count(isolated) == 5
+    assert html["round"].count(isolated) == 7
     assert isolated in html["new case"]
     for character in (chr(0x202E), chr(0x200B), chr(0x2066)):
-        assert html["round"].count(character) == 5
+        assert html["round"].count(character) == 7
     for label in ("<h4>Steps</h4>", "<h4>Expected result</h4>", "Test cases"):
         assert label in html["round"]
 

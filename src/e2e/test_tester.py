@@ -3,6 +3,8 @@
 import pytest
 from playwright.sync_api import expect
 
+from e2e.disclosures import expand_records
+
 
 def sign_in(page, accounts, role):
     """Authenticate each role in its own browser context through the real form."""
@@ -23,6 +25,7 @@ def assert_read_only(page):
 
 def assert_steps(page, steps):
     """Each case preserves the visible step lines and their separating break."""
+    expand_records(page)
     for line in steps.splitlines():
         expect(page.get_by_text(line, exact=True)).to_have_count(2)
     paragraphs = page.locator("p").filter(

@@ -78,7 +78,8 @@ def test_creating_a_round_opens_its_draft_round_page(coord_client, coordinator):
     # From RND-2, "no criteria or cases" shows as the two empty sections.
     assert "<p>No acceptance criteria yet.</p>" in html
     assert "<p>No test cases yet.</p>" in html
-    assert "<li>" not in html and "<h3>" not in html
+    assert "<li>" not in html.split('<div class="records">', 1)[1]
+    assert "<h3>" not in html
     assert "alert" not in html
     home = page(coord_client.get("/coordinator/"))
     assert (

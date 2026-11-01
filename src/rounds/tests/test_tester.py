@@ -171,9 +171,9 @@ def test_detail_shows_ordered_cases_links_and_latest_covering_build(
         "Steps",
         "Expected result",
         "Linked acceptance criteria",
-        "Current build",
     ):
         assert body.count(f"<h4>{heading}</h4>") == 3
+    assert body.count("<span>Current build</span>") == 3
     for absent in (
         "Synthetic partial",
         "Builds",
