@@ -180,6 +180,9 @@ def test_invalid_title_is_refused_next_to_the_field(
     response = coord_client.post(url, {"title": submitted})
     assert response.status_code == 200
     message_next_to_title(response, message)
+    html = page(response)
+    assert '<a href="/coordinator/">Coordinator home</a>' in html
+    assert "Back to round" not in html
     assert list(Round.objects.values_list("title", flat=True)) == [
         "Synthetic unchanged"
     ]
