@@ -1,7 +1,6 @@
 """Explicit operator evaluation; never invoked by pytest or CI against a provider."""
 
 import json
-import os
 import re
 
 from django.conf import settings
@@ -32,19 +31,14 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         """Preflight requests; expose replies only through explicit inspection."""
         try:
-            key = os.environ.get("SOC_LLM_API_KEY", "").strip()
-            model = os.environ.get("SOC_LLM_MODEL", "").strip()
             if not (
                 options["live"]
                 and settings.SOC_LLM_LIVE
                 and re.fullmatch(r"[0-9a-f]{40}", options["revision"])
-                and gateway._endpoint()
-                and model
-                and key
-                and key.isascii()
-                and key.isprintable()
+                and (config := gateway.configured())
             ):
                 raise ValueError
+            model = config[1]
             user = get_user_model().objects.get(pk=options["user_id"])
             cases = evaluation.corpus()
             if (

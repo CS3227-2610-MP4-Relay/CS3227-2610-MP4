@@ -195,6 +195,23 @@ def test_invalid_reply_is_rejected_whole(reply):
 
 
 @pytest.mark.ac("RES-4.8")
+@pytest.mark.parametrize(
+    ("reply", "code"),
+    [
+        ('{"questions": [], "questions": []}', "repeated-key"),
+        ('{"questions": [{"q": "x", "q": "y"}]}', "repeated-key"),
+        ('{"questions": [NaN]}', "json"),
+        ('{"questions": [-Infinity]}', "json"),
+        ("not json", "json"),
+    ],
+)
+def test_strict_decoding_rejects_with_its_own_code(reply, code):
+    with pytest.raises(feedback.InvalidReply) as caught:
+        feedback.parse(reply)
+    assert caught.value.code == code
+
+
+@pytest.mark.ac("RES-4.8")
 def test_parser_recursion_failure_is_fixed_invalid_reply(monkeypatch):
     def too_deep(*args, **kwargs):
         raise RecursionError("Synthetic private detail")

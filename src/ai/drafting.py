@@ -6,6 +6,8 @@ import math
 import unicodedata
 from dataclasses import dataclass
 
+from django.views.decorators.debug import sensitive_variables
+
 from rounds.forms import has_visible_character
 from rounds.models import Case
 
@@ -116,11 +118,7 @@ def clean(text, *, title=False):
     text = "".join(
         char
         for char in text
-        if char in "\n\t"
-        or (
-            unicodedata.category(char) not in ("Cc", "Cs")
-            and not (0xD800 <= ord(char) <= 0xDFFF)
-        )
+        if char in "\n\t" or unicodedata.category(char) not in ("Cc", "Cs")
     )
     if title:
         text = "".join(
@@ -144,7 +142,25 @@ def _no_repeated_keys(pairs):
     return value
 
 
-def _invalid_numeric(value):
+@sensitive_variables()
+def load_reply(reply):
+    """Decode a reply strictly for the drafting and feedback parsers.
+
+    Raise `InvalidReply("repeated-key")` for a repeated key, and
+    `InvalidReply("json")` for `NaN`, `Infinity`, `-Infinity`, any parse
+    error or a `RecursionError`.
+    """
+    try:
+        return json.loads(
+            reply,
+            object_pairs_hook=_no_repeated_keys,
+            parse_constant=_reject_constant,
+        )
+    except (ValueError, RecursionError) as error:
+        raise InvalidReply("json") from error
+
+
+def _nonfinite_or_surrogate(value):
     """Return whether a decoded value contains a non-finite or surrogate string."""
     pending = [value]
     while pending:
@@ -175,17 +191,8 @@ def parse(reply, labels):
     """Return validated `Draft`s, or raise `InvalidReply` for the whole reply."""
     if len(reply) > REPLY_LIMIT:
         raise InvalidReply("too-long")
-    try:
-        value = json.loads(
-            reply,
-            object_pairs_hook=_no_repeated_keys,
-            parse_constant=_reject_constant,
-        )
-    except InvalidReply:
-        raise
-    except (ValueError, RecursionError) as error:
-        raise InvalidReply("json") from error
-    if _invalid_numeric(value):
+    value = load_reply(reply)
+    if _nonfinite_or_surrogate(value):
         raise InvalidReply("surrogate")
     if type(value) is not dict or set(value) != {"drafts"}:
         raise InvalidReply("object")

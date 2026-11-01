@@ -458,17 +458,27 @@ def _reply(value):
     return Success(text)
 
 
-@sensitive_variables("api_key", "headers", "body", "instructions", "data")
-def _transport(instructions, data, deadline):
-    """Send one request without redirects or retries, returning a result."""
-    if not settings.SOC_LLM_LIVE:
-        return Refused("live-off")
+@sensitive_variables("api_key")
+def configured():
+    """Return the endpoint URL, model and API key, or None if any is unusable."""
     url = _endpoint()
     api_key = os.environ.get("SOC_LLM_API_KEY", "").strip()
     model = os.environ.get("SOC_LLM_MODEL", "").strip()
     usable_key = api_key.isascii() and api_key.isprintable()
     if url is None or not model or not api_key or not usable_key:
+        return None
+    return url, model, api_key
+
+
+@sensitive_variables("config", "api_key", "headers", "body", "instructions", "data")
+def _transport(instructions, data, deadline):
+    """Send one request without redirects or retries, returning a result."""
+    if not settings.SOC_LLM_LIVE:
+        return Refused("live-off")
+    config = configured()
+    if config is None:
         return Refused("not-configured")
+    url, model, api_key = config
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -493,9 +503,10 @@ def _transport(instructions, data, deadline):
         return Failed("timeout")
     except _ResponseTooLarge:
         return Failed("invalid-response")
-    except (aiohttp.ClientError, OSError, ValueError):
-        return Failed("transport")
-    except Exception:  # noqa: BLE001 - any other error is a fixed code, never text
+    except Exception:  # noqa: BLE001 - a fixed code, never exception text
+        # aiohttp client errors (connection, TLS, malformed HTTP, incomplete
+        # body), OSError, ValueError (such as an unencodable host name) and
+        # every other Exception.
         return Failed("transport")
     if status in {400, 401, 403}:
         return Refused("provider-refused")

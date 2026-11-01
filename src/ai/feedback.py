@@ -7,7 +7,7 @@ from django.views.decorators.debug import sensitive_variables
 
 from rounds.forms import has_visible_character
 
-from .drafting import InvalidReply, clean
+from .drafting import InvalidReply, clean, load_reply
 from .gateway import INPUT_LIMIT, REPLY_LIMIT
 
 INSTRUCTIONS_VERSION = "observation-feedback-1"
@@ -75,29 +75,12 @@ def encode(source):
     return data
 
 
-def _object(pairs):
-    """Reject duplicate keys before JSON objects become dictionaries."""
-    value = {}
-    for key, item in pairs:
-        if key in value:
-            raise InvalidReply("repeated-key")
-        value[key] = item
-    return value
-
-
-def _constant(value):
-    raise InvalidReply("json")
-
-
 @sensitive_variables()
 def parse(reply):
     """Accept the entire bounded questions-only reply, or reject it entirely."""
     if len(reply) > REPLY_LIMIT:
         raise InvalidReply("too-long")
-    try:
-        value = json.loads(reply, object_pairs_hook=_object, parse_constant=_constant)
-    except (ValueError, RecursionError) as error:
-        raise InvalidReply("json") from error
+    value = load_reply(reply)
     if type(value) is not dict or set(value) != {"questions"}:
         raise InvalidReply("object")
     questions = value["questions"]
