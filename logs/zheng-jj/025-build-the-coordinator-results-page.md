@@ -2,25 +2,26 @@
 
 Slice: #14 (RND-4) · Tier: Standard, with security review · Tool: Claude Code (VS Code extension) · Orchestrator model: claude-opus-5-5, effort unavailable (session model from the environment; effort not recorded) · Date: 2026-11-01
 
-Tokens: 30,728,048 input, 153,998 output, 30,882,046 total, from 2026-11-01 04:08:28 UTC to about 05:20 UTC.
+Tokens: 45,897,470 input, 198,389 output, 46,095,859 total, from 2026-11-01 04:08:28 UTC to about 08:36 UTC.
 
 | Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Orchestrator — `claude-opus-5-5`/unavailable, `claude:180bc6733860a61379eb3052` | 13,614,101 | 13,520,155 | 24,977 | unavailable | 13,639,078 | 04:08:28 – 05:20 UTC |
-| Builder — `claude-opus-5-5`/role default, `claude:2a2041bd35e86fe195571364` | 12,568,727 | 11,727,378 | 77,751 | unavailable | 12,646,478 | 04:09 – 05:17 UTC |
-| Verifier — `claude-opus-5-5`/role default, `claude:48db269ee83298de059cc347` | 2,812,524 | 2,591,925 | 30,636 | unavailable | 2,843,160 | 04:58 – 05:19 UTC |
-| Security-reviewer — `claude-opus-5-5`/role default, `claude:4f5a12f52b6fa5fed6509c02` | 1,732,696 | 1,542,151 | 20,634 | unavailable | 1,753,330 | 04:58 – 05:19 UTC |
+| Orchestrator — `claude-opus-5-5`/unavailable, `claude:180bc6733860a61379eb3052` | 21,751,041 | 21,271,832 | 41,557 | unavailable | 21,792,598 | 04:08:28 – 08:36 UTC |
+| Builder — `claude-opus-5-5`/role default, `claude:2a2041bd35e86fe195571364` | 16,724,679 | 15,630,099 | 90,144 | unavailable | 16,814,823 | 04:09 – 05:37 UTC |
+| Verifier — `claude-opus-5-5`/role default, `claude:48db269ee83298de059cc347` | 4,415,716 | 4,045,519 | 39,293 | unavailable | 4,455,009 | 04:58 – 08:36 UTC |
+| Security-reviewer — `claude-opus-5-5`/role default, `claude:4f5a12f52b6fa5fed6509c02` | 3,006,034 | 2,687,627 | 27,395 | unavailable | 3,033,429 | 04:58 – 08:35 UTC |
 
 **How the figures were measured:**
 - **Orchestrator:** `resource_usage.py report` against a snapshot taken before the slice began.
 - **Subagents:** each row is `resource_usage.py snapshot` of that agent's transcript. Each agent ran only for this slice.
 
-Scale: 3 subagents. The builder was reused across four checkpoints and one repair round, and each reviewer ran once and was continued once for the re-review. Repair rounds: 1. The measurement cutoff is about 05:20 UTC, so writing this log and the PR updates are not counted. See [token reporting](../../workflow/README.md#token-reporting).
+Scale: 3 subagents. The builder was reused across four checkpoints, one repair round and a follow-ups checkpoint. Each reviewer ran once and was continued twice, for the repair and for the follow-ups. Repair rounds: 1. The measurement cutoff is about 08:36 UTC, so the final log and PR updates are not counted. Spans include idle time between requests. See [token reporting](../../workflow/README.md#token-reporting).
 
 ## Requests
 
 - **What to build next.** Asked which slice to start next, the human chose #14, RND-4: the coordinator's results page.
 - **Delivery.** "move it out of draft and let me know the full list of prs ready for review after u are done. then, send me the list of prs with the links in order of merge".
+- **Follow-ups.** "resolve them all", for the three items left open below, including the RES wording. Then: "once its ready, assign my teammate as reviewer".
 
 ## Agent runs
 
@@ -39,6 +40,11 @@ Scale: 3 subagents. The builder was reused across four checkpoints and one repai
 
   Its re-verification of `de0a8b5..b55e2c4` found the findings sent resolved, nothing weakened and nothing new.
 - **Security-reviewer**, on the same range: 0 High, 0 Medium, 1 Low (the round filters on the lookups were untested) and 2 Nit. Its re-review found the Low and its first Nit resolved, and nothing new. Within those limits, `100bfbd..b55e2c4` is security-reviewed for the controls it covered.
+- **Follow-ups checkpoint** (`4193754` spec, `5cb02ee` fix, `70f4a85` plan), on `3904131` after main was merged in:
+  - **Spec:** RES-2.3 and RES-3.4 now say they add no coordinator route and point to RND-4. The "Provisional" wording is gone from the round-states table, the note under it and RND-5's intro.
+  - **Fix:** `show_round` now prefetches covered cases and linked criteria only from the round, which is 11 changed application lines. Its new test plants sibling-round and other-workspace link rows. It failed twice before the fix and fails when either filter is dropped.
+  - **Other pages:** the builder checked every other page that renders links and found none with the gap. Full verification: 2,648 passed, 231 subtests.
+  - **Reviews:** the verifier found one optional Nit: ACC-2.4 could join the new test's markers. The security-reviewer found nothing new and confirmed the survey, including the case edit form's initial values. Within their stated limits, `100bfbd..70f4a85` is security-reviewed for the controls they covered.
 - **Reviewer limits.** Neither reviewer could run commands. The orchestrator supplied the commit order, the `test_routes.py` diff and the unchanged application diff. It ran the review and browser tests on `b55e2c4` itself: 54 passed.
 
 ## Decisions and corrections
@@ -52,11 +58,12 @@ Scale: 3 subagents. The builder was reused across four checkpoints and one repai
   - the `snapshot` import shared between test modules;
   - the unobservable `-build_id` ordering key;
   - the tie-break wording.
-- **Open, for the human:**
-  - **RES wording.** RES-2.3's "No coordinator result route is added." and RES-3.4's "No coordinator history route is added." read as limits on those requirements only. The verifier suggests rewording them, which would change criteria outside this slice.
-  - **Round page prefetches.** `show_round`'s prefetches of a case's criteria and a build's cases have no round filter; this predates the slice.
-  - **Round-states table.** It still calls Open results "Provisional".
-- **Log order.** This log is numbered 025 after logs 022–024 on #93, so #93 should merge first.
+- **Resolved at the human's request:** the RES wording, `show_round`'s unfiltered prefetches and the "Provisional" wording (follow-ups checkpoint above).
+- **Open, not raised as findings:**
+  - SECURITY-SPEC's opening status sentence doesn't list RES or RND-4; it lagged before this slice.
+  - `delete_criterion` checks for links without a round filter, so a forged cross-round link could block a delete; its message is fixed and leaks nothing.
+  - The optional ACC-2.4 marker.
+- **Log order.** #93, carrying logs 022–024, merged during the slice (Whimsyturtle, 05:13 UTC). `3904131` merged main in, so the log numbers are continuous.
 
 ## Problems
 
