@@ -44,7 +44,8 @@ def load_dotenv():
         name, separator, value = line.partition("=")
         name = name.strip()
         if name not in NAMES:
-            if name.split(maxsplit=1)[:1] and name.split(maxsplit=1)[0] in NAMES:
+            # A known name then stray text, like `DJANGO_DEBUG true`, is malformed.
+            if (words := name.split(maxsplit=1)) and words[0] in NAMES:
                 raise ImproperlyConfigured(ERROR)
             continue
         if not separator:

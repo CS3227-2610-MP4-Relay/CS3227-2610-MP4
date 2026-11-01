@@ -22,7 +22,7 @@ ALLOWED_HOSTS = [
     host.strip()
     for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 ]
-if not ALLOWED_HOSTS or set(ALLOWED_HOSTS) - {"localhost", "127.0.0.1", "[::1]"}:
+if set(ALLOWED_HOSTS) - {"localhost", "127.0.0.1", "[::1]"}:
     raise ImproperlyConfigured("DJANGO_ALLOWED_HOSTS must contain loopback hosts only.")
 
 _database_host = os.environ.get("POSTGRES_HOST", "localhost")
