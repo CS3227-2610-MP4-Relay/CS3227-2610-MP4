@@ -43,5 +43,8 @@ Planned mutations, run on a temporary copy and restored with `git diff --exit-co
 
 ## Status and next steps
 
-- Checkpoint 1 ready. Collection baseline (2703 IDs) captured outside the repository; no database test run yet, because the shared test database is in use.
+- [x] Checkpoint 1, plan: `32346d4`. Collection baseline 2703 node IDs, captured outside the repository.
+- [x] Checkpoint 2, accounts (F1-F4): `504dd3b`, +29/-32 in three files. Guard tests unchanged: `src/accounts`, `rounds/tests/{test_views,test_framing,test_sample_round}.py` and the access matrix, 1038 passed; `e2e/test_accounts.py`, 6 passed. Mutations: expiry plus one second gave 1 failed of the 3 ACC-1.6 cases; no `set_expiry` gave 2 failed; no role check failed `test_other_role_home_is_forbidden`. Each was restored and confirmed byte-identical; collection unchanged.
+- [x] Checkpoint 3, settings (F5, F9-F11): +4/-5 in three files. The F10 predicates agree on 45 inputs (empty and blank names, unknown single and multi-word names, every allowed name alone, with stray text and lower-cased), checked by a script outside the repository. Collection unchanged; full verification `ruff check . && ruff format --check . && pytest`: 2703 passed, 231 subtests passed.
+- [ ] Independent verification and security review of `045c33c..` the final head, then PR delivery (coordinator).
 - Open: none.
