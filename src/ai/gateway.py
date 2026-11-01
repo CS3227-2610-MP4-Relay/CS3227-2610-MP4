@@ -439,7 +439,7 @@ def _reply(value):
     if (
         type(message) is not dict
         or message.get("role", "assistant") != "assistant"
-        or message.get("tool_calls") is not None
+        or message.get("tool_calls") not in (None, [])
         or message.get("function_call") is not None
     ):
         return Failed("invalid-response")
