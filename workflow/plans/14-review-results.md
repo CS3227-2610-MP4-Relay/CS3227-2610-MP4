@@ -24,6 +24,15 @@ Only the coordinator changes Git state; the builder yields after each.
 
 About 80 changed application lines: view ~35, URL 1, results template ~35, round-page link ~2.
 
+Actual: 47 insertions and 3 deletions in tracked application files (`views.py`, `urls.py`, `round.html`) plus 28 lines in the new `results.html` and `result_lines.html`, about 78 changed lines.
+
+## Progress
+
+- Checkpoint 1: spec `aaa77e2`, plan `5108dd5`.
+- Checkpoint 2 (`2c66919`): red run 46 failed, 5 passed in `test_review.py` (the five justified as absence or missing-route 404 checks; the no-controls test gained a 200 assertion and then failed); matrix 34 failed. Green: 51 passed; `src/rounds` with the matrix 1,585 passed. Mutations (drop the submitted, coverage or tester-workspace filter; unfiltered username) each failed tests. Test change for the verifier: `test_routes.py`'s cache walk sends the results route to its Open round and expects 200.
+- Checkpoint 3 (`d0d9fef`): `src/e2e/test_review.py` passed; it failed with the link removed, the draft filter dropped, or earlier rows listed as current, each restored and confirmed with `cmp`.
+- Checkpoint 4: User Guide "Review results" section and links from the Open and Closed round sections; Developer Guide sentence on `results_page`; RND status sentence. Results of full verification are in the builder's handoff.
+
 ## Open items
 
-None. Progress and check evidence go in the handoffs.
+None. The round-states table's "Provisional" Open-results wording predates RES-2 and is outside this slice.
