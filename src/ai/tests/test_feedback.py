@@ -116,12 +116,12 @@ def test_fixed_instructions_equal_versioned_spec():
         / "workflow/specs/ai/observation-feedback.md"
     ).read_text(encoding="utf-8")
     quote = (
-        spec.split("Version `observation-feedback-1`", 1)[1]
+        spec.split("Version `observation-feedback-3`", 1)[1]
         .split("\n\n", 1)[1]
         .split("\n\n", 1)[0]
     )
     assert quote == "> " + feedback.INSTRUCTIONS
-    assert feedback.INSTRUCTIONS_VERSION == "observation-feedback-1"
+    assert feedback.INSTRUCTIONS_VERSION == "observation-feedback-3"
 
 
 @pytest.mark.ac("RES-4.3", "RES-4.8")
