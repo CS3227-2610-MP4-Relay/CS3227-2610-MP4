@@ -32,7 +32,7 @@ Left deliberately from the [earlier plan](25-route-access-matrix.md#open-issues)
 - CSRF variants beyond a missing token and a foreign `Origin` are left to Django's own tests.
 - The snapshot leaves out `Session` and the ACC-3 limit counters, which sign-in, sign-out and failed sign-ins change by design; ACC-1 and ACC-3 tests own them.
 
-Out of scope, raised by the coordinator with the human for separate tracking: SECURITY-SPEC's stale opening status sentence, and `delete_criterion`'s link check without a round filter (application code), which can only over-refuse a delete through a directly stored cross-round link.
+Out of scope, reported to the human in the coordinator's delivery summary for separate tracking: SECURITY-SPEC's stale opening status sentence, and `delete_criterion`'s link check without a round filter (application code), which can only over-refuse a delete through a directly stored cross-round link.
 
 ## Review round 1
 
@@ -59,7 +59,7 @@ Candidate `045c33c..70adac0`. Verifier: 0 High, 0 Medium, 3 Low, 3 Nit, 2 Info. 
   | Mutation | This matrix | Matrix at `70adac0` |
   | --- | --- | --- |
   | (g1) feedback's first POST pass skips the submitted check, leaving it to the post-call recheck | 1 failed: Open submitted | 243 passed |
-  | (g2) feedback makes a discarded gateway call before any check | 37 failed: every `tester_a` feedback row and every forged-ID feedback row | 243 passed |
+  | (g2) feedback makes a discarded gateway call before `_load`'s lookup and conflict checks | 37 failed: every `tester_a` feedback row and every forged-ID feedback row | 243 passed |
   | (d1) drafting makes a discarded gateway call before the round and state checks | 35 failed: `ai:draft` for both coordinators in every state, its 15 forged URL-ID rows and its 14 forged body-ID rows | 243 passed |
 
-- [ ] Full verification, review, draft PR closing #25.
+- [x] Full verification on `ceb4299`: Ruff clean; `pytest` 2743 passed, 231 subtests. Re-reviews of `70adac0..ceb4299`: verifier 0 High/Medium/Low, 1 Info and 1 Nit (both plan wording, fixed here); security reviewer L1 resolved, 1 optional Nit (document the `gateway.complete` call convention for future AI routes), not adopted. Draft PR #107 closes #25.
