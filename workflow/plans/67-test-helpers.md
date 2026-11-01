@@ -23,7 +23,7 @@ Helpers go where the repository already shares them: plain functions in `src/rou
 ## Checkpoints
 
 1. **Plan** (`plan:`): this file. Check: `git diff --check`.
-2. **Shared rounds, ai, relay and accounts helpers** (`test:`), items 1, 2, 3, 5 and 9: `src/rounds/tests/conftest.py`, the rounds and ai modules named above, `src/relay/tests/probes.py`, `src/relay/tests/test_configuration.py`, `src/accounts/tests/{conftest,test_models,test_demo_views,test_sign_in}.py`. Mutation: a temporary service change that writes a `BuildCase` or `Result` row on a refused action fails a test that the old helper passed; restored and confirmed with `git diff --exit-code`.
+2. **Shared rounds, ai, relay and accounts helpers** (`test:`), items 1, 2, 3, 5 and 9: `src/rounds/tests/conftest.py`, the rounds and ai modules named above, `src/relay/tests/probes.py`, `src/relay/tests/test_configuration.py`, `src/accounts/tests/{conftest,test_models,test_demo_views,test_sign_in}.py`. Mutation: a temporary change that writes a rounds row the old helper omitted (e.g. `Build`) on a refused action fails a test that the old helper passed; restored and confirmed with `git diff --exit-code`.
 3. **Browser sign-in fixture** (`test:`), item 4: `src/e2e/conftest.py` and the 7 e2e modules. Run every changed e2e module in Chromium.
 4. **Drafting view tests** (`test:`), items 6 to 8: `src/ai/tests/test_views.py`. Item 8's new assertions fail when the 503 page text is changed in a temporary copy.
 
@@ -40,5 +40,19 @@ Collected at base: rounds `test_retest` 74, `test_results` 69, `test_records` 12
 - [x] Checkpoint 1: plan (`c7edae3`).
 - [x] Checkpoint 2: shared helpers (`3cc920b`). Test counts unchanged in all 25 changed modules; 1217 passed across the rounds, accounts, `ai` view, feedback and evaluation-command, and relay configuration tests, and each module alone. The `test_*` import grep finds nothing. Mutation: `state_conflict` creating a `Build` on each 409 fails `test_records.py::test_any_change_to_an_open_or_closed_round_gets_409` (2 cases) with the shared snapshot and passes with the base `everything()`; restored.
 - [x] Checkpoint 3: browser sign-in fixture (`73a90cb`). E2e counts unchanged (accounts 6, drafting 1, feedback 2, results 3, review 1, round_lifecycle 1, rounds 4, tester 1); all 19 passed in Chromium.
-- [x] Checkpoint 4: drafting view tests (on `73a90cb`). `test_views.py` 56 to 54, 54 passed; RND-8.7 still marks 7 tests there and the access matrix's `ai:draft` and `ai:use-draft` rows (`-k "ai:draft or ai:use-draft"`: 76 passed, each running every request kind, including `NO_TOKEN` and `BAD_ORIGIN`). Mutations, each restored: the 503 path rendering another page with status 503 fails the new page-text assertion; a Case written before the storage error is raised fails the new snapshot assertion.
-- [ ] Final full verification, independent review and draft PR.
+- [x] Checkpoint 4: drafting view tests (`8696cee`). `test_views.py` 56 to 54, 54 passed; RND-8.7 still marks 7 tests there and the access matrix's `ai:draft` and `ai:use-draft` rows (`-k "ai:draft or ai:use-draft"`: 76 passed, each running every request kind, including `NO_TOKEN` and `BAD_ORIGIN`). Mutations, each restored: the 503 path rendering another page with status 503 fails the new page-text assertion; a Case written before the storage error is raised fails the new snapshot assertion.
+- [x] Plan evidence (`f80de41`).
+- [x] Repair round 1 (on `f80de41`; see below). Each changed module alone passed with its count unchanged: rounds `test_close` 28, `test_direction_controls` 83, `test_publish` 49, `test_record_rendering` 7, `test_records` 125, `test_result_services` 23, `test_results` 69, `test_retest` 74, `test_review` 53, `test_routes` 3, `test_tester` 59, `test_views` 91; ai `test_feedback_views` 58. No test function or parametrisation line changed. E2e `test_feedback`, `test_results` and `test_review` (docstring-only fixture change): 6 passed. Ruff clean; no inline `<title>` split remains outside the conftest.
+- [ ] Final full verification and draft PR.
+
+## Review round 1
+
+Candidate `045c33c..f80de41`, verifier: no High or Medium; Low 1, Low 2, Nit 1, Nit 2. Coordinator's decisions:
+
+- **Low 1, inline copies of the new helpers** (fixed):
+  - `title_tag`: the 5 identical inline expressions (`test_close.py` 2, `test_publish.py`, `test_retest.py`, `test_record_rendering.py`) call it.
+  - `locked`: every inline `Round.objects.select_for_update().get(pk=<round>.pk)` in `src/rounds/tests` (`test_close`, `test_retest`, `test_direction_controls`, `test_publish`, `test_result_services`, `test_results`, `test_records`, `test_review`) and the 2 in `ai/tests/test_feedback_views.py` (which already imports the rounds conftest) call it. Left: `relay/tests/test_access_matrix.py` (2) and `e2e/test_feedback.py` (1), which import no rounds test helpers; sharing them would add a cross-app test import for one line.
+  - `no_store`: switched where the pair has no message: `test_views.py` 4, `test_routes.py` 1 (its `.get(..., "")` default fails as a `KeyError` instead, still a failure), `test_tester.py` 3. Left: `test_routes.py` lines with a `url` message the helper would drop (2); `test_views.py` 1 and `test_tester.py` 2 that check only `no-store` (the helper would add a check, not keep the meaning).
+- **Nit 1**: checkpoint 2's planned mutation now matches the executed one.
+- **Nit 2**: the e2e `sign_in` docstring says it signs in within `page`'s browser context.
+- **Low 2, commit bundling** (no change): checkpoint 2 was one `test:` commit for items 1, 2, 3, 5 and 9. Lesson: plan one commit per independently reviewable helper move, such as the snapshot change apart from the probe move.
