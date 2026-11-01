@@ -10,7 +10,7 @@ from django.core.management.base import CommandError
 
 from ai import drafting, evaluation, gateway
 from ai.management.commands.evaluate_injection import Command
-from rounds.tests.test_result_services import snapshot
+from rounds.tests.conftest import snapshot
 
 pytestmark = [pytest.mark.django_db, pytest.mark.ac("SEC-INJ-1.1", "SEC-INJ-1.4")]
 REVISION = "a" * 40

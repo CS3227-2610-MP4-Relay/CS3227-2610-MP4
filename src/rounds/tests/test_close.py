@@ -13,7 +13,7 @@ from django.utils.html import escape
 
 from rounds import services
 from rounds import urls as rounds_urls
-from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
+from rounds.models import Case, CaseCriterion, Criterion, Round
 
 from .conftest import (
     DENIED,
@@ -24,9 +24,11 @@ from .conftest import (
     UNAVAILABLE,
     csrf_token,
     detail,
+    no_store,
     page,
     race,
     signed_in,
+    snapshot,
 )
 
 pytestmark = pytest.mark.django_db
@@ -71,22 +73,6 @@ def published(round_, cases=2, criterion="Synthetic criterion", label="Synthetic
     return round_
 
 
-def everything():
-    return (
-        list(Round.objects.values()),
-        list(Criterion.objects.values()),
-        list(Case.objects.values()),
-        list(CaseCriterion.objects.values()),
-        list(Build.objects.values()),
-        list(BuildCase.objects.values()),
-    )
-
-
-def no_store(response):
-    cache_control = response["Cache-Control"]
-    assert "no-store" in cache_control and "private" in cache_control
-
-
 def stays_open(round_):
     round_.refresh_from_db()
     assert (round_.state, round_.closed_at) == (Round.State.OPEN, None)
@@ -102,13 +88,13 @@ def opened(make_round):
 
 @pytest.mark.ac("RND-6.1")
 def test_closing_an_open_round_redirects_and_closes_it(coord_client, opened):
-    before = everything()[1:]
+    before = snapshot(exclude=[Round])
     response = coord_client.post(close_url(opened.pk))
     assert response.status_code == 302
     assert response["Location"] == detail(opened.pk)
     opened.refresh_from_db()
     assert opened.state == Round.State.CLOSED and opened.closed_at is not None
-    assert everything()[1:] == before
+    assert snapshot(exclude=[Round]) == before
 
 
 @pytest.mark.ac("RND-6.1")
@@ -173,14 +159,14 @@ def test_a_round_with_untested_cases_closes(coord_client, make_round):
 @pytest.mark.ac("RND-6.3")
 def test_closing_a_closed_round_gets_409_and_changes_nothing(coord_client, opened):
     coord_client.post(close_url(opened.pk))
-    before = everything()
+    before = snapshot()
     response = coord_client.post(close_url(opened.pk))
     assert response.status_code == 409
     html = page(response)
     assert "<title>Action not available</title>" in html
     assert f"<h1>{CONFLICT.format('Closed')}</h1>" in html
     no_store(response)
-    assert everything() == before
+    assert snapshot() == before
 
 
 @pytest.mark.ac("RND-6.3")
@@ -190,7 +176,8 @@ def test_no_rounds_route_returns_a_closed_round_to_open_or_draft(coordinator, op
     client = signed_in(coordinator, enforce_csrf_checks=True)
     token = csrf_token(client)
     client.post(close_url(opened.pk), HTTP_X_CSRFTOKEN=token)
-    before = everything()
+    stored = list(Round.objects.filter(pk=opened.pk).values())
+    before = snapshot(exclude=[Round])
     ids = {"round_id": opened.pk, "criterion_id": criterion.pk, "case_id": case.pk}
     data = {"title": "Synthetic", "text": "Synthetic", "label": "Synthetic 2.0"}
     for pattern in rounds_urls.urlpatterns:
@@ -203,10 +190,8 @@ def test_no_rounds_route_returns_a_closed_round_to_open_or_draft(coordinator, op
     # Only "new" may add a round; this round and its records are unchanged.
     opened.refresh_from_db()
     assert opened.state == Round.State.CLOSED
-    assert list(Round.objects.filter(pk=opened.pk).values()) == [
-        row for row in before[0] if row["id"] == opened.pk
-    ]
-    assert everything()[1:] == before[1:]
+    assert list(Round.objects.filter(pk=opened.pk).values()) == stored
+    assert snapshot(exclude=[Round]) == before
     html = page(client.get(detail(opened.pk)))
     assert "<form" not in html and "<p>State: Closed</p>" in html
 
@@ -323,31 +308,31 @@ def test_another_workspaces_round_gets_404_not_409(
 ):
     foreign = make_round("Synthetic foreign", state, owner=other_workspace)
     reference = coord_client.get("/coordinator/rounds/999999/")
-    before = everything()
+    before = snapshot()
     for round_id in (foreign.pk, 999999):
         response = coord_client.post(close_url(round_id))
         assert response.status_code == 404
         assert response.content == reference.content
         assert NOT_FOUND in page(response)
-    assert everything() == before
+    assert snapshot() == before
 
 
 @pytest.mark.ac("RND-6.5")
 def test_closing_a_draft_round_gets_409(coord_client, make_round):
     draft = make_round("Synthetic draft")
-    before = everything()
+    before = snapshot()
     response = coord_client.post(close_url(draft.pk))
     assert response.status_code == 409
     assert f"<h1>{CONFLICT.format('Draft')}</h1>" in page(response)
     no_store(response)
-    assert everything() == before
+    assert snapshot() == before
 
 
 @pytest.mark.ac("RND-6.5")
 def test_storage_failure_mid_close_gives_503_and_changes_nothing(
     coord_client, opened, caplog
 ):
-    before = everything()
+    before = snapshot()
     # The close is one conditional UPDATE, so storage fails there.
     failing = mock.patch.object(
         QuerySet, "update", side_effect=DatabaseError("synthetic")
@@ -357,7 +342,7 @@ def test_storage_failure_mid_close_gives_503_and_changes_nothing(
     assert response.status_code == 503
     assert UNAVAILABLE in page(response)
     no_store(response)
-    assert everything() == before
+    assert snapshot() == before
     stays_open(opened)
     logged = [record for record in caplog.records if record.name == "rounds.views"]
     assert len(logged) == 1 and logged[0].exc_info[0] is DatabaseError

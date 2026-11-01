@@ -2,12 +2,10 @@ import json
 import os
 import subprocess
 import sys
-from pathlib import Path
 
 import pytest
 
-SRC = Path(__file__).resolve().parents[2]
-PROBE = SRC / "relay" / "tests" / "settings_probe.py"
+from relay.tests.probes import PROBE, SRC, probe
 
 
 @pytest.mark.ac("PLT-1.4", "PLT-1.8", "PLT-1.12")
@@ -48,23 +46,6 @@ def test_wsgi_file_import_starts_without_pythonpath(tmp_path, production):
     )
     assert response["status"] == ["200 OK"]
     assert "A beta-testing portal for small software teams." in response["body"]
-
-
-def probe(module, dotenv=None, **values):
-    """Inspect settings without inheriting any runtime configuration."""
-    environment = {
-        key: value
-        for key, value in os.environ.items()
-        if not key.startswith(("DJANGO_", "POSTGRES_", "SOC_LLM_", "DATABASE_URL"))
-    }
-    environment.update(PYTHONPATH=str(SRC), **values)
-    return subprocess.run(
-        [sys.executable, str(PROBE), module, *([str(dotenv)] if dotenv else [])],
-        env=environment,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
 
 
 @pytest.mark.ac("PLT-1.5")

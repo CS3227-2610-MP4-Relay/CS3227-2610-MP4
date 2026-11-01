@@ -17,6 +17,8 @@ from django.urls import include, path
 
 from accounts.models import Workspace
 
+from .conftest import csrf_client
+
 PASSWORD = "Synthetic16Chars"
 FAILURE = "Username or password is incorrect."
 DENIED = "You do not have access to this page."
@@ -401,12 +403,6 @@ def test_sign_in_replaces_signed_in_session_identifier(
     assert stale.get(f"/{first}/")["Location"] == "/sign-in/"
 
 
-def csrf_client():
-    client = Client(enforce_csrf_checks=True)
-    client.get("/sign-in/")
-    return client, client.cookies[django_settings.CSRF_COOKIE_NAME].value
-
-
 def csrf_data(valid, token):
     if token is None:
         return {}
@@ -427,7 +423,7 @@ REFUSED_CSRF = [
 
 @pytest.mark.ac("ACC-1.8")
 def test_sign_in_with_valid_token_and_origin_succeeds(coordinator):
-    client, valid = csrf_client()
+    client, valid = csrf_client("/sign-in/")
     response = client.post(
         "/sign-in/",
         {"username": coordinator.username, "password": PASSWORD}
@@ -440,7 +436,7 @@ def test_sign_in_with_valid_token_and_origin_succeeds(coordinator):
 @pytest.mark.ac("ACC-1.8")
 @pytest.mark.parametrize(("token", "origin"), REFUSED_CSRF)
 def test_sign_in_without_valid_csrf_or_origin_is_refused(coordinator, token, origin):
-    client, valid = csrf_client()
+    client, valid = csrf_client("/sign-in/")
     response = client.post(
         "/sign-in/",
         {"username": coordinator.username, "password": PASSWORD}
@@ -457,7 +453,7 @@ def test_sign_in_without_valid_csrf_or_origin_is_refused(coordinator, token, ori
 @pytest.mark.ac("ACC-1.8")
 @pytest.mark.parametrize(("token", "origin"), REFUSED_CSRF)
 def test_sign_out_without_valid_csrf_or_origin_is_refused(coordinator, token, origin):
-    client, valid = csrf_client()
+    client, valid = csrf_client("/sign-in/")
     client.post(
         "/sign-in/",
         {"username": coordinator.username, "password": PASSWORD}
@@ -483,7 +479,7 @@ REFUSED_HTTPS = [
 
 @pytest.mark.ac("ACC-1.8")
 def test_https_sign_in_with_same_origin_succeeds(coordinator):
-    client, valid = csrf_client()
+    client, valid = csrf_client("/sign-in/")
     response = client.post(
         "/sign-in/",
         {"username": coordinator.username, "password": PASSWORD}
@@ -497,7 +493,7 @@ def test_https_sign_in_with_same_origin_succeeds(coordinator):
 @pytest.mark.ac("ACC-1.8")
 @pytest.mark.parametrize("headers", REFUSED_HTTPS)
 def test_https_sign_in_without_matching_origin_is_refused(coordinator, headers):
-    client, valid = csrf_client()
+    client, valid = csrf_client("/sign-in/")
     response = client.post(
         "/sign-in/",
         {"username": coordinator.username, "password": PASSWORD}
@@ -515,7 +511,7 @@ def test_https_sign_in_without_matching_origin_is_refused(coordinator, headers):
 @pytest.mark.ac("ACC-1.8")
 @pytest.mark.parametrize("headers", REFUSED_HTTPS)
 def test_https_sign_out_without_matching_origin_is_refused(coordinator, headers):
-    client, valid = csrf_client()
+    client, valid = csrf_client("/sign-in/")
     client.post(
         "/sign-in/",
         {"username": coordinator.username, "password": PASSWORD}

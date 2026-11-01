@@ -17,6 +17,8 @@ from accounts.workspaces import workspace_records
 from rounds import services as round_services
 from rounds.models import Case, CaseCriterion, Criterion, Round
 
+from .conftest import csrf_client
+
 SAVE = "Save these passwords now. They will not be shown again."
 UNAVAILABLE = "Relay is temporarily unavailable. Try again later."
 DENIED = "You do not have access to this page."
@@ -56,12 +58,6 @@ def created(client=None):
     response = (client or Client()).post("/demo/")
     assert response.status_code == 200
     return response
-
-
-def csrf_client():
-    client = Client(enforce_csrf_checks=True)
-    client.get("/")
-    return client, client.cookies[django_settings.CSRF_COOKIE_NAME].value
 
 
 def capture_passwords():
@@ -364,7 +360,7 @@ def test_failed_commit_leaves_nothing_and_shows_503(caplog):
 @pytest.mark.ac("ACC-2.6", "PLT-1.1")
 @pytest.mark.parametrize("role", ["coordinator", "tester"])
 def test_signed_in_user_is_sent_home_and_creates_nothing(account, role):
-    client, _ = csrf_client()
+    client, _ = csrf_client("/")
     client.force_login(account(role))
     valid = client.cookies[django_settings.CSRF_COOKIE_NAME].value
     before = counts()
@@ -389,7 +385,7 @@ REFUSED_CSRF = [
 @pytest.mark.django_db
 @pytest.mark.ac("ACC-2.7")
 def test_creation_with_token_from_start_page_and_own_origin_succeeds():
-    client, valid = csrf_client()
+    client, valid = csrf_client("/")
     response = client.post(
         "/demo/", {"csrfmiddlewaretoken": valid}, HTTP_ORIGIN="http://testserver"
     )
@@ -401,7 +397,7 @@ def test_creation_with_token_from_start_page_and_own_origin_succeeds():
 @pytest.mark.ac("ACC-2.7")
 @pytest.mark.parametrize(("token", "origin"), REFUSED_CSRF)
 def test_creation_without_valid_csrf_or_origin_is_refused(token, origin):
-    client, valid = csrf_client()
+    client, valid = csrf_client("/")
     data = {} if token is None else {"csrfmiddlewaretoken": valid}
     if token not in (None, "valid"):
         data["csrfmiddlewaretoken"] = token

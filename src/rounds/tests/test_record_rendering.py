@@ -5,7 +5,7 @@ from django.utils.html import escape
 
 from rounds.models import Case, CaseCriterion, Criterion
 
-from .conftest import IMG_TAG, MARKUP, SCRIPT_TAG, detail, page
+from .conftest import MARKUP, assert_no_raw_markup, detail, page
 
 pytestmark = [pytest.mark.django_db, pytest.mark.ac("RND-2.8")]
 
@@ -32,11 +32,6 @@ def pages(client, round_, item, made):
         "edit criterion": page(client.get(f"{base}/criteria/{item.pk}/edit/")),
         "edit case": page(client.get(f"{base}/cases/{made.pk}/edit/")),
     }
-
-
-def assert_no_raw_markup(html):
-    assert SCRIPT_TAG not in html
-    assert IMG_TAG not in html
 
 
 def test_markup_is_escaped_in_content_and_form_values(coord_client, make_round):

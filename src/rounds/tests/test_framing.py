@@ -15,7 +15,7 @@ from django.db import DatabaseError, OperationalError
 from django.test import Client
 
 from relay.settings import base
-from relay.tests.test_configuration import probe
+from relay.tests.probes import probe
 from rounds.models import Round
 
 from .conftest import close, detail, draft_with_case, open_with_case, page, signed_in

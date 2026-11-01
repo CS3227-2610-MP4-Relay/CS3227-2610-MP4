@@ -3,6 +3,7 @@ import time
 from unittest import mock
 
 import pytest
+from django.apps import apps
 from django.conf import settings as django_settings
 from django.contrib.messages import constants
 from django.contrib.messages.storage.base import Message
@@ -36,6 +37,43 @@ IMG_TAG = "\x3cimg"
 assert SCRIPT_TAG in MARKUP and IMG_TAG in MARKUP
 
 
+def assert_no_raw_markup(html):
+    """`html` holds none of the payload's raw tags."""
+    assert SCRIPT_TAG not in html
+    assert IMG_TAG not in html
+
+
+def title_tag(html):
+    """The text inside the page's <title> element."""
+    return html.split("<title>", 1)[1].split("</title>", 1)[0]
+
+
+def no_store(response):
+    """The response carries the private, no-store cache policy."""
+    assert "private" in response["Cache-Control"]
+    assert "no-store" in response["Cache-Control"]
+
+
+def snapshot(*models, exclude=()):
+    """Every row of `models`, by primary key, to show an action changed nothing.
+
+    With no `models`, every model of the rounds app except those in `exclude`,
+    so a new rounds model is checked without changing callers.
+    """
+    if not models:
+        models = [
+            model
+            for model in apps.get_app_config("rounds").get_models()
+            if model not in exclude
+        ]
+    return {model: list(model.objects.order_by("pk").values()) for model in models}
+
+
+def locked(round_):
+    """Lock the round row, as the views do before calling a service."""
+    return Round.objects.select_for_update().get(pk=round_.pk)
+
+
 def detail(round_id):
     """The round page URL."""
     return f"/coordinator/rounds/{round_id}/"
@@ -59,8 +97,7 @@ def open_with_case(make_round):
     """An Open round with one test case, published on build Synthetic 1.0."""
     round_ = draft_with_case(make_round)
     with transaction.atomic():
-        locked = Round.objects.select_for_update().get(pk=round_.pk)
-        services.publish(locked, "Synthetic 1.0")
+        services.publish(locked(round_), "Synthetic 1.0")
     return round_
 
 
@@ -76,8 +113,9 @@ def stored_retest(client, round_, cases, label):
     would, for rendering stored text that the form refuses (rule 5).
     """
     with transaction.atomic():
-        locked = Round.objects.select_for_update().get(pk=round_.pk)
-        build = services.request_retest(locked, label, [case.pk for case in cases])
+        build = services.request_retest(
+            locked(round_), label, [case.pk for case in cases]
+        )
     text = retest_message(len(cases), build.label)
     session = client.session
     session[SessionStorage.session_key] = MessageEncoder().encode(

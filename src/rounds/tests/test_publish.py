@@ -20,9 +20,11 @@ from .conftest import (
     UNAVAILABLE,
     csrf_token,
     detail,
+    no_store,
     page,
     race,
     signed_in,
+    snapshot,
 )
 
 pytestmark = pytest.mark.django_db
@@ -58,26 +60,10 @@ def fill(round_, cases=2):
     return made
 
 
-def everything():
-    return (
-        list(Round.objects.values()),
-        list(Criterion.objects.values()),
-        list(Case.objects.values()),
-        list(CaseCriterion.objects.values()),
-        list(Build.objects.values()),
-        list(BuildCase.objects.values()),
-    )
-
-
 def stays_draft(round_):
     round_.refresh_from_db()
     assert (round_.state, round_.published_at) == (Round.State.DRAFT, None)
     assert not Build.objects.filter(round=round_).exists()
-
-
-def no_store(response):
-    cache_control = response["Cache-Control"]
-    assert "no-store" in cache_control and "private" in cache_control
 
 
 def message_next_to_label(html, message):
@@ -253,14 +239,14 @@ def test_a_null_character_in_the_label_is_refused(coord_client, draft):
 @pytest.mark.ac("RND-3.3")
 def test_a_round_without_cases_is_refused(coord_client, draft):
     Criterion.objects.create(round=draft, text="Synthetic criterion")
-    before = everything()
+    before = snapshot()
     response = coord_client.post(publish_url(draft.pk), {"label": "Synthetic 1.0"})
     assert response.status_code == 200
     html = page(response)
     message_next_to_label(html, NO_CASES)
     assert 'value="Synthetic 1.0"' in html
     assert "Edit round" in html
-    assert everything() == before
+    assert snapshot() == before
 
 
 @pytest.mark.ac("RND-3.3")
@@ -280,10 +266,10 @@ def test_an_invalid_label_on_a_round_without_cases_gets_only_the_label_message(
 @pytest.mark.ac("RND-3.4")
 def test_the_published_round_keeps_exactly_what_was_saved(coord_client, draft):
     fill(draft, 3)
-    records = everything()[1:4]
+    records = snapshot(Criterion, Case, CaseCriterion)
     before = page(coord_client.get(detail(draft.pk)))
     coord_client.post(publish_url(draft.pk), {"label": "Synthetic 1.0"})
-    assert everything()[1:4] == records
+    assert snapshot(Criterion, Case, CaseCriterion) == records
     after = page(coord_client.get(detail(draft.pk)))
     for text in ("Synthetic criterion one", "Synthetic criterion two"):
         assert after.count(text) == before.count(text)
@@ -502,13 +488,13 @@ def test_another_workspaces_round_gets_404_not_409(
     foreign = make_round("Synthetic foreign", state, owner=other_workspace)
     fill(foreign, 1)
     reference = coord_client.get("/coordinator/rounds/999999/")
-    before = everything()
+    before = snapshot()
     for round_id in (foreign.pk, 999999):
         response = coord_client.post(publish_url(round_id), {"label": "Synthetic"})
         assert response.status_code == 404
         assert response.content == reference.content
         assert NOT_FOUND in page(response)
-    assert everything() == before
+    assert snapshot() == before
 
 
 @pytest.mark.ac("RND-3.6")
@@ -519,14 +505,14 @@ def test_publishing_an_open_or_closed_round_gets_409(
 ):
     frozen = make_round("Synthetic frozen", state)
     fill(frozen, 1)
-    before = everything()
+    before = snapshot()
     response = coord_client.post(publish_url(frozen.pk), {"label": label})
     assert response.status_code == 409
     html = page(response)
     assert "<title>Action not available</title>" in html
     assert f"<h1>{CONFLICT.format(name)}</h1>" in html
     no_store(response)
-    assert everything() == before
+    assert snapshot() == before
 
 
 @pytest.mark.ac("RND-3.6")
@@ -552,13 +538,13 @@ def test_storage_failure_mid_publish_gives_503_and_changes_nothing(
     coord_client, draft, caplog
 ):
     fill(draft, 2)
-    before = everything()
+    before = snapshot()
     with mock.patch.object(Round, "save", side_effect=DatabaseError("synthetic")):
         response = coord_client.post(publish_url(draft.pk), {"label": "Synthetic"})
     assert response.status_code == 503
     assert UNAVAILABLE in page(response)
     no_store(response)
-    assert everything() == before
+    assert snapshot() == before
     logged = [record for record in caplog.records if record.name == "rounds.views"]
     assert len(logged) == 1 and logged[0].exc_info[0] is DatabaseError
     assert "Synthetic" not in caplog.text

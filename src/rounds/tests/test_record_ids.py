@@ -2,22 +2,13 @@
 
 import pytest
 
-from rounds.models import Case, CaseCriterion, Criterion, Round
+from rounds.models import Case, CaseCriterion, Criterion
 
-from .conftest import NOT_FOUND, page
+from .conftest import NOT_FOUND, page, snapshot
 
 pytestmark = [pytest.mark.django_db, pytest.mark.ac("RND-2.8")]
 
 HUGE = "99999999999999999999"
-
-
-def everything():
-    return (
-        list(Criterion.objects.values()),
-        list(Case.objects.values()),
-        list(CaseCriterion.objects.values()),
-        list(Round.objects.values()),
-    )
 
 
 def seed(round_):
@@ -49,7 +40,7 @@ def test_zero_or_oversized_record_ids_get_404(
     made = make_round("Synthetic round", state)
     linked = seed(made)
     reference = coord_client.get("/coordinator/rounds/999999/")
-    before = everything()
+    before = snapshot()
     base = f"/coordinator/rounds/{made.pk}/{kind}/{record_id}"
     attempts = [
         ("get", f"{base}/edit/", None),
@@ -61,4 +52,4 @@ def test_zero_or_oversized_record_ids_get_404(
         assert response.status_code == 404, (method, route)
         assert response.content == reference.content
         assert NOT_FOUND in page(response)
-    assert everything() == before
+    assert snapshot() == before

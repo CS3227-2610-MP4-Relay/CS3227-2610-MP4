@@ -7,6 +7,8 @@ from rounds import services
 from rounds.forms import RetestForm
 from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
 
+from .conftest import locked
+
 pytestmark = pytest.mark.django_db
 
 NO_CASE = "Select at least one test case."
@@ -45,11 +47,6 @@ def fill(round_, cases=3):
         CaseCriterion.objects.create(case=case, criterion=criterion)
         made.append(case)
     return made
-
-
-def locked(round_):
-    """Lock the round row, as the view does before calling the service."""
-    return Round.objects.select_for_update().get(pk=round_.pk)
 
 
 def published(workspace, cases=3, title="Synthetic round"):

@@ -6,6 +6,8 @@ from accounts.models import Workspace
 from rounds import services
 from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
 
+from .conftest import locked
+
 pytestmark = pytest.mark.django_db
 
 
@@ -13,11 +15,6 @@ pytestmark = pytest.mark.django_db
 def round_():
     workspace = Workspace.objects.create(name="Demo workspace rnd60001")
     return Round.objects.create(workspace=workspace, title="Synthetic round")
-
-
-def locked(round_):
-    """Lock the round row, as the view does before calling `close`."""
-    return Round.objects.select_for_update().get(pk=round_.pk)
 
 
 def published(round_, cases=2):

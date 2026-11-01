@@ -11,7 +11,7 @@ from django.db.models import ProtectedError
 
 from accounts.models import Workspace
 from relay.settings import base
-from relay.tests.test_configuration import probe
+from relay.tests.probes import probe
 
 PASSWORD = "Synthetic16Chars"
 

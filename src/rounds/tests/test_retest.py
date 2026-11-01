@@ -24,9 +24,11 @@ from .conftest import (
     UNAVAILABLE,
     csrf_token,
     detail,
+    no_store,
     page,
     race,
     signed_in,
+    snapshot,
     stored_retest,
 )
 
@@ -68,22 +70,6 @@ def published(round_, cases=3, title="Synthetic case", label="Synthetic 1.0"):
         services.publish(Round.objects.select_for_update().get(pk=round_.pk), label)
     round_.refresh_from_db()
     return round_
-
-
-def everything():
-    return (
-        list(Round.objects.values()),
-        list(Criterion.objects.values()),
-        list(Case.objects.values()),
-        list(CaseCriterion.objects.values()),
-        list(Build.objects.values()),
-        list(BuildCase.objects.values()),
-    )
-
-
-def no_store(response):
-    cache_control = response["Cache-Control"]
-    assert "no-store" in cache_control and "private" in cache_control
 
 
 def cases_of(round_):
@@ -228,13 +214,13 @@ def test_draft_and_closed_round_pages_have_no_retest_link(
 
 @pytest.mark.ac("RND-5.2")
 def test_selecting_no_case_shows_the_message_and_keeps_the_label(coord_client, opened):
-    before = everything()
+    before = snapshot()
     response = coord_client.post(retest_url(opened.pk), data([], "Synthetic kept"))
     assert response.status_code == 200
     html = page(response)
     assert html.count(NO_CASE) == 1 and next_to_cases(html, NO_CASE)
     assert 'value="Synthetic kept"' in html
-    assert everything() == before
+    assert snapshot() == before
 
 
 @pytest.mark.ac("RND-5.2")
@@ -247,13 +233,13 @@ def test_an_invalid_label_shows_the_message_and_keeps_the_selection(
     coord_client, opened, label
 ):
     one, two, _ = cases_of(opened)
-    before = everything()
+    before = snapshot()
     response = coord_client.post(retest_url(opened.pk), data([one, two], label))
     assert response.status_code == 200
     html = page(response)
     assert html.count(LABEL_LIMIT) == 1 and next_to_label(html, LABEL_LIMIT)
     assert html.count("checked") == 2
-    assert everything() == before
+    assert snapshot() == before
 
 
 @pytest.mark.ac("RND-5.2")
@@ -281,13 +267,13 @@ def test_a_used_label_shows_the_message_next_to_build_label(
     coord_client, opened, label
 ):
     one = cases_of(opened)[0]
-    before = everything()
+    before = snapshot()
     response = coord_client.post(retest_url(opened.pk), data([one], label))
     assert response.status_code == 200
     html = page(response)
     assert html.count(DUPLICATE) == 1 and next_to_label(html, DUPLICATE)
     assert html.count("checked") == 1 and f'value="{label}"' in html
-    assert everything() == before
+    assert snapshot() == before
 
 
 # RND-5.4
@@ -300,12 +286,12 @@ def test_the_tenth_build_is_created_and_the_eleventh_refused(coord_client, opene
         response = coord_client.post(retest_url(opened.pk), data([one], f"v{n}"))
         assert response.status_code == 302
     assert opened.builds.count() == 10
-    before = everything()
+    before = snapshot()
     for label in ("Synthetic 9.9", "Synthetic 1.0"):
         html = page(coord_client.post(retest_url(opened.pk), data([one], label)))
         assert html.count(CAP) == 1 and next_to_label(html, CAP)
         assert DUPLICATE not in html
-    assert everything() == before
+    assert snapshot() == before
 
 
 # RND-5.5
@@ -314,10 +300,10 @@ def test_the_tenth_build_is_created_and_the_eleventh_refused(coord_client, opene
 @pytest.mark.ac("RND-5.5")
 def test_retesting_a_case_again_keeps_earlier_builds_listed(coord_client, opened):
     one, two, _ = cases_of(opened)
-    records = everything()[1:4]
+    records = snapshot(Criterion, Case, CaseCriterion)
     coord_client.post(retest_url(opened.pk), data([one, two], "Synthetic 1.1"))
     coord_client.post(retest_url(opened.pk), data([one], "Synthetic 1.2"))
-    assert everything()[1:4] == records
+    assert snapshot(Criterion, Case, CaseCriterion) == records
     html = page(coord_client.get(detail(opened.pk)))
     builds = html[html.index("<h2>Builds</h2>") :]
     parts = builds.split("<h3>")[1:]
@@ -339,14 +325,14 @@ def test_a_foreign_missing_or_malformed_case_shows_the_message(
     one = cases_of(opened)[0]
     same = cases_of(published(make_round("Synthetic other")))[0]
     foreign = cases_of(published(make_round("Synthetic far", owner=other_workspace)))
-    before = everything()
+    before = snapshot()
     for bad in (same.pk, foreign[0].pk, 999999, "abc"):
         for chosen in ([bad], [one, bad]):
             response = coord_client.post(retest_url(opened.pk), data(chosen))
             assert response.status_code == 200, bad
             html = page(response)
             assert html.count(FOREIGN) == 1 and next_to_cases(html, FOREIGN), bad
-    assert everything() == before
+    assert snapshot() == before
 
 
 # RND-5.7
@@ -430,7 +416,7 @@ def test_a_draft_or_closed_round_gets_409(coord_client, make_round, state, metho
         published(made)
         coord_client.post(close_url(made.pk))
     one = Case.objects.filter(round=made).first()
-    before = everything()
+    before = snapshot()
     payload = data([one] if one else [], "Synthetic 2.0")
     response = getattr(coord_client, method)(retest_url(made.pk), payload)
     assert response.status_code == 409
@@ -438,7 +424,7 @@ def test_a_draft_or_closed_round_gets_409(coord_client, make_round, state, metho
     assert f"<h1>{CONFLICT.format(state.title())}</h1>" in html
     assert "<title>Action not available</title>" in html
     no_store(response)
-    assert everything() == before
+    assert snapshot() == before
 
 
 @pytest.mark.ac("RND-5.8")
@@ -466,18 +452,18 @@ def test_post_without_valid_csrf_or_same_origin_gets_403(
             csrf_token(client) if token == "valid" else "x" * 32
         )
     extra = {"HTTP_ORIGIN": origin} if origin else {}
-    before = everything()
+    before = snapshot()
     response = client.post(retest_url(opened.pk), payload, **extra)
     assert response.status_code == 403
     assert DENIED in page(response)
-    assert everything() == before
+    assert snapshot() == before
 
 
 @pytest.mark.ac("RND-5.8")
 def test_signed_out_visitor_is_redirected_to_sign_in(opened):
     client = Client(enforce_csrf_checks=True)
     token = csrf_token(client)
-    before = everything()
+    before = snapshot()
     for round_id in (opened.pk, opened.pk + 1000):
         for response in (
             client.get(retest_url(round_id)),
@@ -485,7 +471,7 @@ def test_signed_out_visitor_is_redirected_to_sign_in(opened):
         ):
             assert response.status_code == 302
             assert response["Location"] == "/sign-in/"
-    assert everything() == before
+    assert snapshot() == before
 
 
 @pytest.mark.ac("RND-5.8")
@@ -514,7 +500,7 @@ def test_another_workspaces_round_gets_404_not_409(
     if state == "closed":
         Round.objects.filter(pk=foreign.pk).update(state=Round.State.CLOSED)
     reference = coord_client.get("/coordinator/rounds/999999/")
-    before = everything()
+    before = snapshot()
     for round_id in (foreign.pk, 999999):
         for method in ("get", "post"):
             payload = data(cases_of(foreign)[:1])
@@ -522,7 +508,7 @@ def test_another_workspaces_round_gets_404_not_409(
             assert response.status_code == 404
             assert response.content == reference.content
             assert NOT_FOUND in page(response)
-    assert everything() == before
+    assert snapshot() == before
 
 
 @pytest.mark.ac("RND-5.8")
@@ -561,7 +547,7 @@ def test_a_round_not_open_inside_the_service_gives_409_not_500(coord_client, ope
 def test_storage_failure_mid_retest_gives_503_and_changes_nothing(
     coord_client, opened, caplog
 ):
-    before = everything()
+    before = snapshot()
     real = services.request_retest
 
     def write_then_fail(*args):
@@ -573,7 +559,7 @@ def test_storage_failure_mid_retest_gives_503_and_changes_nothing(
     assert response.status_code == 503
     assert UNAVAILABLE in page(response)
     no_store(response)
-    assert everything() == before
+    assert snapshot() == before
     logged = [record for record in caplog.records if record.name == "rounds.views"]
     assert len(logged) == 1 and logged[0].exc_info[0] is DatabaseError
 
@@ -791,13 +777,13 @@ def test_a_retest_message_with_a_leading_zero_is_not_split(count):
 def test_a_label_with_a_null_character_is_refused_next_to_build_label(
     coord_client, opened
 ):
-    before = everything()
+    before = snapshot()
     label = "Synthetic" + chr(0) + "1.1"
     response = coord_client.post(retest_url(opened.pk), data(cases_of(opened), label))
     assert response.status_code == 200
     html = page(response)
     assert next_to_label(html, "Null characters are not allowed.")
-    assert everything() == before
+    assert snapshot() == before
 
 
 @pytest.mark.ac("RND-5.6")
@@ -808,12 +794,12 @@ def test_a_label_with_a_null_character_is_refused_next_to_build_label(
 def test_an_out_of_range_case_id_gets_the_message_not_an_error(
     coord_client, opened, case_id
 ):
-    before = everything()
+    before = snapshot()
     response = coord_client.post(retest_url(opened.pk), data([case_id]))
     assert response.status_code == 200
     html = page(response)
     assert html.count(FOREIGN) == 1 and next_to_cases(html, FOREIGN)
-    assert everything() == before
+    assert snapshot() == before
 
 
 @pytest.mark.ac("RND-5.7")

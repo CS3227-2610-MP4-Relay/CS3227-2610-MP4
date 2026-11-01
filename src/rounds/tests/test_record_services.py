@@ -8,6 +8,8 @@ from accounts.models import Workspace
 from rounds import services
 from rounds.models import Case, CaseCriterion, Criterion, Round
 
+from .conftest import locked
+
 pytestmark = pytest.mark.django_db
 
 CASE_FIELDS = {
@@ -40,11 +42,6 @@ def sibling(workspace):
 def foreign_round():
     other = Workspace.objects.create(name="Demo workspace rnd20002")
     return Round.objects.create(workspace=other, title="Synthetic foreign")
-
-
-def locked(round_):
-    """Lock the round row, as the views do before calling a service."""
-    return Round.objects.select_for_update().get(pk=round_.pk)
 
 
 def criteria(round_, count):

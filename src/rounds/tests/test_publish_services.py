@@ -9,6 +9,8 @@ from rounds import services
 from rounds.forms import PublishForm
 from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
 
+from .conftest import locked
+
 pytestmark = pytest.mark.django_db
 
 NO_CASES = "Add at least one test case before publishing."
@@ -31,11 +33,6 @@ def round_(workspace):
 @pytest.fixture
 def other_round(workspace):
     return Round.objects.create(workspace=workspace, title="Synthetic other")
-
-
-def locked(round_):
-    """Lock the round row, as the view does before calling `publish`."""
-    return Round.objects.select_for_update().get(pk=round_.pk)
 
 
 def fill(round_, cases=2):

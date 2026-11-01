@@ -26,12 +26,12 @@ from .conftest import (
     SCRIPT_TAG,
     UNAVAILABLE,
     csrf_token,
+    no_store,
     open_with_case,
     page,
     signed_in,
+    snapshot,
 )
-from .test_result_services import snapshot
-from .test_results import no_store
 
 pytestmark = pytest.mark.django_db
 

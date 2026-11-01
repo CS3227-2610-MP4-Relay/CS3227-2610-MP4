@@ -17,8 +17,13 @@ from accounts.models import User
 from ai import feedback, feedback_views, gateway
 from rounds import services
 from rounds.models import Case, CaseCriterion, Criterion, Result, Round
-from rounds.tests.conftest import csrf_token, open_with_case, signed_in
-from rounds.tests.test_result_services import snapshot
+from rounds.tests.conftest import (
+    csrf_token,
+    no_store,
+    open_with_case,
+    signed_in,
+    snapshot,
+)
 
 pytestmark = pytest.mark.django_db
 UNAVAILABLE = (
@@ -69,11 +74,6 @@ def post(client, target, answer=None, **data):
     ) as complete:
         response = client.post(url(target), data)
     return response, complete
-
-
-def no_store(response):
-    assert "private" in response["Cache-Control"]
-    assert "no-store" in response["Cache-Control"]
 
 
 @pytest.mark.ac("RES-4.1")

@@ -16,13 +16,11 @@ from rounds.models import (
     Build,
     BuildCase,
     Case,
-    CaseCriterion,
-    Criterion,
     Result,
     Round,
 )
 
-from .conftest import open_with_case
+from .conftest import open_with_case, snapshot
 
 pytestmark = pytest.mark.django_db
 
@@ -43,14 +41,6 @@ def save(user, target, *, submit=False, outcome="pass", observation=""):
     """Use the service's locked operation, as a validated form will."""
     with entry(user, target, write=True) as current:
         return results.save(current, outcome, observation, submit=submit)
-
-
-def snapshot():
-    """Capture domain rows to prove refused actions change nothing."""
-    return {
-        model: list(model.objects.order_by("pk").values())
-        for model in (Round, Criterion, Case, CaseCriterion, Build, BuildCase, Result)
-    }
 
 
 @pytest.mark.ac("RES-2.1", "RES-2.5")

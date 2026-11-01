@@ -13,9 +13,9 @@ from django.db import transaction
 from django.utils.html import escape
 
 from rounds import services
-from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
+from rounds.models import Build, Case, CaseCriterion, Criterion, Round
 
-from .conftest import IMG_TAG, MARKUP, NEW, SCRIPT_TAG, edit, page
+from .conftest import IMG_TAG, MARKUP, NEW, SCRIPT_TAG, edit, page, snapshot
 
 pytestmark = pytest.mark.django_db
 
@@ -90,17 +90,6 @@ FIELD_ROUTES = [
     ),
 ]
 BY_ID = {item.id: item for item in FIELD_ROUTES}
-
-
-def everything():
-    return (
-        list(Round.objects.values()),
-        list(Criterion.objects.values()),
-        list(Case.objects.values()),
-        list(CaseCriterion.objects.values()),
-        list(Build.objects.values()),
-        list(BuildCase.objects.values()),
-    )
 
 
 def prepared(make_round, item):
@@ -231,12 +220,12 @@ def test_a_direction_control_is_refused_next_to_the_field(
 ):
     item = BY_ID[route_id]
     round_, linked, case = prepared(make_round, item)
-    before = everything()
+    before = snapshot()
     value = at(position, CONTROLS[index])
     response = post(coord_client, item, round_, linked, case, value)
     assert response.status_code == 200
     message_next_to(page(response), item, DIRECTION)
-    assert everything() == before
+    assert snapshot() == before
 
 
 @pytest.mark.parametrize("route_id, name", ACCEPTED_CASES)
@@ -277,13 +266,13 @@ def test_the_other_checks_come_first_and_only_their_message_shows(
         value, message = "\u202e" + "a" * item.limit, length
     else:
         value, message = "Synthetic\u202e" + chr(0), NULL_MESSAGE
-    before = everything()
+    before = snapshot()
     response = post(coord_client, item, round_, linked, case, value)
     assert response.status_code == 200
     html = page(response)
     message_next_to(html, item, message)
     assert DIRECTION not in html
-    assert everything() == before
+    assert snapshot() == before
 
 
 @pytest.mark.parametrize(
@@ -355,7 +344,7 @@ def test_a_publish_label_with_a_control_on_a_round_without_cases_gets_only_its_m
     coord_client, make_round
 ):
     round_ = make_round("Synthetic empty round")
-    before = everything()
+    before = snapshot()
     response = coord_client.post(
         f"/coordinator/rounds/{round_.pk}/publish/", {"label": "Synthetic\u202e 1.0"}
     )
@@ -363,7 +352,7 @@ def test_a_publish_label_with_a_control_on_a_round_without_cases_gets_only_its_m
     html = page(response)
     message_next_to(html, BY_ID["label-publish"], DIRECTION)
     assert "Add at least one test case before publishing." not in html
-    assert everything() == before
+    assert snapshot() == before
 
 
 @pytest.mark.ac("RND-5.2")
@@ -372,7 +361,7 @@ def test_a_retest_with_a_control_and_no_case_gets_both_messages(
 ):
     item = BY_ID["label-retest"]
     round_, _, _ = prepared(make_round, item)
-    before = everything()
+    before = snapshot()
     response = coord_client.post(
         f"/coordinator/rounds/{round_.pk}/retest/", {"label": "Synthetic\u2066 1.1"}
     )
@@ -382,7 +371,7 @@ def test_a_retest_with_a_control_and_no_case_gets_both_messages(
     no_case = "Select at least one test case."
     assert html.count(no_case) == 1
     assert html.index("</fieldset>") < html.index(no_case) < html.index("Build label")
-    assert everything() == before
+    assert snapshot() == before
 
 
 @pytest.mark.ac("RND-2.4")
@@ -402,14 +391,14 @@ def test_a_case_with_a_control_and_no_criterion_gets_both_messages(
         "steps": "Synthetic steps",
         "expected_result": "Synthetic result",
     }
-    before = everything()
+    before = snapshot()
     response = coord_client.post(route, data)
     assert response.status_code == 200
     html = page(response)
     message_next_to(html, item, DIRECTION)
     no_link = "Link at least one acceptance criterion."
     assert html.count(no_link) == 1 and html.index("<legend>") < html.index(no_link)
-    assert everything() == before
+    assert snapshot() == before
 
 
 @pytest.mark.ac("RND-1.3")

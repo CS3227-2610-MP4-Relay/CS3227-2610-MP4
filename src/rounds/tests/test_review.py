@@ -36,10 +36,12 @@ from .conftest import (
     UNAVAILABLE,
     csrf_token,
     detail,
+    no_store,
     page,
     signed_in,
+    snapshot,
+    title_tag,
 )
-from .test_result_services import snapshot
 
 pytestmark = pytest.mark.django_db
 
@@ -57,18 +59,9 @@ def results_url(round_id):
     return f"/coordinator/rounds/{round_id}/results/"
 
 
-def title_tag(html):
-    return html.split("<title>", 1)[1].split("</title>", 1)[0]
-
-
 def span(text):
     """One line of user text as the per-line rendering filter shows it."""
     return f'<span dir="auto">{escape(text)}</span>'
-
-
-def no_store(response):
-    assert "no-store" in response["Cache-Control"]
-    assert "private" in response["Cache-Control"]
 
 
 def lock_and(round_, action, *args):

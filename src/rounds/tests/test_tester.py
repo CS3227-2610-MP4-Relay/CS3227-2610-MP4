@@ -15,7 +15,7 @@ from django.utils.html import escape
 
 from accounts.models import User
 from rounds import services
-from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
+from rounds.models import Build, Case, CaseCriterion, Criterion, Round
 
 from .conftest import (
     DENIED,
@@ -28,6 +28,7 @@ from .conftest import (
     csrf_token,
     page,
     signed_in,
+    snapshot,
 )
 
 pytestmark = pytest.mark.django_db
@@ -37,14 +38,6 @@ HOME = "/tester/"
 def detail(round_):
     """The tester detail URL, intentionally usable before its route exists."""
     return f"/tester/rounds/{round_.pk}/"
-
-
-def snapshot():
-    """Capture all domain data, excluding authentication/session bookkeeping."""
-    return {
-        model: list(model.objects.order_by("pk").values())
-        for model in (Round, Case, Criterion, CaseCriterion, Build, BuildCase)
-    }
 
 
 @pytest.fixture

@@ -18,8 +18,7 @@ from ai.fakes import FakeProvider
 from ai.gateway import Failed, Refused, Success
 from ai.models import CallSlot
 from rounds.models import Case, Criterion, Round
-from rounds.tests.conftest import csrf_token, signed_in
-from rounds.tests.test_result_services import snapshot
+from rounds.tests.conftest import csrf_token, signed_in, snapshot
 
 INTRO = (
     "Select 1 to 5 acceptance criteria. The selected criteria are sent to the SoC "

@@ -24,11 +24,12 @@ from .conftest import (
     SCRIPT_TAG,
     UNAVAILABLE,
     csrf_token,
+    no_store,
     open_with_case,
     page,
     signed_in,
+    snapshot,
 )
-from .test_result_services import snapshot
 
 pytestmark = pytest.mark.django_db
 
@@ -49,12 +50,6 @@ def url(target):
 def payload(outcome="pass", observation="", action="save"):
     """One independently valid request unless a test overrides a field."""
     return {"outcome": outcome, "observation": observation, "action": action}
-
-
-def no_store(response):
-    """Result-view responses retain the shared private/no-store policy."""
-    assert "private" in response["Cache-Control"]
-    assert "no-store" in response["Cache-Control"]
 
 
 @pytest.mark.ac("RES-1.5", "RES-2.1", "RES-2.4")
