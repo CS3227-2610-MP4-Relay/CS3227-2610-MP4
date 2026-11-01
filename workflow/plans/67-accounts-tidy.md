@@ -53,5 +53,5 @@ Planned mutations, run on a temporary copy and restored from a copy and confirme
 ## Review round 1
 
 - Candidate `045c33c..de92041`. Verifier: 0 High, 0 Medium, 1 Low, 3 Nit, 4 Info. Security reviewer: 0 High, 0 Medium, 0 Low, 1 Nit.
-- Fixed (text only, no behaviour change): the measured size against the budget (Low 1); the `views.py` module docstring (Nit 2); the commit for checkpoint 3 (Nit 3); section links instead of spec line numbers (Nit 4); the `base.py` session comment now names `SESSION_COOKIE_AGE` as the expiry (security Nit, verifier Info 5).
+- Fixed (text only, no behaviour change): the measured size against the budget (Low 1); the `views.py` module docstring (Nit 2); the commit for checkpoint 3 (Nit 3); section links instead of spec line numbers (Nit 4); the `base.py` session comment now names `SESSION_COOKIE_AGE` as the expiry (security Nit, verifier Info 5); the mutation-restore note now records the `cmp` check actually used. Re-reviews of `de92041..86c6b62` found nothing above Nit; both flagged "Both" in the new docstring as ambiguous, and the coordinator reworded it to name sign-in and demo creation.
 - Not adopted: Info 8, since the Developer Guide accounts paragraph predates this slice; Info 7, on commit bundling, is kept as a lesson for later slices rather than repaired, since existing commits are not rewritten.
