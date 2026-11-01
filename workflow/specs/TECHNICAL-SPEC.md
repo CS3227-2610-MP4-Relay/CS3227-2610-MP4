@@ -13,6 +13,8 @@ How Relay will be built and run. What it will do is in [`PRODUCT-SPEC.md`](PRODU
 
 Shared application presentation ([PLT-4](product/platform.md#plt-4-shared-application-presentation)) uses a CSS template include inside the existing `base.html` head's `<style>` element. Semantic selectors and small presentation-only classes reuse the current server-rendered markup; no JavaScript, external fonts, static-file serving, routes or dependencies are added. Existing template autoescaping and user-text isolation filters remain in place.
 
+Long-page contents use server-rendered fragment links to section headings or content inside native `<details>/<summary>` records, with IDs based on fixed section names or authorized record IDs. Native fragment revelation opens a targeted record; shared template includes reuse contents and action/navigation styling, and responsive CSS presents desktop contents beside the single content column and a native contents disclosure above it on smaller screens. Record expansion is browser-local presentation only, with no persisted state or additional requests.
+
 ## Data model
 
 Only the subsections below are specified. Design workspaces, role-based accounts, rounds, requirements, cases, build references and results around the [product areas](PRODUCT-SPEC.md#areas). Before schema implementation, settle ownership, state transitions, published-case edits, submitted-observation edits and result-history/version rules. Do not infer these from a proposed screen or table name.
