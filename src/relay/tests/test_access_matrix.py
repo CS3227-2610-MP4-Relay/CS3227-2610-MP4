@@ -698,12 +698,18 @@ RESULT_SLOTS = ("round_id", "case_id", "build_id")
 
 @dataclass(frozen=True)
 class Situation:
-    """tester_a's entry before the requests, and the methods it refuses with 409."""
+    """tester_a's entry before the requests, and the methods it refuses with 409.
+
+    `stale` retests the own case so its build is formerly current; `submitted`
+    stores tester_a's submitted row on that build.
+    """
 
     label: str
     refused: frozenset = frozenset()
     message: str = ""
     marks: tuple = ()
+    stale: bool = False
+    submitted: bool = False
 
 
 FRESH = Situation("no result")
@@ -712,11 +718,18 @@ SUBMITTED = Situation(
     POST_ONLY,
     "This result has already been submitted.",
     ("RES-2.5",),
+    submitted=True,
 )
-STALE = Situation(
-    "formerly current build",
+STALE_MESSAGE = "This build is no longer current. Reload the round to record a result."
+STALE = Situation("formerly current build", BOTH, STALE_MESSAGE, stale=True)
+# RES-2.4: the stale build's conflict wins over the submitted one.
+STALE_SUBMITTED = Situation(
+    "submitted on a formerly current build",
     BOTH,
-    "This build is no longer current. Reload the round to record a result.",
+    STALE_MESSAGE,
+    ("RES-2.5",),
+    stale=True,
+    submitted=True,
 )
 
 
@@ -793,7 +806,7 @@ def result_world(state, situation=FRESH):
             locked = Round.objects.select_for_update().get(pk=target.round.pk)
             first = services.publish(locked, "Synthetic 1.0")
             uncovering = services.request_retest(locked, "Synthetic 2.0", [second.pk])
-            if situation == STALE:
+            if situation.stale:
                 services.request_retest(locked, "Synthetic 3.0", [target.case.pk])
             if state == CLOSED:
                 services.close(locked)
@@ -819,7 +832,7 @@ def result_world(state, situation=FRESH):
             observation=f"Peer {PEER_MARK}",
         )
         world.users["peer"] = peer
-    if situation == SUBMITTED:
+    if situation.submitted:
         Result.objects.create(
             tester=world.users[TESTER_A],
             case=target.case,
@@ -1121,13 +1134,15 @@ def test_forged_tester_round_ids_get_the_404_page(name, state, variant):
     failures.assert_none()
 
 
-# Submitted and formerly current entries run in Open rounds only: in a Closed
-# round, RES-2.4's Closed conflict and RES-2.5's or the stale build's both apply
-# (an open decision in the plan).
+# Overlapping conflicts follow RES-2.4's priority: Closed, then the stale
+# build, then RES-2.5's submitted row; a Draft round is 404 before any of them.
 RESULT_ROWS = [
     *((state, FRESH) for state in STATES),
-    (OPEN, SUBMITTED),
-    (OPEN, STALE),
+    *(
+        (state, situation)
+        for situation in (SUBMITTED, STALE, STALE_SUBMITTED)
+        for state in (OPEN, CLOSED)
+    ),
 ]
 
 # Forged IDs in each URL position of result entry.
@@ -1189,36 +1204,48 @@ def test_forged_tester_result_ids_get_the_404_page(name, state, slot, variant):
     failures.assert_none()
 
 
+# tester_a's own row before a feedback request, by situation: none, a draft
+# or a submitted row, on the current or a formerly current build. RES-4.5's
+# priority is Closed, stale build, submitted row, missing draft.
+FEEDBACK_ROWS = {
+    "draft": (FRESH, "draft"),
+    "missing": (FRESH, None),
+    "submitted": (FRESH, "submitted"),
+    "stale": (STALE, "draft"),
+    "stale submitted": (STALE, "submitted"),
+    "stale missing": (STALE, None),
+}
+FEEDBACK_REFUSALS = {
+    "submitted": "This result has already been submitted.",
+    None: "Save a draft before requesting feedback.",
+}
+
+
 @pytest.mark.ac("RES-4.5", "RES-4.7")
 @pytest.mark.parametrize("caller", CALLERS)
 @pytest.mark.parametrize("state", STATES)
-@pytest.mark.parametrize("situation", ["draft", "missing", "submitted", "stale"])
+@pytest.mark.parametrize("situation", list(FEEDBACK_ROWS))
 def test_feedback_access_matrix(caller, state, situation):
-    entry = result_world(state, STALE if situation == "stale" else FRESH)
+    built, row = FEEDBACK_ROWS[situation]
+    entry = result_world(state, built)
     world = entry.world
-    if situation != "missing":
+    if row is not None:
         Result.objects.create(
             tester=world.users[TESTER_A],
             case=world.target.case,
             build_id=entry.own["build_id"],
             outcome="fail",
             observation=f"Own {A_MARK}",
-            submitted_at=timezone.now() if situation == "submitted" else None,
+            submitted_at=timezone.now() if row == "submitted" else None,
         )
     target = url(TESTER_FEEDBACK, entry.own)
     failures = Failures()
     for kind in KINDS:
-        expected = expect_tester_result(
-            caller, kind, state, target, STALE if situation == "stale" else FRESH
-        )
+        expected = expect_tester_result(caller, kind, state, target, built)
         if expected.outcome in (OK, DONE):
-            if situation in ("submitted", "missing"):
+            if row in FEEDBACK_REFUSALS:
                 expected.outcome = CONFLICT
-                expected.message = (
-                    "This result has already been submitted."
-                    if situation == "submitted"
-                    else "Save a draft before requesting feedback."
-                )
+                expected.message = FEEDBACK_REFUSALS[row]
             else:
                 expected.outcome = OK
         exchange(world, caller, kind, target, {}, expected, failures)
