@@ -68,17 +68,9 @@ def browser_accounts(browser_accounts):
         assert round_.builds.count() == 1
 
 
-def sign_in(page, accounts, role="tester"):
-    """Use real credentials and the real form in this browser context."""
-    page.goto("/sign-in/")
-    page.get_by_label("Username", exact=True).fill(accounts[role])
-    page.get_by_label("Password", exact=True).fill(accounts["password"])
-    page.get_by_role("button", name="Sign in", exact=True).click()
-
-
-def save_draft(page, accounts, outcome, observation):
+def save_draft(page, sign_in, outcome, observation):
     """Save through result entry and follow the eligible feedback link."""
-    sign_in(page, accounts)
+    sign_in(page, "tester")
     page.get_by_role("link", name="Synthetic feedback round", exact=True).click()
     page.get_by_role("link", name="Record result", exact=True).click()
     page.get_by_label("Outcome", exact=True).select_option(outcome)
@@ -92,9 +84,10 @@ def test_feedback_preserves_saved_fields_until_manual_edit_and_is_private(
     page,
     browser_accounts,
     live_server,
+    sign_in,
 ):
     accounts = browser_accounts
-    save_draft(page, accounts, "fail", ORIGINAL)
+    save_draft(page, sign_in, "fail", ORIGINAL)
     page.get_by_label("Observation", exact=True).fill("Synthetic unsaved edit")
     reply = Success(json.dumps({"questions": [QUESTION]}))
     with mock.patch(
@@ -126,7 +119,7 @@ def test_feedback_preserves_saved_fields_until_manual_edit_and_is_private(
     peer_context.set_default_navigation_timeout(10000)
     try:
         peer = peer_context.new_page()
-        sign_in(peer, accounts, "peer")
+        sign_in(peer, "peer")
         peer.goto(accounts["entry"])
         expect(peer.get_by_label("Observation", exact=True)).to_have_value("")
         expect(
@@ -156,10 +149,10 @@ def test_feedback_preserves_saved_fields_until_manual_edit_and_is_private(
 
 @pytest.mark.ac("RES-4.2", "RES-4.3", "RES-4.4")
 def test_unavailable_feedback_keeps_manual_result_submission_usable(
-    page, browser_accounts
+    page, browser_accounts, sign_in
 ):
     accounts = browser_accounts
-    save_draft(page, accounts, "pass", "")
+    save_draft(page, sign_in, "pass", "")
     page.get_by_role("link", name="Observation feedback", exact=True).click()
     expect(page.get_by_text("No observation.", exact=True)).to_be_visible()
     with mock.patch(

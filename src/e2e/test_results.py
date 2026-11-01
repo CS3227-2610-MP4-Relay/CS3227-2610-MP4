@@ -30,14 +30,6 @@ def browser_accounts(browser_accounts):
             assert Result.objects.filter(**fields).count() == 1
 
 
-def sign_in(page, accounts, role):
-    """Authenticate through the real form in this page's own browser context."""
-    page.goto("/sign-in/")
-    page.get_by_label("Username", exact=True).fill(accounts[role])
-    page.get_by_label("Password", exact=True).fill(accounts["password"])
-    page.get_by_role("button", name="Sign in", exact=True).click()
-
-
 def context(page, live_server):
     """Create an isolated session with the existing harness's bounded waits."""
     separate = page.context.browser.new_context(base_url=live_server.url)
@@ -46,9 +38,9 @@ def context(page, live_server):
     return separate
 
 
-def publish(coordinator, accounts):
+def publish(coordinator, sign_in):
     """Prepare two linked cases and publish them through coordinator forms."""
-    sign_in(coordinator, accounts, "coordinator")
+    sign_in(coordinator, "coordinator")
     coordinator.get_by_role("link", name="New round", exact=True).click()
     coordinator.get_by_label("Title", exact=True).fill("Synthetic result round")
     coordinator.get_by_role("button", name="Create round", exact=True).click()
@@ -75,16 +67,16 @@ def publish(coordinator, accounts):
     return round_url
 
 
-def open_round(page, accounts, role="tester"):
+def open_round(page, sign_in, role="tester"):
     """Follow the available round rather than constructing an entry URL."""
-    sign_in(page, accounts, role)
+    sign_in(page, role)
     page.get_by_role("link", name="Synthetic result round", exact=True).click()
     expect(page.get_by_role("link", name="Record result", exact=True)).to_have_count(2)
 
 
 @pytest.mark.ac("RES-1.5", "RES-2.1", "RES-2.2", "RES-2.3", "RES-2.5", "RES-2.8")
 def test_private_draft_validation_reload_and_immutable_submission(
-    browser_accounts, page, live_server
+    browser_accounts, page, live_server, sign_in
 ):
     coordinator_context = context(page, live_server)
     other_context = context(page, live_server)
@@ -97,8 +89,8 @@ def test_private_draft_validation_reload_and_immutable_submission(
     page.on("dialog", dismiss)
     try:
         coordinator = coordinator_context.new_page()
-        publish(coordinator, browser_accounts)
-        open_round(page, browser_accounts)
+        publish(coordinator, sign_in)
+        open_round(page, sign_in)
         page.get_by_role("link", name="Record result", exact=True).first.click()
         entry_url = page.url
         expect(page).to_have_title("Record result")
@@ -121,13 +113,13 @@ def test_private_draft_validation_reload_and_immutable_submission(
         expect(page.get_by_label("Observation", exact=True)).to_have_value(observation)
         page.goto("/tester/")
         page.get_by_role("button", name="Sign out", exact=True).click()
-        sign_in(page, browser_accounts, "tester")
+        sign_in(page, "tester")
         page.goto(entry_url)
         expect(page.get_by_label("Observation", exact=True)).to_have_value(observation)
         expect(page.get_by_label("Outcome", exact=True)).to_have_value("fail")
 
         other = other_context.new_page()
-        open_round(other, browser_accounts, "tester2")
+        open_round(other, sign_in, "tester2")
         other.get_by_role("link", name="Record result", exact=True).first.click()
         expect(other.get_by_label("Observation", exact=True)).to_have_value("")
         expect(other.get_by_label("Outcome", exact=True)).to_have_value("")
@@ -180,13 +172,13 @@ def test_private_draft_validation_reload_and_immutable_submission(
 
 @pytest.mark.ac("RES-1.5", "RES-2.1", "RES-2.4", "RES-2.5")
 def test_selected_retest_and_close_refuse_stale_forms_preserving_results(
-    browser_accounts, page, live_server
+    browser_accounts, page, live_server, sign_in
 ):
     coordinator_context = context(page, live_server)
     try:
         coordinator = coordinator_context.new_page()
-        round_url = publish(coordinator, browser_accounts)
-        open_round(page, browser_accounts)
+        round_url = publish(coordinator, sign_in)
+        open_round(page, sign_in)
         detail_url = page.url
         entries = page.get_by_role("link", name="Record result", exact=True)
         original_url = entries.first.get_attribute("href")
@@ -305,14 +297,14 @@ def test_selected_retest_and_close_refuse_stale_forms_preserving_results(
     "RES-3.5",
 )
 def test_private_history_preserves_drafts_submissions_after_retest_and_close(
-    browser_accounts, page, live_server
+    browser_accounts, page, live_server, sign_in
 ):
     coordinator_context = context(page, live_server)
     other_context = context(page, live_server)
     try:
         coordinator = coordinator_context.new_page()
-        publish(coordinator, browser_accounts)
-        open_round(page, browser_accounts)
+        publish(coordinator, sign_in)
+        open_round(page, sign_in)
         page.get_by_role("link", name="My results", exact=True).click()
         expect(page).to_have_title("My results")
         expect(
@@ -415,7 +407,7 @@ def test_private_history_preserves_drafts_submissions_after_retest_and_close(
         check_history(original_rows)
 
         other = other_context.new_page()
-        open_round(other, browser_accounts, "tester2")
+        open_round(other, sign_in, "tester2")
         other.get_by_role("link", name="My results", exact=True).click()
         expect(other.get_by_text("No results yet.", exact=True)).to_be_visible()
         expect(other.locator("main section")).to_have_count(0)

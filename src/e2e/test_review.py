@@ -43,16 +43,9 @@ def session(page, live_server):
     return separate.new_page()
 
 
-def sign_in(page, accounts, role):
-    page.goto("/sign-in/")
-    page.get_by_label("Username", exact=True).fill(accounts[role])
-    page.get_by_label("Password", exact=True).fill(accounts["password"])
-    page.get_by_role("button", name="Sign in", exact=True).click()
-
-
-def publish(page, accounts):
+def publish(page, sign_in):
     """Create a round with two linked cases and publish it on FIRST."""
-    sign_in(page, accounts, "coordinator")
+    sign_in(page, "coordinator")
     page.get_by_role("link", name="New round", exact=True).click()
     page.get_by_label("Title", exact=True).fill(ROUND)
     page.get_by_role("button", name="Create round", exact=True).click()
@@ -84,8 +77,8 @@ def record(page, index, outcome, observation, button):
     page.get_by_role("link", name="Back to round", exact=True).click()
 
 
-def record_as(page, accounts, role, *results):
-    sign_in(page, accounts, role)
+def record_as(page, sign_in, role, *results):
+    sign_in(page, role)
     page.get_by_role("link", name=ROUND, exact=True).click()
     for result in results:
         record(page, *result)
@@ -134,21 +127,21 @@ def expect_retested(page, accounts):
 
 @pytest.mark.ac("RND-4.1", "RND-4.2", "RND-4.3", "RND-4.4")
 def test_coordinator_reviews_results_through_retest_and_close(
-    page, browser_accounts, live_server
+    page, browser_accounts, live_server, sign_in
 ):
     tester = session(page, live_server)
     other = session(page, live_server)
     try:
-        publish(page, browser_accounts)
+        publish(page, sign_in)
         round_url = page.url
         record_as(
             tester,
-            browser_accounts,
+            sign_in,
             "tester",
             (0, "fail", FAILURE, "Submit"),
             (1, "pass", "", "Submit"),
         )
-        record_as(other, browser_accounts, "tester2", (0, "pass", DRAFT, "Save draft"))
+        record_as(other, sign_in, "tester2", (0, "pass", DRAFT, "Save draft"))
 
         page.reload()
         open_results(page, "Open")

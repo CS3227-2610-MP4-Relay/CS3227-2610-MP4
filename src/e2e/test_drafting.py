@@ -41,12 +41,11 @@ def browser_accounts(browser_accounts):
 
 
 @pytest.mark.ac("RND-8.2")
-def test_adopting_a_draft_and_submitting_unchanged_saves_it(page, browser_accounts):
+def test_adopting_a_draft_and_submitting_unchanged_saves_it(
+    page, browser_accounts, sign_in
+):
     accounts = browser_accounts
-    page.goto("/sign-in/")
-    page.get_by_label("Username", exact=True).fill(accounts["coordinator"])
-    page.get_by_label("Password", exact=True).fill(accounts["password"])
-    page.get_by_role("button", name="Sign in", exact=True).click()
+    sign_in(page, "coordinator")
     page.goto(accounts["round_url"])
     page.get_by_role("link", name="Draft test cases with AI", exact=True).click()
     for text in accounts["criteria"]:

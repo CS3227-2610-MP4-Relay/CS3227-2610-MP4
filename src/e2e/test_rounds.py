@@ -4,14 +4,6 @@ import pytest
 from playwright.sync_api import expect
 
 
-def sign_in_coordinator(page, accounts):
-    """Open the coordinator home through the real sign-in form."""
-    page.goto("/sign-in/")
-    page.get_by_label("Username", exact=True).fill(accounts["coordinator"])
-    page.get_by_label("Password", exact=True).fill(accounts["password"])
-    page.get_by_role("button", name="Sign in", exact=True).click()
-
-
 def create_draft_round(page, title):
     """Submit a round title from the coordinator home."""
     page.get_by_role("link", name="New round", exact=True).click()
@@ -20,7 +12,7 @@ def create_draft_round(page, title):
 
 
 @pytest.mark.ac("RND-1.1", "RND-2.1", "RND-2.2", "RND-3.1")
-def test_coordinator_prepares_and_publishes_linked_case(page, browser_accounts):
+def test_coordinator_prepares_and_publishes_linked_case(page, sign_in):
     title = "Synthetic browser round"
     criterion = "The synthetic confirmation is visible."
     case_title = "Check synthetic confirmation"
@@ -28,7 +20,7 @@ def test_coordinator_prepares_and_publishes_linked_case(page, browser_accounts):
     expected = "The synthetic confirmation appears."
     build = "Synthetic build 1.0"
 
-    sign_in_coordinator(page, browser_accounts)
+    sign_in(page, "coordinator")
     create_draft_round(page, title)
     expect(page.get_by_role("heading", name=title, exact=True)).to_be_visible()
     expect(page.get_by_text("State: Draft", exact=True)).to_be_visible()
@@ -83,8 +75,8 @@ def test_coordinator_prepares_and_publishes_linked_case(page, browser_accounts):
 
 
 @pytest.mark.ac("RND-2.6")
-def test_case_without_link_is_refused_without_saving(page, browser_accounts):
-    sign_in_coordinator(page, browser_accounts)
+def test_case_without_link_is_refused_without_saving(page, sign_in):
+    sign_in(page, "coordinator")
     create_draft_round(page, "Synthetic unlinked case round")
     criterion = "The synthetic response appears."
     page.get_by_role("link", name="Add acceptance criterion", exact=True).click()
@@ -122,8 +114,8 @@ def test_case_without_link_is_refused_without_saving(page, browser_accounts):
 
 
 @pytest.mark.ac("RND-3.3")
-def test_empty_round_publish_is_refused_without_creating_build(page, browser_accounts):
-    sign_in_coordinator(page, browser_accounts)
+def test_empty_round_publish_is_refused_without_creating_build(page, sign_in):
+    sign_in(page, "coordinator")
     create_draft_round(page, "Synthetic empty publish round")
     round_url = page.url
     label = "Synthetic refused build 1.0"
@@ -145,9 +137,9 @@ def test_empty_round_publish_is_refused_without_creating_build(page, browser_acc
 
 
 @pytest.mark.ac("RND-8.4")
-def test_drafting_page_keeps_manual_workflow_when_unavailable(page, browser_accounts):
+def test_drafting_page_keeps_manual_workflow_when_unavailable(page, sign_in):
     """Test settings disable live calls; manual drafting remains available."""
-    sign_in_coordinator(page, browser_accounts)
+    sign_in(page, "coordinator")
     create_draft_round(page, "Synthetic drafting browser round")
     criterion = "The synthetic drafting criterion is visible."
     page.get_by_role("link", name="Add acceptance criterion", exact=True).click()

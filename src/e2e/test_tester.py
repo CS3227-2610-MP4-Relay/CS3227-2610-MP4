@@ -4,14 +4,6 @@ import pytest
 from playwright.sync_api import expect
 
 
-def sign_in(page, accounts, role):
-    """Authenticate each role in its own browser context through the real form."""
-    page.goto("/sign-in/")
-    page.get_by_label("Username", exact=True).fill(accounts[role])
-    page.get_by_label("Password", exact=True).fill(accounts["password"])
-    page.get_by_role("button", name="Sign in", exact=True).click()
-
-
 def assert_read_only(page):
     """The tester's detail offers navigation and no mutation controls."""
     expect(page.locator("main form, main input, main button")).to_have_count(0)
@@ -30,9 +22,7 @@ def assert_steps(page, steps):
 
 
 @pytest.mark.ac("RES-1.1", "RES-1.2", "RES-1.3", "RES-1.5", "RES-1.7", "RES-1.8")
-def test_tester_reads_published_retested_and_closed_round(
-    page, browser_accounts, live_server
-):
+def test_tester_reads_published_retested_and_closed_round(page, sign_in, live_server):
     # Red-team markup is escaped in source and decoded only inside this test.
     title = "Synthetic \x3cb\x3etester round\x3c/b\x3e \u05e9\u05dc\u05d5\u05dd"
     criterion = "Synthetic \x3cstrong\x3econfirmation\x3c/strong\x3e is visible."
@@ -48,7 +38,7 @@ def test_tester_reads_published_retested_and_closed_round(
         dialog.dismiss()
 
     page.on("dialog", dismiss_dialog)
-    sign_in(page, browser_accounts, "tester")
+    sign_in(page, "tester")
     expect(page.get_by_role("heading", name="Tester home", exact=True)).to_be_visible()
     expect(page.get_by_text("No tests available.", exact=True)).to_be_visible()
 
@@ -57,7 +47,7 @@ def test_tester_reads_published_retested_and_closed_round(
     coordinator_context.set_default_navigation_timeout(10000)
     try:
         coordinator = coordinator_context.new_page()
-        sign_in(coordinator, browser_accounts, "coordinator")
+        sign_in(coordinator, "coordinator")
         coordinator.get_by_role("link", name="New round", exact=True).click()
         coordinator.get_by_label("Title", exact=True).fill(title)
         coordinator.get_by_role("button", name="Create round", exact=True).click()

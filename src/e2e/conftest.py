@@ -38,6 +38,23 @@ def browser_accounts(transactional_db):
     return accounts
 
 
+@pytest.fixture
+def sign_in(browser_accounts):
+    """Return `sign_in(page, role)`, which signs `role` in through the real form.
+
+    `role` is a key of `browser_accounts`, including any a module's override
+    adds; each page signs in within its own browser context.
+    """
+
+    def submit(page, role):
+        page.goto("/sign-in/")
+        page.get_by_label("Username", exact=True).fill(browser_accounts[role])
+        page.get_by_label("Password", exact=True).fill(browser_accounts["password"])
+        page.get_by_role("button", name="Sign in", exact=True).click()
+
+    return submit
+
+
 @pytest.hookimpl(wrapper=True)
 def pytest_runtest_makereport(item, call):
     """Make the test outcome available before the browser fixture tears down."""
