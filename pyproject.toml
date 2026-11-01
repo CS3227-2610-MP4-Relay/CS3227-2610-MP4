@@ -17,5 +17,3 @@ ignore = ["RUF012"]
 "**/test_*.py" = ["D"]
 "**/*_test.py" = ["D"]
 "**/tests.py" = ["D"]
-# Django's generated settings hold dotted paths too long to wrap.
-"**/settings.py" = ["E501"]
