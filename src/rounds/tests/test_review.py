@@ -36,6 +36,7 @@ from .conftest import (
     UNAVAILABLE,
     csrf_token,
     detail,
+    locked,
     no_store,
     page,
     signed_in,
@@ -67,8 +68,7 @@ def span(text):
 def lock_and(round_, action, *args):
     """Run a round service under the round lock, as its view does."""
     with transaction.atomic():
-        locked = Round.objects.select_for_update().get(pk=round_.pk)
-        return action(locked, *args)
+        return action(locked(round_), *args)
 
 
 def submit(tester, case, build, at=T1, outcome="pass", observation=""):

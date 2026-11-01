@@ -24,6 +24,7 @@ from .conftest import (
     SCRIPT_TAG,
     UNAVAILABLE,
     csrf_token,
+    locked,
     no_store,
     open_with_case,
     page,
@@ -61,13 +62,12 @@ def test_links_follow_each_current_build_and_disappear_on_close(tester, target):
     assert f'href="{url(target)}">Record result</a>' in body
     assert "<form" not in body
     with transaction.atomic():
-        locked = Round.objects.select_for_update().get(pk=round_.pk)
-        new = services.request_retest(locked, "Synthetic next", [case.pk])
+        new = services.request_retest(locked(round_), "Synthetic next", [case.pk])
     body = page(client.get(detail))
     assert url(target) not in body
     assert f'href="{url((round_, case, new))}">Record result</a>' in body
     with transaction.atomic():
-        services.close(Round.objects.select_for_update().get(pk=round_.pk))
+        services.close(locked(round_))
     body = page(client.get(detail))
     assert "Record result" not in body and "<form" not in body
 
@@ -325,12 +325,12 @@ def test_conflicts_precede_invalid_form_and_preserve_rows(tester, target, confli
     round_, case, _ = target
     if conflict == "closed":
         with transaction.atomic():
-            services.close(Round.objects.select_for_update().get(pk=round_.pk))
+            services.close(locked(round_))
         message = "This action is not available while the round is Closed."
     elif conflict == "stale":
         with transaction.atomic():
             services.request_retest(
-                Round.objects.select_for_update().get(pk=round_.pk),
+                locked(round_),
                 "Synthetic next",
                 [case.pk],
             )

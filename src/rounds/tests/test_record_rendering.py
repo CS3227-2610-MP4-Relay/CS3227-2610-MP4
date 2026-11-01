@@ -5,7 +5,7 @@ from django.utils.html import escape
 
 from rounds.models import Case, CaseCriterion, Criterion
 
-from .conftest import MARKUP, assert_no_raw_markup, detail, page
+from .conftest import MARKUP, assert_no_raw_markup, detail, page, title_tag
 
 pytestmark = [pytest.mark.django_db, pytest.mark.ac("RND-2.8")]
 
@@ -66,10 +66,7 @@ def test_record_text_never_reaches_a_page_title(coord_client, make_round):
     draft = make_round("Synthetic round")
     item, made = setup(draft, MARKUP)
     html = pages(coord_client, draft, item, made)
-    titles = {
-        name: text.split("<title>", 1)[1].split("</title>", 1)[0]
-        for name, text in html.items()
-    }
+    titles = {name: title_tag(text) for name, text in html.items()}
     assert titles["new case"] == "New test case"
     assert titles["edit criterion"] == "Edit acceptance criterion"
     assert titles["edit case"] == "Edit test case"

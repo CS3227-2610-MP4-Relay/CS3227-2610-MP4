@@ -24,12 +24,14 @@ from .conftest import (
     UNAVAILABLE,
     csrf_token,
     detail,
+    locked,
     no_store,
     page,
     race,
     signed_in,
     snapshot,
     stored_retest,
+    title_tag,
 )
 
 pytestmark = pytest.mark.django_db
@@ -67,7 +69,7 @@ def published(round_, cases=3, title="Synthetic case", label="Synthetic 1.0"):
         )
         CaseCriterion.objects.create(case=case, criterion=linked)
     with transaction.atomic():
-        services.publish(Round.objects.select_for_update().get(pk=round_.pk), label)
+        services.publish(locked(round_), label)
     round_.refresh_from_db()
     return round_
 
@@ -621,7 +623,7 @@ def test_markup_in_the_label_is_escaped_in_the_message_and_page(coord_client, op
     # The message, the case's current build and the builds list.
     assert html.count(isolated) == 3
     assert SCRIPT_TAG not in html and IMG_TAG not in html
-    title = html.split("<title>", 1)[1].split("</title>", 1)[0]
+    title = title_tag(html)
     assert title == FSI + "Synthetic open round" + PDI
 
 
@@ -809,9 +811,7 @@ def test_of_two_retests_for_the_tenth_build_exactly_one_succeeds(coordinator):
     one, two, _ = cases_of(opened)
     for n in range(1, 9):
         with transaction.atomic():
-            services.request_retest(
-                Round.objects.select_for_update().get(pk=opened.pk), f"v{n}", [one.pk]
-            )
+            services.request_retest(locked(opened), f"v{n}", [one.pk])
     assert opened.builds.count() == 9
     first, second = race(
         coordinator,

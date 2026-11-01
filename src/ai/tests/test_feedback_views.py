@@ -19,6 +19,7 @@ from rounds import services
 from rounds.models import Case, CaseCriterion, Criterion, Result, Round
 from rounds.tests.conftest import (
     csrf_token,
+    locked,
     no_store,
     open_with_case,
     signed_in,
@@ -238,7 +239,7 @@ def test_eligibility_refusals_make_no_call(tester, target, state, message, metho
         if state == "stale":
             with transaction.atomic():
                 services.request_retest(
-                    Round.objects.select_for_update().get(pk=target[0].pk),
+                    locked(target[0]),
                     "Synthetic next",
                     [target[1].pk],
                 )
@@ -309,7 +310,7 @@ def test_changes_during_call_discard_success_and_failure(
         else:
             with transaction.atomic():
                 services.request_retest(
-                    Round.objects.select_for_update().get(pk=target[0].pk),
+                    locked(target[0]),
                     "Synthetic next",
                     [target[1].pk],
                 )

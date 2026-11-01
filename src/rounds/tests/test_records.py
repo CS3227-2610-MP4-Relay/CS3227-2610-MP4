@@ -18,6 +18,7 @@ from .conftest import (
     UNAVAILABLE,
     csrf_token,
     detail,
+    locked,
     no_store,
     page,
     signed_in,
@@ -967,8 +968,7 @@ def forged_links(make_round, other_workspace):
         )
         CaseCriterion.objects.create(case=case, criterion=criterion)
         with transaction.atomic():
-            locked = Round.objects.select_for_update().get(pk=round_.pk)
-            build = services.publish(locked, f"{title} build")
+            build = services.publish(locked(round_), f"{title} build")
         return round_, criterion, case, build
 
     own = published("Synthetic own")

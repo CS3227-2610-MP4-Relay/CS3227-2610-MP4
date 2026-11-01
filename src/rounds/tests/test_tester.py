@@ -26,6 +26,7 @@ from .conftest import (
     SCRIPT_TAG,
     UNAVAILABLE,
     csrf_token,
+    no_store,
     page,
     signed_in,
     snapshot,
@@ -283,10 +284,7 @@ def test_methods_are_read_only_and_uncached(
     )
     assert response.status_code == 405
     assert response["Allow"] == "GET"
-    assert (
-        "private" in response["Cache-Control"]
-        and "no-store" in response["Cache-Control"]
-    )
+    no_store(response)
     assert snapshot() == before
 
 
@@ -313,10 +311,7 @@ def test_success_and_storage_failures_are_uncached(tester, published, detail_pag
     before = snapshot()
     response = client.get(url)
     assert response.status_code == 200
-    assert (
-        "private" in response["Cache-Control"]
-        and "no-store" in response["Cache-Control"]
-    )
+    no_store(response)
     for target in (
         ("rounds_round", "rounds_case", "rounds_criterion", "rounds_build")
         if detail_page
@@ -332,10 +327,7 @@ def test_success_and_storage_failures_are_uncached(tester, published, detail_pag
             response = client.get(url)
         assert response.status_code == 503, target
         assert UNAVAILABLE in page(response) and round_.title not in page(response)
-        assert (
-            "private" in response["Cache-Control"]
-            and "no-store" in response["Cache-Control"]
-        )
+        no_store(response)
     assert snapshot() == before
 
 

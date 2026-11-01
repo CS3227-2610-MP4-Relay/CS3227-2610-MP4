@@ -20,7 +20,7 @@ from rounds.models import (
     Round,
 )
 
-from .conftest import open_with_case, snapshot
+from .conftest import locked, open_with_case, snapshot
 
 pytestmark = pytest.mark.django_db
 
@@ -155,8 +155,9 @@ def test_retest_keeps_old_row_and_unselected_case_entry(tester, target):
         old_rows = list(Result.objects.order_by("pk").values())
         old_ids = [row["id"] for row in old_rows]
         with transaction.atomic():
-            locked = Round.objects.select_for_update().get(pk=round_.pk)
-            new = services.request_retest(locked, label, [item.pk for item in selected])
+            new = services.request_retest(
+                locked(round_), label, [item.pk for item in selected]
+            )
         assert list(Result.objects.order_by("pk").values()) == old_rows
         before = snapshot()
         for item in selected:
@@ -194,7 +195,7 @@ def test_retest_keeps_old_row_and_unselected_case_entry(tester, target):
 def test_closed_entry_is_refused_without_changes(tester, target, write):
     save(tester, target)
     with transaction.atomic():
-        services.close(Round.objects.select_for_update().get(pk=target[0].pk))
+        services.close(locked(target[0]))
     before = snapshot()
     with (
         pytest.raises(results.Conflict, match="while the round is Closed"),
@@ -326,11 +327,11 @@ def test_real_races_serialize_results_and_round_actions(
             except results.Conflict:
                 return "conflict"
         with transaction.atomic():
-            locked = Round.objects.select_for_update().get(pk=target[0].pk)
+            current = locked(target[0])
             if action == "close":
-                services.close(locked)
+                services.close(current)
             else:
-                services.request_retest(locked, "Synthetic racing", [target[1].pk])
+                services.request_retest(current, "Synthetic racing", [target[1].pk])
             if pause:
                 held.set()
                 assert release.wait(10)

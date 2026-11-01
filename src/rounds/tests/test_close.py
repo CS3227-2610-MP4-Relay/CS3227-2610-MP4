@@ -24,11 +24,13 @@ from .conftest import (
     UNAVAILABLE,
     csrf_token,
     detail,
+    locked,
     no_store,
     page,
     race,
     signed_in,
     snapshot,
+    title_tag,
 )
 
 pytestmark = pytest.mark.django_db
@@ -68,7 +70,7 @@ def published(round_, cases=2, criterion="Synthetic criterion", label="Synthetic
         )
         CaseCriterion.objects.create(case=case, criterion=linked)
     with transaction.atomic():
-        services.publish(Round.objects.select_for_update().get(pk=round_.pk), label)
+        services.publish(locked(round_), label)
     round_.refresh_from_db()
     return round_
 
@@ -384,7 +386,7 @@ def test_markup_on_the_closed_page_is_escaped(coord_client, make_round):
     isolated = f'<span dir="auto">{escape(MARKUP)}</span>'
     assert html.count(isolated) == EVERY_PLACE
     assert SCRIPT_TAG not in html and IMG_TAG not in html
-    title = html.split("<title>", 1)[1].split("</title>", 1)[0]
+    title = title_tag(html)
     assert title == FSI + escape(MARKUP) + PDI
 
 
@@ -392,7 +394,7 @@ def test_markup_on_the_closed_page_is_escaped(coord_client, make_round):
 def test_closed_page_title_isolates_a_stray_pop_isolate(coord_client, make_round):
     made = published(make_round("Synthetic " + PDI + RLO + "Reversed"))
     html = closed_page(coord_client, made)
-    title = html.split("<title>", 1)[1].split("</title>", 1)[0]
+    title = title_tag(html)
     assert title == FSI + "Synthetic Reversed" + PDI
 
 

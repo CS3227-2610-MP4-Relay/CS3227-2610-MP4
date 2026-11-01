@@ -43,7 +43,7 @@ def sign_in(browser_accounts):
     """Return `sign_in(page, role)`, which signs `role` in through the real form.
 
     `role` is a key of `browser_accounts`, including any a module's override
-    adds; each page signs in within its own browser context.
+    adds; it signs in within `page`'s browser context.
     """
 
     def submit(page, role):

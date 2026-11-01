@@ -6,7 +6,7 @@ from ai import urls as ai_urls
 from rounds import urls as rounds_urls
 from rounds.models import Case, CaseCriterion, Criterion, Round
 
-from .conftest import csrf_token, signed_in
+from .conftest import csrf_token, no_store, signed_in
 
 
 def test_every_rounds_route_is_never_cached(coordinator, make_round):
@@ -93,5 +93,4 @@ def test_publishing_and_the_open_round_page_are_never_cached(coordinator, make_r
     opened = client.get(reverse("rounds:detail", args=[made.pk]))
     assert (published.status_code, opened.status_code) == (302, 200)
     for response in (published, opened):
-        cache_control = response.get("Cache-Control", "")
-        assert "no-store" in cache_control and "private" in cache_control
+        no_store(response)

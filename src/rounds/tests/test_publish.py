@@ -20,11 +20,13 @@ from .conftest import (
     UNAVAILABLE,
     csrf_token,
     detail,
+    locked,
     no_store,
     page,
     race,
     signed_in,
     snapshot,
+    title_tag,
 )
 
 pytestmark = pytest.mark.django_db
@@ -614,8 +616,7 @@ def test_bidi_and_zero_width_characters_stay_inside_their_element(coord_client, 
     # Published without the form, which refuses text-direction controls (rule 5).
     fill(draft, 1)
     with transaction.atomic():
-        locked = Round.objects.select_for_update().get(pk=draft.pk)
-        services.publish(locked, BIDI_AND_INVISIBLE)
+        services.publish(locked(draft), BIDI_AND_INVISIBLE)
     html = page(coord_client.get(detail(draft.pk)))
     assert html.count(f'<span dir="auto">{BIDI_AND_INVISIBLE}</span>') == 2
     outside = html.replace(f'<span dir="auto">{BIDI_AND_INVISIBLE}</span>', "")
@@ -658,5 +659,5 @@ def test_a_100_character_label_tripled_by_nfc_publishes(coord_client, draft, cha
 @pytest.mark.ac("RND-3.6")
 def test_a_build_label_never_reaches_the_page_title(coord_client, draft):
     html = published_page(coord_client, draft, "Synthetic label")
-    title = html.split("<title>", 1)[1].split("</title>", 1)[0]
+    title = title_tag(html)
     assert title == chr(0x2068) + "Synthetic draft round" + chr(0x2069)

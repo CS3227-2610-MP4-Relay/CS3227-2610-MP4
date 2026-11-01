@@ -20,6 +20,7 @@ from .conftest import (
     csrf_token,
     detail,
     edit,
+    no_store,
     page,
     signed_in,
 )
@@ -388,8 +389,7 @@ def test_retitling_an_open_or_closed_round_gets_409(
         html = page(response)
         assert "<title>Action not available</title>" in html
         assert f"<h1>{CONFLICT.format(name)}</h1>" in html
-        cache_control = response["Cache-Control"]
-        assert "no-store" in cache_control and "private" in cache_control
+        no_store(response)
     made.refresh_from_db()
     assert made.title == "Synthetic frozen"
     html = page(coord_client.get(detail(made.pk)))
@@ -437,8 +437,7 @@ def test_storage_failure_gives_503_and_changes_nothing(
     with mock.patch.object(Round, "save", side_effect=DatabaseError("synthetic")):
         response = coord_client.post(url, {"title": "Synthetic failed"})
     assert response.status_code == 503
-    cache_control = response["Cache-Control"]
-    assert "no-store" in cache_control and "private" in cache_control
+    no_store(response)
     assert UNAVAILABLE in page(response)
     assert list(Round.objects.values_list("title", flat=True)) == ["Synthetic stored"]
     assert Workspace.objects.count() == 1
@@ -448,8 +447,7 @@ def test_storage_failure_gives_503_and_changes_nothing(
 def test_round_pages_are_never_cached(coord_client, make_round):
     made = make_round()
     for url in (NEW, detail(made.pk), edit(made.pk)):
-        cache_control = coord_client.get(url)["Cache-Control"]
-        assert "no-store" in cache_control and "private" in cache_control
+        no_store(coord_client.get(url))
 
 
 def assert_storage_failure_logged(caplog):
@@ -555,6 +553,5 @@ def test_unaccepted_method_with_a_valid_token_gets_405_uncached(
     ]:
         response = getattr(client, method)(url, HTTP_X_CSRFTOKEN=token)
         assert response.status_code == 405, (method, url)
-        cache_control = response["Cache-Control"]
-        assert "no-store" in cache_control and "private" in cache_control
+        no_store(response)
     assert list(Round.objects.values_list("title", flat=True)) == ["Synthetic draft"]

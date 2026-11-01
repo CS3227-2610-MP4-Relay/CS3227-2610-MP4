@@ -15,7 +15,7 @@ from django.utils.html import escape
 from rounds import services
 from rounds.models import Build, Case, CaseCriterion, Criterion, Round
 
-from .conftest import IMG_TAG, MARKUP, NEW, SCRIPT_TAG, edit, page, snapshot
+from .conftest import IMG_TAG, MARKUP, NEW, SCRIPT_TAG, edit, locked, page, snapshot
 
 pytestmark = pytest.mark.django_db
 
@@ -106,8 +106,7 @@ def prepared(make_round, item):
     CaseCriterion.objects.create(case=case, criterion=linked)
     if item.route == "retest":
         with transaction.atomic():
-            locked = Round.objects.select_for_update().get(pk=round_.pk)
-            services.publish(locked, "Synthetic 1.0")
+            services.publish(locked(round_), "Synthetic 1.0")
         state = Round.State.OPEN
     round_.refresh_from_db()
     assert round_.state == state
