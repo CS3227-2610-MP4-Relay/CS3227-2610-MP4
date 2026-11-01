@@ -33,6 +33,15 @@ Out of scope: SECURITY-SPEC's opening status sentence, and `delete_criterion`'s 
 
 ## Next steps
 
-- [ ] Checkpoint 1: spec sentence and plan.
-- [ ] Checkpoint 2: matrix tests with mutation evidence.
+- [x] Checkpoint 1: spec sentence and plan (`ea18693`, `5dbab3e`).
+- [x] Checkpoint 2: matrix tests (`b6f757e`). `RESULT_ROWS` adds submitted, stale and stale-submitted in Open and Closed (`Situation` gains `stale` and `submitted` flags); feedback's `FEEDBACK_ROWS` adds "stale submitted" and "stale missing" in every state. `pytest -q -p no:cacheprovider src/relay/tests/test_access_matrix.py`: 781 passed (741 at base). Ruff clean. Mutations of `rounds/results.py` (and, for b, a temporary `feedback=True` flag from `ai/feedback_views.py`), each restored from a copy and checked with `git diff --exit-code`, run with `-k "tester_result or feedback"` against this matrix and a temporary copy of the `5dbab3e` matrix:
+
+  | Mutation | This matrix | Base matrix |
+  | --- | --- | --- |
+  | (a1) entry checks submission before Closed | 3 failed: Closed submitted, Open and Closed stale-submitted | 150 passed |
+  | (a2) entry checks submission before the stale build | 1 failed: Open stale-submitted | 150 passed |
+  | (a3) entry refuses stale-submitted as stale before Closed | 1 failed: Closed stale-submitted | 150 passed |
+  | (b1) feedback's draft and submitted checks before Closed | 6 failed: Closed missing and submitted, Open and Closed stale submitted and stale missing | 2 failed (Closed missing and submitted) |
+  | (b2) feedback's draft and submitted checks before the stale build | 2 failed: Open stale submitted and stale missing | 150 passed |
+
 - [ ] Full verification, review, draft PR closing #25.
