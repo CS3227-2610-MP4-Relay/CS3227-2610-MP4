@@ -166,6 +166,33 @@ def assert_top_navigation(page, home, back=None):
     )
 
 
+@pytest.mark.ac("PLT-4.5")
+@pytest.mark.parametrize(
+    ("role", "route", "label"),
+    [
+        ("coordinator", "draft", "Publish round"),
+        ("tester", "entry", "Save draft"),
+        ("coordinator", "draft", "Delete criterion"),
+    ],
+)
+def test_button_contrast_at_rest_and_while_keyboard_pressed(
+    page, browser_accounts, role, route, label
+):
+    sign_in(page, browser_accounts, role)
+    page.goto(browser_accounts[route])
+    control = page.get_by_role("button", name=label, exact=True)
+    page.mouse.move(0, 0)
+    assert_contrast(control)
+    control.focus()
+    page.keyboard.down("Space")
+    try:
+        assert control.evaluate("el => el.matches(':active')")
+        assert not control.evaluate("el => el.matches(':hover')")
+        assert_contrast(control)
+    finally:
+        page.keyboard.up("Space")
+
+
 @pytest.mark.ac("PLT-4.2", "PLT-4.6", "PLT-4.7", "PLT-4.4", "PLT-4.5")
 @pytest.mark.parametrize("width", [320, 1440])
 def test_coordinator_action_hierarchy_and_top_context(page, browser_accounts, width):
