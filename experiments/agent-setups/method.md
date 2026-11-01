@@ -306,6 +306,8 @@ Added on 2026-10-31, after every task-2 and task-3 run had passed its whole hidd
   - **What it saw:** the paths, not the contents, of other candidates' copies left there by the planted-bug checks. That includes their task-4 file names, such as `src/accounts/limits.py`.
   - **Fix:** every such copy moved into the private folder at 16:43 UTC.
   - **Result:** the run is kept under a `leak-` prefix, left out of the comparison and rerun as `t4-mp4-haiku-2`. No other run's transcript mentions those copies.
+- **Key limit.** Two Hermes runs on task 3, mp4 (`t3-mp4-hermes-1`) and v8 (`t3-ideal-v8-hermes-1`), stopped when the OpenRouter key reached its spending limit.
+  - **Result:** both are kept under a `billing-` prefix, left out and not rerun. Task 3 has no same-model MP4 reference in Hermes and no v8 run in Hermes.
 - **Outside access.** Each counted access outside a run's own folder in the later runs was read in its transcript; none reached another run's work or the hidden suites.
   - **Haiku reruns:** the clean task-3 Haiku rerun searched the session folder for docs and patches five times, finding nothing.
   - **Library code:** an mp3 run read Django's own source in the main checkout's virtual environment.

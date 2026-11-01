@@ -291,12 +291,12 @@ A further v3 Haiku run with an Opus reviewer cost $2.55, against about $0.90 wit
 
 1. **Pilot accounting.** After the pilot, the scoring script was fixed to read a headless session's several result records. The run harness did not change, so the pilot counts as MP4 run 1.
 2. **Blind-review rubric.** The first four task-1 reviews penalised missing plans and uncommitted changes, which the review setup leaves out on purpose. The rubric was corrected and those four reviewed again.
-3. **Runs left out, each kept under a prefix and rerun:**
+3. **Runs left out, each kept under a prefix and, except the last two, rerun:**
    - **`nocli-`:** three OpenSpec runs whose OpenSpec command-line tool was missing.
    - **`trunc-`:** three task-3 runs cut short when the coordinator ended its turn ([finding](#workflows-models-and-methodologies)).
    - **`paused-`:** six runs interrupted when the human paused the experiment.
    - **`leak-`:** two runs that saw scratch files: the first task-3 Haiku run of v6 saw two lines of a backup of the original RES-2 code, and a task-4 MP4 Haiku run saw the file paths of other candidates' copies left by the planted-bug checks.
-   - **`billing-`:** two Hermes runs on task 3 stopped when the OpenRouter key reached its limit.
+   - **`billing-`:** two Hermes runs on task 3, mp4 and v8, stopped when the OpenRouter key reached its spending limit. They were not rerun, so task 3 has no Hermes run of either.
 4. **Neighbouring runs.** Every counted access outside a run's own clone was read in its transcript. The rest found nothing, were refused, read the run's own files, or read Django's and Python's own source.
 5. **Same-model references and a fourth task were added during the experiment.** method.md fixed each addition before any of its runs ended. The ideal setup's versions were chosen during the experiment, each after reading the previous results.
 6. **Planted bugs were written per candidate,** by helper sessions, because each candidate implemented the checks differently. The behaviours planted were the same in every candidate of a task, and each was confirmed to fail the hidden suite.
