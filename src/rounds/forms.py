@@ -26,7 +26,7 @@ def has_visible_character(text):
 
 
 def limit(model, name):
-    """Return a model field's `max_length`, the one home of each text limit."""
+    """Return a model field's `max_length`, so forms and storage share one limit."""
     return model._meta.get_field(name).max_length
 
 
@@ -108,7 +108,7 @@ class CaseForm(RecordForm):
 
 
 def build_label():
-    """A new build's "Build label" field, 1 to 100 characters."""
+    """A new build's "Build label" field, as long as a build's stored label."""
     return RoundTextField(
         max_length=limit(Build, "label"),
         label="Build label",

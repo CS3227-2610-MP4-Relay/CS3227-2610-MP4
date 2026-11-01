@@ -1,4 +1,7 @@
-"""Tester round reads and private result entry under the round lock (RES)."""
+"""Round reads for the tester and coordinator result pages, and private entry.
+
+Result entry and persistence run under the shared round lock (RES-2).
+"""
 
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -40,8 +43,9 @@ def available_rounds(user):
 def cases_with_current_builds(round_):
     """Return the round's cases, each with its `current_build` (newest covering).
 
-    Linked criteria and covering builds are limited to the round, since the
-    link tables do not tie them to it.
+    `round_` must already be authorized for the caller: this filters by the
+    round only. Linked criteria and covering builds are limited to the round,
+    since the link tables do not tie them to it.
     """
     cases = list(
         round_.cases.prefetch_related(
