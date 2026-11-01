@@ -1,0 +1,5 @@
+{% load rounds_text tz %}{% if earlier %}<p>Build: {{ result.build.label|isolated_lines }}</p>
+{% endif %}<p>Tester: {{ result.tester.username|isolated_lines }}</p>
+<p>Outcome: {{ result.get_outcome_display }}</p>
+<p>Observation: {% if result.observation %}{{ result.observation|isolated_lines }}{% else %}No observation.{% endif %}</p>
+<p>Submitted at: {{ result.submitted_at|utc|date:"Y-m-d H:i:s" }} UTC</p>

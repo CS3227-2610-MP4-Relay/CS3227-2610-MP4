@@ -5,7 +5,7 @@
 <h1>{{ round.title|isolated_lines }}</h1>{% for message in messages %}
 <p role="status">{{ message|status_message }}</p>{% endfor %}
 <p>State: {{ round.get_state_display }}</p>
-{% if draft %}<p><a href="{% url 'rounds:edit' round.pk %}">Edit round</a></p>{% endif %}
+{% if draft %}<p><a href="{% url 'rounds:edit' round.pk %}">Edit round</a></p>{% else %}<p><a href="{% url 'rounds:results' round.pk %}">Review results</a></p>{% endif %}
 <h2>Acceptance criteria</h2>
 {% if draft %}<p><a href="{% url 'rounds:criterion-new' round.pk %}">Add acceptance criterion</a></p>{% endif %}
 {% for criterion in round.criteria.all %}{% if forloop.first %}<ul>{% endif %}

@@ -19,7 +19,8 @@ def test_every_rounds_route_is_never_cached(coordinator, make_round):
     )
     CaseCriterion.objects.create(case=case, criterion=linked)
     opened = make_round("Synthetic open", Round.State.OPEN)
-    # A separate Open round for the retest page, which only an Open round has.
+    # A separate Open round for the retest and results pages, which a Draft
+    # round refuses with 409.
     retested = make_round("Synthetic retest", Round.State.OPEN)
     ids = {"round_id": made.pk, "criterion_id": linked.pk, "case_id": case.pk}
     client = signed_in(coordinator, enforce_csrf_checks=True)
@@ -30,7 +31,8 @@ def test_every_rounds_route_is_never_cached(coordinator, make_round):
         if pattern.name == "close":
             # Only an Open round closes (RND-6); the Draft round stays Draft.
             kwargs["round_id"] = opened.pk
-        if pattern.name == "retest":
+        if pattern.name in ("retest", "results"):
+            # The results page reads only an Open or Closed round (RND-4).
             kwargs["round_id"] = retested.pk
         url = reverse(f"rounds:{pattern.name}", kwargs=kwargs)
         response = client.get(url)
@@ -45,10 +47,10 @@ def test_every_rounds_route_is_never_cached(coordinator, make_round):
             assert "Enter 1 to 100 characters." in response.content.decode()
         if pattern.name == "close":
             assert response.status_code == 302, url
-        if pattern.name == "retest":
+        if pattern.name in ("retest", "results"):
             assert response.status_code == 200, url
     names = {pattern.name for pattern in rounds_urls.urlpatterns}
-    assert {"close", "retest"} <= names
+    assert {"close", "retest", "results"} <= names
 
 
 def test_every_ai_route_is_never_cached(coordinator, make_round):
