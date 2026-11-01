@@ -5,7 +5,7 @@
 <h1>My results</h1>
 <h2>Round</h2>
 <p>{{ round.title|isolated_lines }}</p>
-<p>State: {{ round.get_state_display }}</p>
+<div class="state"><p>State: {{ round.get_state_display }}</p></div>
 {% for result in results %}
 <section>
 <h2>Test case</h2>
@@ -14,7 +14,7 @@
 <ul>{% for criterion in result.case.criteria.all %}<li>{{ criterion.text|isolated_lines }}</li>{% endfor %}</ul>
 <h3>Build</h3>
 <p>{{ result.build.label|isolated_lines }}</p>
-<p>Status: {% if result.submitted_at %}Submitted{% else %}Draft{% endif %}</p>
+<div class="state"><p>Status: {% if result.submitted_at %}Submitted{% else %}Draft{% endif %}</p></div>
 <h3>Outcome</h3><p>{{ result.get_outcome_display }}</p>
 <h3>Observation</h3>
 <p>{% if result.observation %}{{ result.observation|isolated_lines }}{% else %}No observation.{% endif %}</p>

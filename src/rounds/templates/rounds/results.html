@@ -3,7 +3,7 @@
 {% block title %}Results: {{ round.title|title_isolate }}{% endblock %}
 {% block content %}
 <h1>Results: {{ round.title|isolated_lines }}</h1>
-<p>State: {{ round.get_state_display }}</p>
+<div class="state"><p>State: {{ round.get_state_display }}</p></div>
 {% for case in cases %}<h2>{{ case.title|isolated_lines }}</h2>
 <h3>Linked acceptance criteria</h3>
 <ul>{% for criterion in case.criteria.all %}<li>{{ criterion.text|isolated_lines }}</li>{% endfor %}</ul>

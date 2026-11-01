@@ -11,6 +11,8 @@ How Relay will be built and run. What it will do is in [`PRODUCT-SPEC.md`](PRODU
 
 `src/manage.py` starts the `relay` Django project; `relay.wsgi` is its WSGI entry point and `relay.pages` owns public presentation. Shared templates live in `src/relay/templates/`. The `accounts` app (`src/accounts/`) owns the [workspace and account models](#accounts-and-workspaces) and the accounts routes, with Django's `auth`, `contenttypes`, `sessions` and `messages` apps; `django.contrib.admin` is never installed. The `rounds` app (`src/rounds/`), added by RND-1, owns the [round models](#rounds) and the [rounds routes](#rounds-routes). The `ai` app (`src/ai/`) owns the [gateway's rows](#ai-gateway), the gateway and the RND-8 drafting views. ACC-1 adds the accounts apps; until then no auth/session apps or business models are installed. Runtime and dependency pins belong in the root configuration files.
 
+Shared application presentation ([PLT-4](product/platform.md#plt-4-shared-application-presentation)) uses a CSS template include inside the existing `base.html` head's `<style>` element. Semantic selectors and small presentation-only classes reuse the current server-rendered markup; no JavaScript, external fonts, static-file serving, routes or dependencies are added. Existing template autoescaping and user-text isolation filters remain in place.
+
 ## Data model
 
 Only the subsections below are specified. Design workspaces, role-based accounts, rounds, requirements, cases, build references and results around the [product areas](PRODUCT-SPEC.md#areas). Before schema implementation, settle ownership, state transitions, published-case edits, submitted-observation edits and result-history/version rules. Do not infer these from a proposed screen or table name.

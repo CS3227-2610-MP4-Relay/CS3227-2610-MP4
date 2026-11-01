@@ -37,6 +37,16 @@ Platform area `PLT`; see the [product spec](../PRODUCT-SPEC.md).
 - **PLT-3.5:** A metrics storage failure propagates as a storage error to the feature, with no provider retry and no success returned; neither scope row receives a partial metrics update. Slot release is still attempted. Reservation and release storage errors retain their existing feature handling.
 - **PLT-3.6:** Persist only numeric usage and latency on the existing records, with no prompt, source, reply, credentials or raw metadata in records or logs. Existing lazy quota cleanup governs these metrics; inactive users' old rows remain until their next call. There is no new viewer, export, service or cleanup subsystem.
 
+## PLT-4: Shared application presentation
+
+The existing Django start, sign-in, demo credentials, coordinator, tester and AI pages share this presentation. Their existing copy, actions, permissions, workflows and user-text escaping/direction isolation remain governed by their existing requirements.
+
+- **PLT-4.1:** Pages show a pale grey-blue background surrounding a distinct white content surface. At wide desktop sizes the surface is centered and bounded in width; headings, paragraphs, lists and sections have consistent spacing and a readable system-font hierarchy, with body text at least 16 CSS pixels.
+- **PLT-4.2:** Existing links are visibly identifiable, buttons share a consistent appearance, and text inputs, password inputs, textareas, selects and checkbox groups have readable labels and consistent spacing. Text-entry controls fit their available width; checkbox labels remain beside their choices. Styling preserves each control's native operation.
+- **PLT-4.3:** Existing status messages and validation/action errors have distinct, consistent visual treatments while retaining their exact text. The demo credentials table has clear headers, cell spacing and row separation, and every credential remains readable and selectable.
+- **PLT-4.4:** At 320 CSS pixels and at a wide desktop viewport, the pages have no horizontal page overflow or clipped controls. Long unbroken user-authored text and demo credentials wrap within the content surface without hiding text or changing its escaping and direction isolation. Forms, tables and AI suggestions remain readable in a single-column document flow.
+- **PLT-4.5:** Keyboard navigation gives links, buttons and form controls a clearly visible focus outline without clipping it. Shared text and link colors contrast with their backgrounds by at least 4.5:1; button labels meet the same ratio, and focus outlines contrast with the adjacent surface by at least 3:1. Links and status/error text remain understandable without relying on color alone.
+
 ## Planned work
 
 - Shared storage, authorization and bounded SoC LLM access.

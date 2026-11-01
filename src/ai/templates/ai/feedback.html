@@ -2,7 +2,7 @@
 {% load rounds_text %}
 {% block title %}{% if conflict %}Action not available{% else %}Observation feedback{% endif %}{% endblock %}
 {% block content %}
-{% if conflict %}<h1>{{ conflict }}</h1>
+{% if conflict %}<div class="error"><h1>{{ conflict }}</h1></div>
 {% else %}<h1>Observation feedback</h1>
 <p>AI receives your saved observation, this test case and its linked acceptance criteria. Suggestions may be wrong. Review them and edit your result yourself. Unsaved edits are not included.</p>
 <h2>Saved observation</h2><p>{% if entry.result.observation %}{{ entry.result.observation|isolated_lines }}{% else %}No observation.{% endif %}</p>
@@ -14,7 +14,7 @@
 <h2>Current build</h2><p>{{ entry.build.label|isolated_lines }}</p>
 <form method="post">{% csrf_token %}<button type="submit">Suggest missing details</button></form>
 <p><a href="{% url 'accounts:tester-result' entry.round.pk entry.case.pk entry.build.pk %}">Back to result</a></p>
-{% if message %}<p>{{ message }}</p>{% endif %}
+{% if message %}<div class="error"><p>{{ message }}</p></div>{% endif %}
 {% if questions %}<h2>Questions to consider</h2><ol>{% for question in questions %}<li>{{ question|isolated_lines }}</li>{% endfor %}</ol>{% endif %}
 {% endif %}
 {% endblock %}

@@ -1,0 +1,117 @@
+/* Shared by all server-rendered application pages. */
+* { box-sizing: border-box; }
+html { color-scheme: light; }
+body {
+  margin: 0;
+  padding: clamp(12px, 3vw, 40px);
+  min-height: 100vh;
+  background: #edf2f8;
+  color: #243449;
+  font: 400 1rem/1.65 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 56px);
+  background: #fff;
+  border: 1px solid #d6dfeb;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px #2434490a;
+  overflow-wrap: anywhere;
+}
+h1, h2, h3, h4 {
+  color: #17283f;
+  line-height: 1.25;
+  font-weight: 650;
+  margin: 1.5em 0 .65em;
+}
+h1 { font-size: clamp(1.75rem, 4vw, 2.4rem); margin-top: 0; }
+h2 { font-size: 1.5rem; padding-top: .7em; border-top: 1px solid #d6dfeb; }
+h3 { font-size: 1.2rem; }
+h4 { font-size: 1rem; }
+p, ul, ol, form, table { margin: 0 0 1.2rem; }
+ul, ol { padding-left: 1.5rem; }
+li { margin: .55rem 0; }
+li form { margin: .5rem 0 1rem; }
+main > :last-child { margin-bottom: 0; }
+a { color: #1856a2; text-decoration: underline; text-underline-offset: .18em; }
+a:hover { color: #103c76; text-decoration-thickness: 2px; }
+button, input, textarea, select { font: inherit; }
+button {
+  display: inline-block;
+  max-width: 100%;
+  padding: .65rem 1.1rem;
+  margin: .2rem .4rem .2rem 0;
+  border: 1px solid #234e8a;
+  border-radius: 7px;
+  background: #234e8a;
+  color: #fff;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+button:hover { background: #173c70; }
+button:active { background: #102f5a; }
+label, legend { font-weight: 600; }
+label { display: block; margin-bottom: .4rem; }
+input:not([type=checkbox]):not([type=radio]):not([type=hidden]), textarea, select {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: .65rem .75rem;
+  border: 1px solid #697c93;
+  border-radius: 6px;
+  background: #fff;
+  color: #243449;
+  line-height: 1.5;
+}
+textarea { min-height: 9rem; resize: vertical; }
+fieldset {
+  min-width: 0;
+  margin: 0 0 1.2rem;
+  padding: 1rem;
+  border: 1px solid #697c93;
+  border-radius: 7px;
+}
+legend { padding: 0 .3rem; max-width: 100%; }
+p:has(> input[type=checkbox]), p:has(> input[type=radio]) {
+  display: flex;
+  align-items: flex-start;
+  gap: .65rem;
+}
+input[type=checkbox], input[type=radio] {
+  flex: 0 0 auto;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: .3rem 0 0;
+  accent-color: #234e8a;
+}
+input[type=checkbox] + label, input[type=radio] + label {
+  min-width: 0;
+  font-weight: 400;
+  margin: 0;
+}
+:is(a, button, input, textarea, select):focus-visible {
+  outline: 3px solid #9a4900;
+  outline-offset: 3px;
+}
+table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: .95rem; }
+th, td { padding: .8rem .6rem; text-align: left; vertical-align: top; border-bottom: 1px solid #b8c7d9; }
+th { background: #edf2f8; color: #17283f; font-weight: 650; }
+tbody tr:nth-child(even) { background: #f5f7fb; }
+[role=status], .state, .round-heading > p:not([role]):has(+ p), .error {
+  padding: .8rem 1rem;
+  border-radius: 6px;
+  border-left: 4px solid;
+}
+[role=status], .state, .round-heading > p:not([role]):has(+ p) { background: #edf4fc; border-color: #315e98; color: #243449; }
+.error { background: #fff0ee; border-color: #a52e27; color: #87241f; }
+.state, .error { margin-bottom: 1.2rem; }
+.state > :last-child, .error > :last-child { margin-bottom: 0; }
+@media (max-width: 480px) {
+  main { padding: 20px 16px; border-radius: 10px; }
+  th, td { padding: .65rem .35rem; }
+  fieldset { padding: .75rem; }
+}

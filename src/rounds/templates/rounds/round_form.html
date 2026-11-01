@@ -13,7 +13,7 @@
     {% empty %}<p>{% if field.name == "cases" %}No test cases yet.{% else %}No acceptance criteria yet.{% endif %}</p>{% endfor %}
   </fieldset>
   {% else %}<p><label for="{{ field.id_for_label }}">{{ field.label }}</label> {{ field }}</p>{% endif %}
-  {% for error in field.errors %}<p>{{ error }}</p>{% endfor %}
+  {% for error in field.errors %}<div class="error"><p>{{ error }}</p></div>{% endfor %}
   {% endfor %}
   <button type="submit">{{ button }}</button>
 </form>
