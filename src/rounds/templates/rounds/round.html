@@ -2,17 +2,19 @@
 {% load rounds_text %}
 {% block title %}{{ round.title|title_isolate }}{% endblock %}
 {% block content %}
+<div class="round-heading">
 <h1>{{ round.title|isolated_lines }}</h1>{% for message in messages %}
 <p role="status">{{ message|status_message }}</p>{% endfor %}
 <p>State: {{ round.get_state_display }}</p>
 {% if draft %}<p><a href="{% url 'rounds:edit' round.pk %}">Edit round</a></p>{% else %}<p><a href="{% url 'rounds:results' round.pk %}">Review results</a></p>{% endif %}
+</div>
 <h2>Acceptance criteria</h2>
 {% if draft %}<p><a href="{% url 'rounds:criterion-new' round.pk %}">Add acceptance criterion</a></p>{% endif %}
 {% for criterion in round.criteria.all %}{% if forloop.first %}<ul>{% endif %}
   <li>{{ criterion.text|isolated_lines }}{% if draft %}
     <a href="{% url 'rounds:criterion-edit' round.pk criterion.pk %}">Edit criterion</a>
     <form method="post" action="{% url 'rounds:criterion-delete' round.pk criterion.pk %}">{% csrf_token %}<button type="submit">Delete criterion</button></form>{% endif %}
-    {% if refused.0 == criterion.pk %}<p>{{ refused.1 }}</p>{% endif %}</li>
+    {% if refused.0 == criterion.pk %}<div class="error"><p>{{ refused.1 }}</p></div>{% endif %}</li>
 {% if forloop.last %}</ul>{% endif %}{% empty %}<p>No acceptance criteria yet.</p>
 {% endfor %}
 <h2>Test cases</h2>
@@ -39,7 +41,7 @@
 {% endfor %}{% endif %}
 {% if publish_form %}{% with field=publish_form.label %}<form method="post" action="{% url 'rounds:publish' round.pk %}">{% csrf_token %}
   <p><label for="{{ field.id_for_label }}">{{ field.label }}</label> {{ field }}</p>
-  {% for error in field.errors %}<p>{{ error }}</p>{% endfor %}
+  {% for error in field.errors %}<div class="error"><p>{{ error }}</p></div>{% endfor %}
   <button type="submit">Publish round</button>
 </form>{% endwith %}{% endif %}
 {% if open %}<p>Closing makes this round read-only. It cannot be reopened.</p>

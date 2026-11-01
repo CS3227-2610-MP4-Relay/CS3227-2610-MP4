@@ -3,7 +3,7 @@
 {% block title %}{{ round.title|title_isolate }}{% endblock %}
 {% block content %}
 <h1>{{ round.title|isolated_lines }}</h1>
-<p>State: {{ round.get_state_display }}</p>
+<div class="state"><p>State: {{ round.get_state_display }}</p></div>
 <p><a href="{% url 'accounts:tester-results' round.id %}">My results</a></p>
 <h2>Test cases</h2>
 {% for case in cases %}
