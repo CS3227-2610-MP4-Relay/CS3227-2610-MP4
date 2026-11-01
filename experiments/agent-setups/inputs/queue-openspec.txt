@@ -1,3 +1,0 @@
-openspec r1-openspec
-openspec t2-openspec-1 TASK=2 PROMPT_FILE=$EXP/task-prompt-2.md
-openspec r2-openspec

@@ -1,5 +1,0 @@
-ideal-v7 t3-ideal-v7-codex-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md TOOL=codex
-ideal-v7 t3-ideal-v7-opus-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md
-ideal-v7 t3-ideal-v7-hermes-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md TOOL=hermes
-ideal-v7 t3-ideal-v7-sonnet-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md MODEL_OVERRIDE=claude-sonnet-5-5
-ideal-v7 t3-ideal-v7-haiku-1 TASK=3 PROMPT_FILE=$EXP/task-prompt-3.md MODEL_OVERRIDE=claude-haiku-5-5

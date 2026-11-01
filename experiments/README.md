@@ -2,7 +2,7 @@
 
 This folder holds experiment methods, reproducible inputs, observed results and analysis.
 
-- [agent-setups](agent-setups/README.md) (zheng-jj, #31) runs the development-workflow comparison below on one task. It covers 11 workflow, model, methodology and add-on setups, then an ideal setup tested in Claude Code, Codex and Hermes.
+- [agent-setups](agent-setups/README.md) (zheng-jj, #31) runs the development-workflow comparison below on four tasks. It covers 14 workflow, model, methodology and add-on setups, then a portable setup tested in Claude Code, Codex and Hermes. Its evidence is in a zip archive, so agents searching the repository do not read it.
 - [development-workflow](development-workflow/README.md) records one observational run of the consolidated workflow with a weaker model.
 - The app-context comparison has not been run.
 

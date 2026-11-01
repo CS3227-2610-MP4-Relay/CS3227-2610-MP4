@@ -1,3 +1,0 @@
-ideal-v5 i5-opus-1 TASK=1 AGENT_PROFILE=strong
-ideal-v5 i5-sonnet-1 TASK=1 MODEL_OVERRIDE=claude-sonnet-5-5 AGENT_PROFILE=strong
-ideal-v5 i5-haiku-1 TASK=1 MODEL_OVERRIDE=claude-haiku-5-5

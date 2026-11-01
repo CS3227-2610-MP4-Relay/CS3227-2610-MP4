@@ -1,2 +1,0 @@
-ideal-v6 t2-ideal-v6-sonnet-1 TASK=2 PROMPT_FILE=$EXP/task-prompt-2.md MODEL_OVERRIDE=claude-sonnet-5-5 AGENT_PROFILE=strong
-ideal-v6 t2-ideal-v6-haiku-1 TASK=2 PROMPT_FILE=$EXP/task-prompt-2.md MODEL_OVERRIDE=claude-haiku-5-5
