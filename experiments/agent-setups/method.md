@@ -151,7 +151,7 @@ Task 1 was small. Task 2 is larger and has more ways to be wrong, to test whethe
   - solo and the Sonnet mixes, which task 1 already placed and the ideal replaces.
 
   DeepSeek is not rerun. Its task-1 runs are the reference for weaker models, with Haiku standing in on task 2.
-- **Hidden suite (27 tests):** written from RND-5, the route table and the decisions only, and added to `harness/` once every task-2 run has ended. It drives the coordinator's pages over HTTP and covers:
+- **Hidden suite (27 tests):** [`harness/test_hidden_retest.py`](harness/test_hidden_retest.py), written from RND-5, the route table and the decisions only, and added to `harness/` once every task-2 run had ended. It drives the coordinator's pages over HTTP and covers:
   - the page and the link;
   - 409 for Draft and Closed rounds;
   - sign-in, 403 and 404;
@@ -198,7 +198,7 @@ Added on 2026-10-31, at the human's request, after tasks 1 and 2 were reported. 
   - one of mp4 on Haiku.
 
   The human expected the hardest task might need Opus. The Sonnet, Sonnet-with-Opus-review and Haiku runs test where a cheaper model stops being enough.
-- **Hidden suite, task 3 (46 tests from 30 functions):** written from the prompt's decisions only, before any task-3 run ended.
+- **Hidden suite, task 3 (46 tests from 30 functions):** [`harness/test_hidden_results.py`](harness/test_hidden_results.py), written from the prompt's decisions only, before any task-3 run ended.
   - **Checked against the original team implementation (`ea78f09`):** all 46 pass.
   - **Checked against the starting commit:** 45 fail and 1 passes, the absence of a link on a Closed round.
   - **How it judges:** it drives the pages over HTTP and judges outcomes only from status codes, the two status texts, the values shown and whether the form is present.
@@ -254,7 +254,7 @@ Added on 2026-10-31, after every task-2 and task-3 run had passed its whole hidd
 
     The original slice added about 260 lines of non-test code.
   - **Environment:** the starting commit has no browser tests, so task 4 uses the first virtual environment.
-- **Hidden suite, task 4 (26 tests):** written from ACC-3 and the technical spec's accounts notes only, before any task-4 run started.
+- **Hidden suite, task 4 (26 tests):** [`harness/test_hidden_limits.py`](harness/test_hidden_limits.py), written from ACC-3 and the technical spec's accounts notes only, before any task-4 run started.
   - **Checked against the original implementation (`302efbe`):** all 26 pass, in seven full runs and twenty runs of the two concurrency tests alone.
   - **Checked against the starting commit:** 23 fail and 3 pass. The 3 assert things already true at the start: the 30th failure is normal, viewing the sign-in page is never limited, and the 10th creation succeeds.
   - **How it judges:** it drives `/sign-in/` and `/demo/` from chosen client addresses and judges by status codes, the ACC-3 messages, whether a session started and the rows created. Two tests send simultaneous requests from threads, each with its own connection.
