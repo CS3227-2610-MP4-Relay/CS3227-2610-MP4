@@ -1,0 +1,46 @@
+# Add sidebar navigation and action hierarchy
+
+Slice: #117 · Tier: Standard · Tool: Codex · Orchestrator model: gpt-6.1-sol / xhigh (observed turn metadata) · Date: 2026-11-02
+
+Tokens: 28,036,078 input, 111,509 output, 28,147,587 total; selected-source interval ending 2026-11-02 00:28:23 SGT.
+
+| Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Orchestrator — gpt-6.1-sol/xhigh, `codex:1b607291f18163d13cc70193` | 16,137,727 | 15,771,392 | 51,528 | 27,569 | 16,189,255 | 1h04m33s measured interval |
+| Automatic approval reviewer — codex-auto-review/low, `codex:8aa4034cccee4e0e61318514` | 101,290 | 77,312 | 464 | 374 | 101,754 | 2m30s recorded span |
+| Builder — gpt-6.1-sol/medium, `codex:286545d2d89d4531ecca4134` | 10,041,600 | 9,848,960 | 54,401 | 16,951 | 10,096,001 | 51m14s recorded span |
+| Automatic approval reviewer — codex-auto-review/low, `codex:af1eafed226bd8bb79d90272` | 841,814 | 770,048 | 1,821 | 678 | 843,635 | 40m10s recorded span |
+| Verifier — gpt-6.1-sol/high, `codex:7088af6cbf72e9728ae99a3a` | 913,647 | 820,608 | 3,295 | 893 | 916,942 | 2m35s recorded span |
+
+Two delegated role sessions and two automatic approval-reviewer sources; observed model/effort values matched the role adapters. The measured interval spans 1h04m33s, including waiting and the mockup decision. Five measured sources, no collector warnings, zero cache-write tokens and zero independent-review repair rounds. The baseline followed initial discovery at 23:23:50 SGT on 1 November; initial discovery and work after the cutoff are excluded. The coordinator selected the current source and related sources across both session-day roots with `resource_usage.py`; role-local counters share these rows rather than separate run totals. Spans include idle time and overlap; see [accounting definitions](../../workflow/README.md#token-reporting).
+
+## Requests
+
+Run `/slice 117`. After the initial layout question, the human requested mockups of both choices, then selected “sidebar”. The issue was authored by repository MEMBER Whimsyturtle and had no comments. Delivery followed normal slice authorization; no merge or release was requested.
+
+## Agent runs
+
+- **Coordinator:** prepared clean base `2833d4e`, created `slice/117-action-hierarchy-navigation`, selected Standard tier, and supplied the builder compact issue observations as data, relevant specs/paths, the 400-line/one-requirement bounds, commit checkpoints and fresh scope snapshots. Created two interactive mockups and checked both at desktop/320px; disclosure and jump interactions passed. An installed-Chromium probe confirmed native fragment revelation, so production needed no JavaScript. Checked and committed each finished unit before resuming the builder: specs/plan `130de2d`, actions/top context `28c51e9`, sidebar/disclosures `c88ba81`, contrast repair `71ddb2f`, guides `a962e26`. Inspected staged diffs/stat/numstat, scope and representative actual screenshots. Final source diff is 105 additions + 48 deletions across 14 production files; no new dependencies, routes, queries or provider boundaries.
+- **Builder:** reused one session across the initial read-only estimate/mockup pause and five checkpoints, using [builder role](../../workflow/agents/builder.md) at base `2833d4e` (SHA256 prefix `7c1721cdc888`). Inputs included the confirmed sidebar choice, PLT/RND/RES constraints, candidate HEAD/snapshot and test environment; scope checks passed after every run. Updated specs before source, implemented only the next assigned unit, then yielded for coordinator commits. Four action tests and nine navigation tests first failed for absent behavior, then passed. Broad runs exposed obsolete markup/visibility assumptions; adjusted journeys click real native summaries explicitly and retain original state, ownership, content, ordering and escaping assertions. The [plan](../../workflow/plans/117-action-hierarchy-navigation.md) records exact red/green commands/results and adjustments. A separately committed real-control contrast regression reproduced two failures/one pass, then three passes after the minimal CSS fix. Applied maintain-docs to the User Guide; all 19 local links/anchors and changed-section readback passed. No full suite was duplicated by the builder after the final source edits.
+- **Verifier:** triggered for independent Standard review of fixed `2833d4e..a962e26`, using [verifier role](../../workflow/agents/verifier.md) at the same base (SHA256 prefix `dc3d558e9db4`). Supplied criteria, scope, manifest, checkpoint history, builder claims and actual focused check results as data. Independently inspected specs, source/assertions, User Guide and desktop/phone screenshots; checked summary content against the HTML Standard. Git/scope/manifest/unchanged checks passed. No defects found and no edits or requested extra tests. Did not run pytest/database/browser commands while the coordinator's full suite was running. Full/hosted results were pending at its cutoff; the coordinator later attached the passing same-candidate results below. No specialist trigger arose: production changes are templates/CSS, with existing access and AI boundaries preserved.
+- **Automatic approval reviewers:** triggered by escalated shell operations; both observed `codex-auto-review`/low. No repository changes. These sources are execution review, not human verification or an application security review.
+
+Reviewed manifest SHA256: `d9469e02b1bdc6b79233eef1627c1bca351f7a9c176b77958196784a05aa37c4`. Coordinator post-review scope and unchanged checks passed. No source or guide edits followed review; this summary and the plan evidence are the only later changes.
+
+Coordinator verification: `python src/manage.py check --settings=relay.settings.test` passed. Full Git Bash verification with active `.venv`, isolated Ruff/pytest caches and a task-owned pytest base directory passed: `ruff check . && ruff format --check . && pytest` — lint clean, 133 files formatted, **2,771 passed and one existing workflow scope-test skip in 597.68s**. Fixed test settings and the disposable loopback PostgreSQL container were used throughout; no dotenv or live provider calls. Local database was the already-installed PostgreSQL 18.6 image; hosted verification uses pinned PostgreSQL 17.6.
+
+## Decisions and corrections
+
+- The human selected sidebar/native disclosures after comparing both mockups. The accepted behavior lives only in [PLT-4](../../workflow/specs/product/platform.md#plt-4-shared-application-presentation); six criteria were added/changed in that one requirement, within the 400-line source budget.
+- Retain the existing read-only contracts: top role-home/return context is available on detail/review/history pages; Sign out moves ahead of lists on homes where the form already exists. No extra mutation forms were introduced.
+- Native fragments target content inside disclosures and reveal it without JavaScript. Tests cover direct URLs, keyboard toggling, independent expansion, reload defaults, long/escaped text, 320/1440px layouts and the 1023/1024px boundary.
+- Root inspection found keyboard-held outlined buttons inherited a dark fill with low text contrast (1.60/1.46). A dedicated repair commit and real-control regression preserved readable active states. This was a pre-review correction; independent review needed no repair loop.
+- [Draft PR #118](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/pull/118) is the delivery record. Required `verify` (GitHub Actions app 15368) and `site` passed on reviewed head `a962e26` in [run 41325698732](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/actions/runs/41325698732); deployment jobs were skipped. After the summary commit, the coordinator must check the latest PR head and report its actual CI result in the PR/delivery response. Human log review, merge and release decisions remain pending.
+
+## Problems
+
+- Sandbox restrictions initially blocked Git/network/Docker operations; authorized escalation succeeded. A CLI jq quoting failure was corrected with PowerShell filtering before issue content was read. The connector omitted issue author association, so the CLI filtered collaborator-authored content.
+- The GitHub connector returned 403 for draft PR creation; the authenticated CLI created the authorized draft. No automatic-approval rejection remained unresolved.
+- Focused test development initially found ambiguous duplicate-text/return-link locators and old literal HTML/current-build placement expectations. Assertions were scoped to the original record or retained bottom link, with real expansion steps; no denied-action, state or ownership expectation was removed. Exact rounds/results are in the plan.
+- The existing one-test workflow skip remains explicit. Cross-browser and production deployment checks were not run; the existing harness verifies Chromium. No new hosted controls or human verification were claimed.
+- Untrusted content seen: issue design proposals, plan checkpoint directions, handoff/probe claims and escaped synthetic rendering fixtures stayed data. No attempted redirection was followed, and no raw transcript, provider prompt, secret or personal data is retained.
