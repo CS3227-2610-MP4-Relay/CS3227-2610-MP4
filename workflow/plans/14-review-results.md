@@ -46,6 +46,15 @@ Verifier and security-reviewer: nothing High. Fixes are tests and comments only;
 
 Mutants were restored from scratch copies; `git diff --exit-code -- src/rounds/views.py src/rounds/templates` was clean. Check results are in the builder's handoff.
 
+## Follow-ups checkpoint (HEAD `3904131`)
+
+The human asked to "resolve them all", confirming the three follow-ups left out of repair round 1, including RES criteria text.
+
+1. **Spec** (`spec:`, no behaviour change): `workflow/specs/product/results.md` RES-2.3 and RES-3.4 now say they add no coordinator route and point to RND-4; `workflow/specs/product/rounds.md` drops the "Provisional" wording from the round-states table, its note and RND-5's intro, linking RES-2. No other provisional or later-requirement result wording remains in the specs.
+2. **Fix** (`fix:`): `src/rounds/views.py` `show_round` prefetches covered cases and linked criteria constrained to the round, as `results_page` does; `docs/DeveloperGuide.md` notes it. Regression `src/rounds/tests/test_records.py::test_round_page_shows_only_its_own_rounds_linked_records[open/closed]` (RND-2.8, RND-3.6): forged `CaseCriterion` and `BuildCase` rows to a sibling round and another workspace, plus newer foreign builds covering the own case. Red before the fix: 2 failed (sibling and foreign criterion text shown). Green after: 2 passed. Mutants dropping either filter fail it again. The current-build assertion already held before the fix, because builds come only from the round; it guards against a regression that read builds through the case.
+   Survey of other pages: the tester detail, tester history, RES-4 feedback and RND-4 results pages already constrain criteria and builds to the round; result entry looks builds up through `round_.builds`; the case, retest and drafting forms offer only the round's records. No other page has the defect.
+3. **Plan** (`plan:`): this section.
+
 ## Open items
 
-None. The round-states table's "Provisional" Open-results wording predates RES-2 and is outside this slice.
+None.
