@@ -2,6 +2,7 @@
 {% load rounds_text %}
 {% block title %}Draft test cases with AI{% endblock %}
 {% block content %}
+{% include "page_navigation.html" with back=round.get_absolute_url %}
 <h1>Draft test cases with AI</h1>
 <p>Select 1 to 5 acceptance criteria. The selected criteria are sent to the SoC AI service to suggest test cases. Suggestions are not saved; review each one before adding it.</p>
 <form method="post">{% csrf_token %}
@@ -13,7 +14,7 @@
 {% if selection_error %}<div class="error"><p>{{ selection_error }}</p></div>{% endif %}{% for error in form.criteria.errors %}<div class="error"><p>{{ error }}</p></div>{% endfor %}
 <button type="submit">Draft test cases</button>
 </form>
-<p><a href="{% url 'rounds:case-new' round.pk %}">Add test case</a></p>
+<p><a class="action" href="{% url 'rounds:case-new' round.pk %}">Add test case</a></p>
 <p><a href="{{ round.get_absolute_url }}">Back to round</a></p>
 {% if error %}<h2>Suggested test cases</h2><div class="error"><p>{{ error }}</p></div>{% endif %}
 {% if drafts %}<h2>Suggested test cases</h2>

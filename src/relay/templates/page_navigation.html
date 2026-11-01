@@ -1,0 +1,4 @@
+<nav class="page-navigation" aria-label="Page navigation">
+  {% if tester %}<a href="{% url 'accounts:tester' %}">Tester home</a>{% else %}<a href="{% url 'accounts:coordinator' %}">Coordinator home</a>{% endif %}
+  {% if back %}<a href="{{ back }}">{{ back_label|default:"Back to round" }}</a>{% endif %}
+</nav>

@@ -2,6 +2,7 @@
 {% load rounds_text %}
 {% block title %}Results: {{ round.title|title_isolate }}{% endblock %}
 {% block content %}
+{% include "page_navigation.html" with back=round.get_absolute_url %}
 <h1>Results: {{ round.title|isolated_lines }}</h1>
 <div class="state"><p>State: {{ round.get_state_display }}</p></div>
 {% for case in cases %}<h2>{{ case.title|isolated_lines }}</h2>

@@ -16,7 +16,9 @@ def assert_read_only(page):
     """The tester's detail offers navigation and no mutation controls."""
     expect(page.locator("main form, main input, main button")).to_have_count(0)
     expect(page.locator('main a[href^="/coordinator/"]')).to_have_count(0)
-    expect(page.get_by_role("link", name="Tester home", exact=True)).to_be_visible()
+    expect(
+        page.get_by_role("link", name="Tester home", exact=True).last
+    ).to_be_visible()
 
 
 def assert_steps(page, steps):
@@ -126,7 +128,7 @@ def test_tester_reads_published_retested_and_closed_round(
         expect(page.locator("h3")).to_have_text(cases)
         assert_steps(page, steps)
         assert_read_only(page)
-        page.get_by_role("link", name="Tester home", exact=True).click()
+        page.get_by_role("link", name="Tester home", exact=True).last.click()
         expect(page.get_by_role("listitem")).to_contain_text("(Closed)")
         page.get_by_role("link", name=title, exact=True).click()
         expect(page.get_by_text("State: Closed", exact=True)).to_be_visible()

@@ -24,7 +24,11 @@ def browser_accounts(browser_accounts):
     accounts = browser_accounts
     tester = User.objects.get(username=accounts["tester"])
     draft = Round.objects.create(workspace=tester.workspace, title="Long" * 30)
-    Criterion.objects.create(round=draft, text=LONG)
+    draft_criterion = Criterion.objects.create(round=draft, text=LONG)
+    draft_case = Case.objects.create(
+        round=draft, title="Synthetic draft case", steps=LONG, expected_result=MARKUP
+    )
+    draft_case.criteria.add(draft_criterion)
     accounts["draft"] = draft.get_absolute_url()
     open_round = Round.objects.create(
         workspace=tester.workspace, title="Synthetic presentation round"
@@ -44,6 +48,8 @@ def browser_accounts(browser_accounts):
     accounts["entry"] = (
         f"/tester/rounds/{open_round.pk}/cases/{case.pk}/builds/{build.pk}/result/"
     )
+    accounts["open"] = open_round.get_absolute_url()
+    accounts["history"] = f"/tester/rounds/{open_round.pk}/results/"
     return accounts
 
 
@@ -143,6 +149,105 @@ def sign_in(page, accounts, role):
     page.get_by_role("button", name="Sign in", exact=True).click()
 
 
+def background(locator):
+    """Read rendered action emphasis without depending on class names."""
+    return locator.evaluate("el => getComputedStyle(el).backgroundColor")
+
+
+def assert_top_navigation(page, home, back=None):
+    """Existing context is reachable before record details or editing forms."""
+    navigation = page.get_by_role("navigation", name="Page navigation", exact=True)
+    expect(navigation.get_by_role("link", name=home, exact=True)).to_be_visible()
+    if back:
+        expect(navigation.get_by_role("link", name=back, exact=True)).to_be_visible()
+    assert navigation.evaluate(
+        "el => el.getBoundingClientRect().bottom < "
+        "document.querySelector('main h2, main form')?.getBoundingClientRect().top"
+    )
+
+
+@pytest.mark.ac("PLT-4.2", "PLT-4.6", "PLT-4.7", "PLT-4.4", "PLT-4.5")
+@pytest.mark.parametrize("width", [320, 1440])
+def test_coordinator_action_hierarchy_and_top_context(page, browser_accounts, width):
+    page.set_viewport_size({"width": width, "height": 900})
+    sign_in(page, browser_accounts, "coordinator")
+    new_round = page.get_by_role("link", name="New round", exact=True)
+    sign_out = page.get_by_role("button", name="Sign out", exact=True)
+    assert background(new_round) != "rgba(0, 0, 0, 0)"
+    assert background(new_round) != background(sign_out)
+    assert sign_out.bounding_box()["y"] < new_round.bounding_box()["y"]
+    assert sign_out.locator("..").get_attribute("method") == "post"
+    assert (
+        sign_out.locator("..").locator("input[name=csrfmiddlewaretoken]").count() == 1
+    )
+    new_round.click()
+    assert_top_navigation(page, "Coordinator home")
+    page.goto(browser_accounts["draft"])
+    assert_top_navigation(page, "Coordinator home")
+    edit = page.get_by_role("link", name="Edit criterion", exact=True)
+    delete = page.get_by_role("button", name="Delete criterion", exact=True)
+    add = page.get_by_role("link", name="Add acceptance criterion", exact=True)
+    assert background(add) != background(edit)
+    assert background(edit) == background(delete)
+    assert edit.evaluate("el => getComputedStyle(el).color") != delete.evaluate(
+        "el => getComputedStyle(el).color"
+    )
+    group = edit.locator("..")
+    expect(group.get_by_role("button", name="Delete criterion")).to_be_visible()
+    assert group.evaluate("el => getComputedStyle(el).display") == "flex"
+    assert group.evaluate("el => getComputedStyle(el).flexWrap") == "wrap"
+    assert delete.locator("..").get_attribute("method") == "post"
+    assert_layout(page, width)
+    page.screenshot(path=str(Path(gettempdir()) / f"relay-117-actions-{width}.png"))
+    edit.click()
+    assert_top_navigation(page, "Coordinator home", "Back to round")
+    page.get_by_role("navigation", name="Page navigation").get_by_role(
+        "link", name="Back to round", exact=True
+    ).click()
+    page.get_by_role("link", name="Draft test cases with AI", exact=True).click()
+    assert_top_navigation(page, "Coordinator home", "Back to round")
+    page.goto(browser_accounts["open"] + "results/")
+    assert_top_navigation(page, "Coordinator home", "Back to round")
+    expect(page.locator("form")).to_have_count(0)
+    expect(page.get_by_role("button")).to_have_count(0)
+    assert_layout(page, width)
+
+
+@pytest.mark.ac("PLT-4.2", "PLT-4.7", "PLT-4.4", "PLT-4.5")
+@pytest.mark.parametrize("width", [320, 1440])
+def test_tester_action_emphasis_and_native_result_submission(
+    page, browser_accounts, width
+):
+    page.set_viewport_size({"width": width, "height": 900})
+    sign_in(page, browser_accounts, "tester")
+    page.goto(browser_accounts["entry"])
+    assert_top_navigation(page, "Tester home", "Back to round")
+    save = page.get_by_role("button", name="Save draft", exact=True)
+    submit = page.get_by_role("button", name="Submit", exact=True)
+    assert background(save) != background(submit)
+    assert save.get_attribute("value") == "save"
+    assert submit.get_attribute("value") == "submit"
+    assert save.locator("..").get_attribute("method") == "post"
+    assert_layout(page, width)
+    page.get_by_label("Observation", exact=True).fill("Synthetic revised observation")
+    save.click()
+    page.reload()
+    expect(page.get_by_label("Observation", exact=True)).to_have_value(
+        "Synthetic revised observation"
+    )
+    page.get_by_role("link", name="Observation feedback", exact=True).click()
+    assert_top_navigation(page, "Tester home", "Back to result")
+    page.goto(browser_accounts["entry"])
+    page.get_by_role("button", name="Submit", exact=True).click()
+    expect(page.get_by_text("Status: Submitted", exact=True)).to_be_visible()
+    expect(page.locator("form")).to_have_count(0)
+    page.goto(browser_accounts["history"])
+    assert_top_navigation(page, "Tester home", "Back to round")
+    expect(page.locator("form")).to_have_count(0)
+    expect(page.get_by_role("button")).to_have_count(0)
+    assert_layout(page, width)
+
+
 @pytest.mark.ac("PLT-4.1", "PLT-4.2", "PLT-4.3", "PLT-4.4", "PLT-4.5")
 @pytest.mark.parametrize("width", [320, 1440])
 def test_public_pages_controls_messages_and_credentials(page, browser_accounts, width):
@@ -211,7 +316,10 @@ def test_coordinator_forms_long_text_and_ai_states(page, browser_accounts, width
         .evaluate("el => getComputedStyle(el).backgroundColor")
         == "rgba(0, 0, 0, 0)"
     )
-    expect(page.locator("span[dir=auto]", has_text=LONG)).to_have_text(LONG)
+    criterion_row = page.get_by_role("link", name="Edit criterion", exact=True).locator(
+        "../.."
+    )
+    expect(criterion_row.locator(":scope > span[dir=auto]")).to_have_text(LONG)
     page.screenshot(path=str(Path(gettempdir()) / f"relay-108-coordinator-{width}.png"))
     page.get_by_role("link", name="Add test case", exact=True).click()
     assert_layout(page, width)

@@ -3,7 +3,7 @@
 {% block title %}{% if conflict %}Action not available{% else %}Observation feedback{% endif %}{% endblock %}
 {% block content %}
 {% if conflict %}<div class="error"><h1>{{ conflict }}</h1></div>
-{% else %}<h1>Observation feedback</h1>
+{% else %}{% url 'accounts:tester-result' entry.round.pk entry.case.pk entry.build.pk as back_url %}{% include "page_navigation.html" with tester=True back=back_url back_label="Back to result" %}<h1>Observation feedback</h1>
 <p>AI receives your saved observation, this test case and its linked acceptance criteria. Suggestions may be wrong. Review them and edit your result yourself. Unsaved edits are not included.</p>
 <h2>Saved observation</h2><p>{% if entry.result.observation %}{{ entry.result.observation|isolated_lines }}{% else %}No observation.{% endif %}</p>
 <h2>Test case</h2><p>{{ entry.case.title|isolated_lines }}</p>

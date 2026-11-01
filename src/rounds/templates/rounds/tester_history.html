@@ -2,6 +2,7 @@
 {% load rounds_text tz %}
 {% block title %}My results{% endblock %}
 {% block content %}
+{% url 'accounts:tester-round' round.id as back_url %}{% include "page_navigation.html" with tester=True back=back_url %}
 <h1>My results</h1>
 <h2>Round</h2>
 <p>{{ round.title|isolated_lines }}</p>

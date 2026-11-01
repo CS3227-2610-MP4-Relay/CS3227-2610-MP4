@@ -169,7 +169,10 @@ def test_round_page_links_to_results_under_its_state(coord_client, review, state
         review.close()
     html = page(coord_client.get(detail(review.round.pk)))
     label = state.capitalize()
-    link = f'<p><a href="{results_url(review.round.pk)}">{LINK}</a></p>'
+    link = (
+        '<p><a class="action secondary" '
+        f'href="{results_url(review.round.pk)}">{LINK}</a></p>'
+    )
     assert f"<p>State: {label}</p>\n{link}" in html
     assert html.count(LINK) == 1
 

@@ -135,13 +135,21 @@ def test_adding_criteria_shows_them_on_the_round_page_in_creation_order(
     assert html.index("Synthetic first") < html.index("Synthetic second")
     assert html.index("<h2>Acceptance criteria</h2>") < html.index("Synthetic first")
     assert html.index("Synthetic second") < html.index("<h2>Test cases</h2>")
-    assert f'<a href="{url(draft.pk, "criteria", "new")}">' in html
+    assert f'<a class="action" href="{url(draft.pk, "criteria", "new")}">' in html
     assert "Add acceptance criterion</a>" in html
     for item in (first, second):
-        assert f'<a href="{url(draft.pk, "criteria", "edit", item.pk)}">' in html
+        assert (
+            '<a class="action secondary" '
+            f'href="{url(draft.pk, "criteria", "edit", item.pk)}">' in html
+        )
         assert f'action="{url(draft.pk, "criteria", "delete", item.pk)}"' in html
     assert html.count("Edit criterion</a>") == 2
-    assert html.count('<button type="submit">Delete criterion</button>') == 2
+    assert (
+        html.count(
+            '<button class="destructive" type="submit">Delete criterion</button>'
+        )
+        == 2
+    )
     assert "No acceptance criteria yet." not in html
     assert "No test cases yet." in html
 
@@ -204,10 +212,16 @@ def test_adding_a_case_shows_it_with_its_criteria(coord_client, draft):
     assert linked.index("Synthetic one") < linked.index("Synthetic three")
     assert "Synthetic unlinked" not in first_part
     assert second_part.startswith('<span dir="auto">Synthetic second case</span>')
-    assert f'<a href="{url(draft.pk, "cases", "edit", first.pk)}">' in first_part
+    assert (
+        '<a class="action secondary" '
+        f'href="{url(draft.pk, "cases", "edit", first.pk)}">' in first_part
+    )
     assert "Edit test case</a>" in first_part
     assert f'action="{url(draft.pk, "cases", "delete", first.pk)}"' in first_part
-    assert '<button type="submit">Delete test case</button>' in first_part
+    assert (
+        '<button class="destructive" type="submit">Delete test case</button>'
+        in first_part
+    )
     assert "No test cases yet." not in html
 
 

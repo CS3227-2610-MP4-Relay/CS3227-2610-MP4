@@ -2,6 +2,7 @@
 {% load rounds_text %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
+{% include "page_navigation.html" with back=round.get_absolute_url %}
 <h1>{{ title }}</h1>
 {% if prefilled %}<p>Pre-filled from an AI draft. Review it before adding it.</p>{% endif %}
 <form method="post"{% if form_action %} action="{{ form_action }}"{% endif %}>

@@ -146,7 +146,7 @@ def test_open_round_page_shows_the_warning_directly_before_the_close_button(
     warning = html.index(f"<p>{WARNING}</p>")
     form = html.index(f'<form method="post" action="{close_url(opened.pk)}">')
     assert html.index("<h2>Builds</h2>") < warning < form < html.index(BUTTON)
-    assert html.index(BUTTON) < html.index("Coordinator home")
+    assert html.index(BUTTON) < html.rindex("Coordinator home")
     # Nothing but the form's start sits between the warning and the form.
     assert html[warning + len(f"<p>{WARNING}</p>") : form].strip() == ""
     assert "Publish round" not in html and "Edit round" not in html

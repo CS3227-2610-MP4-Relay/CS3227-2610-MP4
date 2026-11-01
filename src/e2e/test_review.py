@@ -81,7 +81,7 @@ def record(page, index, outcome, observation, button):
     page.get_by_role("button", name=button, exact=True).click()
     status = "Submitted" if button == "Submit" else "Draft"
     expect(page.get_by_text(f"Status: {status}", exact=True)).to_be_visible()
-    page.get_by_role("link", name="Back to round", exact=True).click()
+    page.get_by_role("link", name="Back to round", exact=True).last.click()
 
 
 def record_as(page, accounts, role, *results):
@@ -171,7 +171,7 @@ def test_coordinator_reviews_results_through_retest_and_close(
         expect(page.get_by_role("heading", name="Earlier builds")).to_have_count(0)
         expect(page.get_by_text("No results for this build yet.")).to_have_count(0)
 
-        page.get_by_role("link", name="Back to round", exact=True).click()
+        page.get_by_role("link", name="Back to round", exact=True).last.click()
         expect(page).to_have_url(round_url)
         page.get_by_role("link", name="Request a retest", exact=True).click()
         page.get_by_role("checkbox", name=RETESTED, exact=True).check()
@@ -181,7 +181,7 @@ def test_coordinator_reviews_results_through_retest_and_close(
         expect(page.get_by_text(SECOND, exact=True)).to_be_visible()
         expect_retested(page, browser_accounts)
 
-        page.get_by_role("link", name="Back to round", exact=True).click()
+        page.get_by_role("link", name="Back to round", exact=True).last.click()
         page.get_by_role("button", name="Close round", exact=True).click()
         expect(page.get_by_text("Round closed.", exact=True)).to_be_visible()
         open_results(page, "Closed")

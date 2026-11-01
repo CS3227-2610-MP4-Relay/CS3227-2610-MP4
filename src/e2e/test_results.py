@@ -319,7 +319,7 @@ def test_private_history_preserves_drafts_submissions_after_retest_and_close(
             page.get_by_role("heading", name="My results", exact=True)
         ).to_be_visible()
         expect(page.get_by_text("No results yet.", exact=True)).to_be_visible()
-        page.get_by_role("link", name="Back to round", exact=True).click()
+        page.get_by_role("link", name="Back to round", exact=True).last.click()
 
         for index, button, observation in (
             (0, "Save draft", "Synthetic original private draft"),
@@ -331,7 +331,7 @@ def test_private_history_preserves_drafts_submissions_after_retest_and_close(
             page.get_by_label("Outcome", exact=True).select_option("pass")
             page.get_by_label("Observation", exact=True).fill(observation)
             page.get_by_role("button", name=button, exact=True).click()
-            page.get_by_role("link", name="Back to round", exact=True).click()
+            page.get_by_role("link", name="Back to round", exact=True).last.click()
         page.get_by_role("link", name="My results", exact=True).click()
         history_url = page.url
 
@@ -396,14 +396,14 @@ def test_private_history_preserves_drafts_submissions_after_retest_and_close(
         check_history(original_rows)
 
         # Finish the original draft as Fail before the coordinator requests a fix.
-        page.get_by_role("link", name="Back to round", exact=True).click()
+        page.get_by_role("link", name="Back to round", exact=True).last.click()
         page.get_by_role("link", name="Record result", exact=True).first.click()
         page.get_by_label("Outcome", exact=True).select_option("fail")
         page.get_by_label("Observation", exact=True).fill("Synthetic original failure")
         page.get_by_role("button", name="Submit", exact=True).click()
         expect(page.get_by_text("Status: Submitted", exact=True)).to_be_visible()
         expect(page.get_by_text("Fail", exact=True)).to_be_visible()
-        page.get_by_role("link", name="Back to round", exact=True).click()
+        page.get_by_role("link", name="Back to round", exact=True).last.click()
         page.get_by_role("link", name="My results", exact=True).click()
         original_rows[0] = (
             "Synthetic selected case",
@@ -419,14 +419,14 @@ def test_private_history_preserves_drafts_submissions_after_retest_and_close(
         other.get_by_role("link", name="My results", exact=True).click()
         expect(other.get_by_text("No results yet.", exact=True)).to_be_visible()
         expect(other.locator("main section")).to_have_count(0)
-        other.get_by_role("link", name="Back to round", exact=True).click()
+        other.get_by_role("link", name="Back to round", exact=True).last.click()
         other.get_by_role("link", name="Record result", exact=True).first.click()
         other.get_by_label("Outcome", exact=True).select_option("pass")
         other.get_by_label("Observation", exact=True).fill(
             "Synthetic second tester secret"
         )
         other.get_by_role("button", name="Save draft", exact=True).click()
-        other.get_by_role("link", name="Back to round", exact=True).click()
+        other.get_by_role("link", name="Back to round", exact=True).last.click()
         other.get_by_role("link", name="My results", exact=True).click()
         expect(other.locator("main section")).to_have_count(1)
         expect(
@@ -441,14 +441,14 @@ def test_private_history_preserves_drafts_submissions_after_retest_and_close(
         coordinator.get_by_role("button", name="Request retest", exact=True).click()
         page.reload()
         check_history(original_rows)
-        page.get_by_role("link", name="Back to round", exact=True).click()
+        page.get_by_role("link", name="Back to round", exact=True).last.click()
         page.get_by_role("link", name="Record result", exact=True).nth(1).click()
         expect(page.get_by_text("Synthetic original", exact=True)).to_be_visible()
         expect(page.get_by_text("Status: Submitted", exact=True)).to_be_visible()
         expect(
             page.get_by_text("Synthetic original submission", exact=True)
         ).to_be_visible()
-        page.get_by_role("link", name="Back to round", exact=True).click()
+        page.get_by_role("link", name="Back to round", exact=True).last.click()
         page.get_by_role("link", name="Record result", exact=True).first.click()
         expect(page.get_by_text("Synthetic next", exact=True)).to_be_visible()
         expect(page.get_by_label("Outcome", exact=True)).to_have_value("")
@@ -456,7 +456,7 @@ def test_private_history_preserves_drafts_submissions_after_retest_and_close(
         page.get_by_label("Outcome", exact=True).select_option("pass")
         page.get_by_label("Observation", exact=True).fill("Synthetic next submission")
         page.get_by_role("button", name="Submit", exact=True).click()
-        page.get_by_role("link", name="Back to round", exact=True).click()
+        page.get_by_role("link", name="Back to round", exact=True).last.click()
         page.get_by_role("link", name="My results", exact=True).click()
         expected = [
             (
@@ -474,7 +474,7 @@ def test_private_history_preserves_drafts_submissions_after_retest_and_close(
 
         coordinator.get_by_role("button", name="Close round", exact=True).click()
         expect(coordinator.get_by_text("State: Closed", exact=True)).to_be_visible()
-        page.get_by_role("link", name="Back to round", exact=True).click()
+        page.get_by_role("link", name="Back to round", exact=True).last.click()
         expect(page.get_by_text("State: Closed", exact=True)).to_be_visible()
         page.get_by_role("link", name="My results", exact=True).click()
         expect(page).to_have_url(history_url)

@@ -103,7 +103,7 @@ def test_draft_round_page_has_the_publish_form_after_the_cases(coord_client, dra
     assert html.index("<h2>Test cases</h2>") < html.index("Synthetic case 1") < form
     assert form < html.index('<label for="id_label">Build label</label>')
     assert html.index('name="label"') < html.index("Publish round</button>")
-    assert html.index("Publish round</button>") < html.index("Coordinator home")
+    assert html.index("Publish round</button>") < html.rindex("Coordinator home")
     assert "<h2>Builds</h2>" not in html and "Current build" not in html
 
 

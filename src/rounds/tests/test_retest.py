@@ -204,7 +204,9 @@ def test_open_round_page_links_to_the_retest_page_under_the_builds_heading(
     coord_client, opened
 ):
     html = page(coord_client.get(detail(opened.pk)))
-    link = f'<p><a href="{retest_url(opened.pk)}">Request a retest</a></p>'
+    link = (
+        f'<p><a class="action" href="{retest_url(opened.pk)}">Request a retest</a></p>'
+    )
     assert html.count(link) == 1
     builds = html.index("<h2>Builds</h2>")
     assert html[builds + len("<h2>Builds</h2>") : html.index(link)].strip() == ""
