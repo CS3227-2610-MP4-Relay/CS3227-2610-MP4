@@ -1,4 +1,7 @@
-"""The test-drafting feature's transient text and strict reply parsing (RND-8)."""
+"""The test-drafting feature's transient text and strict reply parsing (RND-8).
+
+Its strict JSON loading, `load_reply`, is shared with the RES-4 feedback parser.
+"""
 
 import json
 import logging
@@ -16,6 +19,8 @@ from .gateway import REPLY_LIMIT
 logger = logging.getLogger(__name__)
 
 MAX_DRAFTS = 5
+# RND-8.3 fixes the selection at 1 to 5 criteria; ai/draft.html and the e2e
+# round test (src/e2e/test_rounds.py) repeat "1 to 5" in their own text.
 MAX_CRITERIA = 5
 # The RND-2 field limits, from the test case model.
 TITLE_LIMIT = Case._meta.get_field("title").max_length

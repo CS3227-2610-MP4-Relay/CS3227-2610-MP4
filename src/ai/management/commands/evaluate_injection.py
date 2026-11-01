@@ -35,7 +35,7 @@ class Command(BaseCommand):
                 options["live"]
                 and settings.SOC_LLM_LIVE
                 and re.fullmatch(r"[0-9a-f]{40}", options["revision"])
-                and (config := gateway.configured())
+                and (config := gateway._configured())
             ):
                 raise ValueError
             model = config[1]

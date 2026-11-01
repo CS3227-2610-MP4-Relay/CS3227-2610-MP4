@@ -459,7 +459,7 @@ def _reply(value):
 
 
 @sensitive_variables("api_key")
-def configured():
+def _configured():
     """Return the endpoint URL, model and API key, or None if any is unusable."""
     url = _endpoint()
     api_key = os.environ.get("SOC_LLM_API_KEY", "").strip()
@@ -475,7 +475,7 @@ def _transport(instructions, data, deadline):
     """Send one request without redirects or retries, returning a result."""
     if not settings.SOC_LLM_LIVE:
         return Refused("live-off")
-    config = configured()
+    config = _configured()
     if config is None:
         return Refused("not-configured")
     url, model, api_key = config

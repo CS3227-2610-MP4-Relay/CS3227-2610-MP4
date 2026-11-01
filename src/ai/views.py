@@ -29,7 +29,10 @@ def _posted_text(request, name, limit, *, title=False):
 
 @sensitive_variables()
 def _suggest(user, selected):
-    """Return one gateway call's drafts and error message (RND-8.1, 8.4-8.6)."""
+    """Return the drafts and error message for `selected`.
+
+    Calls the gateway at most once (RND-8.1, 8.4-8.6).
+    """
     labels = [f"C{index}" for index in range(1, len(selected) + 1)]
     text = [
         {"label": label, "text": drafting.clean(item.text).strip()}
