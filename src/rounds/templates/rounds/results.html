@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load rounds_text %}
+{% block title %}Results: {{ round.title|title_isolate }}{% endblock %}
+{% block content %}
+<h1>Results: {{ round.title|isolated_lines }}</h1>
+<p>State: {{ round.get_state_display }}</p>
+{% for case in cases %}<h2>{{ case.title|isolated_lines }}</h2>
+<h3>Linked acceptance criteria</h3>
+<ul>{% for criterion in case.criteria.all %}<li>{{ criterion.text|isolated_lines }}</li>{% endfor %}</ul>
+<h3>Current build</h3>
+<p>{{ case.current_build.label|isolated_lines }}</p>
+<h3>Results for this build</h3>
+{% for result in case.current_results %}{% if forloop.first %}<ul>{% endif %}
+<li>{% include "rounds/result_lines.html" %}</li>
+{% if forloop.last %}</ul>{% endif %}{% empty %}<p>No results for this build yet.</p>
+{% endfor %}
+{% if case.earlier_results %}<h3>Earlier builds</h3>
+<ul>{% for result in case.earlier_results %}
+<li>{% include "rounds/result_lines.html" with earlier=True %}</li>
+{% endfor %}</ul>
+{% endif %}{% endfor %}
+<p><a href="{% url 'rounds:detail' round.pk %}">Back to round</a></p>
+{% endblock %}

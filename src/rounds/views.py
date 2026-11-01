@@ -1,4 +1,4 @@
-"""The coordinator's round pages (RND-1 to 3, 5 and 6), under the action rules."""
+"""The coordinator's round pages (RND-1 to 6), under the action rules."""
 
 import logging
 from functools import wraps
@@ -6,6 +6,7 @@ from functools import wraps
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db import DatabaseError, transaction
+from django.db.models import F, Prefetch
 from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
@@ -16,7 +17,7 @@ from accounts.workspaces import workspace_records
 
 from . import services
 from .forms import CaseForm, CriterionForm, PublishForm, RetestForm, RoundForm
-from .models import Round
+from .models import Build, Criterion, Result, Round
 from .services import RoundLimitReached, create_round
 from .templatetags.rounds_text import retest_message
 
@@ -291,3 +292,45 @@ def retest_round(request, round_id):
         "round": round_,
     }
     return render(request, "rounds/round_form.html", context)
+
+
+@coordinator_view(["GET"])
+def results_page(request, round_id):
+    """List an Open or Closed round's submitted results by case and build (RND-4).
+
+    Only rows whose case and covering build are in the round and whose tester
+    is in its workspace show; everything is read before rendering.
+    """
+    round_ = own_round(request, round_id)
+    if round_.state == Round.State.DRAFT:
+        return state_conflict(request, round_)
+    cases = list(
+        round_.cases.prefetch_related(
+            Prefetch("criteria", queryset=Criterion.objects.filter(round=round_)),
+            Prefetch(
+                "builds", queryset=Build.objects.filter(round=round_).order_by("-id")
+            ),
+        )
+    )
+    submitted = (
+        Result.objects.filter(
+            submitted_at__isnull=False,
+            case__round=round_,
+            build__round=round_,
+            build__cases=F("case_id"),
+            tester__workspace=round_.workspace_id,
+        )
+        .select_related("tester", "build")
+        .order_by("-build_id", "-submitted_at", "-id")
+    )
+    by_case = {}
+    for result in submitted:
+        by_case.setdefault(result.case_id, []).append(result)
+    for case in cases:
+        case.current_build = next(iter(case.builds.all()), None)
+        current = getattr(case.current_build, "pk", None)
+        rows = by_case.get(case.pk, [])
+        case.current_results = [row for row in rows if row.build_id == current]
+        case.earlier_results = [row for row in rows if row.build_id != current]
+    context = {"round": round_, "cases": cases}
+    return render(request, "rounds/results.html", context)

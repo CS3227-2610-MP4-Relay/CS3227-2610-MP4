@@ -30,7 +30,8 @@ def test_every_rounds_route_is_never_cached(coordinator, make_round):
         if pattern.name == "close":
             # Only an Open round closes (RND-6); the Draft round stays Draft.
             kwargs["round_id"] = opened.pk
-        if pattern.name == "retest":
+        if pattern.name in ("retest", "results"):
+            # The results page reads only an Open or Closed round (RND-4).
             kwargs["round_id"] = retested.pk
         url = reverse(f"rounds:{pattern.name}", kwargs=kwargs)
         response = client.get(url)
@@ -45,10 +46,10 @@ def test_every_rounds_route_is_never_cached(coordinator, make_round):
             assert "Enter 1 to 100 characters." in response.content.decode()
         if pattern.name == "close":
             assert response.status_code == 302, url
-        if pattern.name == "retest":
+        if pattern.name in ("retest", "results"):
             assert response.status_code == 200, url
     names = {pattern.name for pattern in rounds_urls.urlpatterns}
-    assert {"close", "retest"} <= names
+    assert {"close", "retest", "results"} <= names
 
 
 def test_every_ai_route_is_never_cached(coordinator, make_round):

@@ -481,10 +481,11 @@ BOTH, POST_ONLY, GET_ONLY = (
     frozenset({"POST"}),
     frozenset({"GET"}),
 )
-ANY_STATE, DRAFT_ONLY, OPEN_ONLY = (
+ANY_STATE, DRAFT_ONLY, OPEN_ONLY, OPEN_OR_CLOSED = (
     frozenset(STATES),
     frozenset({DRAFT}),
     frozenset({OPEN}),
+    frozenset({OPEN, CLOSED}),
 )
 R, RC, RK = ("round_id",), ("round_id", "criterion_id"), ("round_id", "case_id")
 RND1, RND2, RND8 = ("RND-1.6", "RND-1.7"), ("RND-2.8",), ("RND-8.7",)
@@ -507,6 +508,9 @@ ROUNDS = {
     "rounds:case-edit": RoundsRoute(BOTH, DRAFT_ONLY, RK, RND2, case),
     "rounds:case-delete": RoundsRoute(POST_ONLY, DRAFT_ONLY, RK, RND2),
     "rounds:publish": RoundsRoute(POST_ONLY, DRAFT_ONLY, R, ("RND-3.6",), publish),
+    "rounds:results": RoundsRoute(
+        GET_ONLY, OPEN_OR_CLOSED, R, ("RND-4.6",), shows={"GET": ("Results: ",)}
+    ),
     "rounds:retest": RoundsRoute(BOTH, OPEN_ONLY, R, ("RND-5.8",), retest),
     "rounds:close": RoundsRoute(POST_ONLY, OPEN_ONLY, R, ("RND-6.3", "RND-6.5")),
     # Fixed test settings disable live calls, so valid drafting is unavailable.
@@ -1255,6 +1259,26 @@ def test_peer_mark_shows_on_the_peers_own_entry_page():
     response = peer.get(url(TESTER_RESULT, entry.own))
     assert response.status_code == 200
     assert f"Peer {PEER_MARK}" in response.content.decode()
+
+
+@pytest.mark.ac("RND-4.4", "RND-4.6")
+@pytest.mark.parametrize("state", [OPEN, CLOSED])
+def test_a_peers_draft_stays_off_the_coordinators_results_page(state):
+    # The peer's row is a draft, so coord_a's results page must not show it;
+    # once submitted it shows, so the PEER_MARK check here is not vacuous.
+    entry = result_world(state)
+    world = entry.world
+    client = world.clients[COORD_A]
+    results = url("rounds:results", {"round_id": world.target.round.pk})
+    before = snapshot(world)
+    response = client.get(results)
+    assert response.status_code == 200
+    assert PEER_MARK not in response.content.decode().lower()
+    assert snapshot(world) == before
+    Result.objects.filter(tester=world.users["peer"]).update(
+        submitted_at=timezone.now()
+    )
+    assert f"Peer {PEER_MARK}" in client.get(results).content.decode()
 
 
 @dataclass(frozen=True)
