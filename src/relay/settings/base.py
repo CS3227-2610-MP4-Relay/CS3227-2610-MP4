@@ -42,7 +42,8 @@ USE_TZ = True
 
 AUTH_USER_MODEL = "accounts.User"
 CSRF_FAILURE_VIEW = "accounts.views.csrf_failure"
-# Database sessions; sign-in also sets an absolute expiry 8 hours ahead (ACC-1.6).
+# Database sessions; sign-in also sets an absolute expiry SESSION_COOKIE_AGE ahead
+# (ACC-1.6), so the 8-hour lifetime is defined only here.
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 SESSION_COOKIE_AGE = 8 * 60 * 60
 SESSION_COOKIE_HTTPONLY = True

@@ -1,6 +1,6 @@
-"""Sign-in, sign-out, the coordinator home (ACC-1), demo creation (ACC-2), limits.
+"""Sign-in, sign-out, the coordinator home (ACC-1) and demo creation (ACC-2).
 
-The abuse limits are ACC-3; the tester home is `rounds.tester.home`.
+Both apply the ACC-3 abuse limits; the tester home is `rounds.tester.home`.
 """
 
 import logging
