@@ -1,8 +1,8 @@
 # Relay
 
-Relay is a beta-testing portal for small software teams: Test Coordinators prepare test rounds, and Beta Testers record observations and retest fixes. Each role will have an AI feature.
+Relay is a beta-testing portal for small software teams: Test Coordinators prepare test rounds, and Beta Testers record observations and retest fixes. Each role has an AI feature: coordinators can draft test cases, and testers can get feedback on a draft observation.
 
-Relay has a local Django app with demo workspaces that start with a sample draft round, sign-in by role, abuse limits on sign-in and demo creation, test rounds with acceptance criteria and test cases that a coordinator can publish on a named build, retest on new builds and close, an AI test-drafting page backed by the SoC LLM gateway ([setup and pending live validation](docs/DeveloperGuide.md#soc-llm)), and isolated PostgreSQL tests; tester workflows and application hosting remain planned. See the [Developer Guide](docs/DeveloperGuide.md) to run it.
+Relay is a local Django app. The [User Guide](docs/UserGuide.md) describes what is built, and the [Developer Guide](docs/DeveloperGuide.md) shows how to run it. The AI features' [live evaluation](docs/DeveloperGuide.md#soc-llm) and public hosting are still pending.
 
 - [Product website](https://cs3227-2610-mp4-relay.github.io/CS3227-2610-MP4/)
 - [User Guide](docs/UserGuide.md)
