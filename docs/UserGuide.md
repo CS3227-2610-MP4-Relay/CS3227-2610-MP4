@@ -95,7 +95,7 @@ Only your own results appear. This page is read-only, including drafts. Reload t
 
 ## Test rounds
 
-Only a Test Coordinator can prepare, publish, retest and close test rounds. A new round is in the **Draft** state; [publishing](#publish-a-round) it makes it **Open**, and [closing](#close-a-round) it makes it **Closed**. Beta Testers [view available tests](#view-available-tests) from their own home page.
+Only a Test Coordinator can prepare, publish, review, retest and close test rounds. A new round is in the **Draft** state; [publishing](#publish-a-round) it makes it **Open**, and [closing](#close-a-round) it makes it **Closed**. Beta Testers [view available tests](#view-available-tests) from their own home page.
 
 **Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". A new demo workspace starts with its [sample round](#create-a-demo-workspace), so its list is not empty; "No rounds yet." appears only for a workspace with no rounds.
 
@@ -162,7 +162,7 @@ A build label has 1 to 100 characters; spaces or line breaks at either end are r
 
 ### An Open round
 
-An Open round's page shows "State: Open" and the criteria and cases exactly as they were when it was published. Its title, criteria and cases can no longer be changed, so the page has no **Edit round** link, no add, edit or delete links and buttons, and no **Publish round** button. You can still [request a retest](#request-a-retest) or [close](#close-a-round) the round.
+An Open round's page shows "State: Open" and the criteria and cases exactly as they were when it was published. Its title, criteria and cases can no longer be changed, so the page has no **Edit round** link, no add, edit or delete links and buttons, and no **Publish round** button. You can still [review results](#review-results), [request a retest](#request-a-retest) or [close](#close-a-round) the round.
 
 Under each case's linked criteria, **Current build** shows the label of the build the case is tested on. After the test cases, a **Builds** heading lists the round's builds, oldest first: each build's label, then **Covered test cases** with the titles of the cases it covers. A newly published round has one build, covering every case; each [retest](#request-a-retest) adds another.
 
@@ -194,7 +194,18 @@ Closing ends testing on an Open round and makes it read-only. While a round is O
 
 The round page shows "Round closed." and "State: Closed". A Closed round cannot be reopened or returned to Draft.
 
-A Closed round's page still shows its criteria, its cases with their linked criteria and **Current build**, and the **Builds** list. It has no links or buttons for changing the round, no **Request a retest** link and no **Close round** button.
+A Closed round's page still shows its criteria, its cases with their linked criteria and **Current build**, and the **Builds** list. It has no links or buttons for changing the round, no **Request a retest** link and no **Close round** button, but you can still [review results](#review-results).
+
+### Review results
+
+While a round is Open or Closed, its round page has a **Review results** link directly under its state. A Draft round has no results and no link.
+
+1. On the round page, choose **Review results**.
+2. The page is headed "Results: " followed by the round's title, then "State: Open" or "State: Closed". Each test case follows in the order it was added, with its title, **Linked acceptance criteria**, **Current build** and **Results for this build**.
+3. Each submitted result shows "Tester:" with the Beta Tester's username, "Outcome: Pass" or "Outcome: Fail", "Observation:" with the observation, or "Observation: No observation." when it is empty, and "Submitted at:" with the time in UTC. The newest submission comes first. A case with no submitted result for its current build says "No results for this build yet."
+4. Choose **Back to round** to return to the round page.
+
+Only submitted results appear; a Beta Tester's saved draft stays private to them. After a [retest](#request-a-retest), a retested case's earlier results move under **Earlier builds**, newest build first, each starting with "Build:" and its build label, while its new build starts with "No results for this build yet." until someone submits. Results stay listed after the round is [closed](#close-a-round). The page is read-only: it cannot record, change or delete a result. Reload it to see results submitted since you opened it. If reading results fails, the page says "Relay is temporarily unavailable. Try again later."
 
 ### Draft test cases with AI
 
