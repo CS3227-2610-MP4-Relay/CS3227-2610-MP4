@@ -15,11 +15,15 @@ are compared case-insensitively, so a page that leaks one workspace's data to
 the other, to a visitor, or another round's data to a round's page, is caught.
 Each mark has a hyphen, which no CSRF token or generated password contains, so
 a random token cannot match a mark by chance.
+
+Every request also counts its LLM gateway calls: test settings turn live calls
+off, so a call writes nothing and only this count can see it.
 """
 
 import re
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from unittest import mock
 
 import pytest
 from django.conf import settings
@@ -29,6 +33,7 @@ from django.urls import URLResolver, get_resolver, reverse
 from django.utils import timezone
 
 from accounts.models import User, Workspace
+from ai import gateway
 from ai.models import CallRecord, CallSlot
 from rounds import services
 from rounds.models import (
@@ -43,6 +48,18 @@ from rounds.models import (
 from rounds.tests.conftest import DENIED, NOT_FOUND, PASSWORD, csrf_token, signed_in
 
 pytestmark = pytest.mark.django_db
+
+# The real gateway entry point, wrapped to count calls; it still refuses.
+GATEWAY = mock.Mock(wraps=gateway.complete)
+
+
+@pytest.fixture(autouse=True)
+def count_gateway_calls():
+    """Route every gateway call of the matrix's requests through `GATEWAY`."""
+    GATEWAY.reset_mock()
+    with mock.patch.object(gateway, "complete", GATEWAY):
+        yield
+
 
 A_MARK, B_MARK, SIBLING_MARK, PEER_MARK = "mtx-a", "mtx-b", "mtx-s", "mtx-p"
 ANON, COORD_A, TESTER_A, COORD_B = "anonymous", "coord_a", "tester_a", "coord_b"
@@ -319,6 +336,7 @@ class Expect:
     scoped: bool = False
     message: str = ""
     shows: tuple = ()
+    calls: int = 0
 
 
 def check(world, caller, response, expect, before):
@@ -328,7 +346,7 @@ def check(world, caller, response, expect, before):
     which must then be in the caller's workspace. `scoped` marks a page about
     the target round, which must show nothing of its sibling round. A 409's
     `message` replaces the round state's conflict text. `shows` lists texts the
-    page must contain.
+    page must contain, and `calls` the gateway calls the request makes.
     """
     body = response.content.decode()
     status, outcome = response.status_code, expect.outcome
@@ -379,6 +397,7 @@ def check(world, caller, response, expect, before):
     if expect.scoped:
         hidden.add(SIBLING_MARK)
     assert not [mark for mark in hidden if mark in body.lower()], "leaked"
+    assert GATEWAY.call_count == expect.calls, f"{GATEWAY.call_count} gateway calls"
     after = snapshot(world)
     if outcome in CHANGES:
         assert after["all"] != before["all"], "changed nothing"
@@ -409,6 +428,7 @@ def exchange(world, caller, kind, url, data, expect, failures):
     """Send one request and check it, recording any failure."""
     with failures.under((url, caller, kind.label, expect.outcome)):
         before = snapshot(world)
+        GATEWAY.reset_mock()
         response = send(world.clients[caller], kind, url, data)
         check(world, caller, response, expect, before)
 
@@ -432,6 +452,7 @@ class RoundsRoute:
     payload: object = None
     posted: str = DONE
     shows: dict = field(default_factory=dict)
+    calls_gateway: bool = False
 
     def data(self, world):
         """A valid payload, so a wrongly allowed request would change data."""
@@ -522,6 +543,7 @@ ROUNDS = {
         selection,
         RENDERED,
         {"GET": (DRAFTING_DISCLOSURE,), "POST": (DRAFTING_DISCLOSURE, UNAVAILABLE)},
+        calls_gateway=True,
     ),
     "ai:use-draft": RoundsRoute(
         POST_ONLY,
@@ -562,8 +584,16 @@ def rounds_expect(name, world, caller, kind, state, *, names_a_record=True):
     outcome = rounds_outcome(route, caller, kind, state, names_a_record=names_a_record)
     done_at = f"/coordinator/rounds/{world.target.round.pk}/" if route.slots else ""
     shows = route.shows.get(kind.method, ()) if outcome in (OK, RENDERED) else ()
+    # Only a POST that passes every check reaches the gateway.
+    calls = int(route.calls_gateway and kind.method == "POST" and outcome == RENDERED)
     return Expect(
-        outcome, state, route.methods, done_at, scoped=bool(route.slots), shows=shows
+        outcome,
+        state,
+        route.methods,
+        done_at,
+        scoped=bool(route.slots),
+        shows=shows,
+        calls=calls,
     )
 
 
@@ -700,8 +730,9 @@ RESULT_SLOTS = ("round_id", "case_id", "build_id")
 class Situation:
     """tester_a's entry before the requests, and the methods it refuses with 409.
 
-    `stale` retests the own case so its build is formerly current; `submitted`
-    stores tester_a's submitted row on that build.
+    `stale` retests the own case, so the own build is formerly current;
+    `submitted` stores tester_a's submitted row on the own build, formerly
+    current when `stale`.
     """
 
     label: str
@@ -1248,6 +1279,8 @@ def test_feedback_access_matrix(caller, state, situation):
                 expected.message = FEEDBACK_REFUSALS[row]
             else:
                 expected.outcome = OK
+                # Only a POST that passes every check reaches the gateway.
+                expected.calls = int(kind.method == "POST")
         exchange(world, caller, kind, target, {}, expected, failures)
     failures.assert_none()
 
