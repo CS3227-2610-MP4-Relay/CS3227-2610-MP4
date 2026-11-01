@@ -289,6 +289,28 @@ def test_an_empty_observation_shows_no_observation(coord_client, review, tester)
     assert "<p>Observation: No observation.</p>" in html
 
 
+@pytest.mark.ac("RND-4.2")
+@pytest.mark.parametrize("earlier", ["none", "draft"])
+def test_a_retested_case_without_earlier_submissions_has_no_earlier_builds(
+    coord_client, review, tester, earlier
+):
+    if earlier == "draft":
+        Result.objects.create(
+            tester=tester,
+            case=review.case,
+            build=review.build,
+            outcome="pass",
+            observation="Synthetic earlier draft",
+        )
+    review.retest("Synthetic 2.0", review.case)
+    review.retest("Synthetic 3.0", review.case, review.other_case)
+    html = page(coord_client.get(results_url(review.round.pk)))
+    for title in ("Synthetic case A", "Synthetic case B"):
+        part = section(html, title, "<h2>" if title.endswith("A") else None)
+        assert f"<h3>Results for this build</h3>\n<p>{EMPTY}</p>" in part
+    assert "Earlier builds" not in html and "Synthetic earlier draft" not in html
+
+
 # RND-4.3
 
 
@@ -351,9 +373,12 @@ def test_drafts_and_rows_outside_the_rounds_covering_builds_never_appear(
     )
     other = Review(make_round, "Synthetic other round")
     foreign = Review(lambda title: make_round(title, owner=other_workspace))
-    # The link table does not tie a covered case to its build's round, so these
-    # rows can exist only if stored outside the services.
+    # The link tables do not tie a covered case or a linked criterion to the
+    # case's round, so these rows can exist only if stored outside the services.
+    Build.objects.filter(pk=other.build.pk).update(label="Synthetic forged build")
     BuildCase.objects.create(build=other.build, case=review.case)
+    alien = Criterion.objects.create(round=foreign.round, text="Synthetic alien")
+    CaseCriterion.objects.create(case=review.case, criterion=alien)
     submit(tester, review.case, other.build, T1, observation="Synthetic other build")
     uncovered = review.retest("Synthetic 2.0", review.other_case)
     submit(tester, review.case, uncovered, T1, observation="Synthetic uncovered")
@@ -373,7 +398,14 @@ def test_drafts_and_rows_outside_the_rounds_covering_builds_never_appear(
     )
     html = page(response)
     assert "Synthetic shown" in html and second.username in html
+    # The valid result lists under the case's own current build, which is
+    # this round's build, so a foreign covering build changes nothing.
+    first = section(html, "Synthetic case A", "<h2>")
+    assert f"<h3>Current build</h3>\n<p>{span('Synthetic 1.0')}</p>" in first
+    assert "Synthetic shown" in first and "Earlier builds" not in first
     for hidden in (
+        "Synthetic forged build",
+        "Synthetic alien",
         "Synthetic draft",
         "Synthetic other build",
         "Synthetic uncovered",
@@ -401,9 +433,7 @@ def test_the_page_offers_no_controls_and_changes_nothing(coord_client, review, t
 
 
 @pytest.mark.ac("RND-4.4")
-def test_committed_changes_show_on_the_next_request(
-    coord_client, review, tester, second_tester
-):
+def test_committed_changes_show_on_the_next_request(coord_client, review, tester):
     url = results_url(review.round.pk)
     assert "Synthetic later" not in page(coord_client.get(url))
     submit(tester, review.case, review.build, T1, observation="Synthetic later")
@@ -454,6 +484,8 @@ def test_user_text_is_escaped_and_each_line_isolated(
         text, PASSWORD, workspace=workspace, role="tester"
     )
     submit(author, review.case, review.build, T1, "fail", text)
+    # Case A moves to a plain build, so its result shows "Build: <text>".
+    review.retest("Synthetic plain build", review.case)
     response = coord_client.get(results_url(review.round.pk))
     html = page(response)
     lines = (
@@ -461,9 +493,11 @@ def test_user_text_is_escaped_and_each_line_isolated(
         '<span dir="auto">Synthetic line\u200b</span>'
     )
     # Heading; case A's title; criterion one under case A and under case B;
-    # criterion two; case A's and case B's current build; username; observation.
+    # criterion two; case B's current build; the earlier result's build,
+    # username and observation.
     assert html.count(lines) == 9
     assert f"<h1>Results: {lines}</h1>" in html
+    assert f"<p>Build: {lines}</p>" in html
     assert f"<p>Tester: {lines}</p>" in html
     assert f"<p>Observation: {lines}</p>" in html
     assert SCRIPT_TAG not in html and IMG_TAG not in html
@@ -583,7 +617,7 @@ def test_successful_page_is_never_cached(coord_client, review):
     ["lazy-user", "lookup", "cases", "criteria", "builds", "results", "render"],
 )
 def test_storage_failures_give_the_uncached_503_without_results(
-    coordinator, review, tester, failure
+    coordinator, review, tester, failure, caplog
 ):
     submit(tester, review.case, review.build, T1, observation="Synthetic secret")
     path = results_url(review.round.pk)
@@ -628,5 +662,7 @@ def test_storage_failures_give_the_uncached_503_without_results(
     assert UNAVAILABLE in html
     for partial in ("Synthetic secret", "Synthetic case", "Synthetic review round"):
         assert partial not in html
+    assert "Synthetic secret" not in caplog.text
+    assert "A round request failed in storage." in caplog.text
     no_store(response)
     assert snapshot() == before
