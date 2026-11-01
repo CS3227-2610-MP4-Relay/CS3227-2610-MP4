@@ -1,11 +1,13 @@
-"""Form fields for the two RND-8 drafting routes."""
+"""The criteria selection on the RND-8 drafting page."""
 
 from django import forms
 
+from rounds import services
+from rounds.forms import RecordForm
 from rounds.models import Criterion
 
 
-class DraftSelectForm(forms.Form):
+class DraftSelectForm(RecordForm):
     """The round's criteria to draft from, checked in creation order."""
 
     criteria = forms.ModelMultipleChoiceField(
@@ -13,8 +15,8 @@ class DraftSelectForm(forms.Form):
         label="Acceptance criteria to draft from",
         widget=forms.CheckboxSelectMultiple,
         required=False,
+        error_messages={
+            "invalid_choice": services.FOREIGN,
+            "invalid_pk_value": services.FOREIGN,
+        },
     )
-
-    def __init__(self, round_, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["criteria"].queryset = round_.criteria.all()

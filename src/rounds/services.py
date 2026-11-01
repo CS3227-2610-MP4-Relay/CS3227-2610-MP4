@@ -37,6 +37,7 @@ def create_round(workspace, title):
 
 CRITERION_LIMIT = 20
 CASE_LIMIT = 30
+CASE_LIMIT_MESSAGE = f"This round has reached its limit of {CASE_LIMIT} test cases."
 NO_LINK = "Link at least one acceptance criterion."
 FOREIGN = "Choose criteria from this round."
 
@@ -94,8 +95,7 @@ def _link(case, chosen):
 def add_case(round_, fields, criterion_ids):
     """Add a case to the locked `round_`, linked to its chosen criteria."""
     if round_.cases.count() >= CASE_LIMIT:
-        message = f"This round has reached its limit of {CASE_LIMIT} test cases."
-        raise Refused(message, "title")
+        raise Refused(CASE_LIMIT_MESSAGE, "title")
     chosen = _round_criteria(round_, criterion_ids)
     case = Case.objects.create(round=round_, **fields)
     _link(case, chosen)

@@ -512,7 +512,7 @@ def test_error_reports_hide_covered_criterion_text(coord_client, round_):
         for frame in frames
         if Path(frame["filename"]).as_posix().endswith("ai/views.py")
     ]
-    assert [frame["function"] for frame in views] == ["draft_page"]
+    assert [frame["function"] for frame in views] == ["draft_page", "_suggest"]
     assert "Secret criterion text" not in repr([frame["vars"] for frame in views])
 
 

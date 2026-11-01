@@ -14,6 +14,7 @@ from .gateway import REPLY_LIMIT
 logger = logging.getLogger(__name__)
 
 MAX_DRAFTS = 5
+MAX_CRITERIA = 5
 # The RND-2 field limits, from the test case model.
 TITLE_LIMIT = Case._meta.get_field("title").max_length
 STEPS_LIMIT = Case._meta.get_field("steps").max_length
@@ -53,8 +54,7 @@ NO_DRAFTS = (
     "No test cases were suggested for these criteria. You can still add test "
     "cases yourself."
 )
-SELECT = "Select 1 to 5 acceptance criteria."
-FOREIGN = "Choose criteria from this round."
+SELECT = f"Select 1 to {MAX_CRITERIA} acceptance criteria."
 
 # Inclusive code point ranges cleaning rule 3 removes (keeping ZWNJ and ZWJ):
 # Unicode 16.0.0's Default_Ignorable_Code_Point property from its
