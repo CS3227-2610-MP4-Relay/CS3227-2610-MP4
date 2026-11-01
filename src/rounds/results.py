@@ -1,4 +1,4 @@
-"""Round reads for the tester and coordinator result pages, and private entry.
+"""Round reads for the tester pages and the coordinator results page, and entry.
 
 Result entry and persistence run under the shared round lock (RES-2).
 """
