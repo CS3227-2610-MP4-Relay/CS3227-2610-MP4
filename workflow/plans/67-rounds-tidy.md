@@ -15,11 +15,12 @@ Remove duplicated round reads and stale text in `src/rounds/` without changing a
 
 ## Commit checkpoints
 
-1. **Plan:** this file. Checks: readback, `git diff --check`, builder scope.
-2. **Result entry and tester reads (F9, F10, F11, F15)** — `refactor:`; `src/rounds/{results,tester,views}.py`, the one `test_history.py` patch target. Guards: `src/rounds/tests/test_{results,result_services,tester,history,review,routes}.py`, `src/relay/tests/test_access_matrix.py`, `src/ai/tests/test_feedback_views.py`, e2e `test_results.py`, `test_review.py`, `test_tester.py`.
-3. **Coordinator views, forms, services docstrings (F12, F14, F16)** — `refactor:`; `src/rounds/{views,forms,result_forms,services}.py`. Guards: `src/rounds/tests/test_{views,records,forms,retest,publish,close,results,routes}.py`, e2e `test_rounds.py`, `test_round_lifecycle.py`.
+1. [x] **Plan** (`68af695`): this file. Checks: readback, `git diff --check`, builder scope.
+2. [x] **Result entry and tester reads (F9, F10, F11, F15)** (`ab51510`) — `refactor:`; `src/rounds/{results,tester,views}.py`, the one `test_history.py` patch target, two template assertions in `test_results.py`. Guards: `src/rounds/tests/test_{results,result_services,tester,history,review,routes}.py`, `src/relay/tests/test_access_matrix.py`, `src/ai/tests/test_feedback_views.py`, e2e `test_results.py`, `test_review.py`, `test_tester.py`.
+3. [x] **Coordinator views, forms, services docstrings (F12, F14, F16)** — `refactor:`; `src/rounds/{views,forms,result_forms,services}.py`. Guards: `src/rounds/tests/test_{views,records,forms,retest,publish,close,results,routes}.py`, e2e `test_rounds.py`, `test_round_lifecycle.py`.
+4. [ ] **Final review and draft PR:** coordinator; verifier and security review of the integrated candidate.
 
-Each implementation checkpoint: ruff check/format, focused tests, collection compared with the 2703-test baseline, then mutations restored from a copy and confirmed with `git diff --exit-code` on the mutated file.
+Each implementation checkpoint: ruff check/format, focused tests, collection compared with the 2703-test baseline, then mutations restored from a copy and confirmed by matching the candidate's file hashes (the candidate is uncommitted while mutating).
 
 ## Mutations (each must fail a guard, then be restored)
 
@@ -30,8 +31,15 @@ Each implementation checkpoint: ruff check/format, focused tests, collection com
 - F14: pass the round to new/edit round pages (Coordinator home link).
 - F16: change one model-read limit by one (boundary tests).
 
+## Evidence
+
+- Existing passing tests are the regression evidence; a refactor has no missing behaviour to show red, so mutations stand in for red evidence. Collection matched the 2703-test baseline after each checkpoint; ruff check/format passed.
+- **Checkpoint 2:** guards 1030 passed; e2e `test_results`, `test_review`, `test_tester`, `test_feedback` 7 passed. Mutations caught: criteria or builds unscoped (`test_tester.py::test_malformed_related_links_do_not_disclose_other_rounds`), builds oldest first (`test_results.py::test_links_follow_each_current_build_and_disappear_on_close`), Draft available (`test_results.py::test_missing_foreign_and_cross_round_ids_are_fixed_404[get-draft]`).
+- **Test addition:** both F9 mutations first survived all 1030 guards, because `tester_result.html`'s conflict branch renders the same title and heading as `conflict.html`, so no test pinned the template TECHNICAL-SPEC requires for state conflicts. `test_conflicts_precede_invalid_form_and_preserve_rows` now also asserts the template on its POST and GET (conflict page for Closed, entry page for stale/submitted). It passed on the pre-refactor code, so it pins existing, specified behaviour; with it, both F9 mutations fail. No existing assertion changed.
+- **Checkpoint 3:** guards (rounds view/form/record/lifecycle/service tests, `src/ai/tests`, e2e `test_rounds`, `test_round_lifecycle`, `test_drafting`) 1256 passed. Mutations caught: edit-round GET or new round given a round (`test_views.py` Coordinator home link), record or retest page without its round (`test_records.py`, `test_retest.py` Back to round link), each of the seven model-read limits off by one (`test_views`, `test_records`, `test_retest`, `test_results` boundary tests). F12 is docstrings only. `form_page` takes no `**extra`: no rounds caller needs one.
+- Gap, not changed: no test checks the Coordinator home link on an invalid edit-round POST re-render (mutation survived); that call is unchanged by this slice.
+
 ## Status and next steps
 
-- Existing passing tests are the regression evidence; a refactor has no missing behaviour to show red, so mutations stand in for red evidence.
-- Database tests wait for the coordinator's go-ahead (shared test database). Full verification runs on the final candidate.
+- Full verification of the integrated candidate is recorded in the builder's checkpoint-3 handoff; the coordinator owns review and the draft PR.
 - Open: `close_round` not catching `RoundNotOpen` remains a human decision outside this slice.
