@@ -17,9 +17,10 @@ Remove duplicated checks, constants and parsing helpers in `src/ai/` without cha
 
 ## Commit checkpoints
 
-1. **Plan:** this file. Checks: readback, `git diff --check`, builder scope.
-2. **Views and forms (F1-F4, F13)** — `refactor:`; `src/ai/{views,forms,drafting,__init__,apps}.py`, `src/rounds/services.py` (one constant), the one `test_views.py` frame assertion. Guards: `src/ai/tests/test_views.py`, `src/rounds/tests/{test_routes,test_records,test_record_services}.py`, `src/relay/tests/test_access_matrix.py`, e2e `test_drafting.py`.
-3. **Parsers, gateway, command (F5-F8)** — `refactor:`; `src/ai/{drafting,feedback,gateway}.py`, `src/ai/management/commands/evaluate_injection.py`, new code cases in `test_drafting.py`/`test_feedback.py`. Guards: `src/ai/tests/{test_drafting,test_feedback,test_feedback_views,test_gateway,test_transport,test_evaluation,test_evaluation_command}.py`, e2e `test_feedback.py`.
+1. [x] **Plan:** this file (`85d5c4c`). Checks: readback, `git diff --check`, builder scope.
+2. [x] **Views and forms (F1-F4, F13)** (`32a5359`) — `refactor:`; `src/ai/{views,forms,drafting,__init__,apps}.py`, `src/rounds/services.py` (one constant), the one `test_views.py` frame assertion. Guards: `src/ai/tests/test_views.py`, `src/rounds/tests/{test_routes,test_records,test_record_services}.py`, `src/relay/tests/test_access_matrix.py`, e2e `test_drafting.py`.
+3. [x] **Parsers, gateway, command (F5-F8)** — `refactor:`; `src/ai/{drafting,feedback,gateway}.py`, `src/ai/management/commands/evaluate_injection.py`, new code cases in `test_drafting.py`/`test_feedback.py`. Guards: `src/ai/tests/{test_drafting,test_feedback,test_feedback_views,test_gateway,test_transport,test_evaluation,test_evaluation_command}.py`, e2e `test_feedback.py`.
+4. [ ] **Review and PR:** independent review of the final candidate, then the coordinator marks the draft PR ready.
 
 Each implementation checkpoint: ruff check/format, focused tests, collection compared with the 2703-test baseline, then the mutations below, restored from a copy and confirmed with `cmp`.
 
@@ -31,9 +32,13 @@ Each implementation checkpoint: ruff check/format, focused tests, collection com
 - F4: remove `_suggest`'s `@sensitive_variables()` (frame test); sort covered criteria in reverse (RND-8.1 order test).
 - F5: let the key hook accept repeats, then make the constant hook return the value (code cases).
 - F6: drop `Cs` from `clean` (`test_clean_removes_null_and_surrogates`).
-- F7: drop the key's printable check in `configured()` (gateway and command not-configured tests).
+- F7: drop the key's printable check in `configured()` (gateway and command not-configured tests); let the command pass a missing configuration (preflight test).
+- F8: map the catch-all to another code (transport exception tests).
 
 ## Status and next steps
 
 - Existing passing tests are the regression evidence; a refactor has no missing behaviour to show red, so mutations stand in for red evidence.
-- Database tests wait for the coordinator's go-ahead (shared test database). Full verification runs on the final candidate.
+- Checkpoint 2: guards 946 passed (e2e included); all 8 mutations failed a guard and were restored.
+- Checkpoint 3: guards 588 passed (e2e included); 7 new code cases (2 drafting, 5 feedback; collection 2710). Mutations F5 (repeat accepted, constant accepted, `repeated-key` reported as `json`), F6 (both), F7 (both) and F8 failed a guard and were restored. Removing `load_reply`'s `@sensitive_variables()` fails no test: that marking is added coverage (the old drafting parser had none), not a pinned control.
+- Full verification on the integrated candidate: `ruff check .` and `ruff format --check .` clean; `pytest` 2710 passed, 231 subtests passed.
+- Next: independent review, then the PR (item 4).
