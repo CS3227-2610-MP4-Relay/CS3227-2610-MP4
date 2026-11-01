@@ -7,6 +7,7 @@ from .forms import (
     DIRECTION_MESSAGE,
     RoundTextField,
     has_visible_character,
+    limit,
     text_area,
 )
 from .models import Result
@@ -16,8 +17,9 @@ class ObservationField(RoundTextField):
     """Normalize round text, leaving optional/visible checks to the outcome."""
 
     def __init__(self):
-        super().__init__(max_length=2000, required=False, widget=text_area())
-        self.error_messages["max_length"] = "Enter at most 2000 characters."
+        most = limit(Result, "observation")
+        super().__init__(max_length=most, required=False, widget=text_area())
+        self.error_messages["max_length"] = f"Enter at most {most} characters."
 
     def clean(self, value):
         """Keep normalization, length and NUL validation; allow empty Pass."""

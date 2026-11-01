@@ -42,7 +42,7 @@ FOREIGN = "Choose criteria from this round."
 
 
 class Refused(Exception):
-    """A criterion or case write the RND-2 rules refuse.
+    """A round write the rules refuse: RND-2 records, RND-3.3 or RND-5.
 
     `str()` is the user-facing message; `field` names the form field it
     belongs next to, or is None for a refused deletion.
@@ -53,8 +53,9 @@ class Refused(Exception):
         self.field = field
 
 
-# Every function below runs inside the caller's transaction, after the caller
-# has locked the round row and re-checked that the round is Draft.
+# Every write below runs inside the caller's transaction, after the caller has
+# locked the round row and re-checked its state: Draft for the RND-2 records and
+# publishing, Open for closing and retests. `build_key` is a pure function.
 
 
 def add_criterion(round_, text):
@@ -151,7 +152,11 @@ def publish(round_, label):
 
 
 class RoundNotOpen(Exception):
-    """A close or retest of a round that is not Open; the view gives the 409."""
+    """A close or retest of a round that is not Open.
+
+    Under the caller's lock and Open re-check this cannot happen. If it did,
+    `retest_round` would give the 409; `close_round` does not catch it.
+    """
 
     def __init__(self):
         super().__init__("The round is not Open.")

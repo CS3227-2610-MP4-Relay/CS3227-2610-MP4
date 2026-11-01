@@ -6,7 +6,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from . import services
-from .models import Case, Criterion
+from .models import Build, Case, Criterion, Round
 
 # The text-direction controls of rule 5: embeddings, overrides and their pop
 # (U+202A to U+202E) and isolates (U+2066 to U+2069). They can reorder whole runs
@@ -23,6 +23,11 @@ def has_visible_character(text):
         not char.isspace() and unicodedata.category(char) not in ("Cc", "Cf")
         for char in text
     )
+
+
+def limit(model, name):
+    """Return a model field's `max_length`, the one home of each text limit."""
+    return model._meta.get_field(name).max_length
 
 
 class RoundTextField(forms.CharField):
@@ -56,7 +61,7 @@ class RoundForm(forms.Form):
     """A round's title, for creating and retitling a round."""
 
     title = RoundTextField(
-        max_length=120, widget=forms.TextInput(attrs={"dir": "auto"})
+        max_length=limit(Round, "title"), widget=forms.TextInput(attrs={"dir": "auto"})
     )
 
 
@@ -77,17 +82,19 @@ class RecordForm(forms.Form):
 class CriterionForm(RecordForm):
     """An acceptance criterion's text."""
 
-    text = RoundTextField(max_length=500, widget=text_area())
+    text = RoundTextField(max_length=limit(Criterion, "text"), widget=text_area())
 
 
 class CaseForm(RecordForm):
     """A test case's fields and the round's criteria it links to."""
 
     title = RoundTextField(
-        max_length=120, widget=forms.TextInput(attrs={"dir": "auto"})
+        max_length=limit(Case, "title"), widget=forms.TextInput(attrs={"dir": "auto"})
     )
-    steps = RoundTextField(max_length=2000, widget=text_area())
-    expected_result = RoundTextField(max_length=1000, widget=text_area())
+    steps = RoundTextField(max_length=limit(Case, "steps"), widget=text_area())
+    expected_result = RoundTextField(
+        max_length=limit(Case, "expected_result"), widget=text_area()
+    )
     criteria = forms.ModelMultipleChoiceField(
         Criterion.objects.none(),
         label="Linked acceptance criteria",
@@ -103,7 +110,7 @@ class CaseForm(RecordForm):
 def build_label():
     """A new build's "Build label" field, 1 to 100 characters."""
     return RoundTextField(
-        max_length=100,
+        max_length=limit(Build, "label"),
         label="Build label",
         widget=forms.TextInput(attrs={"dir": "auto"}),
     )
