@@ -5,12 +5,12 @@ import time
 from unittest import mock
 
 import pytest
-from django.db import DatabaseError, connection
+from django.db import DatabaseError, connection, transaction
 from django.test import Client
 
 from rounds import services
 from rounds.forms import CaseForm, CriterionForm
-from rounds.models import Case, CaseCriterion, Criterion, Round
+from rounds.models import BuildCase, Case, CaseCriterion, Criterion, Round
 
 from .conftest import (
     DENIED,
@@ -959,3 +959,57 @@ def test_injected_fields_are_ignored(coord_client, draft, make_round):
     assert made.round == draft and made.title == "Synthetic edited"
     assert list(made.criteria.all()) == [free]
     assert stored(sibling) == sibling_before
+
+
+def forged_links(make_round, other_workspace):
+    """An Open round, plus link rows to another round's and workspace's records.
+
+    The link tables do not tie a linked criterion or covered case to the
+    round, so these rows can exist only if stored outside the services.
+    """
+
+    def published(title, owner=None):
+        round_ = make_round(title, owner=owner)
+        criterion = Criterion.objects.create(round=round_, text=f"{title} criterion")
+        case = Case.objects.create(
+            round=round_,
+            title=f"{title} case",
+            steps="Synthetic",
+            expected_result="Synthetic",
+        )
+        CaseCriterion.objects.create(case=case, criterion=criterion)
+        with transaction.atomic():
+            locked = Round.objects.select_for_update().get(pk=round_.pk)
+            build = services.publish(locked, f"{title} build")
+        return round_, criterion, case, build
+
+    own = published("Synthetic own")
+    sibling = published("Synthetic sibling-mark")
+    foreign = published("Synthetic foreign-mark", other_workspace)
+    for _, criterion, case, build in (sibling, foreign):
+        CaseCriterion.objects.create(case=own[2], criterion=criterion)
+        BuildCase.objects.create(build=own[3], case=case)
+        # A newer build of another round covering the own case.
+        BuildCase.objects.create(build=build, case=own[2])
+    return own
+
+
+@pytest.mark.ac("RND-2.8", "RND-3.6")
+@pytest.mark.parametrize("state", ["open", "closed"])
+def test_round_page_shows_only_its_own_rounds_linked_records(
+    coord_client, make_round, other_workspace, state
+):
+    round_ = forged_links(make_round, other_workspace)[0]
+    Round.objects.filter(pk=round_.pk).update(state=state)
+    html = page(coord_client.get(detail(round_.pk)))
+    assert "-mark" not in html
+    own_case = html.index('<h3><span dir="auto">Synthetic own case</span></h3>')
+    linked = html.index("<h4>Linked acceptance criteria</h4>", own_case)
+    current = html.index("<h4>Current build</h4>", linked)
+    section = html[linked : html.index("<h2>Builds</h2>")]
+    assert '<li><span dir="auto">Synthetic own criterion</span></li></ul>' in section
+    assert html.index('<span dir="auto">Synthetic own build</span>', current) < (
+        html.index("<h2>Builds</h2>")
+    )
+    builds = html[html.index("<h2>Builds</h2>") :]
+    assert '<ul><li><span dir="auto">Synthetic own case</span></li></ul>' in builds

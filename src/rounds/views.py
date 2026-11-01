@@ -17,7 +17,7 @@ from accounts.workspaces import workspace_records
 
 from . import services
 from .forms import CaseForm, CriterionForm, PublishForm, RetestForm, RoundForm
-from .models import Build, Criterion, Result, Round
+from .models import Build, Case, Criterion, Result, Round
 from .services import RoundLimitReached, create_round
 from .templatetags.rounds_text import retest_message
 
@@ -90,11 +90,14 @@ def show_round(request, round_, refused=None, publish_form=None):
     """Render the round page; `refused` is a (criterion ID, message) pair.
 
     Builds come oldest first, so each case's current build is the last one
-    covering it (RND-3).
+    covering it (RND-3). Linked criteria and covered cases are limited to the
+    round, since the link tables do not tie them to it.
     """
-    builds = list(round_.builds.prefetch_related("cases"))
+    own_cases = Prefetch("cases", queryset=Case.objects.filter(round=round_))
+    builds = list(round_.builds.prefetch_related(own_cases))
     current = {case.pk: build for build in builds for case in build.cases.all()}
-    cases = list(round_.cases.prefetch_related("criteria"))
+    own_criteria = Prefetch("criteria", queryset=Criterion.objects.filter(round=round_))
+    cases = list(round_.cases.prefetch_related(own_criteria))
     for case in cases:
         case.current_build = current.get(case.pk)
     draft = round_.state == Round.State.DRAFT
