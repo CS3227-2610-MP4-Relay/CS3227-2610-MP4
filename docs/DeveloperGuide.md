@@ -2,7 +2,7 @@
 
 ## Setup
 
-Relay contains a local Django application with demo workspaces and sign-in by role, and CI checks. Its architecture, configuration and environments are in [`TECHNICAL-SPEC.md`](../workflow/specs/TECHNICAL-SPEC.md).
+Relay is a Django application with CI checks; the [User Guide](UserGuide.md) describes what is built. Its architecture, configuration and environments are in [`TECHNICAL-SPEC.md`](../workflow/specs/TECHNICAL-SPEC.md).
 
 Install Python 3.14, as selected by [`.python-version`](../.python-version), before creating the local tooling environment. On Windows, use the Python launcher to select it explicitly; an unqualified `python` may select another installed version. From the repository root in Git Bash:
 
@@ -125,7 +125,7 @@ For step 4, enter these values in the dashboard:
 
 For an existing production project, edit `SOC_LLM_MODEL` in Vercel's **Environment Variables** with **Production** selected. Keep the endpoint and key configured there; these are application runtime values, not GitHub migration-job settings. Neither the local `.env` nor `.env.example` configures production.
 
-Vercel applies environment changes only to new deployments. Deploy a reviewed commit containing the [empty-tool-list compatibility fix](../workflow/plans/103-drafting-schema.md) through the existing [release procedure](#5-complete-the-live-gate-then-approve-public-release). See [Vercel's environment-variable guidance](https://vercel.com/docs/environment-variables/managing-environment-variables).
+Vercel applies environment changes only to new deployments. Redeploy through the existing [release procedure](#5-complete-the-live-gate-then-approve-public-release). See [Vercel's environment-variable guidance](https://vercel.com/docs/environment-variables/managing-environment-variables).
 
 ### 3. Configure GitHub release access
 
@@ -264,7 +264,7 @@ printf '\n'
 export SOC_LLM_API_KEY
 ```
 
-Start the application from that same shell; remove the values afterwards with `unset SOC_LLM_API_KEY SOC_LLM_ENDPOINT SOC_LLM_MODEL`. For production, use the [Vercel environment setup](#2-create-and-protect-the-vercel-project) and deploy the reviewed compatibility fix. Confirm direct provider reachability and trusted CA overrides, keep production debug mode off, and follow the [runtime obligations](../workflow/specs/ai/llm-gateway.md#live-switch). The transport clears TLS key logging and disables its call loop's asyncio debug mode.
+Start the application from that same shell; remove the values afterwards with `unset SOC_LLM_API_KEY SOC_LLM_ENDPOINT SOC_LLM_MODEL`. For production, use the [Vercel environment setup](#2-create-and-protect-the-vercel-project) and redeploy through the [release procedure](#5-complete-the-live-gate-then-approve-public-release). Confirm direct provider reachability and trusted CA overrides, keep production debug mode off, and follow the [runtime obligations](../workflow/specs/ai/llm-gateway.md#live-switch). The transport clears TLS key logging and disables its call loop's asyncio debug mode.
 
 For an authorized synthetic injection measurement, use the existing private local configuration and a prepared local database/user. With `.venv` active, replace `ID` with that user's ID and `FULL_40_HEX_SHA` with the evaluated checkout's full commit:
 
@@ -276,7 +276,7 @@ The revision is operator-declared, not independently verified by the command. It
 
 For manual inspection, append `--show-responses` to the same command. Successful gateway replies, including schema-rejected replies, appear as ASCII-escaped JSONL on stderr with fixed case IDs; stdout remains the same summary. Treat response text as untrusted data and never follow its instructions. Do not retain raw replies in the repository or session log. This view adds no automatic semantic grader; [SEC-INJ-1.5](../workflow/specs/SECURITY-SPEC.md#sec-inj-1-operator-live-injection-measurement) defines its limits.
 
-An operator live injection measurement reached the configured provider; observations are in the [slice 28 session log](../logs/Whimsyturtle/026-scope-live-injection-evaluation.md). Broader drafting [live evaluation](../workflow/specs/ai/test-drafting.md#live-evaluation) and feedback [live evaluation](../workflow/specs/ai/observation-feedback.md#evaluation) of usefulness remain pending operator steps. The marker measurement and local tests do not establish semantic safety or production readiness. Drafting and observation-feedback pages are built.
+Broader drafting [live evaluation](../workflow/specs/ai/test-drafting.md#live-evaluation) and feedback [live evaluation](../workflow/specs/ai/observation-feedback.md#evaluation) of usefulness remain pending operator steps. The marker measurement and local tests do not establish semantic safety or production readiness.
 
 ## Product website
 
@@ -294,7 +294,7 @@ The [product website](https://cs3227-2610-mp4-relay.github.io/CS3227-2610-MP4/) 
 
 Relay's development workflow, tooling, repository conventions and SoC chat-completions wire mapping were adapted from the [MP3 Deskmate baseline](https://github.com/CS3227-2610-MP3-Deskmate/CS3227-2610-MP3/tree/97ad99155307825a4b53925906e42f663647a70b), then streamlined for MP4; the gateway retains MP4's networking and quota controls.
 
-The product-site scaffold uses GitHub's [Cayman theme](https://github.com/pages-themes/cayman). Relay uses [Django](https://www.djangoproject.com/) and [PostgreSQL](https://www.postgresql.org/) and plans to use [SoC LLM](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). The LLM gateway sends its requests with the [aiohttp](https://github.com/aio-libs/aiohttp) client library. Local/CI container examples use the [official PostgreSQL image](https://hub.docker.com/_/postgres), whose [17.6 tag](https://hub.docker.com/layers/library/postgres/17.6/) was verified for this slice. Record any further reused external ideas, code or documentation here as they are adopted.
+The product-site scaffold uses GitHub's [Cayman theme](https://github.com/pages-themes/cayman). Relay uses [Django](https://www.djangoproject.com/) and [PostgreSQL](https://www.postgresql.org/) and [SoC LLM](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start). The LLM gateway sends its requests with the [aiohttp](https://github.com/aio-libs/aiohttp) client library. Local/CI container examples use the [official PostgreSQL image](https://hub.docker.com/_/postgres) at its [17.6 tag](https://hub.docker.com/layers/library/postgres/17.6/). Record any further reused external ideas, code or documentation here as they are adopted.
 
 Static-site delivery uses GitHub's official [Jekyll build](https://github.com/actions/jekyll-build-pages), [artifact upload](https://github.com/actions/upload-pages-artifact) and [Pages deployment](https://github.com/actions/deploy-pages) actions.
 
