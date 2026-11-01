@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from ai import feedback
+from ai import drafting, feedback
 
 
 def source_entry():
@@ -216,7 +216,7 @@ def test_parser_recursion_failure_is_fixed_invalid_reply(monkeypatch):
     def too_deep(*args, **kwargs):
         raise RecursionError("Synthetic private detail")
 
-    monkeypatch.setattr(feedback.json, "loads", too_deep)
+    monkeypatch.setattr(drafting.json, "loads", too_deep)
     with pytest.raises(feedback.InvalidReply) as caught:
         feedback.parse('{"questions": []}')
     assert str(caught.value) == "json"
