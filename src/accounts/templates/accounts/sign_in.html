@@ -2,6 +2,7 @@
 {% load rounds_text %}
 {% block title %}Sign in{% endblock %}
 {% block content %}
+<nav class="page-navigation" aria-label="Page navigation"><a class="action secondary" href="{% url 'home' %}">Back to home</a></nav>
 <h1>Sign in</h1>
 {% for message in messages %}<p role="status">{{ message|status_message }}</p>{% endfor %}
 {% if error %}<div class="error"><p role="alert">{{ error }}</p></div>{% endif %}

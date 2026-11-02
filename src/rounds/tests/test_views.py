@@ -54,6 +54,21 @@ def created_round(response):
 # RND-1.1
 
 
+@pytest.mark.ac("PLT-4.7")
+@pytest.mark.parametrize("invalid", [False, True])
+def test_edit_round_keeps_its_return_navigation(coord_client, make_round, invalid):
+    round_ = make_round("Synthetic title")
+    response = (
+        coord_client.post(edit(round_.pk), {"title": " "})
+        if invalid
+        else coord_client.get(edit(round_.pk))
+    )
+    html = page(response)
+    link = f'<a class="action secondary" href="{detail(round_.pk)}">Back to round</a>'
+    assert html.count(link) == 1
+    assert html.index(link) < html.index("<form")
+
+
 @pytest.mark.ac("RND-1.1")
 def test_new_round_page_has_title_field_and_create_button(coord_client):
     html = page(coord_client.get(NEW))

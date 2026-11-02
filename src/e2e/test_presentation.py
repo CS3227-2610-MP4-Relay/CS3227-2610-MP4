@@ -357,7 +357,7 @@ def test_coordinator_action_hierarchy_and_top_context(page, browser_accounts, wi
     form_links = [
         (
             page.get_by_role("link", name=label, exact=True).get_attribute("href"),
-            None if label == "Edit round" else "Back to round",
+            "Back to round",
         )
         for label in (
             "Edit round",
@@ -371,6 +371,15 @@ def test_coordinator_action_hierarchy_and_top_context(page, browser_accounts, wi
     ]:
         page.goto(route)
         assert_short_navigation(page, "Coordinator home", back)
+        if route == browser_accounts["draft"] + "edit/":
+            page.get_by_label("Title", exact=True).fill(" ")
+            page.get_by_role("button", name="Save", exact=True).click()
+            expect(
+                page.get_by_text("Enter 1 to 120 characters.", exact=True)
+            ).to_be_visible()
+            assert_short_navigation(page, "Coordinator home", "Back to round")
+            page.get_by_role("link", name="Back to round", exact=True).click()
+            assert page.url.endswith(browser_accounts["draft"])
         assert_layout(page, width)
     page.goto(browser_accounts["open"] + "results/")
     assert_top_navigation(page, "Coordinator home", "Back to round")
@@ -458,6 +467,25 @@ def test_public_pages_controls_messages_and_credentials(page, browser_accounts, 
             cell.evaluate("el => parseFloat(getComputedStyle(el).borderBottomWidth)")
             >= 1
         )
+    sign_in_link = page.get_by_role("link", name="Sign in", exact=True)
+    assert_action_link_states(page, sign_in_link)
+    expect(sign_in_link).to_have_class("action secondary")
+    sign_in_link.click()
+    expect(page.get_by_role("heading", name="Sign in", exact=True)).to_be_visible()
+
+
+@pytest.mark.ac("PLT-4.2", "PLT-4.4", "PLT-4.5", "PLT-4.10")
+@pytest.mark.parametrize("width", [320, 1440])
+def test_sign_in_returns_to_public_home(page, width):
+    page.set_viewport_size({"width": width, "height": 900})
+    page.goto("/sign-in/")
+    back = page.get_by_role("link", name="Back to home", exact=True)
+    expect(back).to_have_count(1)
+    assert_action_link_states(page, back)
+    assert back.bounding_box()["y"] < page.locator("form").bounding_box()["y"]
+    back.click()
+    expect(page.get_by_role("heading", name="Relay", exact=True)).to_be_visible()
+    assert_layout(page, width)
 
 
 @pytest.mark.ac("PLT-4.1", "PLT-4.2", "PLT-4.3", "PLT-4.4", "PLT-4.5")
