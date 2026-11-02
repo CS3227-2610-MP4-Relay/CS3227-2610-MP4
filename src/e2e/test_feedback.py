@@ -189,3 +189,112 @@ def test_unavailable_feedback_keeps_manual_result_submission_usable(
         page.get_by_role("link", name="Observation feedback", exact=True)
     ).to_have_count(0)
     accounts["expected"] = ("fail", EDITED, True)
+
+
+@pytest.mark.ac("RES-4.2", "RES-4.3", "RES-4.4")
+@pytest.mark.parametrize(
+    ("questions", "message"),
+    [
+        (
+            [],
+            (
+                "No missing details were suggested. "
+                "You can still edit your result yourself."
+            ),
+        ),
+        (
+            [QUESTION, 7],
+            (
+                "Feedback is unavailable right now. "
+                "You can still edit your result yourself."
+            ),
+        ),
+    ],
+    ids=["empty", "invalid-mixed-reply"],
+)
+def test_empty_or_invalid_feedback_keeps_saved_source_and_manual_editing(
+    page, browser_accounts, questions, message
+):
+    accounts = browser_accounts
+    save_draft(page, accounts, "fail", ORIGINAL)
+    page.get_by_role("link", name="Observation feedback", exact=True).click()
+    feedback_url = page.url
+    with mock.patch(
+        "ai.feedback_views.gateway.complete",
+        return_value=Success(json.dumps({"questions": questions})),
+    ) as complete:
+        page.get_by_role("button", name="Suggest missing details", exact=True).click()
+        expect(page.get_by_text(message, exact=True)).to_be_visible()
+        expect(page.get_by_text(QUESTION, exact=True)).to_have_count(0)
+        expect(
+            page.get_by_role("heading", name="Questions to consider", exact=True)
+        ).to_have_count(0)
+        expect(page.get_by_text(ORIGINAL, exact=True)).to_be_visible()
+        expect(
+            page.get_by_role("button", name="Suggest missing details", exact=True)
+        ).to_be_visible()
+        complete.assert_called_once()
+        page.goto(feedback_url)
+        expect(page.get_by_text(message, exact=True)).to_have_count(0)
+        expect(page.get_by_text(QUESTION, exact=True)).to_have_count(0)
+        complete.assert_called_once()
+    page.get_by_role("link", name="Back to result", exact=True).last.click()
+    expect(page.get_by_label("Outcome", exact=True)).to_have_value("fail")
+    expect(page.get_by_label("Observation", exact=True)).to_have_value(ORIGINAL)
+    page.get_by_label("Observation", exact=True).fill(EDITED)
+    page.get_by_role("button", name="Save draft", exact=True).click()
+    page.reload()
+    expect(page.get_by_label("Observation", exact=True)).to_have_value(EDITED)
+    expect(page.get_by_text("Status: Draft", exact=True)).to_be_visible()
+    accounts["expected"] = ("fail", EDITED, False)
+
+
+@pytest.mark.ac("RES-2.1", "RES-2.5", "RES-4.5")
+def test_stale_feedback_tab_after_submission_refuses_without_gateway_call(
+    page, browser_accounts
+):
+    accounts = browser_accounts
+    save_draft(page, accounts, "fail", ORIGINAL)
+    feedback_url = page.get_by_role(
+        "link", name="Observation feedback", exact=True
+    ).get_attribute("href")
+    feedback = page.context.new_page()
+    try:
+        with mock.patch(
+            "ai.feedback_views.gateway.complete",
+            return_value=Success(json.dumps({"questions": [QUESTION]})),
+        ) as complete:
+            feedback.goto(feedback_url)
+            expect(feedback.get_by_text(ORIGINAL, exact=True)).to_be_visible()
+            page.get_by_role("button", name="Submit", exact=True).click()
+            expect(page.get_by_text("Status: Submitted", exact=True)).to_be_visible()
+            with feedback.expect_response(
+                lambda response: (
+                    response.request.method == "POST"
+                    and response.url.endswith(feedback_url)
+                )
+            ) as refused:
+                feedback.get_by_role(
+                    "button", name="Suggest missing details", exact=True
+                ).click()
+            assert refused.value.status == 409
+            expect(
+                feedback.get_by_role(
+                    "heading",
+                    name="This result has already been submitted.",
+                    exact=True,
+                )
+            ).to_be_visible()
+            expect(feedback.get_by_text(QUESTION, exact=True)).to_have_count(0)
+            complete.assert_not_called()
+        page.reload()
+        expect(page.get_by_text("Status: Submitted", exact=True)).to_be_visible()
+        expect(page.get_by_text(ORIGINAL, exact=True)).to_be_visible()
+        expect(page.get_by_text("Fail", exact=True)).to_be_visible()
+        expect(page.locator("main form")).to_have_count(0)
+        expect(
+            page.get_by_role("link", name="Observation feedback", exact=True)
+        ).to_have_count(0)
+        accounts["expected"] = ("fail", ORIGINAL, True)
+    finally:
+        feedback.close()

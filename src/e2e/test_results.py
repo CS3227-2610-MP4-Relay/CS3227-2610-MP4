@@ -83,6 +83,96 @@ def open_round(page, accounts, role="tester"):
     expect(result_links(page)).to_have_count(2)
 
 
+@pytest.mark.ac("RES-2.1", "RES-2.2", "RES-3.2", "RES-3.3")
+@pytest.mark.parametrize("action", ["Save draft", "Submit"])
+def test_native_validation_and_observation_limits_preserve_saved_draft(
+    browser_accounts, page, live_server, action
+):
+    coordinator_context = context(page, live_server)
+    try:
+        publish(coordinator_context.new_page(), browser_accounts)
+        open_round(page, browser_accounts)
+        result_links(page).first.click()
+        entry_url = page.url
+        outcome = page.get_by_label("Outcome", exact=True)
+        observation = page.get_by_label("Observation", exact=True)
+        outcome.select_option("pass")
+        observation.fill("Synthetic saved draft")
+        page.get_by_role("button", name="Save draft", exact=True).click()
+        expect(page.get_by_text("Status: Draft", exact=True)).to_be_visible()
+
+        posts = []
+
+        def record_post(request):
+            if request.method == "POST":
+                posts.append(request.url)
+
+        page.on("request", record_post)
+        outcome.select_option("")
+        observation.fill("Synthetic unsaved valid observation")
+        expect(outcome).to_have_attribute("required", "")
+        page.get_by_role("button", name=action, exact=True).click()
+        expect(page).to_have_url(entry_url)
+        expect(page.locator("select:invalid")).to_have_count(1)
+        expect(observation).to_have_value("Synthetic unsaved valid observation")
+        assert posts == []
+        page.reload()
+        expect(outcome).to_have_value("pass")
+        expect(observation).to_have_value("Synthetic saved draft")
+
+        below_limit = "a" * 1999
+        observation.fill(below_limit)
+        page.get_by_role("button", name="Save draft", exact=True).click()
+        page.reload()
+        expect(observation).to_have_value(below_limit)
+        posts.clear()
+        expect(observation).to_have_attribute("maxlength", "2000")
+        observation.fill("")
+        observation.press("End")
+        # Native user input truncates at maxlength; no oversized POST is claimed.
+        page.keyboard.insert_text("b" * 2001)
+        at_limit = "b" * 2000
+        expect(observation).to_have_value(at_limit)
+        assert posts == []
+        page.reload()
+        expect(observation).to_have_value(below_limit)
+        page.get_by_role("link", name="Back to round", exact=True).last.click()
+        page.get_by_role("link", name="My results", exact=True).click()
+        rows = page.locator("main section")
+        expect(rows).to_have_count(1)
+        expect(rows.get_by_text(below_limit, exact=True)).to_be_visible()
+        expect(rows.get_by_text("Status: Draft", exact=True)).to_be_visible()
+        page.goto(entry_url)
+        observation.fill(at_limit)
+        page.get_by_role("button", name=action, exact=True).click()
+        submitted = action == "Submit"
+        status = "Submitted" if submitted else "Draft"
+        expect(page.get_by_text(f"Status: {status}", exact=True)).to_be_visible()
+        page.reload()
+        if submitted:
+            expect(page.get_by_text(at_limit, exact=True)).to_be_visible()
+            expect(page.locator("main form")).to_have_count(0)
+        else:
+            expect(observation).to_have_value(at_limit)
+            expect(outcome).to_have_value("pass")
+        page.get_by_role("link", name="Back to round", exact=True).last.click()
+        page.get_by_role("link", name="My results", exact=True).click()
+        expect(rows).to_have_count(1)
+        expect(rows.get_by_text(at_limit, exact=True)).to_be_visible()
+        expect(rows.get_by_text(below_limit, exact=True)).to_have_count(0)
+        expect(rows.get_by_text(f"Status: {status}", exact=True)).to_be_visible()
+        browser_accounts["expected_results"] = [
+            {
+                "tester__username": browser_accounts["tester"],
+                "outcome": "pass",
+                "observation": at_limit,
+                "submitted_at__isnull": not submitted,
+            }
+        ]
+    finally:
+        coordinator_context.close()
+
+
 @pytest.mark.ac("RES-1.5", "RES-2.1", "RES-2.2", "RES-2.3", "RES-2.5", "RES-2.8")
 def test_private_draft_validation_reload_and_immutable_submission(
     browser_accounts, page, live_server
