@@ -22,6 +22,6 @@
 <li>{% include "rounds/result_lines.html" with earlier=True %}</li>
 {% endfor %}</ul>
 {% endif %}</div></details>{% endfor %}
-<p><a href="{% url 'rounds:detail' round.pk %}">Back to round</a></p>
+<p><a class="action secondary" href="{% url 'rounds:detail' round.pk %}">Back to round</a></p>
 </div></div>
 {% endblock %}

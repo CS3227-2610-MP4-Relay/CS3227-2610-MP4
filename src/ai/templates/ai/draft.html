@@ -15,7 +15,6 @@
 <button type="submit">Draft test cases</button>
 </form>
 <p><a class="action" href="{% url 'rounds:case-new' round.pk %}">Add test case</a></p>
-<p><a href="{{ round.get_absolute_url }}">Back to round</a></p>
 {% if error %}<h2>Suggested test cases</h2><div class="error"><p>{{ error }}</p></div>{% endif %}
 {% if drafts %}<h2>Suggested test cases</h2>
 {% for draft in drafts %}<h3>{{ draft.title|isolated_lines }}</h3>

@@ -21,6 +21,6 @@
 {% if round.state == "open" and case.current_build %}<p><a class="action" href="{% url 'accounts:tester-result' round.id case.id case.current_build.id %}">Record result</a></p>{% endif %}
 </div></details>
 {% endfor %}</section>
-<p><a href="{% url 'accounts:tester' %}">Tester home</a></p>
+<p><a class="action secondary" href="{% url 'accounts:tester' %}">Tester home</a></p>
 </div></div>
 {% endblock %}

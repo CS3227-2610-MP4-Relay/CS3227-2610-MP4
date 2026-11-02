@@ -29,7 +29,7 @@ def test_public_landing_page(client):
         assert text in html
     assert html.count("<a") == 1
     assert re.findall(r"<a [^>]*>[^<]*</a>", html) == [
-        '<a href="/sign-in/">Sign in</a>'
+        '<a class="action secondary" href="/sign-in/">Sign in</a>'
     ]
     assert html.count("<form") == 1
     assert '<form method="post" action="/demo/">' in html

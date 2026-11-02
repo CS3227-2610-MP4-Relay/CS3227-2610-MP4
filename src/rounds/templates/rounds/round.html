@@ -14,7 +14,7 @@
 {% if draft %}<div class="actions"><a class="action" href="{% url 'rounds:criterion-new' round.pk %}">Add acceptance criterion</a></div>{% endif %}
 {% for criterion in round.criteria.all %}{% if forloop.first %}<ul>{% endif %}
   <li>{{ criterion.text|isolated_lines }}{% if draft %}
-    <div class="actions"><a class="action secondary" href="{% url 'rounds:criterion-edit' round.pk criterion.pk %}">Edit criterion</a>
+    <div class="actions actions-compact"><a class="action secondary" href="{% url 'rounds:criterion-edit' round.pk criterion.pk %}">Edit criterion</a>
     <form method="post" action="{% url 'rounds:criterion-delete' round.pk criterion.pk %}">{% csrf_token %}<button class="destructive" type="submit">Delete criterion</button></form></div>{% endif %}
     {% if refused.0 == criterion.pk %}<div class="error"><p>{{ refused.1 }}</p></div>{% endif %}</li>
 {% if forloop.last %}</ul>{% endif %}{% empty %}<p>No acceptance criteria yet.</p>
@@ -31,7 +31,7 @@
 <p>{{ case.expected_result|isolated_lines }}</p>
 <h4>Linked acceptance criteria</h4>
 <ul>{% for criterion in case.criteria.all %}<li>{{ criterion.text|isolated_lines }}</li>{% endfor %}</ul>
-{% if draft %}<div class="actions"><a class="action secondary" href="{% url 'rounds:case-edit' round.pk case.pk %}">Edit test case</a>
+{% if draft %}<div class="actions actions-compact"><a class="action secondary" href="{% url 'rounds:case-edit' round.pk case.pk %}">Edit test case</a>
 <form method="post" action="{% url 'rounds:case-delete' round.pk case.pk %}">{% csrf_token %}<button class="destructive" type="submit">Delete test case</button></form></div>{% endif %}</div></details>
 {% empty %}<p>No test cases yet.</p>
 {% endfor %}
@@ -48,6 +48,6 @@
 </form>{% endwith %}{% endif %}
 {% if open %}<p>Closing makes this round read-only. It cannot be reopened.</p>
 <form method="post" action="{% url 'rounds:close' round.pk %}">{% csrf_token %}<button class="destructive" type="submit">Close round</button></form>{% endif %}
-<p><a href="{% url 'accounts:coordinator' %}">Coordinator home</a></p>
+<p><a class="action secondary" href="{% url 'accounts:coordinator' %}">Coordinator home</a></p>
 </div></div>
 {% endblock %}

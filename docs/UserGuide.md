@@ -51,9 +51,9 @@ You are also signed out 8 hours after signing in, whatever you do in between; op
 
 ## Find your way around
 
-Creation links such as **New round**, **Add test case** and **Record result** have a filled primary style. Edit and review links, and links to AI pages, have an outlined secondary style; **Delete criterion**, **Delete test case** and **Close round** have a red outline. **Save draft** and **Sign out** use the secondary style, while **Submit** is primary. Ordinary navigation links are underlined.
+Creation links such as **New round**, **Add test case** and **Record result** have a filled primary style. Edit and review links, links to AI pages, and the start page's **Sign in** link have an outlined secondary style; **Delete criterion**, **Delete test case** and **Close round** have a red outline. **Save draft** and **Sign out** use the secondary style, while **Submit** is primary. Action links look like compact buttons without underlines; ordinary content links and **Contents** links stay underlined. Repeated edit and delete controls form smaller groups that wrap on narrow screens.
 
-Round, result, history, editing and AI pages have **Coordinator home** or **Tester home** near the top, with **Back to round** or **Back to result** where applicable. Return links also remain at the bottom.
+Round, result, history, editing and AI pages have **Coordinator home** or **Tester home** near the top, with **Back to round** or **Back to result** where applicable. These links look like outlined buttons. Editing forms, result entry and AI pages show each destination once at the top. Round pages also have a final home link; coordinator results and **My results** also have a final **Back to round** link.
 
 Round pages, coordinator results and **My results** have **Contents** links to their sections or records. On a wide desktop, these links appear in a sidebar. On a narrower screen, **Contents** starts collapsed above the details; choose it to show the links.
 

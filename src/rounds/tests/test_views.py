@@ -61,7 +61,9 @@ def test_new_round_page_has_title_field_and_create_button(coord_client):
     assert "<h1>New round</h1>" in html
     assert '<label for="id_title">Title</label>' in html
     assert '<button type="submit">Create round</button>' in html
-    assert '<a href="/coordinator/">Coordinator home</a>' in html
+    assert (
+        '<a class="action secondary" href="/coordinator/">Coordinator home</a>' in html
+    )
 
 
 @pytest.mark.ac("RND-1.1")
@@ -74,7 +76,9 @@ def test_creating_a_round_opens_its_draft_round_page(coord_client, coordinator):
     assert '<h1><span dir="auto">Synthetic checkout round</span></h1>' in html
     assert "<p>State: Draft</p>" in html
     assert f'<a class="action secondary" href="{edit(made.pk)}">Edit round</a>' in html
-    assert '<a href="/coordinator/">Coordinator home</a>' in html
+    assert (
+        '<a class="action secondary" href="/coordinator/">Coordinator home</a>' in html
+    )
     # From RND-2, "no criteria or cases" shows as the two empty sections.
     assert "<p>No acceptance criteria yet.</p>" in html
     assert "<p>No test cases yet.</p>" in html
@@ -132,7 +136,9 @@ def test_retitling_a_draft_round_shows_the_new_title(coord_client, make_round):
     assert "<h1>Edit round</h1>" in form
     assert 'value="Synthetic old title"' in form
     assert '<button type="submit">Save</button>' in form
-    assert '<a href="/coordinator/">Coordinator home</a>' in form
+    assert (
+        '<a class="action secondary" href="/coordinator/">Coordinator home</a>' in form
+    )
     response = coord_client.post(edit(made.pk), {"title": "Synthetic new title"})
     assert response.status_code == 302
     assert response["Location"] == detail(made.pk)

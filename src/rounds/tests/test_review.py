@@ -219,7 +219,10 @@ def test_results_page_lists_cases_and_current_build_results_newest_first(
     assert f"<li>{span('Synthetic criterion one')}</li></ul>" in second
     assert "Synthetic criterion two" not in second and EMPTY in second
     assert html.index("Synthetic case A") < html.index("Synthetic case B")
-    back = f'<p><a href="{detail(review.round.pk)}">Back to round</a></p>'
+    back = (
+        f'<p><a class="action secondary" href="{detail(review.round.pk)}">'
+        "Back to round</a></p>"
+    )
     assert back in html
     assert {older.pk, newer.pk} == set(Result.objects.values_list("pk", flat=True))
 

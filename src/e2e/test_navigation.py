@@ -9,7 +9,12 @@ from django.utils import timezone
 from playwright.sync_api import expect
 
 from accounts.models import User
-from e2e.test_presentation import assert_layout, contrast, sign_in
+from e2e.test_presentation import (
+    assert_action_link_states,
+    assert_layout,
+    contrast,
+    sign_in,
+)
 from rounds import services
 from rounds.models import Case, Criterion, Result, Round
 
@@ -59,7 +64,7 @@ def browser_accounts(browser_accounts):
     return accounts
 
 
-@pytest.mark.ac("PLT-4.4", "PLT-4.5", "PLT-4.6", "PLT-4.8", "PLT-4.9")
+@pytest.mark.ac("PLT-4.4", "PLT-4.5", "PLT-4.6", "PLT-4.7", "PLT-4.8", "PLT-4.9")
 @pytest.mark.parametrize("width", [320, 1440])
 @pytest.mark.parametrize("kind", ["round", "results", "tester_round", "history"])
 def test_contents_reveal_records_and_keyboard_defaults(
@@ -72,6 +77,18 @@ def test_contents_reveal_records_and_keyboard_defaults(
         "tester" if kind.startswith(("tester", "history")) else "coordinator",
     )
     page.goto(browser_accounts[kind])
+    navigation = page.get_by_role("navigation", name="Page navigation", exact=True)
+    home = "Tester home" if kind in ("tester_round", "history") else "Coordinator home"
+    for link in navigation.get_by_role("link").all():
+        label = link.inner_text()
+        expect(page.get_by_role("link", name=label, exact=True)).to_have_count(
+            2 if label != home or kind in ("round", "tester_round") else 1
+        )
+        assert_action_link_states(page, link)
+    final_label = home if kind in ("round", "tester_round") else "Back to round"
+    final_return = page.locator("main a").last
+    expect(final_return).to_have_text(final_label)
+    assert_action_link_states(page, final_return)
     records = page.locator("details.record")
     expect(records).to_have_count(2)
     assert records.evaluate_all("els => els.map(el => el.open)") == [True, False]

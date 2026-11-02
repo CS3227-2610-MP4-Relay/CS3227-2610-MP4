@@ -144,7 +144,10 @@ def test_retest_page_lists_every_case_unselected_with_the_label_field(
     assert html.index("<legend>") < at[0] < at[1] < at[2] < html.index("Build label")
     assert "Synthetic foreign" not in html
     assert html.index("Build label") < html.index(BUTTON)
-    assert f'<a href="{detail(opened.pk)}">Back to round</a>' in html
+    assert (
+        f'<a class="action secondary" href="{detail(opened.pk)}">Back to round</a>'
+        in html
+    )
 
 
 @pytest.mark.ac("RND-5.1")
