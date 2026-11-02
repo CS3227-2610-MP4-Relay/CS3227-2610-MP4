@@ -18,6 +18,4 @@
   {% endfor %}
   <button type="submit">{{ button }}</button>
 </form>
-{% if round %}<p><a href="{{ round.get_absolute_url }}">Back to round</a></p>
-{% else %}<p><a href="{% url 'accounts:coordinator' %}">Coordinator home</a></p>{% endif %}
 {% endblock %}

@@ -22,6 +22,6 @@
 <p>{{ result.submitted_at|utc|date:"Y-m-d H:i:s" }} UTC</p>{% endif %}
 </div></details></section>
 {% empty %}<p>No results yet.</p>{% endfor %}
-<p><a href="{% url 'accounts:tester-round' round.id %}">Back to round</a></p>
+<p><a class="action secondary" href="{% url 'accounts:tester-round' round.id %}">Back to round</a></p>
 </div></div>
 {% endblock %}

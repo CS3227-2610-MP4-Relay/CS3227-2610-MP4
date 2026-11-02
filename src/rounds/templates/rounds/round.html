@@ -48,6 +48,6 @@
 </form>{% endwith %}{% endif %}
 {% if open %}<p>Closing makes this round read-only. It cannot be reopened.</p>
 <form method="post" action="{% url 'rounds:close' round.pk %}">{% csrf_token %}<button class="destructive" type="submit">Close round</button></form>{% endif %}
-<p><a href="{% url 'accounts:coordinator' %}">Coordinator home</a></p>
+<p><a class="action secondary" href="{% url 'accounts:coordinator' %}">Coordinator home</a></p>
 </div></div>
 {% endblock %}

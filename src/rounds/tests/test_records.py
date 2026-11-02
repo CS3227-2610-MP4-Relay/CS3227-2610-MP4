@@ -118,7 +118,10 @@ def test_new_criterion_page_has_text_field_and_add_button(coord_client, draft):
     assert '<label for="id_text">Text</label>' in html
     assert '<textarea name="text"' in html and 'dir="auto"' in html
     assert '<button type="submit">Add acceptance criterion</button>' in html
-    assert f'<a href="{detail(draft.pk)}">Back to round</a>' in html
+    assert (
+        f'<a class="action secondary" href="{detail(draft.pk)}">Back to round</a>'
+        in html
+    )
 
 
 @pytest.mark.ac("RND-2.1")
@@ -177,7 +180,10 @@ def test_new_case_page_has_fields_in_order_and_round_criteria(coord_client, draf
     assert positions == sorted(positions)
     assert '<span dir="auto">Synthetic one</span>' in html
     assert html.count('type="checkbox"') == 2
-    assert f'<a href="{detail(draft.pk)}">Back to round</a>' in html
+    assert (
+        f'<a class="action secondary" href="{detail(draft.pk)}">Back to round</a>'
+        in html
+    )
 
 
 @pytest.mark.ac("RND-2.2")
@@ -236,7 +242,10 @@ def test_editing_a_criterion_changes_its_text(coord_client, draft):
     assert "<title>Edit acceptance criterion</title>" in html
     assert "Synthetic before</textarea>" in html
     assert '<button type="submit">Save</button>' in html
-    assert f'<a href="{detail(draft.pk)}">Back to round</a>' in html
+    assert (
+        f'<a class="action secondary" href="{detail(draft.pk)}">Back to round</a>'
+        in html
+    )
     redirects_to_round(coord_client.post(edit_url, {"text": "Synthetic after"}), draft)
     item.refresh_from_db()
     assert item.text == "Synthetic after"

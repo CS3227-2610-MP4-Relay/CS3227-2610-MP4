@@ -182,6 +182,16 @@ def assert_action_link_states(page, link):
         assert_contrast(link)
 
 
+def assert_short_navigation(page, home, back=None):
+    """Short pages expose each existing destination once, before their content."""
+    assert_top_navigation(page, home, back)
+    navigation = page.get_by_role("navigation", name="Page navigation", exact=True)
+    for link in navigation.get_by_role("link").all():
+        destination = link.get_attribute("href")
+        expect(page.locator(f'main a[href="{destination}"]')).to_have_count(1)
+        assert_action_link_states(page, link)
+
+
 @pytest.mark.ac("PLT-1.1", "PLT-4.2", "PLT-4.4", "PLT-4.5")
 @pytest.mark.parametrize("width", [320, 1440])
 def test_public_actions_are_compact_grouped_native_controls(page, width):
@@ -296,7 +306,8 @@ def test_coordinator_action_hierarchy_and_top_context(page, browser_accounts, wi
         sign_out.locator("..").locator("input[name=csrfmiddlewaretoken]").count() == 1
     )
     new_round.click()
-    assert_top_navigation(page, "Coordinator home")
+    assert_short_navigation(page, "Coordinator home")
+    page.screenshot(path=str(Path(gettempdir()) / f"relay-121-new-round-{width}.png"))
     page.goto(browser_accounts["draft"])
     assert_top_navigation(page, "Coordinator home")
     edit = page.get_by_role("link", name="Edit criterion", exact=True)
@@ -315,12 +326,31 @@ def test_coordinator_action_hierarchy_and_top_context(page, browser_accounts, wi
     assert_layout(page, width)
     page.screenshot(path=str(Path(gettempdir()) / f"relay-117-actions-{width}.png"))
     edit.click()
-    assert_top_navigation(page, "Coordinator home", "Back to round")
+    assert_short_navigation(page, "Coordinator home", "Back to round")
     page.get_by_role("navigation", name="Page navigation").get_by_role(
         "link", name="Back to round", exact=True
     ).click()
     page.get_by_role("link", name="Draft test cases with AI", exact=True).click()
-    assert_top_navigation(page, "Coordinator home", "Back to round")
+    assert_short_navigation(page, "Coordinator home", "Back to round")
+    page.goto(browser_accounts["draft"])
+    form_links = [
+        (
+            page.get_by_role("link", name=label, exact=True).get_attribute("href"),
+            None if label == "Edit round" else "Back to round",
+        )
+        for label in (
+            "Edit round",
+            "Add acceptance criterion",
+            "Add test case",
+            "Edit test case",
+        )
+    ]
+    for route, back in form_links + [
+        (browser_accounts["open"] + "retest/", "Back to round")
+    ]:
+        page.goto(route)
+        assert_short_navigation(page, "Coordinator home", back)
+        assert_layout(page, width)
     page.goto(browser_accounts["open"] + "results/")
     assert_top_navigation(page, "Coordinator home", "Back to round")
     expect(page.locator("form")).to_have_count(0)
@@ -336,7 +366,7 @@ def test_tester_action_emphasis_and_native_result_submission(
     page.set_viewport_size({"width": width, "height": 900})
     sign_in(page, browser_accounts, "tester")
     page.goto(browser_accounts["entry"])
-    assert_top_navigation(page, "Tester home", "Back to round")
+    assert_short_navigation(page, "Tester home", "Back to round")
     save = page.get_by_role("button", name="Save draft", exact=True)
     submit = page.get_by_role("button", name="Submit", exact=True)
     assert background(save) != background(submit)
@@ -351,11 +381,12 @@ def test_tester_action_emphasis_and_native_result_submission(
         "Synthetic revised observation"
     )
     page.get_by_role("link", name="Observation feedback", exact=True).click()
-    assert_top_navigation(page, "Tester home", "Back to result")
+    assert_short_navigation(page, "Tester home", "Back to result")
     page.goto(browser_accounts["entry"])
     page.get_by_role("button", name="Submit", exact=True).click()
     expect(page.get_by_text("Status: Submitted", exact=True)).to_be_visible()
     expect(page.locator("form")).to_have_count(0)
+    assert_short_navigation(page, "Tester home", "Back to round")
     page.goto(browser_accounts["history"])
     assert_top_navigation(page, "Tester home", "Back to round")
     expect(page.locator("form")).to_have_count(0)
@@ -457,6 +488,7 @@ def test_coordinator_forms_long_text_and_ai_states(page, browser_accounts, width
     with mock.patch("ai.views.gateway.complete", return_value=Failed("unavailable")):
         page.get_by_role("button", name="Draft test cases", exact=True).click()
     expect(page.locator(".error")).to_be_visible()
+    assert_short_navigation(page, "Coordinator home", "Back to round")
     assert_layout(page, width)
     reply = {
         "drafts": [
@@ -473,6 +505,7 @@ def test_coordinator_forms_long_text_and_ai_states(page, browser_accounts, width
     ):
         page.get_by_role("button", name="Draft test cases", exact=True).click()
     expect(page.get_by_role("button", name="Use this draft")).to_be_visible()
+    assert_short_navigation(page, "Coordinator home", "Back to round")
     assert_layout(page, width)
     expect(page.locator("main")).to_contain_text(MARKUP)
     expect(page.locator("main b")).to_have_count(0)
@@ -499,6 +532,7 @@ def test_tester_result_and_feedback_long_content(page, browser_accounts, width):
     ):
         page.get_by_role("button", name="Suggest missing details", exact=True).click()
     expect(page.locator(".error")).to_be_visible()
+    assert_short_navigation(page, "Tester home", "Back to result")
     assert_layout(page, width)
     with mock.patch(
         "ai.feedback_views.gateway.complete",
@@ -506,6 +540,7 @@ def test_tester_result_and_feedback_long_content(page, browser_accounts, width):
     ):
         page.get_by_role("button", name="Suggest missing details", exact=True).click()
     expect(page.get_by_role("heading", name="Questions to consider")).to_be_visible()
+    assert_short_navigation(page, "Tester home", "Back to result")
     assert_layout(page, width)
     if width == 320:
         page.screenshot(path=str(Path(gettempdir()) / "relay-108-narrow.png"))
