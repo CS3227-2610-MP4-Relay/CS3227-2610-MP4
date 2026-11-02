@@ -414,7 +414,8 @@ def test_tester_action_emphasis_and_native_result_submission(
     assert save.locator("..").get_attribute("method") == "post"
     assert_layout(page, width)
     page.get_by_label("Observation", exact=True).fill("Synthetic revised observation")
-    save.click()
+    with page.expect_navigation(wait_until="load", timeout=10000):
+        save.click()
     page.reload()
     expect(page.get_by_label("Observation", exact=True)).to_have_value(
         "Synthetic revised observation"
