@@ -74,6 +74,8 @@ Threat: user-written requirements, cases or observations steer the model into mi
 
 Exact prompts, schemas, limits and failure rules belong in [`ai/`](ai/llm-gateway.md) before implementation. Prompt wording and human review are additional safeguards, not guarantees.
 
+The operator-only synthetic context comparison and its experimental background-data exception are defined in [CTX-1](ai/context-comparison.md#ctx-1-compare-selected-and-broader-synthetic-context).
+
 ### SEC-INJ-1: operator live injection measurement
 
 Measure exact instruction following against the current drafting and feedback instructions with a fixed synthetic corpus. This internal evaluation adds no product action or model quality guarantee; the feature contracts' broader manual evaluations remain pending.
