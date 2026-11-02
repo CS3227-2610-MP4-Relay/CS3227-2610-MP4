@@ -41,8 +41,29 @@ def browser_accounts(browser_accounts):
             expected_result=expected,
         )
         case.criteria.add(*linked)
+    original_criteria = list(round_.criteria.values())
+    original_cases = list(round_.cases.values())
+    original_links = [list(case.links.values()) for case in round_.cases.all()]
     yield accounts
     # The page fixture depends on this fixture, so its event loop has stopped.
+    if accounts.get("recovered_retest"):
+        round_.refresh_from_db()
+        assert (round_.state, round_.title, round_.closed_at) == (
+            Round.State.OPEN,
+            TITLE,
+            None,
+        )
+        assert list(round_.criteria.values()) == original_criteria
+        assert list(round_.cases.values()) == original_cases
+        assert [
+            list(case.links.values()) for case in round_.cases.all()
+        ] == original_links
+        builds = list(round_.builds.all())
+        assert [build.label for build in builds] == list(BUILDS[:2])
+        assert [list(build.cases.values_list("pk", flat=True)) for build in builds] == [
+            [case["id"] for case in original_cases],
+            [original_cases[1]["id"]],
+        ]
     if accounts.get("closed"):
         round_.refresh_from_db()
         assert (round_.state, round_.title) == (Round.State.CLOSED, REVISED_TITLE)
@@ -217,3 +238,69 @@ def test_coordinator_edits_retests_twice_and_closes_round(page, browser_accounts
     expect(page.get_by_role("heading", name=REVISED_TITLE, exact=True)).to_be_visible()
     expect(page.get_by_text(IGNORED)).to_have_count(0)
     browser_accounts["closed"] = True
+
+
+@pytest.mark.ac("RND-5.1", "RND-5.2", "RND-5.3", "RND-5.5")
+def test_coordinator_recovers_from_retest_refusals(page, browser_accounts):
+    sign_in_coordinator(page, browser_accounts)
+    page.get_by_role("link", name=TITLE, exact=True).click()
+    page.get_by_label("Build label", exact=True).fill(BUILDS[0])
+    page.get_by_role("button", name="Publish round", exact=True).click()
+    expect(page.get_by_role("status")).to_have_text("Round published.")
+    round_url = page.url
+    page.reload()
+    expect_builds(page, BUILDS[0], BUILDS[0])
+    sections = page.locator("#acceptance-criteria, #test-cases, #builds")
+    original_content = sections.all_text_contents()
+    for label, selected, error in (
+        (BUILDS[1], False, "Select at least one test case."),
+        (BUILDS[0], True, "This build label is already used in this round."),
+    ):
+        page.get_by_role("link", name="Request a retest", exact=True).click()
+        choices = page.get_by_role("group", name="Test cases to retest")
+        expect(choices.get_by_role("checkbox")).to_have_count(2)
+        expect(
+            choices.get_by_role("checkbox", name=FIRST_CASE, exact=True)
+        ).not_to_be_checked()
+        second = choices.get_by_role("checkbox", name=SECOND_CASE, exact=True)
+        expect(second).not_to_be_checked()
+        if selected:
+            second.check()
+        page.get_by_label("Build label", exact=True).fill(label)
+        with page.expect_response(
+            lambda response: response.request.method == "POST"
+        ) as refused:
+            page.get_by_role("button", name="Request retest", exact=True).click()
+        assert refused.value.status == 200
+        expect(page.locator(".error")).to_have_text(error)
+        expect(page.get_by_label("Build label", exact=True)).to_have_value(label)
+        expect(second).to_be_checked(checked=selected)
+        expect(
+            choices.get_by_role("checkbox", name=FIRST_CASE, exact=True)
+        ).not_to_be_checked()
+        expect(page.get_by_role("status")).to_have_count(0)
+        page.get_by_role("navigation", name="Page navigation").get_by_role(
+            "link", name="Back to round", exact=True
+        ).click()
+        expect(page).to_have_url(round_url)
+        page.reload()
+        expect(page.get_by_text("State: Open", exact=True)).to_be_visible()
+        expect(sections).to_have_text(original_content)
+        expect_builds(page, BUILDS[0], BUILDS[0])
+        expect(page.locator("#builds > h3")).to_have_text([BUILDS[0]])
+    page.get_by_role("link", name="Request a retest", exact=True).click()
+    page.get_by_role("checkbox", name=SECOND_CASE, exact=True).check()
+    page.get_by_label("Build label", exact=True).fill(BUILDS[1])
+    page.get_by_role("button", name="Request retest", exact=True).click()
+    expect(page.get_by_role("status")).to_have_count(1)
+    expect(page.get_by_role("status")).to_have_text(
+        f"Retest requested for 1 test case on build {BUILDS[1]}."
+    )
+    page.reload()
+    expect_builds(page, BUILDS[0], BUILDS[1])
+    expect(page.locator("#builds > h3")).to_have_text(list(BUILDS[:2]))
+    coverage = page.locator("#builds > ul")
+    expect(coverage).to_have_count(2)
+    expect(coverage.nth(0).locator("li")).to_have_text([FIRST_CASE, SECOND_CASE])
+    expect(coverage.nth(1).locator("li")).to_have_text([SECOND_CASE])
+    browser_accounts["recovered_retest"] = True
