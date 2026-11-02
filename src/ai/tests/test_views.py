@@ -668,7 +668,8 @@ def test_hostile_reply_text_is_escaped_isolated_and_round_trips(
     response, _ = post_draft(coord_client, round_, [criteria[0].pk], result)
     page = response.content.decode()
     line = '<span dir="auto">{}</span>'.format
-    assert "<script" not in page
+    assert page.count("<script") == 1
+    assert "<script" not in page.split("<main>", 1)[1].split("</main>", 1)[0]
     assert "<b>" not in page
     assert "<h3>" + line("&lt;script&gt;alert(1)&lt;/script&gt;") + "</h3>" in page
     second_line = '<br><span dir="auto">line two &quot;&gt;&lt;input'

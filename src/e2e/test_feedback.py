@@ -9,6 +9,7 @@ from playwright.sync_api import expect
 
 from accounts.models import User
 from ai.gateway import Failed, Success
+from e2e.pending import assert_pending_submit
 from rounds import services
 from rounds.models import Case, Criterion, Result, Round
 
@@ -85,6 +86,47 @@ def save_draft(page, accounts, outcome, observation):
     page.get_by_label("Observation", exact=True).fill(observation)
     page.get_by_role("button", name="Save draft", exact=True).click()
     expect(page.get_by_text("Status: Draft", exact=True)).to_be_visible()
+
+
+@pytest.mark.ac("PLT-4.12", "RES-4.2")
+def test_feedback_pending_request_and_history_reset(page, browser_accounts):
+    save_draft(page, browser_accounts, "fail", ORIGINAL)
+    page.get_by_role("link", name="Observation feedback", exact=True).click()
+    assert_pending_submit(
+        page,
+        "ai.feedback_views.gateway.complete",
+        "Suggest missing details",
+        "Suggesting missing details…",
+        Success(json.dumps({"questions": [QUESTION]})),
+        "Questions to consider",
+    )
+    browser_accounts["expected"] = ("fail", ORIGINAL, False)
+
+
+@pytest.mark.ac("PLT-4.12", "RES-4.2")
+def test_feedback_without_javascript(page, browser_accounts, live_server):
+    context = page.context.browser.new_context(
+        base_url=live_server.url, java_script_enabled=False
+    )
+    try:
+        plain = context.new_page()
+        save_draft(plain, browser_accounts, "fail", ORIGINAL)
+        plain.get_by_role("link", name="Observation feedback", exact=True).click()
+        with mock.patch(
+            "ai.feedback_views.gateway.complete",
+            return_value=Success(json.dumps({"questions": [QUESTION]})),
+        ) as complete:
+            plain.get_by_role(
+                "button", name="Suggest missing details", exact=True
+            ).click()
+            expect(plain.get_by_text(QUESTION, exact=True)).to_be_visible()
+            expect(
+                plain.get_by_role("button", name="Suggest missing details", exact=True)
+            ).to_be_enabled()
+            complete.assert_called_once()
+        browser_accounts["expected"] = ("fail", ORIGINAL, False)
+    finally:
+        context.close()
 
 
 @pytest.mark.ac("RES-4.1", "RES-4.2", "RES-4.4", "RES-4.5")

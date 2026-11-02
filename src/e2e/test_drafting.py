@@ -8,6 +8,7 @@ from playwright.sync_api import expect
 
 from accounts.models import Workspace
 from ai.gateway import Success
+from e2e.pending import assert_pending_submit
 from e2e.test_rounds import sign_in_coordinator
 from rounds.models import Case, Criterion, Round
 
@@ -57,6 +58,66 @@ def open_drafting(page, accounts):
     page.get_by_role("link", name="Draft test cases with AI", exact=True).click()
     for text in accounts["criteria"]:
         page.get_by_role("checkbox", name=text, exact=True).check()
+
+
+@pytest.mark.ac("PLT-4.12", "RND-8.1")
+def test_drafting_pending_request_and_history_reset(page, browser_accounts):
+    accounts = browser_accounts
+    sign_in_coordinator(page, accounts)
+    page.goto(accounts["round_url"] + "cases/draft/")
+    for criterion in accounts["criteria"]:
+        page.get_by_role("checkbox", name=criterion, exact=True).check()
+    assert_pending_submit(
+        page,
+        "ai.views.gateway.complete",
+        "Draft test cases",
+        "Drafting test cases…",
+        Success(json.dumps({"drafts": [DRAFT]})),
+        "Suggested test cases",
+    )
+
+
+@pytest.mark.ac("PLT-4.12", "RND-8.3")
+def test_drafting_invalid_selection_restores_enabled_form(page, browser_accounts):
+    sign_in_coordinator(page, browser_accounts)
+    page.goto(browser_accounts["round_url"] + "cases/draft/")
+    with mock.patch("ai.views.gateway.complete") as complete:
+        page.get_by_role("button", name="Draft test cases", exact=True).click()
+        expect(
+            page.get_by_text("Select 1 to 5 acceptance criteria.", exact=True)
+        ).to_be_visible()
+        expect(
+            page.get_by_role("button", name="Draft test cases", exact=True)
+        ).to_be_enabled()
+        expect(page.get_by_role("status")).to_be_empty()
+        complete.assert_not_called()
+
+
+@pytest.mark.ac("PLT-4.12", "RND-8.1")
+def test_drafting_without_javascript(page, browser_accounts, live_server):
+    context = page.context.browser.new_context(
+        base_url=live_server.url, java_script_enabled=False
+    )
+    try:
+        plain = context.new_page()
+        sign_in_coordinator(plain, browser_accounts)
+        plain.goto(browser_accounts["round_url"] + "cases/draft/")
+        for criterion in browser_accounts["criteria"]:
+            plain.get_by_role("checkbox", name=criterion, exact=True).check()
+        with mock.patch(
+            "ai.views.gateway.complete",
+            return_value=Success(json.dumps({"drafts": [DRAFT]})),
+        ) as complete:
+            plain.get_by_role("button", name="Draft test cases", exact=True).click()
+            expect(
+                plain.get_by_role("heading", name=DRAFT["title"], exact=True)
+            ).to_be_visible()
+            expect(
+                plain.get_by_role("button", name="Draft test cases", exact=True)
+            ).to_be_enabled()
+            complete.assert_called_once()
+    finally:
+        context.close()
 
 
 @pytest.mark.ac("RND-8.2")
