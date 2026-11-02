@@ -10,4 +10,6 @@ Checkpoints:
 
 Evidence: base `048eb5e3c388c38e1f4fdc97ab6cce6bd85dcb55`, private snapshot `relay-124-builder-home.json`. Before the template edit, updated landing-page and 320/1440 public-browser expectations failed for the missing built-workflow copy (3 failures). After editing one paragraph, `pytest src/relay/tests/test_pages.py src/accounts/tests/test_demo_views.py src/e2e/test_presentation.py::test_public_actions_are_compact_grouped_native_controls` passed 31 in 6.46s, retaining method/action/HEAD/redirect checks. Changed Python lint/format passed. Repository source/workflow-script scan found no other stale copy fixture expectations. Runtime diff: 2 lines. Public screenshots remain temporary outside the repository.
 
-Next: coordinator checks scope/diff and commits 124, then assigns the 125 spec-control correction before implementation. No open product decisions.
+Review mapping: PLT-1.1 → `test_public_landing_page` in [page tests](../../src/relay/tests/test_pages.py), `test_public_actions_are_compact_grouped_native_controls` in [browser presentation tests](../../src/e2e/test_presentation.py), and `test_signed_in_user_is_sent_home_and_creates_nothing` in [demo tests](../../src/accounts/tests/test_demo_views.py). Existing page method tests retain PLT-1.2 coverage.
+
+Next: User Guide copy aligned with built home; coordinator commits combined docs, runs full integrated checks, then independent review and delivery. Runtime 124: 2 lines. No open product decisions.
