@@ -192,6 +192,25 @@ def assert_short_navigation(page, home, back=None):
         assert_action_link_states(page, link)
 
 
+def assert_compact_label(control):
+    """Bound native text-label growth by its actual rendered line count."""
+    metrics = control.evaluate("""el => {
+      const range = document.createRange(); range.selectNodeContents(el);
+      const rects = [...range.getClientRects()].filter(r => r.width > 0);
+      const box = el.getBoundingClientRect(), style = getComputedStyle(el);
+      return {lines: new Set(rects.map(r => r.top.toFixed(2))).size,
+        height: box.height, width: box.width, font: parseFloat(style.fontSize),
+        line: parseFloat(style.lineHeight), contained: rects.every(r =>
+          r.left >= box.left - .5 && r.right <= box.right + .5 &&
+          r.top >= box.top - .5 && r.bottom <= box.bottom + .5)};
+    }""")
+    assert metrics["lines"] >= 1 and metrics["font"] >= 16
+    assert metrics["width"] >= 24 and metrics["contained"]
+    assert max(38, metrics["lines"] * metrics["line"]) <= metrics["height"]
+    assert metrics["height"] <= 42 + (metrics["lines"] - 1) * metrics["line"]
+    return metrics["lines"]
+
+
 @pytest.mark.ac("PLT-1.1", "PLT-4.2", "PLT-4.4", "PLT-4.5")
 @pytest.mark.parametrize("width", [320, 1440])
 def test_public_actions_are_compact_grouped_native_controls(page, width):
@@ -205,9 +224,7 @@ def test_public_actions_are_compact_grouped_native_controls(page, width):
     expect(group.get_by_role("button", name="Create a demo workspace")).to_have_count(1)
     assert group.evaluate("el => getComputedStyle(el).gap") == "8px"
     for control in (sign_in_link, demo):
-        box = control.bounding_box()
-        assert 38 <= box["height"] <= 42
-        assert box["width"] >= 24
+        assert_compact_label(control)
         assert control.evaluate("el => getComputedStyle(el).margin") == "0px"
     form = demo.locator("..")
     assert form.get_attribute("method") == "post"
@@ -217,6 +234,10 @@ def test_public_actions_are_compact_grouped_native_controls(page, width):
     assert_action_link_states(page, sign_in_link)
     assert_layout(page, width)
     page.screenshot(path=str(Path(gettempdir()) / f"relay-121-public-{width}.png"))
+    group.evaluate("el => el.style.maxWidth = '160px'")
+    assert assert_compact_label(demo) > 1
+    assert_compact_label(sign_in_link)
+    assert_layout(page, width)
     assert_keyboard_focus(page, 1)
     sign_in_link.click()
     expect(page).to_have_url("/sign-in/")
