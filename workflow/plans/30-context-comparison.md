@@ -22,7 +22,7 @@ Why: the planned app-context comparison has no measured evidence for whether sel
 
 ## Current checkpoint and next step
 
-Specs/plan checkpoint committed as `d802b54` before implementation. No live invocations yet. Actual measurements and semantic assessments belong only in the experiment report, with session resources in the coordinator log.
+Specs/plan checkpoint committed as `d802b54` before implementation; command committed as `7705b32`. Guide now documents the actual operator command and links CTX-1/report. No live invocations yet. Next: coordinator performs full verification, fixed-candidate reviews, authorized live execution and sanitized reporting; human review/merge remain pending. Measurements/assessments belong only in the experiment report, with session resources in the coordinator log.
 
 Corpus checkpoint: spec-before-code commit `d802b54`. Focused new tests initially failed collection because `ai.context_comparison` did not exist. After implementation, `pytest src/ai/tests/test_context_comparison.py src/ai/tests/test_evaluation.py -q` passed 27 tests in 0.26s using fixed test settings and unique temporary/cache directories; focused Ruff lint/format passed. Lint repairs wrapped fixed strings without changing their content. Exact synthetic inputs/background are now frozen as `context-1`; semantic assessment remains separate. Next: coordinator commits the corpus checkpoint and supplies a fresh snapshot before command/tests.
 
