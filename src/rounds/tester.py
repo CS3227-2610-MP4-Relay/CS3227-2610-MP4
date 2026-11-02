@@ -72,6 +72,30 @@ def detail(request, round_id):
     )
     for case in cases:
         case.current_build = next(iter(case.builds.all()), None)
+    saved = (
+        {
+            (case_id, build_id): submitted_at
+            for case_id, build_id, submitted_at in Result.objects.filter(
+                tester=request.user,
+                case__round=round_,
+                case_id__in=[case.pk for case in cases],
+                build__round=round_,
+                build__cases=F("case_id"),
+                build_id__in=[
+                    case.current_build.pk for case in cases if case.current_build
+                ],
+            ).values_list("case_id", "build_id", "submitted_at")
+        }
+        if round_.state == Round.State.OPEN
+        else {}
+    )
+    for case in cases:
+        pair = (case.pk, case.current_build.pk) if case.current_build else None
+        case.result_action = (
+            ("View result" if saved[pair] is not None else "Continue draft")
+            if pair in saved
+            else "Record result"
+        )
     return render(
         request, "rounds/tester_round.html", {"round": round_, "cases": cases}
     )

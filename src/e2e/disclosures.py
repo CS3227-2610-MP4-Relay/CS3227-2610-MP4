@@ -1,5 +1,7 @@
 """Exercise native disclosures before assertions about their full record content."""
 
+import re
+
 
 def expand_records(page):
     """Open each closed record with its real summary control."""
@@ -11,4 +13,6 @@ def expand_records(page):
 def result_links(page):
     """Expose the round's result-entry links through native expansion."""
     expand_records(page)
-    return page.get_by_role("link", name="Record result", exact=True)
+    return page.get_by_role(
+        "link", name=re.compile(r"^(Record result|Continue draft|View result)$")
+    )

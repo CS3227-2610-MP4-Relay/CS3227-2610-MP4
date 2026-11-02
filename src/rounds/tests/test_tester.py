@@ -15,7 +15,15 @@ from django.utils.html import escape
 
 from accounts.models import User
 from rounds import services
-from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
+from rounds.models import (
+    Build,
+    BuildCase,
+    Case,
+    CaseCriterion,
+    Criterion,
+    Result,
+    Round,
+)
 
 from .conftest import (
     DENIED,
@@ -104,6 +112,63 @@ def test_home_orders_only_own_available_rounds_for_both_testers(
             assert round_.title not in body
             assert f'href="{detail(round_)}"' not in body
     assert reverse("accounts:tester-round", args=[latest.pk]) == detail(latest)
+
+
+@pytest.mark.ac("RES-1.5")
+def test_result_actions_pair_owner_case_and_current_build(tester, published):
+    round_, cases, _ = published
+    original = round_.builds.get()
+    peer = User.objects.create_user(
+        "tester-result-actions", PASSWORD, workspace=tester.workspace, role="tester"
+    )
+    Result.objects.create(
+        tester=tester,
+        case=cases[0],
+        build=original,
+        outcome="pass",
+        submitted_at=timezone.now(),
+    )
+    Result.objects.create(tester=tester, case=cases[1], build=original, outcome="pass")
+    Result.objects.create(
+        tester=peer,
+        case=cases[2],
+        build=original,
+        outcome="pass",
+        submitted_at=timezone.now(),
+    )
+    client = signed_in(tester)
+
+    def actions(labels, builds):
+        before = list(Result.objects.order_by("pk").values())
+        response = client.get(detail(round_))
+        assert response.status_code == 200
+        html = page(response)
+        for case, label, build in zip(cases, labels, builds, strict=True):
+            style = "action secondary" if label == "View result" else "action"
+            url = reverse("accounts:tester-result", args=[round_.pk, case.pk, build.pk])
+            assert f'<a class="{style}" href="{url}">{label}</a>' in html
+        assert list(Result.objects.order_by("pk").values()) == before
+
+    actions(["View result", "Continue draft", "Record result"], [original] * 3)
+    with transaction.atomic():
+        services.request_retest(round_, "Synthetic action retest", [cases[0].pk])
+    current = round_.builds.order_by("-id").first()
+    Result.objects.create(
+        tester=peer,
+        case=cases[0],
+        build=current,
+        outcome="pass",
+        submitted_at=timezone.now(),
+    )
+    actions(
+        ["Record result", "Continue draft", "Record result"],
+        [current, original, original],
+    )
+    round_.state = Round.State.CLOSED
+    round_.save(update_fields=["state"])
+    html = page(client.get(detail(round_)))
+    for label in ("Record result", "Continue draft", "View result"):
+        assert label not in html
 
 
 @pytest.mark.ac("RES-1.2")
@@ -325,7 +390,13 @@ def test_success_and_storage_failures_are_uncached(tester, published, detail_pag
         and "no-store" in response["Cache-Control"]
     )
     for target in (
-        ("rounds_round", "rounds_case", "rounds_criterion", "rounds_build")
+        (
+            "rounds_round",
+            "rounds_case",
+            "rounds_criterion",
+            "rounds_build",
+            "rounds_result",
+        )
         if detail_page
         else ("rounds_round",)
     ):
