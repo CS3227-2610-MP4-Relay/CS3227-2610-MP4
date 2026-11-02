@@ -1,0 +1,12 @@
+# 125: Review multiple suggestions
+
+Goal: keep one response available while separately reviewing and adopting its suggestions under [RND-8.2](../specs/product/rounds.md#rnd-8-draft-test-cases-with-ai).
+
+Tier: High (AI adoption boundary). One requirement changed; <=400 runtime lines, estimate 10–30. Why: full-page adoption replaces the sole transient response. Recommended smallest design: explicit new-tab notice plus native POST target with opener isolation, preserving existing manual review form and ordinary case-save route. No fetch mutation subsystem, stored suggestions, dependencies or automatic adoption. Contract details remain in the [AI contract](../specs/ai/test-drafting.md#review-and-adoption).
+
+Checkpoints:
+1. Specs/plan recorded with 123; coordinator accepted the routine new-tab design before implementation assignment.
+2. `fix: Preserve suggestions during individual review`: `src/ai/templates/ai/draft.html`, criterion-marked `src/e2e/test_drafting.py` and `src/ai/tests/test_views.py`. Red: adopt first of two suggestions, edit/save it, return to original response, adopt/save second, fake gateway called once. Assert no case exists before explicit form save, two independently edited saves, cancelled review leaves no case, distinct browser contexts, opener isolation and visible new-tab notice. Check ordinary forms work without JavaScript. Keep existing cleaned hidden-text round-trip test, cap/state/cross-round authorization and manual validation coverage. Existing browser adoption tests must select the new page; expectations change for the intentional new-tab journey only.
+3. `docs: Explain individual suggestion review`: `docs/UserGuide.md` after code exists; explain keeping the suggestions tab and reviewing each case, without duplicating AI contract details.
+
+Next: coordinator assigns implementation after 124 checkpoint. Closing/reloading response still discards suggestions; no recovery feature. Published/deleted-criterion changes continue to use existing server checks. Final independent AI security review required.
