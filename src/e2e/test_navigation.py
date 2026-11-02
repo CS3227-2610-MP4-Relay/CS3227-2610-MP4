@@ -102,6 +102,12 @@ def test_contents_reveal_records_and_keyboard_defaults(
         expect(summaries.nth(1)).to_contain_text("Pass")
         title = summaries.first.get_by_role("heading")
         label = summaries.first.get_by_text("Test case", exact=True)
+        assert label.bounding_box()["y"] - summaries.first.bounding_box()[
+            "y"
+        ] < summaries.first.evaluate(
+            "el => parseFloat(getComputedStyle(el).paddingTop) + "
+            "parseFloat(getComputedStyle(el).lineHeight) / 2"
+        )
         assert (
             label.bounding_box()["y"] + label.bounding_box()["height"]
             <= title.bounding_box()["y"]
