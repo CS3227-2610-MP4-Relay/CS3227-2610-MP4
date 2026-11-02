@@ -24,9 +24,10 @@ def test_public_landing_page(client):
         "<title>Relay</title>",
         "<h1>Relay</h1>",
         "A beta-testing portal for small software teams.",
-        "Testing workflows are coming soon.",
+        "Create test rounds, record results and review feedback with your team.",
     ):
         assert text in html
+    assert "Testing workflows are coming soon." not in html
     assert html.count("<a") == 1
     assert re.findall(r"<a [^>]*>[^<]*</a>", html) == [
         '<a class="action secondary" href="/sign-in/">Sign in</a>'

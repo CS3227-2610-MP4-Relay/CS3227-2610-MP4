@@ -216,6 +216,15 @@ def assert_compact_label(control):
 def test_public_actions_are_compact_grouped_native_controls(page, width):
     page.set_viewport_size({"width": width, "height": 900})
     page.goto("/")
+    expect(
+        page.get_by_text(
+            "Create test rounds, record results and review feedback with your team.",
+            exact=True,
+        )
+    ).to_be_visible()
+    expect(
+        page.get_by_text("Testing workflows are coming soon.", exact=True)
+    ).to_have_count(0)
     sign_in_link = page.get_by_role("link", name="Sign in", exact=True)
     demo = page.get_by_role("button", name="Create a demo workspace", exact=True)
     assert background(sign_in_link) == "rgb(255, 255, 255)"

@@ -8,4 +8,6 @@ Checkpoints:
 1. Specs/plan recorded with 123 before source edits.
 2. `fix: Describe available workflows on home`: `src/relay/templates/home.html`, `src/relay/tests/test_pages.py` and existing public-home browser coverage in `src/e2e/test_presentation.py`. Red: assert replacement copy and absence of stale message. Green: public GET/HEAD, allowed actions/methods and role redirect regression checks, browser visible copy. Update any existing smoke-test fixture expectations for PLT-1.1 if needed; no deployment change.
 
-Next: wait for coordinator's assignment after 123; run focused tests then yield for commit. No open product decisions.
+Evidence: base `048eb5e3c388c38e1f4fdc97ab6cce6bd85dcb55`, private snapshot `relay-124-builder-home.json`. Before the template edit, updated landing-page and 320/1440 public-browser expectations failed for the missing built-workflow copy (3 failures). After editing one paragraph, `pytest src/relay/tests/test_pages.py src/accounts/tests/test_demo_views.py src/e2e/test_presentation.py::test_public_actions_are_compact_grouped_native_controls` passed 31 in 6.46s, retaining method/action/HEAD/redirect checks. Changed Python lint/format passed. Repository source/workflow-script scan found no other stale copy fixture expectations. Runtime diff: 2 lines. Public screenshots remain temporary outside the repository.
+
+Next: coordinator checks scope/diff and commits 124, then assigns the 125 spec-control correction before implementation. No open product decisions.
