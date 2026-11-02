@@ -1,0 +1,7 @@
+{% load rounds_text %}<ul>
+{% if round_contents %}<li><a href="#acceptance-criteria">Acceptance criteria</a></li>{% endif %}
+{% if round_contents or tester_contents %}<li><a href="#test-cases">Test cases</a></li>{% endif %}
+{% if history_contents %}{% for result in results %}<li><a href="#result-{{ result.pk }}">{{ result.case.title|isolated_lines }} — {{ result.build.label|isolated_lines }}</a></li>{% endfor %}
+{% else %}{% for case in cases %}<li><a href="#case-{{ case.pk }}">{{ case.title|isolated_lines }}</a></li>{% endfor %}{% endif %}
+{% if round_contents and builds %}<li><a href="#builds">Builds</a></li>{% endif %}
+</ul>

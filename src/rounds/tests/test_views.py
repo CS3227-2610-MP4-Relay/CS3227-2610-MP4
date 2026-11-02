@@ -73,12 +73,13 @@ def test_creating_a_round_opens_its_draft_round_page(coord_client, coordinator):
     html = page(coord_client.get(response["Location"]))
     assert '<h1><span dir="auto">Synthetic checkout round</span></h1>' in html
     assert "<p>State: Draft</p>" in html
-    assert f'<a href="{edit(made.pk)}">Edit round</a>' in html
+    assert f'<a class="action secondary" href="{edit(made.pk)}">Edit round</a>' in html
     assert '<a href="/coordinator/">Coordinator home</a>' in html
     # From RND-2, "no criteria or cases" shows as the two empty sections.
     assert "<p>No acceptance criteria yet.</p>" in html
     assert "<p>No test cases yet.</p>" in html
-    assert "<li>" not in html and "<h3>" not in html
+    assert "<li>" not in html.split('<div class="records">', 1)[1]
+    assert "<h3>" not in html
     assert "alert" not in html
     home = page(coord_client.get("/coordinator/"))
     assert (
@@ -97,7 +98,7 @@ def test_coordinator_home_lists_own_rounds_newest_first_with_state(
     make_round("Synthetic foreign", owner=other_workspace)
     html = page(coord_client.get("/coordinator/"))
     assert "<h2>Rounds</h2>" in html
-    assert '<a href="/coordinator/rounds/new/">New round</a>' in html
+    assert '<a class="action" href="/coordinator/rounds/new/">New round</a>' in html
     item = r'<li><a href="([^"]+)"><span dir="auto">([^<]+)</span></a> \((\w+)\)</li>'
     items = re.findall(item, html)
     assert items == [
@@ -114,7 +115,7 @@ def test_coordinator_home_without_rounds(coord_client):
     html = page(coord_client.get("/coordinator/"))
     assert "<h2>Rounds</h2>" in html
     assert "<p>No rounds yet.</p>" in html
-    assert '<a href="/coordinator/rounds/new/">New round</a>' in html
+    assert '<a class="action" href="/coordinator/rounds/new/">New round</a>' in html
     # ACC-1's home content stays.
     assert "Username: coord-rnd10001" in html
     assert "Sign out" in html

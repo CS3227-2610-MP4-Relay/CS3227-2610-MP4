@@ -129,7 +129,8 @@ def expect_builds(page, *current):
     for title, label in zip((FIRST_CASE, SECOND_CASE), current, strict=True):
         case = page.get_by_role("heading", name=title, exact=True)
         own = (
-            "xpath=following-sibling::h4[.='Current build'][1]/following-sibling::p[1]"
+            "xpath=following-sibling::span[contains(@class,'record-meta')]"
+            "//span[@dir='auto']"
         )
         expect(case.locator(own)).to_have_text(label)
 
@@ -158,7 +159,7 @@ def test_coordinator_edits_retests_twice_and_closes_round(page, browser_accounts
     expect(page.get_by_text(REVISED_FIRST, exact=True)).to_have_count(2)
     expect(page.get_by_text(SECOND, exact=True)).to_have_count(3)
     expect(page.get_by_text(FIRST, exact=True)).to_have_count(0)
-    page.get_by_role("link", name="Coordinator home", exact=True).click()
+    page.get_by_role("link", name="Coordinator home", exact=True).last.click()
     expect(
         page.get_by_role("listitem").filter(
             has=page.get_by_role("link", name=REVISED_TITLE, exact=True)

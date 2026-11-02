@@ -34,7 +34,7 @@ def test_coordinator_prepares_and_publishes_linked_case(page, browser_accounts):
     expect(page.get_by_text("State: Draft", exact=True)).to_be_visible()
     expect(page.get_by_text("No acceptance criteria yet.", exact=True)).to_be_visible()
     expect(page.get_by_text("No test cases yet.", exact=True)).to_be_visible()
-    page.get_by_role("link", name="Coordinator home", exact=True).click()
+    page.get_by_role("link", name="Coordinator home", exact=True).last.click()
     page.get_by_role("link", name=title, exact=True).click()
 
     page.get_by_role("link", name="Add acceptance criterion", exact=True).click()
@@ -63,9 +63,7 @@ def test_coordinator_prepares_and_publishes_linked_case(page, browser_accounts):
     expect(page.get_by_text("State: Open", exact=True)).to_be_visible()
     expect(page.get_by_role("heading", name=case_title, exact=True)).to_be_visible()
     expect(page.get_by_text(criterion, exact=True)).to_have_count(2)
-    expect(
-        page.get_by_role("heading", name="Current build", exact=True)
-    ).to_be_visible()
+    expect(page.get_by_text("Current build", exact=True)).to_be_visible()
     expect(page.get_by_role("heading", name="Builds", exact=True)).to_be_visible()
     expect(page.get_by_role("heading", name=build, exact=True)).to_be_visible()
     # The label appears as the case's current build and in the build list.
@@ -110,7 +108,7 @@ def test_case_without_link_is_refused_without_saving(page, browser_accounts):
         expect(page.get_by_label(label, exact=True)).to_have_value(value)
     expect(page.get_by_role("checkbox", name=criterion, exact=True)).not_to_be_checked()
 
-    page.get_by_role("link", name="Back to round", exact=True).click()
+    page.get_by_role("link", name="Back to round", exact=True).last.click()
     page.reload()
     expect(page.get_by_text("State: Draft", exact=True)).to_be_visible()
     expect(page.get_by_text(criterion, exact=True)).to_be_visible()

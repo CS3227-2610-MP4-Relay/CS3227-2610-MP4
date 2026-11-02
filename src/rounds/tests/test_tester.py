@@ -171,9 +171,9 @@ def test_detail_shows_ordered_cases_links_and_latest_covering_build(
         "Steps",
         "Expected result",
         "Linked acceptance criteria",
-        "Current build",
     ):
         assert body.count(f"<h4>{heading}</h4>") == 3
+    assert body.count("<span>Current build</span>") == 3
     for absent in (
         "Synthetic partial",
         "Builds",
@@ -428,7 +428,7 @@ def test_publish_and_close_change_next_request(tester, coordinator, make_round):
     closed_detail = client.get(detail(round_))
     assert closed_detail.status_code == 200
     entry_link = (
-        f'<p><a href="/tester/rounds/{round_.pk}/cases/{case.pk}/builds/'
+        f'<p><a class="action" href="/tester/rounds/{round_.pk}/cases/{case.pk}/builds/'
         f'{round_.builds.get().pk}/result/">Record result</a></p>'
     )
     assert entry_link in page(original) and "Record result" not in page(closed_detail)

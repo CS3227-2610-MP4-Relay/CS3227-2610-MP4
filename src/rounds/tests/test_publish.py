@@ -100,10 +100,14 @@ def test_draft_round_page_has_the_publish_form_after_the_cases(coord_client, dra
     fill(draft)
     html = page(coord_client.get(detail(draft.pk)))
     form = html.index(f'action="{publish_url(draft.pk)}"')
-    assert html.index("<h2>Test cases</h2>") < html.index("Synthetic case 1") < form
+    assert (
+        html.index("<h2>Test cases</h2>")
+        < html.index('<h3><span dir="auto">Synthetic case 1</span></h3>')
+        < form
+    )
     assert form < html.index('<label for="id_label">Build label</label>')
     assert html.index('name="label"') < html.index("Publish round</button>")
-    assert html.index("Publish round</button>") < html.index("Coordinator home")
+    assert html.index("Publish round</button>") < html.rindex("Coordinator home")
     assert "<h2>Builds</h2>" not in html and "Current build" not in html
 
 
@@ -141,9 +145,9 @@ def test_round_page_after_publishing_shows_the_message_once_and_the_open_view(
     assert html.count(label) == 3
     for n in range(2):
         case_at = html.index(f'<h3><span dir="auto">Synthetic case {n}</span></h3>')
-        build_at = html.index("<h4>Current build</h4>", case_at)
-        assert html.index("<h4>Linked acceptance criteria</h4>", case_at) < build_at
-        assert html.index(label, build_at) == html.index("<p>", build_at) + 3
+        build_at = html.index("<span>Current build</span>", case_at)
+        assert build_at < html.index("<h4>Linked acceptance criteria</h4>", case_at)
+        assert html[build_at:].startswith(f"<span>Current build</span> {label}</span>")
     builds = html.index("<h2>Builds</h2>")
     assert html.rindex("Current build") < builds
     after = html[builds:]
@@ -185,7 +189,12 @@ def test_builds_list_oldest_first_and_current_build_is_the_newest_covering(
     html = page(coord_client.get(detail(opened.pk)))
     builds = html.index("<h2>Builds</h2>")
     current = [
-        html[html.index("<h4>Current build</h4>", html.index(f"Synthetic case {n}")) :]
+        html[
+            html.index(
+                "<span>Current build</span>",
+                html.index(f'<h3><span dir="auto">Synthetic case {n}</span></h3>'),
+            ) :
+        ]
         for n in range(2)
     ]
     assert current[0].index("Synthetic old") < current[0].index("Synthetic new")
@@ -648,8 +657,8 @@ def test_case_titles_in_the_builds_list_are_escaped_and_isolated(coord_client, d
         f'<span dir="auto">{escape(MARKUP)}</span><br>'
         f'<span dir="auto">{BIDI_AND_INVISIBLE}</span>'
     )
-    # The case heading under "Test cases" and the entry under "Builds".
-    assert html.count(lines) == 2
+    # The case heading, Builds entry and both responsive contents versions.
+    assert html.count(lines) == 4
     assert html.index("<h2>Builds</h2>") < html.rindex(lines)
     outside = html.replace(lines, "")
     assert SCRIPT_TAG not in outside and IMG_TAG not in outside

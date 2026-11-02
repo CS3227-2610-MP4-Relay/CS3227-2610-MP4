@@ -169,7 +169,10 @@ def test_round_page_links_to_results_under_its_state(coord_client, review, state
         review.close()
     html = page(coord_client.get(detail(review.round.pk)))
     label = state.capitalize()
-    link = f'<p><a href="{results_url(review.round.pk)}">{LINK}</a></p>'
+    link = (
+        '<p><a class="action secondary" '
+        f'href="{results_url(review.round.pk)}">{LINK}</a></p>'
+    )
     assert f"<p>State: {label}</p>\n{link}" in html
     assert html.count(LINK) == 1
 
@@ -201,7 +204,10 @@ def test_results_page_lists_cases_and_current_build_results_newest_first(
         f"<li>{span('Synthetic criterion one')}</li>"
         f"<li>{span('Synthetic criterion two')}</li></ul>"
     ) in first
-    assert f"<h3>Current build</h3>\n<p>{span('Synthetic 1.0')}</p>" in first
+    assert (
+        '<span class="record-meta"><span>Current build</span> '
+        f"{span('Synthetic 1.0')}</span>" in first
+    )
     lines = [
         result_lines(second_tester.username, "Pass", "", T2),
         result_lines(tester.username, "Fail", "Synthetic older", T1),
@@ -271,9 +277,12 @@ def test_earlier_build_results_do_not_count_for_the_current_build(
     review.retest("Synthetic 2.0", review.case)
     html = page(coord_client.get(results_url(review.round.pk)))
     first = section(html, "Synthetic case A", "<h2>")
-    assert f"<h3>Current build</h3>\n<p>{span('Synthetic 2.0')}</p>" in first
+    assert (
+        '<span class="record-meta"><span>Current build</span> '
+        f"{span('Synthetic 2.0')}</span>" in first
+    )
     current = first[: first.index("<h3>Earlier builds</h3>")]
-    assert f"<h3>Results for this build</h3>\n<p>{EMPTY}</p>" in current
+    assert f'<span class="record-meta">{EMPTY}</span>' in current
     assert "Synthetic earlier" not in current
     earlier = first[first.index("<h3>Earlier builds</h3>") :]
     expected = result_lines(
@@ -307,7 +316,7 @@ def test_a_retested_case_without_earlier_submissions_has_no_earlier_builds(
     html = page(coord_client.get(results_url(review.round.pk)))
     for title in ("Synthetic case A", "Synthetic case B"):
         part = section(html, title, "<h2>" if title.endswith("A") else None)
-        assert f"<h3>Results for this build</h3>\n<p>{EMPTY}</p>" in part
+        assert f'<span class="record-meta">{EMPTY}</span>' in part
     assert "Earlier builds" not in html and "Synthetic earlier draft" not in html
 
 
@@ -332,7 +341,10 @@ def test_retests_move_selected_results_to_earlier_builds_unchanged(
     first = section(html, "Synthetic case A", "<h2>")
     current = first[: first.index("<h3>Earlier builds</h3>")]
     earlier = first[first.index("<h3>Earlier builds</h3>") :]
-    assert f"<p>{span('Synthetic 3.0')}</p>" in current and EMPTY in current
+    assert (
+        f"<span>Current build</span> {span('Synthetic 3.0')}</span>" in current
+        and EMPTY in current
+    )
     newest = result_lines(
         second_tester.username, "Pass", "Synthetic 2", T2, "Synthetic 2.0"
     )
@@ -401,7 +413,10 @@ def test_drafts_and_rows_outside_the_rounds_covering_builds_never_appear(
     # The valid result lists under the case's own current build, which is
     # this round's build, so a foreign covering build changes nothing.
     first = section(html, "Synthetic case A", "<h2>")
-    assert f"<h3>Current build</h3>\n<p>{span('Synthetic 1.0')}</p>" in first
+    assert (
+        '<span class="record-meta"><span>Current build</span> '
+        f"{span('Synthetic 1.0')}</span>" in first
+    )
     assert "Synthetic shown" in first and "Earlier builds" not in first
     for hidden in (
         "Synthetic forged build",
@@ -495,13 +510,13 @@ def test_user_text_is_escaped_and_each_line_isolated(
     # Heading; case A's title; criterion one under case A and under case B;
     # criterion two; case B's current build; the earlier result's build,
     # username and observation.
-    assert html.count(lines) == 9
+    assert html.count(lines) == 11
     assert f"<h1>Results: {lines}</h1>" in html
     assert f"<p>Build: {lines}</p>" in html
     assert f"<p>Tester: {lines}</p>" in html
     assert f"<p>Observation: {lines}</p>" in html
     assert SCRIPT_TAG not in html and IMG_TAG not in html
-    assert html.count("\u202e") == 9
+    assert html.count("\u202e") == 11
     assert title_tag(html) == (
         f"Results: {FSI}{escape(MARKUP)} Synthetic line\u200b{PDI}"
     )

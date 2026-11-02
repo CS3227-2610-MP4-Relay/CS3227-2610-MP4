@@ -37,7 +37,7 @@ main > :last-child { margin-bottom: 0; }
 a { color: #1856a2; text-decoration: underline; text-underline-offset: .18em; }
 a:hover { color: #103c76; text-decoration-thickness: 2px; }
 button, input, textarea, select { font: inherit; }
-button {
+button, .action {
   display: inline-block;
   max-width: 100%;
   padding: .65rem 1.1rem;
@@ -53,6 +53,15 @@ button {
 }
 button:hover { background: #173c70; }
 button:active { background: #102f5a; }
+.action:hover { background: #173c70; color: #fff; }
+.secondary, .destructive { background: #fff; color: #234e8a; }
+.secondary:hover, .secondary:active { background: #edf4fc; color: #173c70; }
+.destructive { border-color: #a52e27; color: #87241f; }
+.destructive:hover, .destructive:active { background: #fff0ee; color: #87241f; }
+.actions, .page-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: 1.2rem; }
+.actions > form, .actions > p, .actions button, .actions .action { margin: 0; }
+li > .actions { margin: .5rem 0; }
+.page-navigation { padding-bottom: .8rem; border-bottom: 1px solid #d6dfeb; }
 label, legend { font-weight: 600; }
 label { display: block; margin-bottom: .4rem; }
 input:not([type=checkbox]):not([type=radio]):not([type=hidden]), textarea, select {
@@ -93,7 +102,7 @@ input[type=checkbox] + label, input[type=radio] + label {
   font-weight: 400;
   margin: 0;
 }
-:is(a, button, input, textarea, select):focus-visible {
+:is(a, button, input, textarea, select, summary):focus-visible {
   outline: 3px solid #9a4900;
   outline-offset: 3px;
 }
@@ -110,6 +119,25 @@ tbody tr:nth-child(even) { background: #f5f7fb; }
 .error { background: #fff0ee; border-color: #a52e27; color: #87241f; }
 .state, .error { margin-bottom: 1.2rem; }
 .state > :last-child, .error > :last-child { margin-bottom: 0; }
+.reading-layout > *, .contents { min-width: 0; }
+.desktop-contents { display: none; }
+.contents { margin-bottom: 1.2rem; }
+.contents ul { list-style: none; padding: 0; }
+.contents a { display: block; padding: .2rem; }
+.contents p { font-weight: 650; margin-bottom: .5rem; }
+summary { cursor: pointer; padding: .8rem; }
+summary > :is(h2, h3) { display: inline; border: 0; padding: 0; margin: 0; }
+.record { margin: 1.2rem 0; border: 1px solid #b8c7d9; border-radius: 7px; }
+.record-meta { display: block; margin: .3rem 0 0 1.1rem; }
+.record-body { padding: 0 1rem 1rem; scroll-margin-top: 1rem; }
+.record-body :is(h3, h4) { margin: .9rem 0 .35rem; }
+.record-body :is(p, ul) { margin-bottom: .65rem; }
+.record-body li { margin: .35rem 0; }
+@media (min-width: 1024px) {
+  .reading-layout { display: grid; grid-template-columns: minmax(140px, 190px) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+  .desktop-contents { display: block; }
+  .mobile-contents { display: none; }
+}
 @media (max-width: 480px) {
   main { padding: 20px 16px; border-radius: 10px; }
   th, td { padding: .65rem .35rem; }

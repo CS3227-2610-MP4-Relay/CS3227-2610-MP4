@@ -2,21 +2,25 @@
 {% load rounds_text %}
 {% block title %}{{ round.title|title_isolate }}{% endblock %}
 {% block content %}
+{% include "page_navigation.html" with tester=True %}
 <h1>{{ round.title|isolated_lines }}</h1>
 <div class="state"><p>State: {{ round.get_state_display }}</p></div>
-<p><a href="{% url 'accounts:tester-results' round.id %}">My results</a></p>
-<h2>Test cases</h2>
+<p><a class="action secondary" href="{% url 'accounts:tester-results' round.id %}">My results</a></p>
+<div class="reading-layout">{% include "rounds/contents.html" with tester_contents=True %}<div class="records">
+<section id="test-cases"><h2>Test cases</h2>
 {% for case in cases %}
-<h3>{{ case.title|isolated_lines }}</h3>
+<details class="record"{% if forloop.first %} open{% endif %}><summary><h3>{{ case.title|isolated_lines }}</h3>
+{% if case.current_build %}<span class="record-meta"><span>Current build</span> {{ case.current_build.label|isolated_lines }}</span>{% endif %}</summary>
+<div class="record-body" id="case-{{ case.pk }}">
 <h4>Steps</h4>
 <p>{{ case.steps|isolated_lines }}</p>
 <h4>Expected result</h4>
 <p>{{ case.expected_result|isolated_lines }}</p>
 <h4>Linked acceptance criteria</h4>
 <ul>{% for criterion in case.criteria.all %}<li>{{ criterion.text|isolated_lines }}</li>{% endfor %}</ul>
-{% if case.current_build %}<h4>Current build</h4>
-<p>{{ case.current_build.label|isolated_lines }}</p>{% endif %}
-{% if round.state == "open" and case.current_build %}<p><a href="{% url 'accounts:tester-result' round.id case.id case.current_build.id %}">Record result</a></p>{% endif %}
-{% endfor %}
+{% if round.state == "open" and case.current_build %}<p><a class="action" href="{% url 'accounts:tester-result' round.id case.id case.current_build.id %}">Record result</a></p>{% endif %}
+</div></details>
+{% endfor %}</section>
 <p><a href="{% url 'accounts:tester' %}">Tester home</a></p>
+</div></div>
 {% endblock %}

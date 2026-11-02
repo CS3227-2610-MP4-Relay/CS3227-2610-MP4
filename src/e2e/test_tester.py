@@ -3,6 +3,8 @@
 import pytest
 from playwright.sync_api import expect
 
+from e2e.disclosures import expand_records
+
 
 def sign_in(page, accounts, role):
     """Authenticate each role in its own browser context through the real form."""
@@ -16,11 +18,14 @@ def assert_read_only(page):
     """The tester's detail offers navigation and no mutation controls."""
     expect(page.locator("main form, main input, main button")).to_have_count(0)
     expect(page.locator('main a[href^="/coordinator/"]')).to_have_count(0)
-    expect(page.get_by_role("link", name="Tester home", exact=True)).to_be_visible()
+    expect(
+        page.get_by_role("link", name="Tester home", exact=True).last
+    ).to_be_visible()
 
 
 def assert_steps(page, steps):
     """Each case preserves the visible step lines and their separating break."""
+    expand_records(page)
     for line in steps.splitlines():
         expect(page.get_by_text(line, exact=True)).to_have_count(2)
     paragraphs = page.locator("p").filter(
@@ -126,7 +131,7 @@ def test_tester_reads_published_retested_and_closed_round(
         expect(page.locator("h3")).to_have_text(cases)
         assert_steps(page, steps)
         assert_read_only(page)
-        page.get_by_role("link", name="Tester home", exact=True).click()
+        page.get_by_role("link", name="Tester home", exact=True).last.click()
         expect(page.get_by_role("listitem")).to_contain_text("(Closed)")
         page.get_by_role("link", name=title, exact=True).click()
         expect(page.get_by_text("State: Closed", exact=True)).to_be_visible()

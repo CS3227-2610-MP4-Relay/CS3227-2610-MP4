@@ -123,8 +123,8 @@ def test_closed_round_page_shows_the_message_once_and_everything_without_control
     label = '<span dir="auto">Synthetic 1.0</span>'
     for n in range(2):
         case_at = html.index(f'<h3><span dir="auto">Synthetic case {n}</span></h3>')
-        build_at = html.index("<h4>Current build</h4>", case_at)
-        assert html.index("<h4>Linked acceptance criteria</h4>", case_at) < build_at
+        build_at = html.index("<span>Current build</span>", case_at)
+        assert build_at < html.index("<h4>Linked acceptance criteria</h4>", case_at)
         assert html.index(label, build_at) < html.index("<h2>Builds</h2>")
     builds = html[html.index("<h2>Builds</h2>") :]
     assert f"<h3>{label}</h3>" in builds and "<h4>Covered test cases</h4>" in builds
@@ -146,7 +146,7 @@ def test_open_round_page_shows_the_warning_directly_before_the_close_button(
     warning = html.index(f"<p>{WARNING}</p>")
     form = html.index(f'<form method="post" action="{close_url(opened.pk)}">')
     assert html.index("<h2>Builds</h2>") < warning < form < html.index(BUTTON)
-    assert html.index(BUTTON) < html.index("Coordinator home")
+    assert html.index(BUTTON) < html.rindex("Coordinator home")
     # Nothing but the form's start sits between the warning and the form.
     assert html[warning + len(f"<p>{WARNING}</p>") : form].strip() == ""
     assert "Publish round" not in html and "Edit round" not in html
@@ -376,7 +376,8 @@ def test_injected_fields_are_ignored(coord_client, opened, make_round):
 # Heading; criterion in its list and under the case; the case's title, steps,
 # expected result and current build; the build label and the covered case's
 # title in the builds list.
-EVERY_PLACE = 9
+# Both responsive contents versions repeat the case title, with isolation.
+EVERY_PLACE = 11
 
 
 def everywhere(make_round, text):

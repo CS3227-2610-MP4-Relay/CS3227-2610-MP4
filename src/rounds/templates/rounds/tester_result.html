@@ -3,7 +3,7 @@
 {% block title %}{% if conflict %}Action not available{% else %}Record result{% endif %}{% endblock %}
 {% block content %}
 {% if conflict %}<div class="error"><h1>{{ conflict }}</h1></div>
-{% else %}<h1>Record result</h1>
+{% else %}{% url 'accounts:tester-round' entry.round.id as back_url %}{% include "page_navigation.html" with tester=True back=back_url %}<h1>Record result</h1>
 <h2>Test case</h2>
 <p>{{ entry.case.title|isolated_lines }}</p>
 <h2>Current build</h2>
@@ -14,7 +14,7 @@
 <h2>Observation</h2>
 <p>{% if entry.result.observation %}{{ entry.result.observation|isolated_lines }}{% else %}No observation.{% endif %}</p>
 {% else %}
-{% if entry.result %}<div class="state"><p>Status: Draft</p></div><p><a href="{% url 'accounts:tester-feedback' entry.round.pk entry.case.pk entry.build.pk %}">Observation feedback</a></p>{% endif %}
+{% if entry.result %}<div class="state"><p>Status: Draft</p></div><p><a class="action secondary" href="{% url 'accounts:tester-feedback' entry.round.pk entry.case.pk entry.build.pk %}">Observation feedback</a></p>{% endif %}
 <form method="post">
 {% csrf_token %}
 {% for error in form.non_field_errors %}<div class="error"><p>{{ error }}</p></div>{% endfor %}
@@ -22,7 +22,7 @@
 <p><label for="{{ field.id_for_label }}">{{ field.label }}</label> {{ field }}</p>
 {% for error in field.errors %}<div class="error"><p>{{ error }}</p></div>{% endfor %}
 {% endfor %}
-<button type="submit" name="action" value="save">Save draft</button>
+<button class="secondary" type="submit" name="action" value="save">Save draft</button>
 <button type="submit" name="action" value="submit">Submit</button>
 </form>
 {% endif %}

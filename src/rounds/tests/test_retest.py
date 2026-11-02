@@ -177,8 +177,8 @@ def test_round_page_shows_the_message_once_and_the_new_current_builds(
     old = '<span dir="auto">Synthetic 1.0</span>'
     for n, label in ((0, new), (1, old), (2, new)):
         case_at = html.index(f'<span dir="auto">Synthetic case {n}</span></h3>')
-        after = html[html.index("<h4>Current build</h4>", case_at) :]
-        assert after.split("<p>", 1)[1].split("</p>", 1)[0] == label
+        after = html[html.index("<span>Current build</span>", case_at) :]
+        assert after.startswith(f"<span>Current build</span> {label}</span>")
     builds = html[html.index("<h2>Builds</h2>") :]
     newest = builds[builds.index(f"<h3>{new}</h3>") :]
     assert builds.index("<h3>") < builds.index(f"<h3>{new}</h3>")
@@ -204,7 +204,9 @@ def test_open_round_page_links_to_the_retest_page_under_the_builds_heading(
     coord_client, opened
 ):
     html = page(coord_client.get(detail(opened.pk)))
-    link = f'<p><a href="{retest_url(opened.pk)}">Request a retest</a></p>'
+    link = (
+        f'<p><a class="action" href="{retest_url(opened.pk)}">Request a retest</a></p>'
+    )
     assert html.count(link) == 1
     builds = html.index("<h2>Builds</h2>")
     assert html[builds + len("<h2>Builds</h2>") : html.index(link)].strip() == ""
