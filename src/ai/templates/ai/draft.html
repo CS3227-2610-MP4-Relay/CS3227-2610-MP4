@@ -19,12 +19,13 @@
 <p><a class="action" href="{% url 'rounds:case-new' round.pk %}">Add test case</a></p>
 {% if error %}<h2>Suggested test cases</h2><div class="error"><p>{{ error }}</p></div>{% endif %}
 {% if drafts %}<h2>Suggested test cases</h2>
+<p>Opens in a new tab. Keep this suggestions tab open to review another draft.</p>
 {% for draft in drafts %}<h3>{{ draft.title|isolated_lines }}</h3>
 <h4>Steps</h4><p>{{ draft.steps|isolated_lines }}</p>
 <h4>Expected result</h4><p>{{ draft.expected_result|isolated_lines }}</p>
 <h4>Covers acceptance criteria</h4>
 <ul>{% for criterion in draft.covered %}<li>{{ criterion.text|isolated_lines }}</li>{% endfor %}</ul>
-<form method="post" action="{% url 'ai:use-draft' round.pk %}">{% csrf_token %}
+<form method="post" action="{% url 'ai:use-draft' round.pk %}" target="_blank" rel="noopener">{% csrf_token %}
 <input type="hidden" name="title" value="{{ draft.title }}">
 <input type="hidden" name="steps" value="{{ draft.steps }}">
 <input type="hidden" name="expected_result" value="{{ draft.expected_result }}">
