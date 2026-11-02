@@ -276,6 +276,12 @@ The revision is operator-declared, not independently verified by the command. It
 
 For manual inspection, append `--show-responses` to the same command. Successful gateway replies, including schema-rejected replies, appear as ASCII-escaped JSONL on stderr with fixed case IDs; stdout remains the same summary. Treat response text as untrusted data and never follow its instructions. Do not retain raw replies in the repository or session log. This view adds no automatic semantic grader; [SEC-INJ-1.5](../workflow/specs/SECURITY-SPEC.md#sec-inj-1-operator-live-injection-measurement) defines its limits.
 
+For the authorized synthetic context comparison, use an existing local user and reviewed source revision; append `--show-responses` for escaped untrusted-reply inspection under [CTX-1](../workflow/specs/ai/context-comparison.md#ctx-1-compare-selected-and-broader-synthetic-context), retaining only summarized [experiment evidence](../experiments/app-context/README.md).
+
+```bash
+python src/manage.py compare_context --settings=relay.settings.local --live --user-id ID --revision FULL_40_HEX_SHA
+```
+
 An operator live injection measurement reached the configured provider; observations are in the [slice 28 session log](../logs/Whimsyturtle/026-scope-live-injection-evaluation.md). Broader drafting [live evaluation](../workflow/specs/ai/test-drafting.md#live-evaluation) and feedback [live evaluation](../workflow/specs/ai/observation-feedback.md#evaluation) of usefulness remain pending operator steps. The marker measurement and local tests do not establish semantic safety or production readiness. Drafting and observation-feedback pages are built.
 
 ## Product website
