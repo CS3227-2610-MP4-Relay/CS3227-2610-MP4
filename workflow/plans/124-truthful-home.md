@@ -12,4 +12,4 @@ Evidence: base `048eb5e3c388c38e1f4fdc97ab6cce6bd85dcb55`, private snapshot `rel
 
 Review mapping: PLT-1.1 → `test_public_landing_page` in [page tests](../../src/relay/tests/test_pages.py), `test_public_actions_are_compact_grouped_native_controls` in [browser presentation tests](../../src/e2e/test_presentation.py), and `test_signed_in_user_is_sent_home_and_creates_nothing` in [demo tests](../../src/accounts/tests/test_demo_views.py). Existing page method tests retain PLT-1.2 coverage.
 
-Next: User Guide copy aligned with built home; coordinator commits combined docs, runs full integrated checks, then independent review and delivery. Runtime 124: 2 lines. No open product decisions.
+User Guide copy matches the built home. Implementation and independent review are complete; [integrated validation](123-shared-ui-repairs.md#final-validation) records the reviewed candidate, CI evidence, local limitation and delivery. Runtime 124: 2 lines. Human review and merge remain pending.

@@ -13,4 +13,4 @@ Implementation evidence: base `64819f6cc7bbe988ebabf0f60118523bd4f1acaa`, privat
 
 Review mapping: RES-1.5 → `test_result_actions_pair_owner_case_and_current_build` in [tester view tests](../../src/rounds/tests/test_tester.py), plus `test_private_draft_validation_reload_and_immutable_submission` and `test_selected_retest_and_close_refuse_stale_forms_preserving_results` in [browser result tests](../../src/e2e/test_results.py). The existing tester suite retains RES-1.4/.6 denials, no-store and storage-failure checks; browser result checks retain RES-2 read-only submission and stale-form behavior.
 
-Next: code committed as `6c85475743e2fcf8eb2b77f65ea3b69f7fb8189f`; combined User Guide update prepared with exact action labels. Coordinator commits docs, runs full integrated checks and freezes independent verifier/security review. Runtime 126: 26 lines. No open product decisions.
+Code committed as `6c85475743e2fcf8eb2b77f65ea3b69f7fb8189f`; User Guide matches the exact action labels. Independent verifier/security review is complete; see [integrated validation](123-shared-ui-repairs.md#final-validation). Runtime 126: 26 lines. Human review and merge remain pending.
