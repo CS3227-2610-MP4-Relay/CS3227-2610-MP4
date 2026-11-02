@@ -119,9 +119,11 @@ def assert_layout(page, width):
     ).all():
         assert_contrast(locator)
     for link in page.locator("a").all():
-        assert "underline" in link.evaluate(
-            "el => getComputedStyle(el).textDecorationLine"
-        )
+        decoration = link.evaluate("el => getComputedStyle(el).textDecorationLine")
+        if "action" in (link.get_attribute("class") or "").split():
+            assert decoration == "none"
+        else:
+            assert "underline" in decoration
 
 
 def assert_keyboard_focus(page, count):
@@ -164,6 +166,92 @@ def assert_top_navigation(page, home, back=None):
         "el => el.getBoundingClientRect().bottom < "
         "document.querySelector('main h2, main form')?.getBoundingClientRect().top"
     )
+
+
+def assert_action_link_states(page, link):
+    """Action labels remain undecorated and readable during native interaction."""
+    assert link.evaluate("el => el.tagName") == "A"
+    page.mouse.move(0, 0)
+    for state in ("rest", "hover", "focus"):
+        if state == "hover":
+            link.hover()
+        elif state == "focus":
+            page.mouse.move(0, 0)
+            link.focus()
+        assert link.evaluate("el => getComputedStyle(el).textDecorationLine") == "none"
+        assert_contrast(link)
+
+
+@pytest.mark.ac("PLT-1.1", "PLT-4.2", "PLT-4.4", "PLT-4.5")
+@pytest.mark.parametrize("width", [320, 1440])
+def test_public_actions_are_compact_grouped_native_controls(page, width):
+    page.set_viewport_size({"width": width, "height": 900})
+    page.goto("/")
+    sign_in_link = page.get_by_role("link", name="Sign in", exact=True)
+    demo = page.get_by_role("button", name="Create a demo workspace", exact=True)
+    assert background(sign_in_link) == "rgb(255, 255, 255)"
+    assert background(demo) != background(sign_in_link)
+    group = sign_in_link.locator("..")
+    expect(group.get_by_role("button", name="Create a demo workspace")).to_have_count(1)
+    assert group.evaluate("el => getComputedStyle(el).gap") == "8px"
+    for control in (sign_in_link, demo):
+        box = control.bounding_box()
+        assert 38 <= box["height"] <= 42
+        assert box["width"] >= 24
+        assert control.evaluate("el => getComputedStyle(el).margin") == "0px"
+    form = demo.locator("..")
+    assert form.get_attribute("method") == "post"
+    assert form.get_attribute("action") == "/demo/"
+    expect(form.locator("input[name=csrfmiddlewaretoken]")).to_have_count(1)
+    assert form.evaluate("el => getComputedStyle(el).margin") == "0px"
+    assert_action_link_states(page, sign_in_link)
+    assert_layout(page, width)
+    page.screenshot(path=str(Path(gettempdir()) / f"relay-121-public-{width}.png"))
+    assert_keyboard_focus(page, 1)
+    sign_in_link.click()
+    expect(page).to_have_url("/sign-in/")
+
+
+@pytest.mark.ac("PLT-4.2", "PLT-4.4", "PLT-4.5", "PLT-4.6")
+@pytest.mark.parametrize("width", [320, 1440])
+def test_repeated_edit_delete_groups_have_compact_targets(
+    page, browser_accounts, width
+):
+    page.set_viewport_size({"width": width, "height": 900})
+    sign_in(page, browser_accounts, "coordinator")
+    page.goto(browser_accounts["draft"])
+    for kind in ("criterion", "test case"):
+        edit = page.get_by_role("link", name=f"Edit {kind}", exact=True)
+        delete = page.get_by_role("button", name=f"Delete {kind}", exact=True)
+        group = edit.locator("..")
+        for control in (edit, delete):
+            box = control.bounding_box()
+            assert 32 <= box["height"] <= 36
+            assert box["width"] >= 24
+        assert group.evaluate("el => getComputedStyle(el).flexWrap") == "wrap"
+        assert group.evaluate("el => getComputedStyle(el).gap") == "8px"
+        a, b = edit.bounding_box(), delete.bounding_box()
+        horizontal_gap = b["x"] - a["x"] - a["width"]
+        vertical_gap = b["y"] - a["y"] - a["height"]
+        assert horizontal_gap >= 7.9 or vertical_gap >= 7.9
+        form = delete.locator("..")
+        assert form.evaluate("el => getComputedStyle(el).margin") == "0px"
+        assert form.get_attribute("method") == "post"
+        expect(form.locator("input[name=csrfmiddlewaretoken]")).to_have_count(1)
+        assert_action_link_states(page, edit)
+        group.screenshot(
+            path=str(
+                Path(gettempdir())
+                / f"relay-121-{kind.replace(' ', '-')}-group-{width}.png"
+            )
+        )
+    publish = page.get_by_role("button", name="Publish round", exact=True)
+    assert 38 <= publish.bounding_box()["height"] <= 42
+    assert_action_link_states(
+        page, page.get_by_role("link", name="Edit round", exact=True)
+    )
+    assert_layout(page, width)
+    page.screenshot(path=str(Path(gettempdir()) / f"relay-121-dense-{width}.png"))
 
 
 @pytest.mark.ac("PLT-4.5")
