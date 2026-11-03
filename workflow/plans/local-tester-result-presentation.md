@@ -24,7 +24,7 @@ Goal: put history disclosure controls beside their details and distinguish empty
 
 ## Final status
 
-Local implementation and independent source reviews are complete with no open review findings; local full verification remains non-green because of the previously documented account timeout-log assertions. See the [session log](../../logs/Whimsyturtle/037-fix-tester-results-and-feedback.md) for actual results, candidate identity and usage. Branch delivery is in progress; latest-head hosted checks remain pending.
+Local implementation and independent source reviews are complete with no open review findings; local full verification remains non-green because of the previously documented account timeout-log assertions. See the [session log](../../logs/Whimsyturtle/037-fix-tester-results-and-feedback.md) for results, candidate identity and usage. Feature-branch commits are prepared. Automatic approval review rejected the push for lack of explicit authorization to publish to the remote; push, draft PR and hosted checks remain blocked pending that approval.
 
 ## Delivery correction
 
