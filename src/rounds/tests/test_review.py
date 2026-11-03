@@ -149,7 +149,7 @@ def section(html, case_title, until=None):
 def result_lines(username, outcome, observation, at, build=None):
     """The lines one result shows, as RND-4 lists them."""
     lines = [f"<p>Build: {span(build)}</p>"] if build else []
-    shown = span(observation) if observation else "No observation."
+    shown = span(observation) if observation else "<em>No observation.</em>"
     lines += [
         f"<p>Tester: {span(username)}</p>",
         f"<p>Outcome: {outcome}</p>",
@@ -294,11 +294,11 @@ def test_earlier_build_results_do_not_count_for_the_current_build(
     assert expected in earlier
 
 
-@pytest.mark.ac("RND-4.2")
+@pytest.mark.ac("RND-4.2", "PLT-4.13")
 def test_an_empty_observation_shows_no_observation(coord_client, review, tester):
     submit(tester, review.case, review.build, T1, "pass", "")
     html = page(coord_client.get(results_url(review.round.pk)))
-    assert "<p>Observation: No observation.</p>" in html
+    assert "<p>Observation: <em>No observation.</em></p>" in html
 
 
 @pytest.mark.ac("RND-4.2")

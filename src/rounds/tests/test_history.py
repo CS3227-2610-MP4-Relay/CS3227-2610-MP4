@@ -1,12 +1,14 @@
 """RES-3 private read-only history and its authorization boundaries."""
 
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
 from django.contrib.auth.models import AnonymousUser
 from django.db import OperationalError, transaction
 from django.db.models.query import QuerySet
+from django.template.loader import render_to_string
 from django.test import RequestFactory
 from django.urls import resolve, reverse
 from django.utils import timezone
@@ -57,6 +59,35 @@ def save_row(tester, target, **fields):
     return Result.objects.create(
         tester=tester, case=case, build=build, outcome="pass", **fields
     )
+
+
+@pytest.mark.ac("PLT-4.13")
+@pytest.mark.parametrize("observation", ["", "No observation."])
+@pytest.mark.parametrize(
+    "template",
+    [
+        "rounds/tester_history.html",
+        "rounds/tester_result.html",
+        "rounds/result_lines.html",
+        "ai/feedback.html",
+    ],
+)
+def test_only_system_observation_placeholders_are_italic(
+    tester, target, template, observation
+):
+    round_, case, build = target
+    result = save_row(
+        tester, target, observation=observation, submitted_at=timezone.now()
+    )
+    entry = SimpleNamespace(round=round_, case=case, build=build, result=result)
+    body = render_to_string(
+        template,
+        {"round": round_, "results": [result], "result": result, "entry": entry},
+    )
+    assert "No observation." in body
+    assert ("<em>No observation.</em>" in body) == (observation == "")
+    if observation:
+        assert '<span dir="auto">No observation.</span>' in body
 
 
 @pytest.mark.ac("RES-3.1", "RES-3.2", "RES-3.5", "RES-3.6")

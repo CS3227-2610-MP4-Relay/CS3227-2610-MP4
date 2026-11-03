@@ -20,9 +20,13 @@ from rounds.models import Case, Criterion, Result, Round
 
 
 @pytest.fixture
-def browser_accounts(browser_accounts):
+def browser_accounts(browser_accounts, request):
     """Create multiple authorized records before starting Chromium."""
     accounts = browser_accounts
+    history = (
+        getattr(getattr(request.node, "callspec", None), "params", {}).get("kind")
+        == "history"
+    )
     tester = User.objects.get(username=accounts["tester"])
     round_ = Round.objects.create(
         workspace=tester.workspace, title="Synthetic navigation"
@@ -52,7 +56,9 @@ def browser_accounts(browser_accounts):
             case=case,
             build=build,
             outcome="pass",
-            observation=f"Synthetic observation {index}",
+            observation=("No observation." if index else "")
+            if history
+            else f"Synthetic observation {index}",
             submitted_at=timezone.now() if index == 0 else None,
         )
     accounts["round"] = round_.get_absolute_url()
@@ -65,7 +71,14 @@ def browser_accounts(browser_accounts):
 
 
 @pytest.mark.ac(
-    "PLT-4.4", "PLT-4.5", "PLT-4.6", "PLT-4.7", "PLT-4.8", "PLT-4.9", "PLT-4.11"
+    "PLT-4.4",
+    "PLT-4.5",
+    "PLT-4.6",
+    "PLT-4.7",
+    "PLT-4.8",
+    "PLT-4.9",
+    "PLT-4.11",
+    "PLT-4.13",
 )
 @pytest.mark.parametrize("width", [320, 1440])
 @pytest.mark.parametrize("kind", ["round", "results", "tester_round", "history"])
@@ -95,19 +108,31 @@ def test_contents_reveal_records_and_keyboard_defaults(
     expect(records).to_have_count(2)
     assert records.evaluate_all("els => els.map(el => el.open)") == [True, False]
     summaries = records.locator("summary")
-    expect(summaries.nth(1).get_by_role("heading")).to_contain_text("Synthetic case 1")
-    expect(summaries.nth(1)).to_contain_text("Synthetic build")
+    headers = (
+        page.locator(".history-record > header") if kind == "history" else summaries
+    )
+    expect(headers.nth(1).get_by_role("heading")).to_contain_text("Synthetic case 1")
+    expect(headers.nth(1)).to_contain_text("Synthetic build")
     if kind == "history":
-        expect(summaries.nth(1)).to_contain_text("Status: Draft")
-        expect(summaries.nth(1)).to_contain_text("Pass")
-        title = summaries.first.get_by_role("heading")
-        label = summaries.first.get_by_text("Test case", exact=True)
-        assert label.bounding_box()["y"] - summaries.first.bounding_box()[
-            "y"
-        ] < summaries.first.evaluate(
-            "el => parseFloat(getComputedStyle(el).paddingTop) + "
-            "parseFloat(getComputedStyle(el).lineHeight) / 2"
+        expect(headers.nth(1)).to_contain_text("Status: Draft")
+        expect(headers.nth(1)).to_contain_text("Pass")
+        expect(summaries.first).to_have_text("Hide details", use_inner_text=True)
+        expect(summaries.nth(1)).to_have_text("Show details", use_inner_text=True)
+        assert records.first.locator("summary + .record-body").count() == 1
+        assert (
+            summaries.first.bounding_box()["y"]
+            >= headers.first.bounding_box()["y"]
+            + headers.first.bounding_box()["height"]
         )
+        body = records.first.locator(".record-body")
+        assert abs(body.bounding_box()["x"] - summaries.first.bounding_box()["x"]) <= 2
+        expect(page.locator("main form, main button")).to_have_count(0)
+        assert (
+            body.locator("em").evaluate("el => getComputedStyle(el).fontStyle")
+            == "italic"
+        )
+        title = headers.first.get_by_role("heading")
+        label = headers.first.get_by_text("Test case", exact=True)
         assert (
             label.bounding_box()["y"] + label.bounding_box()["height"]
             <= title.bounding_box()["y"]
@@ -115,7 +140,7 @@ def test_contents_reveal_records_and_keyboard_defaults(
         title_size = title.evaluate("el => parseFloat(getComputedStyle(el).fontSize)")
         for subordinate in [
             label,
-            *summaries.first.locator(".record-meta").all(),
+            *headers.first.locator(".record-meta").all(),
             *records.first.locator(".record-body h3").all(),
         ]:
             assert (
@@ -168,6 +193,11 @@ def test_contents_reveal_records_and_keyboard_defaults(
     page.keyboard.press("Enter")
     expect(records.nth(1)).to_have_attribute("open", "")
     expect(records.first).to_have_attribute("open", "")
+    if kind == "history":
+        expect(summaries.nth(1)).to_have_text("Hide details", use_inner_text=True)
+        authored = records.nth(1).locator(".record-body p").first
+        expect(authored).to_have_text("No observation.")
+        assert authored.evaluate("el => getComputedStyle(el).fontStyle") == "normal"
     page.keyboard.press("Space")
     expect(records.nth(1)).not_to_have_attribute("open", "")
     page.keyboard.press("Space")
@@ -183,6 +213,10 @@ def test_contents_reveal_records_and_keyboard_defaults(
     page.screenshot(
         path=str(Path(gettempdir()) / f"relay-117-{kind}-{width}.png"), full_page=True
     )
+    if kind == "history":
+        page.locator(".history-record").first.screenshot(
+            path=str(Path(gettempdir()) / f"relay-history-card-{width}.png")
+        )
     summaries.nth(1).click()
     assert_layout(page, width)
     expect(page.locator("main b, main script")).to_have_count(0)

@@ -420,7 +420,7 @@ def test_tester_action_emphasis_and_native_result_submission(
     expect(page.get_by_label("Observation", exact=True)).to_have_value(
         "Synthetic revised observation"
     )
-    page.get_by_role("link", name="Observation feedback", exact=True).click()
+    page.get_by_role("button", name="Observation feedback", exact=True).click()
     assert_short_navigation(page, "Tester home", "Back to result")
     page.goto(browser_accounts["entry"])
     page.get_by_role("button", name="Submit", exact=True).click()
@@ -583,7 +583,7 @@ def test_tester_result_and_feedback_long_content(page, browser_accounts, width):
     page.goto(browser_accounts["entry"])
     assert_layout(page, width)
     expect(page.get_by_label("Observation", exact=True)).to_have_value(LONG)
-    page.get_by_role("link", name="Observation feedback", exact=True).click()
+    page.get_by_role("button", name="Observation feedback", exact=True).click()
     assert_layout(page, width)
     expect(page.locator("span[dir=auto]", has_text=LONG).first).to_have_text(LONG)
     with mock.patch(
