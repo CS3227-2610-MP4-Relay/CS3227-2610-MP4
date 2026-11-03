@@ -101,7 +101,7 @@ def test_creation_shows_credentials_once_and_stays_signed_out():
         f"<p>Workspace: {name}</p>",
         "<tr><th>Role</th><th>Username</th><th>Password</th></tr>",
         f"<p>{SAVE}</p>",
-        '<a href="/sign-in/">Sign in</a>',
+        '<a class="action secondary" href="/sign-in/">Sign in</a>',
     ):
         assert text in html
     assert html.index("</table>") < html.index(SAVE)

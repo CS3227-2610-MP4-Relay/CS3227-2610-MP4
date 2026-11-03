@@ -1,0 +1,23 @@
+<script>
+(() => {
+  for (const form of document.querySelectorAll('form[data-pending-message]')) {
+    const button = form.querySelector('button[type="submit"]');
+    const status = form.querySelector('[role="status"]');
+    let pending = false;
+    form.addEventListener('submit', event => {
+      if (pending) {
+        event.preventDefault();
+        return;
+      }
+      pending = true;
+      button.disabled = true;
+      status.textContent = form.dataset.pendingMessage;
+    });
+    window.addEventListener('pageshow', () => {
+      pending = false;
+      button.disabled = false;
+      status.textContent = '';
+    });
+  }
+})();
+</script>

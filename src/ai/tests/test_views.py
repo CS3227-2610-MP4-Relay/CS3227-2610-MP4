@@ -113,6 +113,20 @@ def test_success_renders_cleaned_drafts_and_sends_only_selected(
     assert second.text not in sent
 
 
+@pytest.mark.ac("RND-8.2")
+def test_adoption_forms_open_isolated_review_tabs(coord_client, round_, criteria):
+    response, _ = post_draft(
+        coord_client, round_, [criteria[0].pk], Success(reply(one()))
+    )
+    html = response.content.decode()
+    assert 'target="_blank" rel="noopener"' in html
+    assert (
+        "Opens in a new tab. Keep this suggestions tab open to review another draft."
+        in html
+    )
+    assert not Case.objects.exists()
+
+
 @pytest.mark.ac("RND-8.8")
 @pytest.mark.prompt_injection
 def test_selection_is_validated_and_foreign_ids_are_refused(coord_client, workspace):
@@ -668,7 +682,8 @@ def test_hostile_reply_text_is_escaped_isolated_and_round_trips(
     response, _ = post_draft(coord_client, round_, [criteria[0].pk], result)
     page = response.content.decode()
     line = '<span dir="auto">{}</span>'.format
-    assert "<script" not in page
+    assert page.count("<script") == 1
+    assert "<script" not in page.split("<main>", 1)[1].split("</main>", 1)[0]
     assert "<b>" not in page
     assert "<h3>" + line("&lt;script&gt;alert(1)&lt;/script&gt;") + "</h3>" in page
     second_line = '<br><span dir="auto">line two &quot;&gt;&lt;input'

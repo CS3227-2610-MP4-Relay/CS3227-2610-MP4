@@ -8,7 +8,7 @@ The page is headed **Relay** and says:
 
 > A beta-testing portal for small software teams.
 >
-> Testing workflows are coming soon.
+> Create test rounds, record results and review feedback with your team.
 
 It has two actions: the **Sign in** link and the **Create a demo workspace** button. If you are already signed in, opening the start page takes you to your own home page.
 
@@ -35,6 +35,8 @@ Each network address can create up to 10 workspaces an hour, and Relay up to 200
 1. Choose **Sign in** on the start page, or open `/sign-in/`.
 2. Enter your **Username** and **Password**, then choose **Sign in**.
 
+Choose **Back to home** above the form to return to the start page.
+
 A Test Coordinator lands on **Coordinator home** and a Beta Tester on **Tester home**. Each home page shows `Username:` and `Workspace:` with your username and workspace name.
 
 If the username or password is wrong, or a field is blank, the page shows "Username or password is incorrect." and does not say which field was wrong. You are not signed in; if you were already signed in, you stay signed in as before.
@@ -51,11 +53,11 @@ You are also signed out 8 hours after signing in, whatever you do in between; op
 
 ## Find your way around
 
-Creation links such as **New round**, **Add test case** and **Record result** have a filled primary style. Edit and review links, links to AI pages, and the start page's **Sign in** link have an outlined secondary style; **Delete criterion**, **Delete test case** and **Close round** have a red outline. **Save draft** and **Sign out** use the secondary style, while **Submit** is primary. Action links look like compact buttons without underlines; ordinary content links and **Contents** links stay underlined. Repeated edit and delete controls form smaller groups that wrap on narrow screens.
+Creation and result-entry links such as **New round**, **Add test case**, **Record result** and **Continue draft** have a filled primary style. Edit and review links, including **View result**, links to AI pages, and the start and demo pages' **Sign in** links have an outlined secondary style; **Delete criterion**, **Delete test case** and **Close round** have a red outline. **Save draft** and **Sign out** use the secondary style, while **Submit** is primary. Action links look like compact buttons without underlines; ordinary content links and **Contents** links stay underlined. Repeated edit and delete controls form smaller groups that wrap on narrow screens.
 
 Round, result, history, editing and AI pages have **Coordinator home** or **Tester home** near the top, with **Back to round** or **Back to result** where applicable. These links look like outlined buttons. Editing forms, result entry and AI pages show each destination once at the top. Round pages also have a final home link; coordinator results and **My results** also have a final **Back to round** link.
 
-Round pages, coordinator results and **My results** have **Contents** links to their sections or records. On a wide desktop, these links appear in a sidebar. On a narrower screen, **Contents** starts collapsed above the details; choose it to show the links.
+Round pages, coordinator results and **My results** have **Contents** links to their sections or records. Round-page case links appear as an indented list beneath **Test cases**. On a wide desktop, these links appear in a sidebar. On a narrower screen, **Contents** starts collapsed above the details; choose it to show the links.
 
 Choose a case title or saved-result heading to expand or collapse its details. The first record starts expanded and the others collapsed; several can stay open together. Following a record's **Contents** link opens its details and brings them into view. A direct link to that record does the same. Reloading restores the starting layout, unless the address links directly to a record. You can use Tab to focus a heading, then Enter or Space to toggle it.
 
@@ -66,13 +68,13 @@ Choose a case title or saved-result heading to expand or collapse its details. T
 3. Test the software outside Relay using those instructions and the named build. If the coordinator requests a retest, reload the page: only the selected cases change to the new **Current build**; other cases keep their previous build.
 4. Choose **Tester home** to return to the list, or return there to **Sign out**.
 
-Both Beta Testers in a workspace see the same rounds. Draft rounds stay hidden. An Open round has a **Record result** link inside each expanded case. A Closed round remains available as read-only reference; after the coordinator closes it, reload to see "State: Closed" and "(Closed)" in the list, with the result-entry links removed.
+Both Beta Testers in a workspace see the same rounds. Draft rounds stay hidden. Each expanded case in an Open round shows **Record result** if you have no result for its current build, **Continue draft** for your saved draft, or **View result** for your submitted result. These actions reflect your own results. A Closed round remains available as read-only reference; after the coordinator closes it, reload to see "State: Closed" and "(Closed)" in the list, with the result-entry links removed.
 
 If reading tests fails, the page says "Relay is temporarily unavailable. Try again later." Opening a Draft, missing or another workspace's round shows "Page not found."
 
 ## Save and submit a result
 
-1. In an Open round, expand the case you tested and choose **Record result**. The **Record result** page shows **Test case** and **Current build**.
+1. In an Open round, expand the case you tested and choose **Record result**, or **Continue draft** to resume your saved fields. The **Record result** page shows **Test case** and **Current build**.
 2. Choose **Pass** or **Fail** under **Outcome** and enter your **Observation**. Fail requires an observation; Pass allows it to be empty.
 3. Choose **Save draft** to keep working later. The page shows "Status: Draft" and your saved fields; they remain when you reload or sign in again. Each tester has a separate private draft for each case and build.
 4. Choose **Submit** when ready. You may submit directly or after saving a draft. The page shows "Status: Submitted", your outcome and your observation as read-only text. An empty observation says "No observation." Submission is final; another attempt to save or submit it says "This result has already been submitted."
@@ -82,7 +84,7 @@ Both buttons apply the same checks. A missing outcome says "Choose Pass or Fail.
 
 Results belong to the build shown when you opened the entry page. After the coordinator requests a retest, reload the round and check the selected case's **Current build**. Test the fix outside Relay on that build, then choose **Record result**: the new build starts with empty **Outcome** and **Observation** fields. Choose **Pass** or **Fail** and **Submit** a separate result; earlier submissions remain available in [My results](#review-my-results). Cases omitted from the retest keep their existing build and result entry. If the build changes before you save or submit, the page says "This build is no longer current. Reload the round to record a result." Return to the round, reload, and choose **Record result** for the new build.
 
-You can view your submitted result through **Record result** while its build is current and the round is Open. Once the round closes, an entry page says "This action is not available while the round is Closed." and saves nothing. The round's instructions remain available. If storage fails, the page says "Relay is temporarily unavailable. Try again later." and no part of the result change is saved.
+Choose **View result** to read your submitted result while its build is current and the round is Open. Once the round closes, an entry page says "This action is not available while the round is Closed." and saves nothing. The round's instructions remain available. If storage fails, the page says "Relay is temporarily unavailable. Try again later." and no part of the result change is saved.
 
 ## Observation feedback
 
@@ -90,6 +92,8 @@ You can view your submitted result through **Record result** while its build is 
 2. Review **Saved observation**, **Test case**, **Steps**, **Expected result**, **Linked acceptance criteria** and **Current build**. The page says "AI receives your saved observation, this test case and its linked acceptance criteria. Suggestions may be wrong. Review them and edit your result yourself. Unsaved edits are not included."
 3. Choose **Suggest missing details** to request questions. Any suggestions appear under **Questions to consider**, beside the original source. They do not change your outcome, observation or submission.
 4. Choose **Back to result**, edit **Observation** yourself and choose **Save draft** or **Submit** when ready.
+
+With JavaScript enabled, the request disables **Suggest missing details** and shows "Suggesting missing details…" while you wait.
 
 An empty reply says "No missing details were suggested. You can still edit your result yourself." If the source is too long, the page says "This observation and test case are too long for feedback. You can still edit your result yourself." If feedback is unavailable, it says "Feedback is unavailable right now. You can still edit your result yourself." You can still choose **Back to result** and continue manually.
 
@@ -123,7 +127,7 @@ The round page opens. It shows the title as its heading, "State: Draft", an **Ed
 1. On the round page, choose **Edit round**.
 2. Change the **Title**, then choose **Save**.
 
-The round page shows the new title.
+The round page shows the new title. Choose **Back to round** above the edit form to leave without saving, including after a validation error.
 
 ### Titles and limits
 
@@ -223,9 +227,11 @@ Use AI to draft suggestions from selected acceptance criteria, then review each 
 
 While a round is Draft, its page has a **Draft test cases with AI** link directly after **Add test case**. The drafting page says "Select 1 to 5 acceptance criteria. The selected criteria are sent to the SoC AI service to suggest test cases. Suggestions are not saved; review each one before adding it." It lists the round's criteria under **Acceptance criteria to draft from**, with a **Draft test cases** button, an **Add test case** link and a **Back to round** link.
 
-Tick one to five criteria and choose **Draft test cases**. When suggestions are returned, **Suggested test cases** shows each title, **Steps**, **Expected result** and **Covers acceptance criteria**. Review these beside the criteria; nothing is saved by drafting.
+Tick one to five criteria and choose **Draft test cases**. With JavaScript enabled, the button is disabled and "Drafting test cases…" appears while you wait. When suggestions are returned, **Suggested test cases** shows each title, **Steps**, **Expected result** and **Covers acceptance criteria**. Review these beside the criteria; nothing is saved by drafting.
 
-Choose **Use this draft** to open **New test case** with the suggested fields and covered criteria filled in. The page says "Pre-filled from an AI draft. Review it before adding it." Edit the fields and links as needed, then choose **Add test case** to save under the normal [test case limits](#criteria-and-test-case-limits).
+The suggestions page says "Opens in a new tab. Keep this suggestions tab open to review another draft." Choose **Use this draft** to open **New test case** in a separate tab with the suggested fields and covered criteria filled in. The new page says "Pre-filled from an AI draft. Review it before adding it." Edit the fields and links as needed, then choose **Add test case** to save under the normal [test case limits](#criteria-and-test-case-limits). Closing a review tab without adding saves nothing.
+
+Return to the original suggestions tab to review another draft from the same response. Each draft needs its own review and **Add test case** action; choosing another suggestion does not request new AI output. Keep the suggestions tab open until you finish reviewing the response.
 
 If the service is unavailable or its reply cannot be used, the page says "Drafting is unavailable right now. You can still add test cases yourself." If it returns no drafts, or every ticked criterion is blank once hidden characters are removed, it says "No test cases were suggested for these criteria. You can still add test cases yourself."
 

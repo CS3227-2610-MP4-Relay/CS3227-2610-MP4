@@ -208,6 +208,13 @@ def test_private_draft_validation_reload_and_immutable_submission(
         page.get_by_label("Observation", exact=True).fill(observation)
         page.get_by_role("button", name="Save draft", exact=True).click()
         expect(page.get_by_text("Status: Draft", exact=True)).to_be_visible()
+        page.get_by_role("link", name="Back to round", exact=True).click()
+        continued = page.get_by_role("link", name="Continue draft", exact=True)
+        expect(continued).to_have_attribute(
+            "href", entry_url.removeprefix(live_server.url)
+        )
+        expect(continued).to_have_class("action")
+        continued.click()
         page.reload()
         expect(page.get_by_label("Observation", exact=True)).to_have_value(observation)
         page.goto("/tester/")
@@ -219,6 +226,9 @@ def test_private_draft_validation_reload_and_immutable_submission(
 
         other = other_context.new_page()
         open_round(other, browser_accounts, "tester2")
+        expect(
+            other.get_by_role("link", name="Record result", exact=True)
+        ).to_have_count(2)
         result_links(other).first.click()
         expect(other.get_by_label("Observation", exact=True)).to_have_value("")
         expect(other.get_by_label("Outcome", exact=True)).to_have_value("")
@@ -244,10 +254,25 @@ def test_private_draft_validation_reload_and_immutable_submission(
         expect(page.locator("main p br")).to_have_count(1)
         page.reload()
         expect(page.get_by_text("Status: Submitted", exact=True)).to_be_visible()
+        page.get_by_role("link", name="Back to round", exact=True).click()
+        viewed = page.get_by_role("link", name="View result", exact=True)
+        expect(viewed).to_have_attribute(
+            "href", entry_url.removeprefix(live_server.url)
+        )
+        expect(viewed).to_have_class("action secondary")
+        viewed.click()
+        expect(page.locator("main form, main input, main button")).to_have_count(0)
         other.reload()
         expect(other.get_by_text("Status: Draft", exact=True)).to_be_visible()
         expect(other.get_by_label("Observation", exact=True)).to_have_value(
             "Synthetic other private draft"
+        )
+        other.get_by_role("link", name="Back to round", exact=True).click()
+        expect(
+            other.get_by_role("link", name="Continue draft", exact=True)
+        ).to_have_count(1)
+        expect(other.get_by_role("link", name="View result", exact=True)).to_have_count(
+            0
         )
         assert dialogs == []
         browser_accounts["expected_results"] = [
@@ -291,6 +316,8 @@ def test_selected_retest_and_close_refuse_stale_forms_preserving_results(
             page.get_by_label("Observation", exact=True).fill(observation)
             page.get_by_role("button", name="Save draft", exact=True).click()
             expect(page.get_by_text("Status: Draft", exact=True)).to_be_visible()
+        page.goto(detail_url)
+        expect(result_links(page)).to_have_text(["Continue draft", "Continue draft"])
         page.goto(original_url)
         page.get_by_label("Observation", exact=True).fill(
             "Synthetic refused stale edit"
@@ -326,6 +353,8 @@ def test_selected_retest_and_close_refuse_stale_forms_preserving_results(
             "Synthetic unchanged draft"
         )
         page.goto(detail_url)
+        expect(result_links(page)).to_have_text(["Record result", "Continue draft"])
+        expect(result_links(page).nth(1)).to_have_attribute("href", untouched_url)
         result_links(page).first.click()
         expect(page.get_by_text("Synthetic next", exact=True)).to_be_visible()
         expect(page.get_by_label("Observation", exact=True)).to_have_value("")

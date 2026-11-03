@@ -64,9 +64,9 @@ def state_conflict(request, round_):
     return render(request, "rounds/conflict.html", context, status=409)
 
 
-def form_page(request, form, title, button):
+def form_page(request, form, title, button, round_=None):
     """Show the round title form."""
-    context = {"form": form, "title": title, "button": button}
+    context = {"form": form, "title": title, "button": button, "round": round_}
     return render(request, "rounds/round_form.html", context)
 
 
@@ -127,10 +127,10 @@ def edit_round(request, round_id):
         return state_conflict(request, round_)
     if request.method == "GET":
         form = RoundForm(initial={"title": round_.title})
-        return form_page(request, form, "Edit round", "Save")
+        return form_page(request, form, "Edit round", "Save", round_)
     form = RoundForm(request.POST)
     if not form.is_valid():
-        return form_page(request, form, "Edit round", "Save")
+        return form_page(request, form, "Edit round", "Save", round_)
     with transaction.atomic():
         round_ = own_round(request, round_id, lock=True)
         if round_.state != Round.State.DRAFT:

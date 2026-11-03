@@ -9,7 +9,7 @@
 <div class="state"><p>State: {{ round.get_state_display }}</p></div>
 <div class="reading-layout">{% include "rounds/contents.html" with history_contents=True %}<div class="records">
 {% for result in results %}<section>
-<details class="record"{% if forloop.first %} open{% endif %}><summary><span>Test case</span> <h2>{{ result.case.title|isolated_lines }}</h2>
+<details class="record history-record"{% if forloop.first %} open{% endif %}><summary><span class="record-label">Test case</span><h2>{{ result.case.title|isolated_lines }}</h2>
 <span class="record-meta"><span>Build</span> {{ result.build.label|isolated_lines }}</span>
 <span class="record-meta">Status: {% if result.submitted_at %}Submitted{% else %}Draft{% endif %}</span>
 <span class="record-meta"><span>Outcome</span> <span>{{ result.get_outcome_display }}</span></span></summary>

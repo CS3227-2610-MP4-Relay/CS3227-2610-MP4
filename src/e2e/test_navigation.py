@@ -64,7 +64,9 @@ def browser_accounts(browser_accounts):
     return accounts
 
 
-@pytest.mark.ac("PLT-4.4", "PLT-4.5", "PLT-4.6", "PLT-4.7", "PLT-4.8", "PLT-4.9")
+@pytest.mark.ac(
+    "PLT-4.4", "PLT-4.5", "PLT-4.6", "PLT-4.7", "PLT-4.8", "PLT-4.9", "PLT-4.11"
+)
 @pytest.mark.parametrize("width", [320, 1440])
 @pytest.mark.parametrize("kind", ["round", "results", "tester_round", "history"])
 def test_contents_reveal_records_and_keyboard_defaults(
@@ -98,6 +100,28 @@ def test_contents_reveal_records_and_keyboard_defaults(
     if kind == "history":
         expect(summaries.nth(1)).to_contain_text("Status: Draft")
         expect(summaries.nth(1)).to_contain_text("Pass")
+        title = summaries.first.get_by_role("heading")
+        label = summaries.first.get_by_text("Test case", exact=True)
+        assert label.bounding_box()["y"] - summaries.first.bounding_box()[
+            "y"
+        ] < summaries.first.evaluate(
+            "el => parseFloat(getComputedStyle(el).paddingTop) + "
+            "parseFloat(getComputedStyle(el).lineHeight) / 2"
+        )
+        assert (
+            label.bounding_box()["y"] + label.bounding_box()["height"]
+            <= title.bounding_box()["y"]
+        )
+        title_size = title.evaluate("el => parseFloat(getComputedStyle(el).fontSize)")
+        for subordinate in [
+            label,
+            *summaries.first.locator(".record-meta").all(),
+            *records.first.locator(".record-body h3").all(),
+        ]:
+            assert (
+                subordinate.evaluate("el => parseFloat(getComputedStyle(el).fontSize)")
+                < title_size
+            )
     if kind == "results":
         expect(summaries.first).to_contain_text("Pass")
         expect(summaries.nth(1)).to_contain_text("No results for this build yet.")
@@ -112,6 +136,17 @@ def test_contents_reveal_records_and_keyboard_defaults(
         expect(mobile).to_have_attribute("open", "")
     contents = page.get_by_role("navigation", name="Contents", exact=True)
     expect(contents).to_be_visible()
+    if kind in ("round", "tester_round"):
+        parent = contents.get_by_role("link", name="Test cases", exact=True).locator(
+            ".."
+        )
+        nested = parent.locator("ul")
+        expect(nested.locator("li > a")).to_have_count(2)
+        assert nested.evaluate("el => getComputedStyle(el).listStyleType") == "disc"
+        assert (
+            nested.locator("a").first.bounding_box()["x"]
+            > parent.locator(":scope > a").bounding_box()["x"]
+        )
     links = contents.locator('a[href^="#"]')
     targets = [link.get_attribute("href") for link in links.all()]
     assert len(targets) == len(set(targets))

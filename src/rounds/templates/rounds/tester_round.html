@@ -18,7 +18,7 @@
 <p>{{ case.expected_result|isolated_lines }}</p>
 <h4>Linked acceptance criteria</h4>
 <ul>{% for criterion in case.criteria.all %}<li>{{ criterion.text|isolated_lines }}</li>{% endfor %}</ul>
-{% if round.state == "open" and case.current_build %}<p><a class="action" href="{% url 'accounts:tester-result' round.id case.id case.current_build.id %}">Record result</a></p>{% endif %}
+{% if round.state == "open" and case.current_build %}<p><a class="action{% if case.result_action == 'View result' %} secondary{% endif %}" href="{% url 'accounts:tester-result' round.id case.id case.current_build.id %}">{{ case.result_action }}</a></p>{% endif %}
 </div></details>
 {% endfor %}</section>
 <p><a class="action secondary" href="{% url 'accounts:tester' %}">Tester home</a></p>

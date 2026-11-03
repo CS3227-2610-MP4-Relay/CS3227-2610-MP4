@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {% load rounds_text %}
 {% block title %}Draft test cases with AI{% endblock %}
+{% block pending_forms %}{% include "pending_forms.html" %}{% endblock %}
 {% block content %}
 {% include "page_navigation.html" with back=round.get_absolute_url %}
 <h1>Draft test cases with AI</h1>
 <p>Select 1 to 5 acceptance criteria. The selected criteria are sent to the SoC AI service to suggest test cases. Suggestions are not saved; review each one before adding it.</p>
-<form method="post">{% csrf_token %}
+<form method="post" data-pending-message="Drafting test cases…">{% csrf_token %}
 <fieldset>
   <legend>{{ form.criteria.label }}</legend>
   {% for choice in form.criteria %}<p>{{ choice.tag }} <label for="{{ choice.id_for_label }}">{{ choice.choice_label|isolated_lines }}</label></p>
@@ -13,16 +14,18 @@
 </fieldset>
 {% if selection_error %}<div class="error"><p>{{ selection_error }}</p></div>{% endif %}{% for error in form.criteria.errors %}<div class="error"><p>{{ error }}</p></div>{% endfor %}
 <button type="submit">Draft test cases</button>
+<p class="pending-status" role="status" aria-live="polite" aria-atomic="true"></p>
 </form>
 <p><a class="action" href="{% url 'rounds:case-new' round.pk %}">Add test case</a></p>
 {% if error %}<h2>Suggested test cases</h2><div class="error"><p>{{ error }}</p></div>{% endif %}
 {% if drafts %}<h2>Suggested test cases</h2>
+<p>Opens in a new tab. Keep this suggestions tab open to review another draft.</p>
 {% for draft in drafts %}<h3>{{ draft.title|isolated_lines }}</h3>
 <h4>Steps</h4><p>{{ draft.steps|isolated_lines }}</p>
 <h4>Expected result</h4><p>{{ draft.expected_result|isolated_lines }}</p>
 <h4>Covers acceptance criteria</h4>
 <ul>{% for criterion in draft.covered %}<li>{{ criterion.text|isolated_lines }}</li>{% endfor %}</ul>
-<form method="post" action="{% url 'ai:use-draft' round.pk %}">{% csrf_token %}
+<form method="post" action="{% url 'ai:use-draft' round.pk %}" target="_blank" rel="noopener">{% csrf_token %}
 <input type="hidden" name="title" value="{{ draft.title }}">
 <input type="hidden" name="steps" value="{{ draft.steps }}">
 <input type="hidden" name="expected_result" value="{{ draft.expected_result }}">

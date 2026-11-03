@@ -470,7 +470,9 @@ def test_direct_and_coordinator_injection_are_data_and_output_is_escaped(
         ],
     }
     body = response.content.decode()
-    assert "\x3cscript\x3e" not in body and "\x3cimg" not in body
+    assert body.count("<script") == 1  # Only the shared, fixed pending handler.
+    assert "<script" not in body.split("<main>", 1)[1].split("</main>", 1)[0]
+    assert "\x3cimg" not in body
     assert escape(payload) in body and '<span dir="auto">' in body
     assert 'href="https://example.invalid/' not in body
     if answer == "valid":
