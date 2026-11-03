@@ -1,6 +1,6 @@
 # Product spec
 
-Relay is a planned beta-testing portal for small software teams. It coordinates manual testing and records results; the software being tested runs outside Relay. How it will be built is in [`TECHNICAL-SPEC.md`](TECHNICAL-SPEC.md), and its threats and intended controls are in [`SECURITY-SPEC.md`](SECURITY-SPEC.md).
+Relay is a beta-testing portal for small software teams. It coordinates manual testing and records results; the software being tested runs outside Relay. How it is built is in [`TECHNICAL-SPEC.md`](TECHNICAL-SPEC.md), and its threats and controls are in [`SECURITY-SPEC.md`](SECURITY-SPEC.md).
 
 The first application foundation is defined in [PLT-1](product/platform.md#plt-1-django-foundation-and-continuous-verification). The areas below record the agreed direction. Exact screens, fields, state rules and acceptance criteria must be settled before each implementation slice.
 

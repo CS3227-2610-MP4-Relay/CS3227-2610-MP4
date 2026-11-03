@@ -56,8 +56,6 @@ The existing Django start, sign-in, demo credentials, coordinator, tester and AI
 - **PLT-4.12:** With JavaScript enabled, submitting "Draft test cases" or "Suggest missing details" immediately disables that form's submit button and shows a live status of "Drafting test cases…" or "Suggesting missing details…" respectively while the normal request is pending. Further submissions of that form are suppressed until navigation completes; returning through browser history restores an enabled form with no pending status. Invalid native form input does not enter the pending state. Without JavaScript, both forms retain normal server submission and existing validation and failure messages. This adds no automatic retry or AI call.
 - **PLT-4.13:** The system-generated "No observation." placeholder is italic on tester history, submitted result entry, saved observation feedback and coordinator result displays, including earlier builds. A tester-authored observation with exactly that text retains the ordinary observation styling and existing escaped plain-text rendering; styling depends on the observation being empty, never on a text comparison.
 
-## Planned work
-
-- Shared storage, authorization and bounded SoC LLM access.
+## New work
 
 Before each slice, define its observable behaviour, important boundaries, denied actions and failure cases. Architecture and delivery decisions belong in the [technical spec](../TECHNICAL-SPEC.md); threats and controls belong in the [security spec](../SECURITY-SPEC.md).
