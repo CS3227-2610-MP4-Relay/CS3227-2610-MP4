@@ -134,8 +134,14 @@ summary { cursor: pointer; padding: .8rem; }
 summary > :is(h2, h3) { display: inline; border: 0; padding: 0; margin: 0; }
 .record { margin: 1.2rem 0; border: 1px solid #b8c7d9; border-radius: 7px; }
 .record-meta { display: block; margin: .3rem 0 0 1.1rem; }
-.history-record .record-label { display: inline-block; margin-left: .3rem; font-weight: 650; }
-.history-record > summary > h2 { display: block; margin: .2rem 0 0 1.1rem; font-size: 1.2rem; }
+.history-record { margin: 1.2rem 0; border: 1px solid #b8c7d9; border-radius: 7px; }
+.history-record > header { padding: 1rem 1rem 0; }
+.history-record .record-label { font-weight: 650; }
+.history-record > header > h2 { margin: .2rem 0 0; font-size: 1.2rem; border: 0; padding: 0; }
+.history-record .record-meta { margin-left: 0; }
+.history-record > .record { margin: 0; border: 0; }
+.history-record summary { padding: .8rem 1rem; }
+.record:not([open]) .hide-details, .record[open] .show-details { display: none; }
 .history-record .record-body h3 { font-size: 1rem; border: 0; padding: 0; }
 .record-body { padding: 0 1rem 1rem; scroll-margin-top: 1rem; }
 .record-body :is(h3, h4) { margin: .9rem 0 .35rem; }
