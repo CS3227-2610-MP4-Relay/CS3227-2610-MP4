@@ -59,7 +59,7 @@ Round, result, history, editing and AI pages have **Coordinator home** or **Test
 
 Round pages, coordinator results and **My results** have **Contents** links to their sections or records. Round-page case links appear as an indented list beneath **Test cases**. On a wide desktop, these links appear in a sidebar. On a narrower screen, **Contents** starts collapsed above the details; choose it to show the links.
 
-Choose a case title or saved-result heading to expand or collapse its details. The first record starts expanded and the others collapsed; several can stay open together. Following a record's **Contents** link opens its details and brings them into view. A direct link to that record does the same. Reloading restores the starting layout, unless the address links directly to a record. You can use Tab to focus a heading, then Enter or Space to toggle it.
+Choose a case title to expand or collapse its details. In **My results**, choose **Show details** or **Hide details** below the saved-result header. The first record starts expanded and the others collapsed; several can stay open together. Following a record's **Contents** link opens its details and brings them into view. A direct link to that record does the same. Reloading restores the starting layout, unless the address links directly to a record. You can use Tab to focus a disclosure control, then Enter or Space to toggle it.
 
 ## View available tests
 
@@ -80,7 +80,9 @@ If reading tests fails, the page says "Relay is temporarily unavailable. Try aga
 4. Choose **Submit** when ready. You may submit directly or after saving a draft. The page shows "Status: Submitted", your outcome and your observation as read-only text. An empty observation says "No observation." Submission is final; another attempt to save or submit it says "This result has already been submitted."
 5. Choose **Back to round** to return to the case instructions.
 
-Both buttons apply the same checks. A missing outcome says "Choose Pass or Fail." An empty or invisible-only Fail observation says "Enter an observation for Fail." Observations allow at most 2000 characters after surrounding spaces and line breaks are removed; a line break counts as one character. A longer observation says "Enter at most 2000 characters." A nonempty invisible-only Pass observation says "Enter an observation with a visible character." Null characters and hidden text-direction characters get the same messages as [round text fields](#criteria-and-test-case-limits). Invalid input leaves your previously saved result unchanged.
+**Save draft**, **Submit** and [**Observation feedback**](#observation-feedback) apply the same checks. A missing outcome says "Choose Pass or Fail." An empty or invisible-only Fail observation says "Enter an observation for Fail." Observations allow at most 2000 characters after surrounding spaces and line breaks are removed; a line break counts as one character. A longer observation says "Enter at most 2000 characters." A nonempty invisible-only Pass observation says "Enter an observation with a visible character." Null characters and hidden text-direction characters get the same messages as [round text fields](#criteria-and-test-case-limits). Invalid input leaves your previously saved result unchanged.
+
+An empty observation appears as italic *No observation.* on submitted result entry, **My results**, observation feedback and coordinator results. If you type "No observation." yourself, it appears as ordinary observation text.
 
 Results belong to the build shown when you opened the entry page. After the coordinator requests a retest, reload the round and check the selected case's **Current build**. Test the fix outside Relay on that build, then choose **Record result**: the new build starts with empty **Outcome** and **Observation** fields. Choose **Pass** or **Fail** and **Submit** a separate result; earlier submissions remain available in [My results](#review-my-results). Cases omitted from the retest keep their existing build and result entry. If the build changes before you save or submit, the page says "This build is no longer current. Reload the round to record a result." Return to the round, reload, and choose **Record result** for the new build.
 
@@ -88,21 +90,21 @@ Choose **View result** to read your submitted result while its build is current 
 
 ## Observation feedback
 
-1. On **Record result**, choose **Save draft**, then **Observation feedback**. The link is available for your saved draft while its round is Open and its build is current.
+1. On **Record result**, choose **Observation feedback** while your result is unsubmitted, its round is Open and its build is current. The button is available before your first draft. It saves your current **Outcome** and **Observation** as a draft, including edits made since your last save, then opens **Observation feedback**. The notice says "Observation feedback saves your draft and opens the AI feedback page. Choose an outcome first; Fail also needs an observation." Invalid fields keep you on **Record result** with your entered values and errors, without changing your saved draft.
 2. Review **Saved observation**, **Test case**, **Steps**, **Expected result**, **Linked acceptance criteria** and **Current build**. The page says "AI receives your saved observation, this test case and its linked acceptance criteria. Suggestions may be wrong. Review them and edit your result yourself. Unsaved edits are not included."
-3. Choose **Suggest missing details** to request questions. Any suggestions appear under **Questions to consider**, beside the original source. They do not change your outcome, observation or submission.
+3. Choose **Suggest missing details** to request questions about the saved fields. Saving and opening the feedback page sends no AI request. Any suggestions appear under **Questions to consider**, beside the original source. They do not change your outcome, observation or submission.
 4. Choose **Back to result**, edit **Observation** yourself and choose **Save draft** or **Submit** when ready.
 
 With JavaScript enabled, the request disables **Suggest missing details** and shows "Suggesting missing details…" while you wait.
 
 An empty reply says "No missing details were suggested. You can still edit your result yourself." If the source is too long, the page says "This observation and test case are too long for feedback. You can still edit your result yourself." If feedback is unavailable, it says "Feedback is unavailable right now. You can still edit your result yourself." You can still choose **Back to result** and continue manually.
 
-Questions are not saved. Opening the feedback page again clears them; resubmitting its request asks for new feedback. If your saved source changes during a request, the page says "Your saved draft or test case changed. Reload before requesting feedback." A missing draft says "Save a draft before requesting feedback." Submission, a newer build or a closed round prevents feedback with the same messages described under [Save and submit a result](#save-and-submit-a-result).
+Questions are not saved. Opening the feedback page again clears them; resubmitting its request asks for new feedback. If your saved source changes during a request, the page says "Your saved draft or test case changed. Reload before requesting feedback." Opening the feedback address directly without a saved draft says "Save a draft before requesting feedback." Submission, a newer build or a closed round prevents feedback with the same messages described under [Save and submit a result](#save-and-submit-a-result).
 
 ## Review my results
 
 1. Open an Open or Closed round from **Tester home**, then choose **My results**.
-2. The **My results** page shows the **Round** and its state, followed by your saved drafts and submissions for current and earlier builds. Each summary shows **Test case** with the case title, the original **Build**, **Outcome** and "Status: Draft" or "Status: Submitted". Expand an entry for **Linked acceptance criteria**, **Observation** and, for submissions, **Submitted at** in UTC. An empty observation says "No observation."; with no saved results, the page says "No results yet."
+2. The **My results** page shows the **Round** and its state, followed by your saved drafts and submissions for current and earlier builds. Each card keeps **Test case** with the case title, the original **Build**, **Outcome** and "Status: Draft" or "Status: Submitted" visible in its header. Choose **Show details** immediately below the header for **Linked acceptance criteria**, **Observation** and, for submissions, **Submitted at** in UTC; choose **Hide details** to collapse them. An empty observation says "No observation."; with no saved results, the page says "No results yet."
 3. Choose **Back to round** to return to the instructions.
 
 Only your own results appear. This page is read-only, including drafts. Reload to see later saves or submissions; retesting and closure retain earlier results with their original build and case details.
