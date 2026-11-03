@@ -77,7 +77,7 @@ def no_store(response):
 
 
 @pytest.mark.ac("RES-4.1")
-def test_feedback_get_and_eligible_entry_link_without_ai(tester, target):
+def test_feedback_get_and_eligible_entry_action_without_ai(tester, target):
     client = signed_in(tester)
     before = snapshot()
     with mock.patch("ai.feedback_views.gateway.complete") as complete:
@@ -107,16 +107,76 @@ def test_feedback_get_and_eligible_entry_link_without_ai(tester, target):
         "your result yourself. Unsaved edits are not included." in body
     )
     assert (
-        'href="' + url(target) + '">Observation feedback</a>'
+        'name="action" value="feedback">Observation feedback</button>'
         in client.get(entry_url(target)).content.decode()
     )
     no_store(response)
     assert snapshot() == before
     target[3].submitted_at = timezone.now()
     target[3].save()
-    assert "Observation feedback" not in client.get(entry_url(target)).content.decode()
+    assert 'value="feedback"' not in client.get(entry_url(target)).content.decode()
     target[3].delete()
-    assert "Observation feedback" not in client.get(entry_url(target)).content.decode()
+    assert 'value="feedback"' in client.get(entry_url(target)).content.decode()
+
+
+@pytest.mark.ac("RES-4.9")
+@pytest.mark.parametrize("existing", [False, True])
+def test_feedback_action_saves_current_fields_before_opening_without_ai(
+    tester, target, existing
+):
+    if not existing:
+        target[3].delete()
+    client = signed_in(tester)
+    with mock.patch("ai.feedback_views.gateway.complete") as complete:
+        response = client.post(
+            entry_url(target),
+            {
+                "action": "feedback",
+                "outcome": "pass",
+                "observation": " Synthetic current \r\nedit ",
+            },
+        )
+        assert response.status_code == 302 and response.url == url(target)
+        shown = client.get(response.url)
+        complete.assert_not_called()
+    saved = Result.objects.get(tester=tester, case=target[1], build=target[2])
+    assert (saved.outcome, saved.observation, saved.submitted_at) == (
+        "pass",
+        "Synthetic current \nedit",
+        None,
+    )
+    assert shown.context["entry"].result.observation == saved.observation
+    assert (
+        'Synthetic current </span><br><span dir="auto">edit' in shown.content.decode()
+    )
+    no_store(response)
+    no_store(shown)
+
+
+@pytest.mark.ac("RES-4.9")
+@pytest.mark.parametrize(
+    "outcome,observation,message",
+    [
+        ("", "Synthetic retained", "Choose Pass or Fail."),
+        ("fail", "", "Enter an observation for Fail."),
+        ("pass", "x" * 2001, "Enter at most 2000 characters."),
+    ],
+)
+def test_feedback_action_invalid_fields_stay_on_entry_without_save(
+    tester, target, outcome, observation, message
+):
+    before = snapshot()
+    with mock.patch("ai.feedback_views.gateway.complete") as complete:
+        response = signed_in(tester).post(
+            entry_url(target),
+            {"action": "feedback", "outcome": outcome, "observation": observation},
+        )
+        complete.assert_not_called()
+    assert response.status_code == 200 and message in response.content.decode()
+    assert response.context["form"]["observation"].value() == observation
+    assert 'value="feedback"' in response.content.decode()
+    assert snapshot() == before
+    no_store(response)
 
 
 @pytest.mark.ac("RES-4.2", "RES-4.8")

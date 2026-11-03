@@ -217,8 +217,11 @@ def test_normalized_boundary_and_allowed_scripts(tester, target, observation):
     assert Result.objects.get().observation == observation.replace("\r\n", "\n").strip()
 
 
-@pytest.mark.ac("RES-2.3")
-def test_same_workspace_identity_fields_cannot_select_another_result(tester, target):
+@pytest.mark.ac("RES-2.3", "RES-4.9")
+@pytest.mark.parametrize("action", ["save", "feedback"])
+def test_same_workspace_identity_fields_cannot_select_another_result(
+    tester, target, action
+):
     other = User.objects.create_user(
         "tester2-entry", "Synthetic16Chars", workspace=tester.workspace, role="tester"
     )
@@ -230,7 +233,7 @@ def test_same_workspace_identity_fields_cannot_select_another_result(tester, tar
     assert "Synthetic private" not in body and "Status: Submitted" not in body
     response = client.post(
         url(target),
-        payload(observation="Synthetic other")
+        payload(observation="Synthetic other", action=action)
         | {
             "tester": tester.pk,
             "tester_id": tester.pk,
@@ -248,13 +251,15 @@ def test_same_workspace_identity_fields_cannot_select_another_result(tester, tar
     assert Result.objects.get(tester=other).observation == "Synthetic other"
 
 
-@pytest.mark.ac("RES-2.3")
-@pytest.mark.parametrize("method", ["get", "post"])
-def test_role_and_auth_precede_any_domain_lookup(coordinator, target, method):
+@pytest.mark.ac("RES-2.3", "RES-4.9")
+@pytest.mark.parametrize(
+    "method,action", [("get", "save"), ("post", "save"), ("post", "feedback")]
+)
+def test_role_and_auth_precede_any_domain_lookup(coordinator, target, method, action):
     location = url(target)
     match = resolve(location)
     for user in (coordinator, AnonymousUser()):
-        request = getattr(RequestFactory(), method)(location, payload())
+        request = getattr(RequestFactory(), method)(location, payload(action=action))
         request.user = user
         with patch("rounds.results.workspace_records") as lookup:
             if user.is_authenticated:
@@ -265,11 +270,11 @@ def test_role_and_auth_precede_any_domain_lookup(coordinator, target, method):
                 assert response.status_code == 302 and response.url == "/sign-in/"
                 no_store(response)
             lookup.assert_not_called()
-    response = getattr(signed_in(coordinator), method)(location, payload())
+    response = getattr(signed_in(coordinator), method)(location, payload(action=action))
     assert response.status_code == 403 and DENIED in page(response)
 
 
-@pytest.mark.ac("RES-2.3", "RES-2.4")
+@pytest.mark.ac("RES-2.3", "RES-2.4", "RES-4.9")
 @pytest.mark.parametrize(
     "kind",
     [
@@ -283,9 +288,11 @@ def test_role_and_auth_precede_any_domain_lookup(coordinator, target, method):
         "coverage",
     ],
 )
-@pytest.mark.parametrize("method", ["get", "post"])
+@pytest.mark.parametrize(
+    "method,action", [("get", "save"), ("post", "save"), ("post", "feedback")]
+)
 def test_missing_foreign_and_cross_round_ids_are_fixed_404(
-    tester, target, make_round, other_workspace, kind, method
+    tester, target, make_round, other_workspace, kind, method, action
 ):
     round_, case, build = target
     if kind == "missing":
@@ -312,7 +319,9 @@ def test_missing_foreign_and_cross_round_ids_are_fixed_404(
         Round.objects.filter(pk=round_.pk).update(state=Round.State.CLOSED)
     before = snapshot()
     client = signed_in(tester)
-    response = getattr(client, method)(url((round_, case, build)), payload())
+    response = getattr(client, method)(
+        url((round_, case, build)), payload(action=action)
+    )
     missing = client.get(
         "/tester/rounds/2147483647/cases/2147483647/builds/2147483647/result/"
     )
@@ -322,9 +331,12 @@ def test_missing_foreign_and_cross_round_ids_are_fixed_404(
     assert snapshot() == before
 
 
-@pytest.mark.ac("RES-2.4", "RES-2.5")
+@pytest.mark.ac("RES-2.4", "RES-2.5", "RES-4.9")
+@pytest.mark.parametrize("action", [None, "feedback"])
 @pytest.mark.parametrize("conflict", ["closed", "stale", "submitted"])
-def test_conflicts_precede_invalid_form_and_preserve_rows(tester, target, conflict):
+def test_conflicts_precede_invalid_form_and_preserve_rows(
+    tester, target, conflict, action
+):
     client = signed_in(tester)
     client.post(url(target), payload(action="submit"))
     round_, case, _ = target
@@ -343,7 +355,7 @@ def test_conflicts_precede_invalid_form_and_preserve_rows(tester, target, confli
     else:
         message = results.SUBMITTED
     before = snapshot()
-    response = client.post(url(target), {})
+    response = client.post(url(target), {} if action is None else {"action": action})
     assert response.status_code == 409 and message in page(response)
     no_store(response)
     if conflict != "submitted":
@@ -363,14 +375,15 @@ def test_other_methods_are_uncached_405(tester, target, method):
     assert snapshot() == before
 
 
-@pytest.mark.ac("RES-2.7")
+@pytest.mark.ac("RES-2.7", "RES-4.9")
+@pytest.mark.parametrize("action", ["submit", "feedback"])
 @pytest.mark.parametrize(
     "token,origin",
     [("missing", None), ("invalid", None), ("valid", "https://attacker.example")],
 )
-def test_csrf_rejects_before_any_result_write(tester, target, token, origin):
+def test_csrf_rejects_before_any_result_write(tester, target, token, origin, action):
     client = signed_in(tester, enforce_csrf_checks=True)
-    data = payload(action="submit")
+    data = payload(action=action)
     if token != "missing":
         data["csrfmiddlewaretoken"] = (
             csrf_token(client) if token == "valid" else "x" * 32
@@ -443,8 +456,9 @@ def test_database_failures_are_fixed_503_without_observation_logging(
     assert snapshot() == before
 
 
-@pytest.mark.ac("RES-2.6")
-def test_failure_after_insert_rolls_back_at_route_boundary(tester, target):
+@pytest.mark.ac("RES-2.6", "RES-4.9")
+@pytest.mark.parametrize("action", ["submit", "feedback"])
+def test_failure_after_insert_rolls_back_at_route_boundary(tester, target, action):
     original = Result.save
 
     def fail_after_save(self, *args, **kwargs):
@@ -453,7 +467,7 @@ def test_failure_after_insert_rolls_back_at_route_boundary(tester, target):
 
     before = snapshot()
     with patch.object(Result, "save", fail_after_save):
-        response = signed_in(tester).post(url(target), payload(action="submit"))
+        response = signed_in(tester).post(url(target), payload(action=action))
     assert response.status_code == 503
     assert snapshot() == before
 

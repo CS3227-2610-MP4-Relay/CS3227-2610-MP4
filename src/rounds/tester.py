@@ -144,7 +144,12 @@ def result_entry(request, round_id, case_id, build_id):
                     form.cleaned_data["observation"],
                     submit=form.cleaned_data["action"] == "submit",
                 )
-                return redirect("accounts:tester-result", round_id, case_id, build_id)
+                destination = (
+                    "accounts:tester-feedback"
+                    if form.cleaned_data["action"] == "feedback"
+                    else "accounts:tester-result"
+                )
+                return redirect(destination, round_id, case_id, build_id)
             return render(
                 request, "rounds/tester_result.html", {"entry": current, "form": form}
             )

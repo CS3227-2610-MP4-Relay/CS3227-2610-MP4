@@ -52,7 +52,7 @@ class ResultForm(forms.Form):
             elif not DIRECTION_CONTROLS.isdisjoint(text):
                 self.add_error("observation", DIRECTION_MESSAGE)
         action = self.data.get("action")
-        if action not in ("save", "submit"):
+        if action not in ("save", "submit", "feedback"):
             self.add_error(None, "Choose Save draft or Submit.")
         cleaned["action"] = action
         return cleaned

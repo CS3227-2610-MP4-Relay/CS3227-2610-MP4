@@ -1,6 +1,8 @@
 """Saved-observation feedback followed by explicit manual editing (RES-4)."""
 
 import json
+from pathlib import Path
+from tempfile import gettempdir
 from unittest import mock
 
 import pytest
@@ -10,6 +12,7 @@ from playwright.sync_api import expect
 from accounts.models import User
 from ai.gateway import Failed, Success
 from e2e.pending import assert_pending_submit
+from e2e.test_presentation import assert_layout
 from rounds import services
 from rounds.models import Case, Criterion, Result, Round
 
@@ -77,21 +80,59 @@ def sign_in(page, accounts, role="tester"):
     page.get_by_role("button", name="Sign in", exact=True).click()
 
 
-def save_draft(page, accounts, outcome, observation):
-    """Save through result entry and follow the eligible feedback link."""
+def save_draft(page, accounts, outcome, observation, *, save=True):
+    """Fill result entry and optionally save before testing feedback navigation."""
     sign_in(page, accounts)
     page.get_by_role("link", name="Synthetic feedback round", exact=True).click()
     page.get_by_role("link", name="Record result", exact=True).click()
     page.get_by_label("Outcome", exact=True).select_option(outcome)
     page.get_by_label("Observation", exact=True).fill(observation)
-    page.get_by_role("button", name="Save draft", exact=True).click()
-    expect(page.get_by_text("Status: Draft", exact=True)).to_be_visible()
+    if save:
+        page.get_by_role("button", name="Save draft", exact=True).click()
+        expect(page.get_by_text("Status: Draft", exact=True)).to_be_visible()
+
+
+@pytest.mark.ac("RES-4.9", "PLT-4.4")
+@pytest.mark.parametrize("width", [320, 1440])
+def test_feedback_before_first_draft_validates_then_saves_without_ai(
+    page, browser_accounts, width
+):
+    page.set_viewport_size({"width": width, "height": 900})
+    save_draft(page, browser_accounts, "fail", "", save=False)
+    action = page.get_by_role("button", name="Observation feedback", exact=True)
+    expect(action).to_be_visible()
+    expect(
+        page.get_by_text(
+            "Observation feedback saves your draft and opens the AI feedback page. "
+            "Choose an outcome first; Fail also needs an observation.",
+            exact=True,
+        )
+    ).to_be_visible()
+    assert_layout(page, width)
+    page.screenshot(
+        path=str(Path(gettempdir()) / f"relay-feedback-entry-{width}.png"),
+        full_page=True,
+    )
+    with mock.patch("ai.feedback_views.gateway.complete") as complete:
+        action.click()
+        expect(
+            page.get_by_text("Enter an observation for Fail.", exact=True)
+        ).to_be_visible()
+        expect(page.get_by_label("Outcome", exact=True)).to_have_value("fail")
+        page.get_by_label("Observation", exact=True).fill(ORIGINAL)
+        action.click()
+        expect(
+            page.get_by_role("heading", name="Observation feedback", exact=True)
+        ).to_be_visible()
+        expect(page.get_by_text(ORIGINAL, exact=True)).to_be_visible()
+        complete.assert_not_called()
+    browser_accounts["expected"] = ("fail", ORIGINAL, False)
 
 
 @pytest.mark.ac("PLT-4.12", "RES-4.2")
 def test_feedback_pending_request_and_history_reset(page, browser_accounts):
     save_draft(page, browser_accounts, "fail", ORIGINAL)
-    page.get_by_role("link", name="Observation feedback", exact=True).click()
+    page.get_by_role("button", name="Observation feedback", exact=True).click()
     assert_pending_submit(
         page,
         "ai.feedback_views.gateway.complete",
@@ -103,19 +144,21 @@ def test_feedback_pending_request_and_history_reset(page, browser_accounts):
     browser_accounts["expected"] = ("fail", ORIGINAL, False)
 
 
-@pytest.mark.ac("PLT-4.12", "RES-4.2")
+@pytest.mark.ac("PLT-4.12", "RES-4.2", "RES-4.9")
 def test_feedback_without_javascript(page, browser_accounts, live_server):
     context = page.context.browser.new_context(
         base_url=live_server.url, java_script_enabled=False
     )
     try:
         plain = context.new_page()
-        save_draft(plain, browser_accounts, "fail", ORIGINAL)
-        plain.get_by_role("link", name="Observation feedback", exact=True).click()
+        save_draft(plain, browser_accounts, "fail", ORIGINAL, save=False)
         with mock.patch(
             "ai.feedback_views.gateway.complete",
             return_value=Success(json.dumps({"questions": [QUESTION]})),
         ) as complete:
+            plain.get_by_role("button", name="Observation feedback", exact=True).click()
+            expect(plain.get_by_text(ORIGINAL, exact=True)).to_be_visible()
+            complete.assert_not_called()
             plain.get_by_role(
                 "button", name="Suggest missing details", exact=True
             ).click()
@@ -129,7 +172,7 @@ def test_feedback_without_javascript(page, browser_accounts, live_server):
         context.close()
 
 
-@pytest.mark.ac("RES-4.1", "RES-4.2", "RES-4.4", "RES-4.5")
+@pytest.mark.ac("RES-4.1", "RES-4.2", "RES-4.4", "RES-4.5", "RES-4.9")
 def test_feedback_preserves_saved_fields_until_manual_edit_and_is_private(
     page,
     browser_accounts,
@@ -137,26 +180,27 @@ def test_feedback_preserves_saved_fields_until_manual_edit_and_is_private(
 ):
     accounts = browser_accounts
     save_draft(page, accounts, "fail", ORIGINAL)
-    page.get_by_label("Observation", exact=True).fill("Synthetic unsaved edit")
+    current = "Synthetic current edit"
+    page.get_by_label("Observation", exact=True).fill(current)
     reply = Success(json.dumps({"questions": [QUESTION]}))
     with mock.patch(
         "ai.feedback_views.gateway.complete", return_value=reply
     ) as complete:
-        page.get_by_role("link", name="Observation feedback", exact=True).click()
+        page.get_by_role("button", name="Observation feedback", exact=True).click()
         expect(
             page.get_by_role("heading", name="Observation feedback", exact=True)
         ).to_be_visible()
         complete.assert_not_called()
-        expect(page.get_by_text(ORIGINAL, exact=True)).to_be_visible()
-        expect(page.get_by_text("Synthetic unsaved edit", exact=True)).to_have_count(0)
+        expect(page.get_by_text(current, exact=True)).to_be_visible()
+        expect(page.get_by_text(ORIGINAL, exact=True)).to_have_count(0)
         page.get_by_role("button", name="Suggest missing details", exact=True).click()
         expect(
             page.get_by_role("heading", name="Questions to consider", exact=True)
         ).to_be_visible()
         expect(page.get_by_text(QUESTION, exact=True)).to_be_visible()
-        expect(page.get_by_text(ORIGINAL, exact=True)).to_be_visible()
+        expect(page.get_by_text(current, exact=True)).to_be_visible()
         complete.assert_called_once()
-        assert json.loads(complete.call_args.args[2])["observation"] == ORIGINAL
+        assert json.loads(complete.call_args.args[2])["observation"] == current
         feedback_url = page.url
         # A GET discards transient questions without another request to the model.
         page.goto(feedback_url)
@@ -172,8 +216,8 @@ def test_feedback_preserves_saved_fields_until_manual_edit_and_is_private(
         peer.goto(accounts["entry"])
         expect(peer.get_by_label("Observation", exact=True)).to_have_value("")
         expect(
-            peer.get_by_role("link", name="Observation feedback", exact=True)
-        ).to_have_count(0)
+            peer.get_by_role("button", name="Observation feedback", exact=True)
+        ).to_be_visible()
         denied = peer.goto(feedback_url)
         assert denied.status == 409
         expect(
@@ -181,12 +225,12 @@ def test_feedback_preserves_saved_fields_until_manual_edit_and_is_private(
                 "heading", name="Save a draft before requesting feedback.", exact=True
             )
         ).to_be_visible()
-        expect(peer.get_by_text(ORIGINAL, exact=True)).to_have_count(0)
+        expect(peer.get_by_text(current, exact=True)).to_have_count(0)
     finally:
         peer_context.close()
 
     page.get_by_role("link", name="Back to result", exact=True).last.click()
-    expect(page.get_by_label("Observation", exact=True)).to_have_value(ORIGINAL)
+    expect(page.get_by_label("Observation", exact=True)).to_have_value(current)
     expect(page.get_by_label("Outcome", exact=True)).to_have_value("fail")
     page.get_by_label("Observation", exact=True).fill(EDITED)
     page.get_by_role("button", name="Save draft", exact=True).click()
@@ -202,7 +246,7 @@ def test_unavailable_feedback_keeps_manual_result_submission_usable(
 ):
     accounts = browser_accounts
     save_draft(page, accounts, "pass", "")
-    page.get_by_role("link", name="Observation feedback", exact=True).click()
+    page.get_by_role("button", name="Observation feedback", exact=True).click()
     expect(page.get_by_text("No observation.", exact=True)).to_be_visible()
     with mock.patch(
         "ai.feedback_views.gateway.complete", return_value=Failed("timeout")
@@ -228,7 +272,7 @@ def test_unavailable_feedback_keeps_manual_result_submission_usable(
     expect(page.get_by_text("Status: Submitted", exact=True)).to_be_visible()
     expect(page.get_by_text(EDITED, exact=True)).to_be_visible()
     expect(
-        page.get_by_role("link", name="Observation feedback", exact=True)
+        page.get_by_role("button", name="Observation feedback", exact=True)
     ).to_have_count(0)
     accounts["expected"] = ("fail", EDITED, True)
 
@@ -259,7 +303,7 @@ def test_empty_or_invalid_feedback_keeps_saved_source_and_manual_editing(
 ):
     accounts = browser_accounts
     save_draft(page, accounts, "fail", ORIGINAL)
-    page.get_by_role("link", name="Observation feedback", exact=True).click()
+    page.get_by_role("button", name="Observation feedback", exact=True).click()
     feedback_url = page.url
     with mock.patch(
         "ai.feedback_views.gateway.complete",
@@ -297,9 +341,9 @@ def test_stale_feedback_tab_after_submission_refuses_without_gateway_call(
 ):
     accounts = browser_accounts
     save_draft(page, accounts, "fail", ORIGINAL)
-    feedback_url = page.get_by_role(
-        "link", name="Observation feedback", exact=True
-    ).get_attribute("href")
+    page.get_by_role("button", name="Observation feedback", exact=True).click()
+    feedback_url = page.url
+    page.get_by_role("link", name="Back to result", exact=True).click()
     feedback = page.context.new_page()
     try:
         with mock.patch(
@@ -335,7 +379,7 @@ def test_stale_feedback_tab_after_submission_refuses_without_gateway_call(
         expect(page.get_by_text("Fail", exact=True)).to_be_visible()
         expect(page.locator("main form")).to_have_count(0)
         expect(
-            page.get_by_role("link", name="Observation feedback", exact=True)
+            page.get_by_role("button", name="Observation feedback", exact=True)
         ).to_have_count(0)
         accounts["expected"] = ("fail", ORIGINAL, True)
     finally:
