@@ -13,7 +13,15 @@ from django.test import Client
 
 from accounts.models import User, Workspace
 from rounds import services
-from rounds.models import Case, Round
+from rounds.models import (
+    Build,
+    BuildCase,
+    Case,
+    CaseCriterion,
+    Criterion,
+    Result,
+    Round,
+)
 from rounds.templatetags.rounds_text import retest_message
 
 PASSWORD = "Synthetic16Chars"
@@ -34,6 +42,23 @@ MARKUP = (
 SCRIPT_TAG = "\x3cscript\x3e"
 IMG_TAG = "\x3cimg"
 assert SCRIPT_TAG in MARKUP and IMG_TAG in MARKUP
+
+
+# What a round holds besides its own row, and the whole rounds domain.
+ROUND_RECORDS = (Criterion, Case, CaseCriterion, Build, BuildCase, Result)
+DOMAIN_MODELS = (Round, *ROUND_RECORDS)
+
+
+def domain_rows(*models):
+    """Every stored row of `models`, or of all domain models, ordered by pk.
+
+    Compare two calls to show an action changed nothing. Name only the models
+    that must stay unchanged when the action legitimately writes others.
+    """
+    return {
+        model: list(model.objects.order_by("pk").values())
+        for model in models or DOMAIN_MODELS
+    }
 
 
 def detail(round_id):

@@ -9,6 +9,8 @@ from rounds import services
 from rounds.forms import PublishForm
 from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
 
+from .conftest import domain_rows
+
 pytestmark = pytest.mark.django_db
 
 NO_CASES = "Add at least one test case before publishing."
@@ -53,15 +55,6 @@ def fill(round_, cases=2):
         CaseCriterion.objects.create(case=case, criterion=one if n % 2 else two)
         made.append(case)
     return made
-
-
-def snapshot(round_):
-    """Everything RND-2 stores for a round."""
-    return (
-        list(Criterion.objects.filter(round=round_).values()),
-        list(Case.objects.filter(round=round_).values()),
-        list(CaseCriterion.objects.filter(case__round=round_).values()),
-    )
 
 
 def build(round_, label):
@@ -113,9 +106,9 @@ def test_the_refusal_names_no_user_text(round_):
 @pytest.mark.ac("RND-3.4")
 def test_publishing_leaves_criteria_cases_and_links_unchanged(round_):
     fill(round_, 3)
-    before = snapshot(round_)
+    before = domain_rows(Criterion, Case, CaseCriterion)
     services.publish(locked(round_), "Synthetic build")
-    assert snapshot(round_) == before
+    assert domain_rows(Criterion, Case, CaseCriterion) == before
 
 
 @pytest.mark.ac("RND-3.2")

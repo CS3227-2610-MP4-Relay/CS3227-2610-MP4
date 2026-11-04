@@ -17,8 +17,7 @@ from accounts.models import User
 from ai import feedback, feedback_views, gateway
 from rounds import services
 from rounds.models import Case, CaseCriterion, Criterion, Result, Round
-from rounds.tests.conftest import csrf_token, open_with_case, signed_in
-from rounds.tests.test_result_services import snapshot
+from rounds.tests.conftest import csrf_token, domain_rows, open_with_case, signed_in
 
 pytestmark = pytest.mark.django_db
 UNAVAILABLE = (
@@ -79,7 +78,7 @@ def no_store(response):
 @pytest.mark.ac("RES-4.1")
 def test_feedback_get_and_eligible_entry_action_without_ai(tester, target):
     client = signed_in(tester)
-    before = snapshot()
+    before = domain_rows()
     with mock.patch("ai.feedback_views.gateway.complete") as complete:
         response = client.get(url(target))
     complete.assert_not_called()
@@ -111,7 +110,7 @@ def test_feedback_get_and_eligible_entry_action_without_ai(tester, target):
         in client.get(entry_url(target)).content.decode()
     )
     no_store(response)
-    assert snapshot() == before
+    assert domain_rows() == before
     target[3].submitted_at = timezone.now()
     target[3].save()
     assert 'value="feedback"' not in client.get(entry_url(target)).content.decode()
@@ -165,7 +164,7 @@ def test_feedback_action_saves_current_fields_before_opening_without_ai(
 def test_feedback_action_invalid_fields_stay_on_entry_without_save(
     tester, target, outcome, observation, message
 ):
-    before = snapshot()
+    before = domain_rows()
     with mock.patch("ai.feedback_views.gateway.complete") as complete:
         response = signed_in(tester).post(
             entry_url(target),
@@ -175,7 +174,7 @@ def test_feedback_action_invalid_fields_stay_on_entry_without_save(
     assert response.status_code == 200 and message in response.content.decode()
     assert response.context["form"]["observation"].value() == observation
     assert 'value="feedback"' in response.content.decode()
-    assert snapshot() == before
+    assert domain_rows() == before
     no_store(response)
 
 
@@ -200,7 +199,7 @@ def test_post_uses_only_own_saved_source_and_never_changes_it(
         outcome="pass",
         observation="Synthetic private peer",
     )
-    before = snapshot()
+    before = domain_rows()
     response, complete = post(
         client,
         target,
@@ -226,7 +225,7 @@ def test_post_uses_only_own_saved_source_and_never_changes_it(
     assert "Questions to consider" in body and "Which steps reproduce this?" in body
     assert "Synthetic private peer" not in body and foreign.text not in body
     assert "Which steps reproduce this?" not in client.get(url(target)).content.decode()
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-4.3", "RES-4.4")
@@ -243,7 +242,7 @@ def test_post_uses_only_own_saved_source_and_never_changes_it(
 def test_empty_or_unavailable_keeps_source_and_manual_navigation(
     tester, target, result, message, caplog
 ):
-    before = snapshot()
+    before = domain_rows()
     response, complete = post(signed_in(tester), target, result)
     assert response.status_code == 200 and message in response.content.decode()
     assert target[3].observation in response.content.decode()
@@ -252,7 +251,7 @@ def test_empty_or_unavailable_keeps_source_and_manual_navigation(
     assert "Synthetic invalid private reply" not in caplog.text
     complete.assert_called_once()
     no_store(response)
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-4.3")
@@ -304,13 +303,13 @@ def test_eligibility_refusals_make_no_call(tester, target, state, message, metho
                 )
         elif state == "closed":
             Round.objects.filter(pk=target[0].pk).update(state="closed")
-    before = snapshot()
+    before = domain_rows()
     with mock.patch("ai.feedback_views.gateway.complete") as complete:
         response = getattr(signed_in(tester), method)(url(target))
     assert response.status_code == 409 and message in response.content.decode()
     complete.assert_not_called()
     no_store(response)
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-4.5", "RES-4.7")
@@ -414,7 +413,7 @@ def test_gateway_runs_after_read_transaction_and_connection_release(tester, targ
 )
 def test_storage_and_unexpected_failures_hide_details(tester, target, failure, caplog):
     client = signed_in(tester)
-    before = snapshot()
+    before = domain_rows()
     error = DatabaseError("Synthetic private error")
     if failure in ("gateway", "unexpected"):
         patch = mock.patch(
@@ -460,7 +459,7 @@ def test_storage_and_unexpected_failures_hide_details(tester, target, failure, c
     assert response.status_code == (200 if failure == "unexpected" else 503)
     assert "Synthetic private error" not in response.content.decode() + caplog.text
     assert target[3].observation not in caplog.text
-    assert snapshot() == before
+    assert domain_rows() == before
     no_store(response)
 
 
@@ -510,7 +509,7 @@ def test_direct_and_coordinator_injection_are_data_and_output_is_escaped(
         result["outcome"] = "pass"
     elif answer == "tools":
         result["tools"] = ["database"]
-    before = snapshot()
+    before = domain_rows()
     response, complete = post(
         signed_in(tester), target, gateway.Success(json.dumps(result))
     )
@@ -543,7 +542,7 @@ def test_direct_and_coordinator_injection_are_data_and_output_is_escaped(
         assert UNAVAILABLE in body
         assert "Questions to consider" not in body
         assert "https://example.invalid/" not in body
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-4.7")

@@ -11,7 +11,7 @@ from django.core.management.base import CommandError
 from ai import context_comparison as comparison
 from ai import gateway
 from ai.management.commands import compare_context as command
-from rounds.tests.test_result_services import snapshot
+from rounds.tests.conftest import domain_rows
 
 pytestmark = [
     pytest.mark.django_db,
@@ -98,7 +98,7 @@ def test_fixed_calls_metrics_output_and_interruption(
         gateway, "INPUT_LIMIT", max(len(c.instructions) + len(c.data) for c in cases)
     )
     make_round()
-    before = snapshot()
+    before = domain_rows()
     ticks = iter(range(16))
     monkeypatch.setattr(command.time, "monotonic", lambda: next(ticks))
     replies = [
@@ -172,4 +172,4 @@ def test_fixed_calls_metrics_output_and_interruption(
         "private" not in output.getvalue() and "synthetic-key" not in output.getvalue()
     )
     assert all(c.data not in output.getvalue() for c in cases)
-    assert snapshot() == before
+    assert domain_rows() == before

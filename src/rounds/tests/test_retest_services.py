@@ -5,7 +5,9 @@ import pytest
 from accounts.models import Workspace
 from rounds import services
 from rounds.forms import RetestForm
-from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
+from rounds.models import BuildCase, Case, CaseCriterion, Criterion, Round
+
+from .conftest import domain_rows
 
 pytestmark = pytest.mark.django_db
 
@@ -75,26 +77,15 @@ def current_build(case):
     return case.builds.order_by("-id").first()
 
 
-def stored(round_):
-    """Everything RND-2 and RND-3 store for a round."""
-    return (
-        list(Criterion.objects.filter(round=round_).values()),
-        list(Case.objects.filter(round=round_).values()),
-        list(CaseCriterion.objects.filter(case__round=round_).values()),
-        list(Build.objects.filter(round=round_).values()),
-        list(BuildCase.objects.filter(build__round=round_).values()),
-    )
-
-
 def refused(round_, label, case_ids, message, field):
     """Assert the service refuses with `message` and writes nothing."""
-    before = stored(round_)
+    before = domain_rows()
     with pytest.raises(services.Refused) as caught:
         services.request_retest(locked(round_), label, case_ids)
     assert str(caught.value) == message
     assert caught.value.field == field
     assert label not in repr(caught.value)
-    assert stored(round_) == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-5.1")
@@ -201,14 +192,14 @@ def test_the_cap_is_checked_before_the_cases_and_the_label(open_round, workspace
 def test_a_case_can_be_retested_again_and_earlier_builds_stay(open_round):
     round_, (one, two, _) = open_round
     first = current_build(one)
-    records = stored(round_)[:3]
+    records = domain_rows(Criterion, Case, CaseCriterion)
     second = retest(round_, "Synthetic build 1.1", [one, two])
     third = retest(round_, "Synthetic build 1.2", [one])
     assert list(one.builds.order_by("id")) == [first, second, third]
     assert current_build(one) == third and current_build(two) == second
     assert set(first.cases.all()) == set(round_.cases.all())
     assert set(second.cases.all()) == {one, two}
-    assert stored(round_)[:3] == records
+    assert domain_rows(Criterion, Case, CaseCriterion) == records
 
 
 @pytest.mark.ac("RND-5.6")
@@ -240,13 +231,13 @@ def test_a_round_that_is_not_open_is_refused_before_any_write(workspace, state):
         round_, cases = published(workspace, cases=2)
         services.close(locked(round_))
     round_.refresh_from_db()
-    before = (round_.state, stored(round_))
+    before = (round_.state, domain_rows())
     with pytest.raises(services.RoundNotOpen) as caught:
         retest(round_, SECRET, cases)
     assert str(caught.value) == NOT_OPEN
     assert SECRET not in repr(caught.value)
     round_.refresh_from_db()
-    assert (round_.state, stored(round_)) == before
+    assert (round_.state, domain_rows()) == before
 
 
 @pytest.mark.ac("RND-5.8")
@@ -355,7 +346,7 @@ def test_a_closed_round_at_the_cap_is_refused_as_not_open(open_round):
     for n in range(1, 10):
         retest(round_, f"Synthetic build 1.{n}", [one])
     services.close(locked(round_))
-    before = stored(round_)
+    before = domain_rows()
     with pytest.raises(services.RoundNotOpen):
         retest(round_, "Synthetic build 2.0", [one])
-    assert stored(round_) == before
+    assert domain_rows() == before

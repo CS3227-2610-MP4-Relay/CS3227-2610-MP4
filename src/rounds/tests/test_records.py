@@ -18,6 +18,7 @@ from .conftest import (
     UNAVAILABLE,
     csrf_token,
     detail,
+    domain_rows,
     page,
     signed_in,
 )
@@ -68,20 +69,11 @@ def case_data(*linked, **fields):
 
 
 def stored(round_):
-    """Everything stored for a round's criteria and cases."""
+    """One round's criteria, cases and links, for a test that writes another round."""
     return (
-        list(Criterion.objects.filter(round=round_).values()),
-        list(Case.objects.filter(round=round_).values()),
-        list(CaseCriterion.objects.filter(case__round=round_).values()),
-    )
-
-
-def everything():
-    return (
-        list(Criterion.objects.values()),
-        list(Case.objects.values()),
-        list(CaseCriterion.objects.values()),
-        list(Round.objects.values()),
+        list(Criterion.objects.filter(round=round_).order_by("pk").values()),
+        list(Case.objects.filter(round=round_).order_by("pk").values()),
+        list(CaseCriterion.objects.filter(case__round=round_).order_by("pk").values()),
     )
 
 
@@ -387,11 +379,11 @@ def test_each_invalid_field_gets_its_message_next_to_it(
     else:
         value, message = INVALID[invalid](limit), f"Enter 1 to {limit} characters."
     route = target(draft, kind, action, linked)
-    before = everything()
+    before = domain_rows()
     response = submit(coord_client, route, kind, field, value, linked)
     assert response.status_code == 200
     message_next_to(page(response), field, message, NEXT_MARKER[field])
-    assert everything() == before
+    assert domain_rows() == before
 
 
 # RND-2.5
@@ -425,11 +417,11 @@ def test_thirtieth_case_is_added_and_thirty_first_refused(coord_client, draft):
     new = url(draft.pk, "cases", "new")
     data = case_data(linked, title="Synthetic 30th")
     redirects_to_round(coord_client.post(new, data), draft)
-    before = stored(draft)
+    before = domain_rows()
     response = coord_client.post(new, case_data(linked, title="Synthetic 31st"))
     assert response.status_code == 200
     message_next_to(page(response), "title", CASE_CAP, 'name="steps"')
-    assert stored(draft) == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-2.5")
@@ -482,12 +474,12 @@ def test_a_case_without_criteria_is_refused(coord_client, draft, action):
     linked = criterion(draft)
     made = case(draft, [linked], title="Synthetic old")
     record_id = made.pk if action == "edit" else None
-    before = stored(draft)
+    before = domain_rows()
     data = case_data(title="Synthetic changed")
     response = coord_client.post(url(draft.pk, "cases", action, record_id), data)
     assert response.status_code == 200
     message_next_to(page(response), "criteria", NO_LINK, "<button")
-    assert stored(draft) == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-2.6")
@@ -495,7 +487,7 @@ def test_deleting_a_linked_criterion_is_refused_on_the_round_page(coord_client, 
     linked = criterion(draft, "Synthetic linked")
     criterion(draft, "Synthetic other")
     case(draft, [linked])
-    before = stored(draft)
+    before = domain_rows()
     response = coord_client.post(url(draft.pk, "criteria", "delete", linked.pk))
     assert response.status_code == 200
     html = page(response)
@@ -503,7 +495,7 @@ def test_deleting_a_linked_criterion_is_refused_on_the_round_page(coord_client, 
     assert html.count(LINKED) == 1
     message = html.index(LINKED)
     assert html.index("Synthetic linked") < message < html.index("Synthetic other")
-    assert stored(draft) == before
+    assert domain_rows() == before
     no_store(response)
 
 
@@ -531,13 +523,13 @@ def test_criteria_from_elsewhere_are_refused(
     else:
         wrong = "abc"
     record_id = made.pk if action == "edit" else None
-    before = everything()
+    before = domain_rows()
     data = case_data(own, title="Synthetic changed")
     data["criteria"].append(wrong)
     response = coord_client.post(url(draft.pk, "cases", action, record_id), data)
     assert response.status_code == 200
     message_next_to(page(response), "criteria", FOREIGN, "<button")
-    assert everything() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-2.7")
@@ -610,7 +602,7 @@ def test_signed_out_visitor_is_redirected_to_sign_in(coordinator, draft):
     linked, free, made = records(draft)
     client = Client(enforce_csrf_checks=True)
     token = csrf_token(client)
-    before = everything()
+    before = domain_rows()
     for route, methods in routes(draft.pk, free.pk, made.pk):
         for method in methods:
             data = {**valid_post(route, linked), "csrfmiddlewaretoken": token}
@@ -619,14 +611,14 @@ def test_signed_out_visitor_is_redirected_to_sign_in(coordinator, draft):
             )
             assert response.status_code == 302, (route, method)
             assert response["Location"] == "/sign-in/"
-    assert everything() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-2.8")
 def test_tester_gets_the_same_403_for_existing_and_missing_records(tester, draft):
     linked, free, made = records(draft)
     client = signed_in(tester)
-    before = everything()
+    before = domain_rows()
     existing = routes(draft.pk, free.pk, made.pk)
     missing = routes(draft.pk + 1000, free.pk + 1000, made.pk + 1000)
     with mock.patch("rounds.views.get_object_or_404") as lookup:
@@ -639,7 +631,7 @@ def test_tester_gets_the_same_403_for_existing_and_missing_records(tester, draft
                 assert first.content == second.content
                 assert DENIED in page(first)
     lookup.assert_not_called()
-    assert everything() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-2.8")
@@ -653,7 +645,7 @@ def test_post_without_valid_csrf_or_same_origin_gets_403(
     linked, free, made = records(draft)
     client = signed_in(coordinator, enforce_csrf_checks=True)
     valid = csrf_token(client)
-    before = everything()
+    before = domain_rows()
     extra = {"HTTP_ORIGIN": origin} if origin else {}
     for route, _ in routes(draft.pk, free.pk, made.pk):
         data = valid_post(route, linked)
@@ -662,7 +654,7 @@ def test_post_without_valid_csrf_or_same_origin_gets_403(
         response = client.post(route, data, **extra)
         assert response.status_code == 403, route
         assert DENIED in page(response)
-    assert everything() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-2.8")
@@ -673,7 +665,7 @@ def test_another_workspaces_records_get_404_not_409(
     foreign = make_round("Synthetic foreign", state, owner=other_workspace)
     linked, free, made = records(foreign)
     reference = coord_client.get("/coordinator/rounds/999999/")
-    before = everything()
+    before = domain_rows()
     for route, methods in routes(foreign.pk, free.pk, made.pk):
         for method in methods:
             data = valid_post(route, linked) if method == "post" else None
@@ -681,7 +673,7 @@ def test_another_workspaces_records_get_404_not_409(
             assert response.status_code == 404, (route, method)
             assert response.content == reference.content
             assert NOT_FOUND in page(response)
-    assert everything() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-2.8")
@@ -693,7 +685,7 @@ def test_records_of_another_round_or_missing_get_404_not_409(
     elsewhere = make_round("Synthetic elsewhere", state)
     linked, free, made = records(elsewhere)
     reference = coord_client.get("/coordinator/rounds/999999/")
-    before = everything()
+    before = domain_rows()
     missing_id = made.pk + free.pk + 1000
     named = [
         url(draft.pk, kind, action, record_id)
@@ -713,7 +705,7 @@ def test_records_of_another_round_or_missing_get_404_not_409(
             response = getattr(coord_client, method)(route, data)
             assert response.status_code == 404, (route, method)
             assert response.content == reference.content
-    assert everything() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-2.8")
@@ -723,7 +715,7 @@ def test_any_change_to_an_open_or_closed_round_gets_409(
 ):
     frozen = make_round("Synthetic frozen", state)
     linked, free, made = records(frozen)
-    before = everything()
+    before = domain_rows()
     for route, methods in routes(frozen.pk, free.pk, made.pk):
         attempts = [("get", None)] if "get" in methods else []
         attempts += [("post", valid_post(route, linked)), ("post", {})]
@@ -734,7 +726,7 @@ def test_any_change_to_an_open_or_closed_round_gets_409(
             assert "<title>Action not available</title>" in html
             assert f"<h1>{CONFLICT.format(name)}</h1>" in html
             no_store(response)
-    assert everything() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-2.8")
@@ -773,13 +765,13 @@ def test_round_opened_after_the_state_check_gets_409_from_the_locked_recheck(
         Round.objects.filter(pk=draft.pk).update(state=Round.State.OPEN)
         return real_is_valid(form)
 
-    before = stored(draft)
+    before = domain_rows(Criterion, Case, CaseCriterion)
     route = url(draft.pk, kind, "new")
     with mock.patch.object(form_class, "is_valid", open_then_validate):
         response = coord_client.post(route, valid_post(route, linked))
     assert response.status_code == 409
     assert CONFLICT.format("Open") in page(response)
-    assert stored(draft) == before
+    assert domain_rows(Criterion, Case, CaseCriterion) == before
 
 
 @pytest.mark.ac("RND-2.8")
@@ -802,13 +794,13 @@ def test_storage_failure_gives_503_and_changes_nothing(
     else:
         record_id = made.pk if route_kind == "cases" else free.pk
     route = url(draft.pk, route_kind, action, record_id)
-    before = everything()
+    before = domain_rows()
     with mock.patch.object(services, service, side_effect=DatabaseError("synthetic")):
         response = coord_client.post(route, valid_post(route, linked))
     assert response.status_code == 503
     assert UNAVAILABLE in page(response)
     no_store(response)
-    assert everything() == before
+    assert domain_rows() == before
     logged = [record for record in caplog.records if record.name == "rounds.views"]
     assert len(logged) == 1 and logged[0].exc_info[0] is DatabaseError
 
@@ -865,7 +857,7 @@ def test_open_or_closed_round_url_with_a_foreign_or_missing_record_gets_404(
     records(frozen)
     linked, free, made = records(make_round("Synthetic elsewhere"))
     reference = coord_client.get("/coordinator/rounds/999999/")
-    before = everything()
+    before = domain_rows()
     missing = made.pk + free.pk + 1000
     for kind, record_id in (
         ("criteria", free.pk),
@@ -883,7 +875,7 @@ def test_open_or_closed_round_url_with_a_foreign_or_missing_record_gets_404(
             response = getattr(coord_client, method)(route, data)
             assert response.status_code == 404, (method, route)
             assert response.content == reference.content
-    assert everything() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-2.8")
@@ -894,14 +886,14 @@ def test_link_failure_mid_write_gives_503_and_changes_nothing(
     _, free, made = records(draft)
     record_id = made.pk if action == "edit" else None
     route = url(draft.pk, "cases", action, record_id)
-    before = everything()
+    before = domain_rows()
     with mock.patch.object(
         CaseCriterion.objects, "bulk_create", side_effect=DatabaseError("synthetic")
     ):
         response = coord_client.post(route, case_data(free, title="Synthetic new"))
     assert response.status_code == 503
     assert UNAVAILABLE in page(response)
-    assert everything() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-2.8")
@@ -909,11 +901,11 @@ def test_case_delete_failure_after_unlinking_gives_503_and_keeps_links(
     coord_client, draft
 ):
     _, _, made = records(draft)
-    before = everything()
+    before = domain_rows()
     with mock.patch.object(Case, "delete", side_effect=DatabaseError("synthetic")):
         response = coord_client.post(url(draft.pk, "cases", "delete", made.pk))
     assert response.status_code == 503
-    assert everything() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-2.5")

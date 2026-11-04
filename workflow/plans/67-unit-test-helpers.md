@@ -24,10 +24,10 @@ Tier: Standard (test-only; verifier review). Base: `ebd890c`. Paths: `src/**/tes
 ## Commit checkpoints
 
 1. [x] `plan:` this file.
-2. [ ] `test:` shared ordered `domain_rows`, including `Result` (T1, T3). Paths: `rounds/tests/conftest.py` and the snapshot users in `rounds/tests/` and `ai/tests/`. Checks: the affected modules; a mutation in which a tester GET creates a `Result` fails a `test_tester` no-write test.
+2. [x] `test:` shared ordered `domain_rows`, including `Result` (T1, T3). Paths: `rounds/tests/conftest.py` (`domain_rows`, `ROUND_RECORDS`, `DOMAIN_MODELS`) and 19 snapshot users in `rounds/tests/` and `ai/tests/`. Result: the 19 modules gave 858 passed; ruff clean. Mutation (a tester detail GET of an Open round creates a `Result`): `test_tester.py` gave 4 failed, including `test_detail_shows_ordered_cases_links_and_latest_covering_build[False]` at its `domain_rows()` no-write check; the base `ebd890c` copy of that test passed both cases under the same mutation. Reverted.
 3. [ ] `test:` share the other duplicated helpers (T4). Paths: `rounds/tests/conftest.py`, new `relay/tests/conftest.py`, and their call sites. Checks: the affected modules; a mutation of the shared `no_store` fails a named test.
 4. [ ] `test:` deterministic race harness (T2). Path: `rounds/tests/conftest.py` (and any `wait=False` callers). Checks: the 11 race callers; with the round lock removed from `rounds/views.py` in a scratch mutation, at least one race test fails (then reverted).
-5. [ ] `test:` driver-independent ACC-3.7 idle assertion (A13). Path: `accounts/tests/test_limit_views.py`. Checks: the timeout test; the idle case still fails if the injected pause is removed.
+5. [ ] `test:` driver-independent ACC-3.7 idle assertion (A13). Path: `accounts/tests/test_limit_views.py`. Orchestrator conditions: the idle case still rejects the statement-timeout text, and its alternative is psycopg's exact connection-loss text, with the source cited. Checks: the timeout test; the idle case still fails if the injected pause is removed.
 6. [ ] Full verification: `ruff check . && ruff format --check . && pytest` through the DB lock wrapper (base: 2857 passed, 254 subtests). The test count must not drop.
 
 ## Open items

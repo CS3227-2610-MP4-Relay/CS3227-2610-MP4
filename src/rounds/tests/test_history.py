@@ -28,11 +28,11 @@ from .conftest import (
     SCRIPT_TAG,
     UNAVAILABLE,
     csrf_token,
+    domain_rows,
     open_with_case,
     page,
     signed_in,
 )
-from .test_result_services import snapshot
 from .test_results import no_store
 
 pytestmark = pytest.mark.django_db
@@ -97,7 +97,7 @@ def test_navigation_and_empty_read_only_page(tester, target, closed):
     if closed:
         Round.objects.filter(pk=round_.pk).update(state="closed")
     client = signed_in(tester)
-    before = snapshot()
+    before = domain_rows()
     detail = f"/tester/rounds/{round_.pk}/"
     body = page(client.get(detail))
     assert body.count(f'href="{url(round_)}">My results</a>') == 1
@@ -117,7 +117,7 @@ def test_navigation_and_empty_read_only_page(tester, target, closed):
     assert f'href="{detail}">Back to round</a>' in body
     assert "<form" not in body and "<button" not in body and "Record result" not in body
     no_store(response)
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-3.2", "RES-3.3")
@@ -153,7 +153,7 @@ def test_order_original_context_and_refresh_after_save_retest_close(tester, targ
         if closed:
             with transaction.atomic():
                 services.close(round_)
-        before = snapshot()
+        before = domain_rows()
         response = client.get(url(round_))
         rows = list(response.context["results"])
         assert rows == [newest, first, submitted]
@@ -180,7 +180,7 @@ def test_order_original_context_and_refresh_after_save_retest_close(tester, targ
         assert "Synthetic earlier draft" not in body
         assert body.count("Submitted at") == 1
         assert "Current build" not in body and "No results yet." not in body
-        assert snapshot() == before
+        assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-3.4")
@@ -220,7 +220,7 @@ def test_owner_round_and_coverage_scope_ignores_forged_selectors(
     save_row(tester, (round_, uncovered, build), observation="Synthetic uncovered row")
     alien = Criterion.objects.create(round=foreign, text="Synthetic alien criterion")
     case.criteria.add(alien)
-    before = snapshot()
+    before = domain_rows()
     response = signed_in(tester).get(
         url(round_),
         {
@@ -242,7 +242,7 @@ def test_owner_round_and_coverage_scope_ignores_forged_selectors(
         alien.text,
     ):
         assert secret not in body
-    assert snapshot() == before
+    assert domain_rows() == before
     other_response = signed_in(other).get(url(round_))
     assert list(other_response.context["results"]) == [private]
     assert "Synthetic own" not in page(other_response)
@@ -283,11 +283,11 @@ def test_authentication_and_role_precede_lookup(tester, coordinator, target):
     "method", ["post", "head", "put", "patch", "delete", "options", "trace"]
 )
 def test_other_methods_are_read_only_405(tester, target, method):
-    before = snapshot()
+    before = domain_rows()
     response = getattr(signed_in(tester), method)(url(target[0]))
     assert response.status_code == 405
     no_store(response)
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-3.5")
@@ -295,12 +295,12 @@ def test_other_methods_are_read_only_405(tester, target, method):
 def test_csrf_precedes_method_refusal(tester, target, origin):
     client = signed_in(tester, enforce_csrf_checks=True)
     data = {"csrfmiddlewaretoken": csrf_token(client)} if origin else {}
-    before = snapshot()
+    before = domain_rows()
     response = client.post(
         url(target[0]), data, **({"HTTP_ORIGIN": origin} if origin else {})
     )
     assert response.status_code == 403 and DENIED in page(response)
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-3.6")
@@ -313,7 +313,7 @@ def test_storage_errors_return_fixed_uncached_503(tester, target, failure, caplo
     save_row(tester, target)
     match = resolve(request.path)
     error = OperationalError("Synthetic sensitive observation")
-    before = snapshot()
+    before = domain_rows()
     if failure == "lazy-user":
 
         def fail_user():
@@ -356,7 +356,7 @@ def test_storage_errors_return_fixed_uncached_503(tester, target, failure, caplo
     assert response.status_code == 503 and UNAVAILABLE in page(response)
     assert "Synthetic sensitive" not in page(response) + caplog.text
     no_store(response)
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-3.2")

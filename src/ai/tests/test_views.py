@@ -18,8 +18,7 @@ from ai.fakes import FakeProvider
 from ai.gateway import Failed, Refused, Success
 from ai.models import CallSlot
 from rounds.models import Case, Criterion, Round
-from rounds.tests.conftest import csrf_token, signed_in
-from rounds.tests.test_result_services import snapshot
+from rounds.tests.conftest import csrf_token, domain_rows, signed_in
 
 INTRO = (
     "Select 1 to 5 acceptance criteria. The selected criteria are sent to the SoC "
@@ -438,7 +437,7 @@ def test_injection_text_stays_one_data_value_and_changes_nothing(
     hostile = bytes.fromhex(attack).decode()
     criteria[0].text = hostile
     criteria[0].save(update_fields=["text"])
-    before = snapshot()
+    before = domain_rows()
     suggestion = one()
     if answer == "extra-field":
         suggestion["state"] = "open"
@@ -461,7 +460,7 @@ def test_injection_text_stays_one_data_value_and_changes_nothing(
     else:
         assert "Drafting is unavailable right now." in page
         assert "Synthetic draft title" not in page
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-8.8")
