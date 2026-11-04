@@ -9,6 +9,7 @@ import pytest
 from playwright.sync_api import expect
 
 from accounts.models import Workspace
+from e2e.sessions import sign_in
 from rounds.models import Case, Criterion, Round
 
 TITLE, REVISED_TITLE = "Synthetic checkout round", "Synthetic checkout revised"
@@ -85,14 +86,6 @@ def browser_accounts(browser_accounts):
         ]
 
 
-def sign_in_coordinator(page, accounts):
-    """Open the coordinator home through the real sign-in form."""
-    page.goto("/sign-in/")
-    page.get_by_label("Username", exact=True).fill(accounts["coordinator"])
-    page.get_by_label("Password", exact=True).fill(accounts["password"])
-    page.get_by_role("button", name="Sign in", exact=True).click()
-
-
 def refused(tab, state, button=None):
     """A stale tab's `button` POST, if given, gets 409 and the conflict page."""
     if button is not None:
@@ -158,7 +151,7 @@ def expect_builds(page, *current):
 
 @pytest.mark.ac("RND-1.2", "RND-5.1", "RND-5.5", "RND-6.1", "RND-6.2", "RND-6.3")
 def test_coordinator_edits_retests_twice_and_closes_round(page, browser_accounts):
-    sign_in_coordinator(page, browser_accounts)
+    sign_in(page, browser_accounts, "coordinator")
     page.get_by_role("link", name=TITLE, exact=True).click()
     round_url = page.url
 
@@ -242,7 +235,7 @@ def test_coordinator_edits_retests_twice_and_closes_round(page, browser_accounts
 
 @pytest.mark.ac("RND-5.1", "RND-5.2", "RND-5.3", "RND-5.5")
 def test_coordinator_recovers_from_retest_refusals(page, browser_accounts):
-    sign_in_coordinator(page, browser_accounts)
+    sign_in(page, browser_accounts, "coordinator")
     page.get_by_role("link", name=TITLE, exact=True).click()
     page.get_by_label("Build label", exact=True).fill(BUILDS[0])
     page.get_by_role("button", name="Publish round", exact=True).click()

@@ -9,7 +9,7 @@ from playwright.sync_api import expect
 from accounts.models import Workspace
 from ai.gateway import Success
 from e2e.pending import assert_pending_submit
-from e2e.test_rounds import sign_in_coordinator
+from e2e.sessions import sign_in
 from rounds.models import Case, Criterion, Round
 
 DRAFT = {
@@ -90,7 +90,7 @@ def test_two_suggestions_are_reviewed_and_saved_from_one_response(
     page, browser_accounts
 ):
     accounts = browser_accounts
-    sign_in_coordinator(page, accounts)
+    sign_in(page, accounts, "coordinator")
     page.goto(accounts["round_url"])
     open_drafting(page, accounts)
     drafts = [DRAFT, {**DRAFT, "title": "Synthetic second draft", "criteria": ["C1"]}]
@@ -160,7 +160,7 @@ def test_two_suggestions_are_reviewed_and_saved_from_one_response(
 @pytest.mark.ac("PLT-4.12", "RND-8.1")
 def test_drafting_pending_request_and_history_reset(page, browser_accounts):
     accounts = browser_accounts
-    sign_in_coordinator(page, accounts)
+    sign_in(page, accounts, "coordinator")
     page.goto(accounts["round_url"] + "cases/draft/")
     for criterion in accounts["criteria"]:
         page.get_by_role("checkbox", name=criterion, exact=True).check()
@@ -176,7 +176,7 @@ def test_drafting_pending_request_and_history_reset(page, browser_accounts):
 
 @pytest.mark.ac("PLT-4.12", "RND-8.3")
 def test_drafting_invalid_selection_restores_enabled_form(page, browser_accounts):
-    sign_in_coordinator(page, browser_accounts)
+    sign_in(page, browser_accounts, "coordinator")
     page.goto(browser_accounts["round_url"] + "cases/draft/")
     with mock.patch("ai.views.gateway.complete") as complete:
         page.get_by_role("button", name="Draft test cases", exact=True).click()
@@ -197,7 +197,7 @@ def test_drafting_without_javascript(page, browser_accounts, live_server):
     )
     try:
         plain = context.new_page()
-        sign_in_coordinator(plain, browser_accounts)
+        sign_in(plain, browser_accounts, "coordinator")
         plain.goto(browser_accounts["round_url"] + "cases/draft/")
         for criterion in browser_accounts["criteria"]:
             plain.get_by_role("checkbox", name=criterion, exact=True).check()
@@ -264,7 +264,7 @@ def test_drafting_reply_without_usable_suggestions_keeps_manual_flow(
     page, browser_accounts, kind
 ):
     accounts = browser_accounts
-    sign_in_coordinator(page, accounts)
+    sign_in(page, accounts, "coordinator")
     page.goto(accounts["round_url"])
     source = page.locator("#acceptance-criteria").text_content()
     open_drafting(page, accounts)
@@ -313,7 +313,7 @@ def test_drafting_reply_without_usable_suggestions_keeps_manual_flow(
 @pytest.mark.ac("RND-8.1", "RND-8.2")
 def test_reviewed_draft_saves_only_after_explicit_add(page, browser_accounts):
     accounts = browser_accounts
-    sign_in_coordinator(page, accounts)
+    sign_in(page, accounts, "coordinator")
     page.goto(accounts["round_url"])
     reviewed = {
         **DRAFT,

@@ -5,9 +5,8 @@ import re
 import pytest
 from playwright.sync_api import expect
 
-from accounts.models import User
 from e2e.disclosures import expand_records, result_links
-from rounds.models import Result
+from e2e.sessions import second_tester_accounts, separate_context, sign_in
 
 ROUND = "Synthetic review round"
 RETESTED, STEADY = "Synthetic retested case", "Synthetic steady case"
@@ -20,35 +19,7 @@ SUBMITTED_AT = re.compile(r"^Submitted at: \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} U
 @pytest.fixture
 def browser_accounts(browser_accounts):
     """Add a second tester before Playwright; check rows after it has stopped."""
-    owner = User.objects.get(username=browser_accounts["tester"])
-    other = User.objects.create_user(
-        "tester2-browser1",
-        browser_accounts["password"],
-        workspace=owner.workspace,
-        role="tester",
-    )
-    browser_accounts["tester2"] = other.username
-    yield browser_accounts
-    expected = browser_accounts.get("expected_results")
-    if expected is not None:
-        assert Result.objects.count() == len(expected)
-        for fields in expected:
-            assert Result.objects.filter(**fields).count() == 1
-
-
-def session(page, live_server):
-    """A separate browser session with the harness's bounded waits."""
-    separate = page.context.browser.new_context(base_url=live_server.url)
-    separate.set_default_timeout(5000)
-    separate.set_default_navigation_timeout(10000)
-    return separate.new_page()
-
-
-def sign_in(page, accounts, role):
-    page.goto("/sign-in/")
-    page.get_by_label("Username", exact=True).fill(accounts[role])
-    page.get_by_label("Password", exact=True).fill(accounts["password"])
-    page.get_by_role("button", name="Sign in", exact=True).click()
+    yield from second_tester_accounts(browser_accounts)
 
 
 def publish(page, accounts):
@@ -138,8 +109,8 @@ def expect_retested(page, accounts):
 def test_coordinator_reviews_results_through_retest_and_close(
     page, browser_accounts, live_server
 ):
-    tester = session(page, live_server)
-    other = session(page, live_server)
+    tester = separate_context(page, live_server).new_page()
+    other = separate_context(page, live_server).new_page()
     try:
         publish(page, browser_accounts)
         round_url = page.url

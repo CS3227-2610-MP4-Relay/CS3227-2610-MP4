@@ -9,12 +9,8 @@ from django.utils import timezone
 from playwright.sync_api import expect
 
 from accounts.models import User
-from e2e.test_presentation import (
-    assert_action_link_states,
-    assert_layout,
-    contrast,
-    sign_in,
-)
+from e2e.presentation import assert_action_link_states, assert_layout, contrast
+from e2e.sessions import sign_in
 from rounds import services
 from rounds.models import Case, Criterion, Result, Round
 

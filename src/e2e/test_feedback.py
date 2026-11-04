@@ -12,7 +12,8 @@ from playwright.sync_api import expect
 from accounts.models import User
 from ai.gateway import Failed, Success
 from e2e.pending import assert_pending_submit
-from e2e.test_presentation import assert_layout
+from e2e.presentation import assert_layout
+from e2e.sessions import separate_context, sign_in
 from rounds import services
 from rounds.models import Case, Criterion, Result, Round
 
@@ -72,17 +73,9 @@ def browser_accounts(browser_accounts):
         assert round_.builds.count() == 1
 
 
-def sign_in(page, accounts, role="tester"):
-    """Use real credentials and the real form in this browser context."""
-    page.goto("/sign-in/")
-    page.get_by_label("Username", exact=True).fill(accounts[role])
-    page.get_by_label("Password", exact=True).fill(accounts["password"])
-    page.get_by_role("button", name="Sign in", exact=True).click()
-
-
 def save_draft(page, accounts, outcome, observation, *, save=True):
     """Fill result entry and optionally save before testing feedback navigation."""
-    sign_in(page, accounts)
+    sign_in(page, accounts, "tester")
     page.get_by_role("link", name="Synthetic feedback round", exact=True).click()
     page.get_by_role("link", name="Record result", exact=True).click()
     page.get_by_label("Outcome", exact=True).select_option(outcome)
@@ -207,9 +200,7 @@ def test_feedback_preserves_saved_fields_until_manual_edit_and_is_private(
         expect(page.get_by_text(QUESTION, exact=True)).to_have_count(0)
         complete.assert_called_once()
 
-    peer_context = page.context.browser.new_context(base_url=live_server.url)
-    peer_context.set_default_timeout(5000)
-    peer_context.set_default_navigation_timeout(10000)
+    peer_context = separate_context(page, live_server)
     try:
         peer = peer_context.new_page()
         sign_in(peer, accounts, "peer")

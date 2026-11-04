@@ -30,3 +30,4 @@ Tier: Standard (test-only; verifier review). Base: `ebd890c`. Paths: `src/e2e/**
 ## Results
 
 - Checkpoint 1: plan written; collection at base: 68 tests, duplicate module loads as above.
+- Checkpoint 2: `sessions.py` (`bounded`, `separate_context`, `sign_in`, `second_tester_accounts`) and `presentation.py` added; conftest uses `bounded`; `sign_in_coordinator(p, a)` calls became `sign_in(p, a, "coordinator")`. Collection: 68 tests, each test module loaded once (no `e2e.test_*`). dblock `pytest src/e2e` → 68 passed (rerun after the session restart and database restart: 68 passed in 120.21s). Mutation `count() == len(expected) + 1` in `second_tester_accounts` → `test_private_draft_validation_reload_and_immutable_submission` 1 passed, 1 error (teardown assertion); reverted. Diff: 10 files +46/-232 plus 139 new lines; 0 non-test `src/` lines.
