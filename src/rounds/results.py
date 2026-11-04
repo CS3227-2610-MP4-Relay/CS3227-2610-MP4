@@ -21,6 +21,12 @@ class Conflict(Exception):
     """A fixed-text state/build/submission refusal, rendered by entry as 409."""
 
 
+def state_message(round_):
+    """The refusal of an action `round_`'s state does not allow."""
+    state = round_.get_state_display()
+    return f"This action is not available while the round is {state}."
+
+
 @dataclass
 class Entry:
     """Authorized context valid for the duration of an entry operation."""
@@ -50,10 +56,7 @@ def entry(tester, round_id, case_id, build_id, *, write=False):
         case = get_object_or_404(round_.cases, pk=case_id)
         build = get_object_or_404(round_.builds.filter(cases=case), pk=build_id)
         if round_.state != Round.State.OPEN:
-            raise Conflict(
-                "This action is not available while the round is "
-                f"{round_.get_state_display()}."
-            )
+            raise Conflict(state_message(round_))
         if round_.builds.filter(cases=case).order_by("-pk").first().pk != build.pk:
             raise Conflict(STALE)
         result = Result.objects.filter(tester=tester, case=case, build=build).first()

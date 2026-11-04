@@ -16,6 +16,7 @@ from accounts.workspaces import workspace_records
 from . import results
 from .models import Build, Criterion, Result, Round
 from .result_forms import ResultForm
+from .views import conflict_page
 
 logger = logging.getLogger(__name__)
 
@@ -154,13 +155,4 @@ def result_entry(request, round_id, case_id, build_id):
                 request, "rounds/tester_result.html", {"entry": current, "form": form}
             )
     except results.Conflict as conflict:
-        if str(conflict) == "This action is not available while the round is Closed.":
-            return render(
-                request, "rounds/conflict.html", {"state": "Closed"}, status=409
-            )
-        return render(
-            request,
-            "rounds/tester_result.html",
-            {"conflict": str(conflict)},
-            status=409,
-        )
+        return conflict_page(request, str(conflict))

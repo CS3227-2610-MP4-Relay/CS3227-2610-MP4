@@ -24,8 +24,11 @@ Tier: High (touches round- and workspace-isolation query constraints). Base `ebd
 
 - Helpers go in `rounds/results.py`. It already imports only models and `accounts`, so `views.py` and `tester.py` can import it without a cycle.
 - For the A11 role check I'll compare against the stored value `"tester"`. I won't add an accounts helper, because `accounts/` is outside this slice's paths.
-- Open (for the orchestrator): `ai/feedback.html`'s conflict branch currently inherits the `pending_forms` script block. `conflict.html` does not, so the feedback 409 page would lose an inert script that has no form to act on. I recommend accepting that, since the page behaves the same. The alternative is to keep a feedback-specific conflict template, which defeats R1.
+- The feedback 409 page now renders `conflict.html`, so it drops the inert `pending_forms` script; there is no form on that page for it to act on. The orchestrator accepted this (option a). No test asserts the script on a 409 page.
+- `conflict_page(request, message)` lives in `rounds/views.py` beside `state_conflict`. `tester.py` and `ai/feedback_views.py` import it from there. The state refusal text has one home, `results.state_message(round_)`.
 
 ## Progress
 
 - Checkpoint 1: plan written; no checks run.
+- Checkpoint 2 (R1): 7 non-test `src` files, +25/-30. `ruff check .` and `ruff format --check .` pass. Through dblock: `src/rounds/tests`, `src/ai/tests/test_feedback_views.py`, `src/ai/tests/test_views.py` and `src/relay/tests/test_access_matrix.py` gave 1777 passed; e2e `test_results`, `test_feedback` and `test_round_lifecycle` gave 16 passed. Mutation (`{{ message }}` changed to `{{ state }}` in `conflict.html`, then reverted): 25 failures, including `test_results.py::test_conflicts_precede_invalid_form_and_preserve_rows` (6), `test_feedback_views.py::test_eligibility_refusals_make_no_call` (8) and `::test_changes_during_call_discard_success_and_failure` (8), and three `test_close.py` 409 tests.
+- Checkpoint 2 rerun after the session restart (2026-11-05, same code, after the orchestrator restarted `relay-test-db`): the focused set plus e2e `test_results`, `test_feedback` and `test_round_lifecycle` gave 1793 passed in 127.24s. The backed-up conflict-page mutation gave 25 failed, 72 passed, with the same named tests; the file was restored and `cmp` matched the backup.

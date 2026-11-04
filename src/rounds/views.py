@@ -15,7 +15,7 @@ from django.views.decorators.http import require_http_methods
 from accounts.models import User
 from accounts.workspaces import workspace_records
 
-from . import services
+from . import results, services
 from .forms import CaseForm, CriterionForm, PublishForm, RetestForm, RoundForm
 from .models import Build, Case, Criterion, Result, Round
 from .services import RoundLimitReached, create_round
@@ -60,8 +60,12 @@ def own_round(request, round_id, *, lock=False):
 
 def state_conflict(request, round_):
     """Refuse an action the round's state does not allow."""
-    context = {"state": round_.get_state_display()}
-    return render(request, "rounds/conflict.html", context, status=409)
+    return conflict_page(request, results.state_message(round_))
+
+
+def conflict_page(request, message):
+    """Render a fixed-text refusal as the shared 409 page."""
+    return render(request, "rounds/conflict.html", {"message": message}, status=409)
 
 
 def form_page(request, form, title, button, round_=None):
