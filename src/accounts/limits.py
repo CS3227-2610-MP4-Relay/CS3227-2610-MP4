@@ -1,7 +1,8 @@
 """Fixed-window abuse limits on failed sign-ins and demo creations (ACC-3).
 
-Views call only the functions below: `start` and `lock` inside one transaction,
-then `reached` and, for a counted request, `record`. Refused requests record
+Views call only the functions below: `client_key` for the address, `peek` for
+an unlocked early check, `start` and `lock` inside one transaction, then
+`reached` and, for a counted request, `record`. Refused requests record
 nothing, so they never move a window.
 """
 

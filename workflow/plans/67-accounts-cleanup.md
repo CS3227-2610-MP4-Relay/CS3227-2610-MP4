@@ -20,7 +20,8 @@ Tier: High (coordinator-home role check, session lifetime, release smoke check).
 
 ## Results
 
-- Checkpoint 1: plan written.
+- Checkpoint 1: plan written (38e4b24).
+- Checkpoint 2 (rerun after the session restart): ruff check/format pass; focused `src/accounts/tests src/relay/tests/test_access_matrix.py src/rounds/tests/test_views.py` → 1058 passed. Mutations (each backed up, reverted and compared): drop the coordinator role check → `test_other_role_home_is_forbidden[tester-/tester/-/coordinator/]` and `test_accounts_route_matrix[accounts:coordinator-tester_a]` fail (2 failed, 840 passed); `SESSION_COOKIE_AGE + 1` → `test_session_ends_eight_hours_after_sign_in[elapsed1-302]` fails (1 failed, 60 passed); drop `@never_cache` → `test_role_homes_are_never_cached[coordinator]` fails (1 failed, 841 passed). Non-test `src/`: 3 files, +23 −29. `accounts/home.html` stays (both role templates extend it).
 
 ## Decisions and open items
 
