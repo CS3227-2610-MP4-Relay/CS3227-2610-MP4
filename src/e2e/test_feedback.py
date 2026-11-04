@@ -1,8 +1,6 @@
 """Saved-observation feedback followed by explicit manual editing (RES-4)."""
 
 import json
-from pathlib import Path
-from tempfile import gettempdir
 from unittest import mock
 
 import pytest
@@ -102,10 +100,6 @@ def test_feedback_before_first_draft_validates_then_saves_without_ai(
         )
     ).to_be_visible()
     assert_layout(page, width)
-    page.screenshot(
-        path=str(Path(gettempdir()) / f"relay-feedback-entry-{width}.png"),
-        full_page=True,
-    )
     with mock.patch("ai.feedback_views.gateway.complete") as complete:
         action.click()
         expect(

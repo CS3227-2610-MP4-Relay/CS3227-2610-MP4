@@ -1,8 +1,5 @@
 """Native responsive contents and record disclosure journeys."""
 
-from pathlib import Path
-from tempfile import gettempdir
-
 import pytest
 from django.db import transaction
 from django.utils import timezone
@@ -206,13 +203,6 @@ def test_contents_reveal_records_and_keyboard_defaults(
     page.reload()
     assert records.evaluate_all("els => els.map(el => el.open)") == [True, False]
     assert_layout(page, width)
-    page.screenshot(
-        path=str(Path(gettempdir()) / f"relay-117-{kind}-{width}.png"), full_page=True
-    )
-    if kind == "history":
-        page.locator(".history-record").first.screenshot(
-            path=str(Path(gettempdir()) / f"relay-history-card-{width}.png")
-        )
     summaries.nth(1).click()
     assert_layout(page, width)
     expect(page.locator("main b, main script")).to_have_count(0)
