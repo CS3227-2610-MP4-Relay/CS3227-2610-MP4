@@ -214,7 +214,7 @@ def test_feedback_preserves_saved_fields_until_manual_edit_and_is_private(
     finally:
         peer_context.close()
 
-    page.get_by_role("link", name="Back to result", exact=True).last.click()
+    page.get_by_role("link", name="Back to result", exact=True).click()
     expect(page.get_by_label("Observation", exact=True)).to_have_value(current)
     expect(page.get_by_label("Outcome", exact=True)).to_have_value("fail")
     page.get_by_label("Observation", exact=True).fill(EDITED)
@@ -248,7 +248,7 @@ def test_unavailable_feedback_keeps_manual_result_submission_usable(
     expect(
         page.get_by_role("button", name="Suggest missing details", exact=True)
     ).to_be_visible()
-    page.get_by_role("link", name="Back to result", exact=True).last.click()
+    page.get_by_role("link", name="Back to result", exact=True).click()
     expect(page.get_by_label("Outcome", exact=True)).to_have_value("pass")
     expect(page.get_by_label("Observation", exact=True)).to_have_value("")
     page.get_by_label("Outcome", exact=True).select_option("fail")
@@ -309,7 +309,7 @@ def test_empty_or_invalid_feedback_keeps_saved_source_and_manual_editing(
         expect(page.get_by_text(message, exact=True)).to_have_count(0)
         expect(page.get_by_text(QUESTION, exact=True)).to_have_count(0)
         complete.assert_called_once()
-    page.get_by_role("link", name="Back to result", exact=True).last.click()
+    page.get_by_role("link", name="Back to result", exact=True).click()
     expect(page.get_by_label("Outcome", exact=True)).to_have_value("fail")
     expect(page.get_by_label("Observation", exact=True)).to_have_value(ORIGINAL)
     page.get_by_label("Observation", exact=True).fill(EDITED)

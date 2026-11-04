@@ -104,7 +104,7 @@ def test_native_validation_and_observation_limits_preserve_saved_draft(
         assert posts == []
         page.reload()
         expect(observation).to_have_value(below_limit)
-        page.get_by_role("link", name="Back to round", exact=True).last.click()
+        page.get_by_role("link", name="Back to round", exact=True).click()
         page.get_by_role("link", name="My results", exact=True).click()
         rows = page.locator("main section")
         expect(rows).to_have_count(1)
@@ -123,7 +123,7 @@ def test_native_validation_and_observation_limits_preserve_saved_draft(
         else:
             expect(observation).to_have_value(at_limit)
             expect(outcome).to_have_value("pass")
-        page.get_by_role("link", name="Back to round", exact=True).last.click()
+        page.get_by_role("link", name="Back to round", exact=True).click()
         page.get_by_role("link", name="My results", exact=True).click()
         expect(rows).to_have_count(1)
         expect(rows.get_by_text(at_limit, exact=True)).to_be_visible()
