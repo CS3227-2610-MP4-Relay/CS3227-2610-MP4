@@ -25,8 +25,11 @@ Owned paths: `src/ai/**` except `src/ai/feedback_views.py` and `src/ai/templates
 
 ## Decisions and open items
 
-- The 30-case limit message is an inline f-string in `rounds/services.py` `add_case`, not a constant, so the view keeps its own copy. Sharing it needs a constant added to `src/rounds/services.py`, which another builder owns. This is left for the orchestrator.
+- The 30-case limit message is an inline f-string in `rounds/services.py` `add_case`, not a constant. Decision (orchestrator, option a): the view keeps its own copy in this slice. Follow-up: add a constant in `rounds.services` and import it in `ai/views.py`, outside this PR.
+- Not confirmed, so not changed: `gateway._envelope` keeps its own repeated-key and constant hooks. They raise `ValueError`, which maps to `Failed("invalid-response")`. Sharing them with `drafting.load` would make the gateway depend on a feature module.
 
 ## Progress
 
-- Checkpoint 1: plan written.
+- Checkpoint 1: plan written (`ffd7ce2`).
+- Checkpoint 2 (R4): `drafting.load` is shared, and feedback's hooks, the dead `except` and the redundant surrogate test are gone. Added code cases: drafting `repeated-key`/`too-long`; feedback `json` (NaN)/`repeated-key`/`too-long`/`surrogate`. `ruff check .` and `ruff format --check .` passed; dblock `pytest src/ai/tests/` gave 673 passed. Each mutation failed the expected test in both parsers: constant code `json`→`constant`, `object_pairs_hook=dict`, length check removed. Dropping `"Cs"` from `clean()` failed `test_clean_removes_null_and_surrogates`.
+  - Rerun after the 2026-11-05 session restart: `dblock.py` was gone from the scratchpad, so I ran without it only the two DB-free modules `test_drafting.py` and `test_feedback.py` (135 passed), and all four mutations failed as before. With the wrapper restored and the test database restarted, dblock `pytest src/ai/tests/` gave 673 passed.

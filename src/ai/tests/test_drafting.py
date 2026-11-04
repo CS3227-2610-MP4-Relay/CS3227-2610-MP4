@@ -224,8 +224,10 @@ def test_unauthorized_labels_are_refused(label):
         ('{"drafts": ["\\ud800"]}', "surrogate"),
         ('{"drafts": NaN}', "json"),
         ('{"drafts": [' + "9" * 5000 + "]}", "json"),
+        ('{"drafts": [{"title": "x", "title": "y"}]}', "repeated-key"),
+        ('{"drafts": []}' + " " * 20001, "too-long"),
     ],
-    ids=["surrogate", "nan", "long-number"],
+    ids=["surrogate", "nan", "long-number", "repeated-key", "too-long"],
 )
 def test_each_parse_guard_rejects_with_its_own_code(value, code):
     with pytest.raises(InvalidReply) as info:

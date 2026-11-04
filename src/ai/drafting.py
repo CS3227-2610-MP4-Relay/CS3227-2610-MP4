@@ -6,6 +6,8 @@ import math
 import unicodedata
 from dataclasses import dataclass
 
+from django.views.decorators.debug import sensitive_variables
+
 from rounds.forms import has_visible_character
 from rounds.models import Case
 
@@ -116,11 +118,7 @@ def clean(text, *, title=False):
     text = "".join(
         char
         for char in text
-        if char in "\n\t"
-        or (
-            unicodedata.category(char) not in ("Cc", "Cs")
-            and not (0xD800 <= ord(char) <= 0xDFFF)
-        )
+        if char in "\n\t" or unicodedata.category(char) not in ("Cc", "Cs")
     )
     if title:
         text = "".join(
@@ -131,7 +129,7 @@ def clean(text, *, title=False):
 
 
 def _reject_constant(value):
-    raise ValueError(value)
+    raise InvalidReply("json")
 
 
 def _no_repeated_keys(pairs):
@@ -142,6 +140,21 @@ def _no_repeated_keys(pairs):
             raise InvalidReply("repeated-key")
         value[key] = item
     return value
+
+
+@sensitive_variables()
+def load(reply):
+    """Decode a bounded reply as strict JSON, or raise `InvalidReply` for all of it."""
+    if len(reply) > REPLY_LIMIT:
+        raise InvalidReply("too-long")
+    try:
+        return json.loads(
+            reply,
+            object_pairs_hook=_no_repeated_keys,
+            parse_constant=_reject_constant,
+        )
+    except (ValueError, RecursionError) as error:
+        raise InvalidReply("json") from error
 
 
 def _invalid_numeric(value):
@@ -173,18 +186,7 @@ def _checked_text(value, limit, key, *, title=False):
 
 def parse(reply, labels):
     """Return validated `Draft`s, or raise `InvalidReply` for the whole reply."""
-    if len(reply) > REPLY_LIMIT:
-        raise InvalidReply("too-long")
-    try:
-        value = json.loads(
-            reply,
-            object_pairs_hook=_no_repeated_keys,
-            parse_constant=_reject_constant,
-        )
-    except InvalidReply:
-        raise
-    except (ValueError, RecursionError) as error:
-        raise InvalidReply("json") from error
+    value = load(reply)
     if _invalid_numeric(value):
         raise InvalidReply("surrogate")
     if type(value) is not dict or set(value) != {"drafts"}:
