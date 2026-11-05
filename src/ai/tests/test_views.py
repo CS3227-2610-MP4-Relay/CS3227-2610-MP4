@@ -509,10 +509,9 @@ def test_storage_error_from_the_gateway_gives_503(coord_client, round_, criteria
 
 def test_error_reports_hide_covered_criterion_text(coord_client, round_):
     secret = Criterion.objects.create(round=round_, text="Secret criterion text")
-    broken = [drafting.Draft("t", "s", "e", ("C1", "C9"))]
     with (
         mock.patch("ai.views.gateway.complete", return_value=Success("{}")),
-        mock.patch("ai.views.drafting.parse", return_value=broken),
+        mock.patch("ai.views.drafting.parse", side_effect=TypeError),
         pytest.raises(TypeError) as info,
     ):
         coord_client.post(
@@ -526,7 +525,7 @@ def test_error_reports_hide_covered_criterion_text(coord_client, round_):
         for frame in frames
         if Path(frame["filename"]).as_posix().endswith("ai/views.py")
     ]
-    assert [frame["function"] for frame in views] == ["draft_page"]
+    assert [frame["function"] for frame in views] == ["draft_page", "_suggest"]
     assert "Secret criterion text" not in repr([frame["vars"] for frame in views])
 
 

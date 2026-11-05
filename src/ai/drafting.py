@@ -50,13 +50,14 @@ INSTRUCTIONS = (
     "text around the JSON object."
 )
 
-UNKNOWN = "Drafting is unavailable right now. You can still add test cases yourself."
+UNAVAILABLE = (
+    "Drafting is unavailable right now. You can still add test cases yourself."
+)
 NO_DRAFTS = (
     "No test cases were suggested for these criteria. You can still add test "
     "cases yourself."
 )
 SELECT = "Select 1 to 5 acceptance criteria."
-FOREIGN = "Choose criteria from this round."
 
 # Inclusive code point ranges cleaning rule 3 removes (keeping ZWNJ and ZWJ):
 # Unicode 16.0.0's Default_Ignorable_Code_Point property from its
@@ -126,6 +127,26 @@ def clean(text, *, title=False):
             for char in text
         )
     return text
+
+
+def labels(count):
+    """Return the request-only labels C1, C2, ... for `count` selected criteria."""
+    return [f"C{index}" for index in range(1, count + 1)]
+
+
+@sensitive_variables()
+def encode(texts):
+    """Encode criterion texts, cleaned and labelled in order, as the data part.
+
+    Return None when every text is empty after cleaning, so no call is made.
+    """
+    criteria = [
+        {"label": label, "text": clean(text).strip()}
+        for label, text in zip(labels(len(texts)), texts, strict=True)
+    ]
+    if not any(item["text"] for item in criteria):
+        return None
+    return json.dumps({"criteria": criteria}, ensure_ascii=False)
 
 
 def _reject_constant(value):

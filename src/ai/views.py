@@ -1,12 +1,10 @@
 """The Test Coordinator's transient AI drafting pages (RND-8)."""
 
-import json
 import logging
 
 from django.db import DatabaseError
 from django.shortcuts import render
 from django.urls import reverse
-from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 
 from rounds.forms import CaseForm
@@ -28,35 +26,59 @@ def _posted_text(request, name, limit, *, title=False):
     return drafting.clean(value, title=title)
 
 
-def _form(round_, data=None):
-    form = DraftSelectForm(round_, data)
-    form.fields["criteria"].error_messages.update(
-        {"invalid_choice": drafting.FOREIGN, "invalid_pk_value": drafting.FOREIGN}
-    )
-    return form
+@sensitive_variables()
+def _suggest(user, selected):
+    """Return transient drafts and an error message for `selected` (RND-8.4-8.8)."""
+    labels = drafting.labels(len(selected))
+    data = drafting.encode([item.text for item in selected])
+    if data is None:
+        return [], drafting.NO_DRAFTS
+    try:
+        result = gateway.complete(user, drafting.INSTRUCTIONS, data)
+    except DatabaseError:
+        raise
+    except Exception:  # noqa: BLE001 - fixed user-facing failure
+        logger.warning("Drafting gateway raised")
+        result = gateway.Failed("provider-error")
+    if not isinstance(result, gateway.Success):
+        logger.warning("Drafting gateway %s: %s", type(result).__name__, result.code)
+        return [], drafting.UNAVAILABLE
+    try:
+        parsed = drafting.parse(result.text, labels)
+    except drafting.InvalidReply as invalid:
+        logger.warning("Drafting reply rejected: %s", invalid.code)
+        return [], drafting.UNAVAILABLE
+    if not parsed:
+        return [], drafting.NO_DRAFTS
+    drafts = []
+    for item in parsed:
+        covered = [
+            criterion
+            for label, criterion in zip(labels, selected, strict=True)
+            if label in item.criteria
+        ]
+        drafts.append(
+            {
+                "title": item.title,
+                "steps": item.steps,
+                "expected_result": item.expected_result,
+                "covered": covered,
+                "ids": [criterion.pk for criterion in covered],
+            }
+        )
+    return drafts, None
 
 
-@never_cache
 @coordinator_view(["GET", "POST"])
 @sensitive_post_parameters("criteria")
-@sensitive_variables(
-    "selected",
-    "text",
-    "data",
-    "result",
-    "parsed",
-    "drafts",
-    "error",
-    "by_label",
-    "context",
-)
+@sensitive_variables("selected", "drafts", "error", "context")
 def draft_page(request, round_id):
     """Show the drafting selection, then transient suggestions (RND-8.1-8.8)."""
     round_ = own_round(request, round_id)
     if round_.state != Round.State.DRAFT:
         return state_conflict(request, round_)
-    form = _form(round_, request.POST if request.method == "POST" else None)
-    drafts, error, selection_error, selected = [], None, "", []
+    form = DraftSelectForm(round_, request.POST if request.method == "POST" else None)
+    drafts, error, selection_error = [], None, ""
     if request.method == "POST" and form.is_valid():
         selected = list(form.cleaned_data["criteria"])
         if not 1 <= len(selected) <= 5:
@@ -66,61 +88,7 @@ def draft_page(request, round_id):
                 f"This round has reached its limit of {CASE_LIMIT} test cases."
             )
         else:
-            labels = [f"C{index}" for index in range(1, len(selected) + 1)]
-            text = [
-                {"label": label, "text": drafting.clean(item.text).strip()}
-                for label, item in zip(labels, selected, strict=True)
-            ]
-            if not any(item["text"] for item in text):
-                error = drafting.NO_DRAFTS
-            else:
-                data = json.dumps({"criteria": text}, ensure_ascii=False)
-                try:
-                    result = gateway.complete(request.user, drafting.INSTRUCTIONS, data)
-                except DatabaseError:
-                    raise
-                except Exception:  # noqa: BLE001 - fixed user-facing failure
-                    logger.warning("Drafting gateway raised")
-                    result = gateway.Failed("provider-error")
-                if isinstance(result, gateway.Success):
-                    try:
-                        parsed = drafting.parse(result.text, labels)
-                    except drafting.InvalidReply as invalid:
-                        logger.warning("Drafting reply rejected: %s", invalid.code)
-                        error = drafting.UNKNOWN
-                    else:
-                        if not parsed:
-                            error = drafting.NO_DRAFTS
-                        else:
-                            order = {label: i for i, label in enumerate(labels)}
-                            by_label = dict(zip(labels, selected, strict=True))
-                            drafts = [
-                                {
-                                    "title": item.title,
-                                    "steps": item.steps,
-                                    "expected_result": item.expected_result,
-                                    "covered": [
-                                        by_label[label]
-                                        for label in sorted(
-                                            item.criteria, key=order.get
-                                        )
-                                    ],
-                                    "ids": [
-                                        by_label[label].pk
-                                        for label in sorted(
-                                            item.criteria, key=order.get
-                                        )
-                                    ],
-                                }
-                                for item in parsed
-                            ]
-                else:
-                    logger.warning(
-                        "Drafting gateway %s: %s",
-                        type(result).__name__,
-                        result.code,
-                    )
-                    error = drafting.UNKNOWN
+            drafts, error = _suggest(request.user, selected)
     context = {
         "form": form,
         "round": round_,
@@ -131,7 +99,6 @@ def draft_page(request, round_id):
     return render(request, "ai/draft.html", context)
 
 
-@never_cache
 @coordinator_view(["POST"])
 @sensitive_post_parameters("title", "steps", "expected_result", "criteria")
 @sensitive_variables("posted", "own", "chosen", "initial", "form")
