@@ -58,7 +58,7 @@ sequenceDiagram
     DB-->>View: Selected source
     View->>Gateway: Fixed instructions and encoded source
     Gateway->>DB: Reserve quota and slots in a short transaction
-    Note over DB,Gateway: Reservation ends before provider work;<br/>no round lock or transaction spans the call
+    Note over DB,Gateway: Reservation ends before provider work<br/>No round lock or transaction spans the call
     Gateway->>Provider: Bounded HTTPS request
     Provider-->>Gateway: Reply or failure
     Gateway->>DB: Record metrics and release slots
@@ -73,7 +73,7 @@ sequenceDiagram
         Coordinator->>View: Use this draft
         View-->>Coordinator: Prefill the normal case form
         Coordinator->>Form: Review, edit and submit
-        Form->>DB: Recheck authorization and Draft state;<br/>save under the round lock
+        Form->>DB: Recheck authorization and Draft state<br/>Save under the round lock
         Form-->>Coordinator: Show the saved case
     end
 ```

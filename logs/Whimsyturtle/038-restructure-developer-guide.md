@@ -2,19 +2,20 @@
 
 Slice: developer-guide-architecture · Tier: Fast lane · Tool: Codex · Orchestrator model: gpt-6.1-sol / xhigh (observed turn metadata) · Date: 2026-11-05
 
-Tokens: 4,609,861 input, 29,814 output, 4,639,675 total across the selected coordinator and automatic approval-review sources; cutoff 2026-11-05 16:41:49 SGT.
+Tokens: 14,615,652 input, 50,900 output, 14,666,552 total across the selected coordinator and automatic approval-review sources; cutoff 2026-11-05 17:01:47 SGT, including the rendering continuation.
 
 | Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Orchestrator — gpt-6.1-sol / xhigh, `codex:7a2c201260063eb590ca2991` | 4,090,655 | 3,982,976 | 28,479 | 12,500 | 4,119,134 | Combined interval below |
-| Automatic approval review — codex-auto-review / low, `codex:8624b8c2393d0ba4baedef3d` | 519,206 | 464,768 | 1,335 | 589 | 520,541 | Combined interval below |
+| Orchestrator — gpt-6.1-sol / xhigh, `codex:7a2c201260063eb590ca2991` | 13,190,989 | 13,053,312 | 48,430 | 22,369 | 13,239,419 | Combined interval below |
+| Automatic approval review — codex-auto-review / low, `codex:8624b8c2393d0ba4baedef3d` | 1,424,663 | 1,340,416 | 2,470 | 992 | 1,427,133 | Combined interval below |
 
-No delegated role agents ran. The measured interval was 810.506 seconds (13m 30.506s), including waiting; cache-write tokens were zero in both measured sources. The baseline/report used the same coordinator selector, related-session day root and project filter, with no collector warnings. The earlier advisory turn and work after the cutoff are outside this interval; see [accounting definitions](../../workflow/README.md#token-reporting).
+No delegated role agents ran. The measured interval was 2,008.278 seconds (33m 28.278s), including CI/approval waits; cache-write tokens were zero in both measured sources. This refreshed report uses the original baseline and the same coordinator selector, related-session day root and project filter, with no collector warnings; it replaces the earlier cutoff rather than adding overlapping totals. The earlier advisory turn and work after the cutoff are outside this interval; see [accounting definitions](../../workflow/README.md#token-reporting). Rendering required one syntax repair round and one retry after an HTTP 503.
 
 ## Requests
 
 - Assess whether the Developer Guide should have UML and concentrate on design, architecture, software engineering and the agent workflow, reducing fragile implementation claims.
 - Implement the accepted restructuring thoroughly on a new branch and open a draft PR; do not create an issue.
+- Recheck the blocked rendering after the human reported giving approval; following another automatic rejection, the human explicitly approved sending only the four Mermaid blocks from the technical spec to `https://mermaid.ink` for temporary previews.
 
 ## Agent runs
 
@@ -25,16 +26,18 @@ No delegated role agents ran. The measured interval was 810.506 seconds (13m 30.
 - Reduced the guide from 4,042 words / 330 lines to 1,125 words / 122 lines. All four operational sections moved into `docs/Runbook.md` verbatim apart from terminal blank-line normalization; all 16 Bash/dotenv blocks match exactly. Updated README, example-configuration and spec navigation, retained incoming guide entry anchors, and excluded the runbook alongside the guides in the product-site configuration.
 - **Targeted evidence:** 281 relative file/anchor links across guide, runbook, technical spec, README and unchanged User Guide resolve; fences balanced; every Bash block passed `bash -n` without executing its commands. Read back the changed guide and relocated sections, checked source references, and corrected one trailing blank line detected in staged review.
 - **Existing environment checks:** Django system check with test settings passed; `pytest src/relay/tests/test_site.py src/relay/tests/test_ci.py -q` passed (27 tests); Ruff lint passed and format check passed (143 files). Side-effect-free help checks passed for both operator commands using test settings, site checker and Playwright trace viewer. No source, dependency, product acceptance criterion, security control, CI workflow, User Guide or Reflections change; no live-provider or production operation.
-- Pushed the branch and opened [draft PR #139](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/pull/139). The first CI run was in progress at this log's cutoff; final current-head results belong in the PR validation section. This summary commit must also pass configured hosted checks before delivery is reported complete.
+- Pushed the branch and opened [draft PR #139](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/pull/139). Both `verify` and `site` passed on summary head `baae907be4b43ea4782d8c455f9b44591fa10bbb` ([run](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/actions/runs/41996711407)); its downloaded Pages artifact contained the required pages and excluded the guides/runbook. Final current-head results after the rendering repair belong in the PR validation section.
+- **Rendering continuation, coordinator:** trigger was the human's approval/recheck request and subsequent exact export approval. Candidate was `baae907` plus two sequence-label syntax corrections in the technical spec. The live renderer rejected a semicolon before an HTML line break; removed both such separators without changing meaning. All four final PNG previews were rendered and inspected using the image-view tool for readable labels, relationships, state transitions and save boundaries. Dimensions were architecture 775×883, sequence 1753×1263, class 544×863 and state 376×470. The 281-link, full operational-prose/block parity, Bash-syntax and whitespace checks passed again. Existing Python checks remain valid for unchanged code/inputs/environment; GitHub's own browser renderer was not inspected. No delegated agent or new dependency was used; previews remain in the temporary directory.
 
 ## Decisions and corrections
 
 - Keep architecture and diagrams in the technical spec, operational commands in the runbook, and the guide as the design/setup entry point under [one home per fact](../../AGENTS.md#one-home-per-fact). Existing requirements and operating/approval safeguards retain their meaning.
-- Fast lane uses coordinator documentation work and targeted checks; human diff review, rendered-diagram inspection and log approval remain pending in the draft. No delegated review or human verification is claimed.
+- Fast lane uses coordinator documentation work and targeted checks; coordinator rendering inspection is now complete. Human diff review and log approval remain pending in the draft. Export approval is not recorded as human diff review, manual testing or log approval.
 - The [plan](../../workflow/plans/developer-guide-architecture.md) records the commit boundaries, checks and remaining review steps. No issue was created. Merge, release, hosted-setting changes and new tooling dependencies were outside this request.
 
 ## Problems
 
-- The browser host was unavailable and no existing local Mermaid installation/cache was found. An initial temporary rendering helper was blocked by sandbox networking; automatic approval review then rejected exporting the draft diagram source to Mermaid Ink because that destination was not authorized for non-public content. No export occurred, no workaround destination was used, and no renderer dependency was installed. Official Mermaid/GitHub syntax references and source checks were used; visual layout remains unverified for human browser review.
+- The browser host was unavailable and no existing local Mermaid installation/cache was found. Initial Mermaid Ink exports were blocked by sandbox networking/automatic approval review; the generic approval statement was also rejected. The human then selected approval naming the exact four-block payload and Mermaid Ink destination, after which that export was accepted. No alternative destination, new dependency or broader payload was used.
+- Actual rendering exposed a sequence-diagram parse failure missed by static inspection. Corrected the two semicolon/HTML-break labels in one repair round; all four final previews then rendered successfully. A transient HTTP 503 during the class-preview background render succeeded on one retry. No rendering finding remains open; GitHub-specific browser rendering remains unobserved.
 - The GitHub connector returned `403 Resource not accessible by integration` for draft-PR creation. The already-authorized authenticated CLI fallback created PR #139 successfully; no additional account access was requested.
 - Git index writes needed the existing automatic approval path; approved branch/staging/commit/push operations succeeded. No application-check failure or unresolved document-link failure was observed. No suspicious instruction payload was followed; repository and web reference content were treated as data.
