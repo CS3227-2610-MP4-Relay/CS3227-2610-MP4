@@ -65,3 +65,5 @@ Tier: High (development security controls: the scope hook, its adapters and the 
   - `ruff check .` and `ruff format --check .` are clean. Workflow unittest: 120 tests OK, 1 skipped (PowerShell). Full `pytest`: 2882 passed, 1 skipped, 254 subtests.
 - **Accepted as is:** DWF-1.2's wording in SECURITY-SPEC still says "outside" without naming worktrees. The README, which SECURITY-SPEC links for the hook's mechanics, now defines it.
 - **Usage:** reported in the session log rather than here, because the orchestrator implemented this slice in the same session as the others.
+- **Repair round 2 rechecks:** both reviewers found M1 and the shared-deadline Low resolved in the code. The behavioural evidence for the Windows command is the `pwsh` test on CI.
+- **Open nit, left after the last repair round:** the `pwsh` test links `git` with `symlink_to`. On a Windows machine with PowerShell 7 but no symlink rights it would error instead of skipping. CI and macOS are unaffected.
