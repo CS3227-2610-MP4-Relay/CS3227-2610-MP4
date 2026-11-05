@@ -53,6 +53,7 @@ Owned paths: `src/ai/**` except `src/ai/feedback_views.py` and `src/ai/templates
     - L1: R3 bundles several small view cleanups in one commit.
     - L3: `experiments` serves the commands, yet the `score` functions import `status` from it.
     - L5: `test_reply_over_limit_is_rejected` duplicates the new `too-long` code cases.
+- Repair round 1 (`ea40ea5`): `ruff check .` and `ruff format --check .` clean; `pytest` 2864 passed, 254 subtests. Verifier recheck: L2 and L4 resolved; M1 stays with the human. Security recheck: no findings in either PR; I-1 closed by the mutation. PR A was verified on its own at `479d40d`: ruff clean, 2864 passed, 254 subtests. The `encode` docstring fix lands only in PR B.
 
 ## Delivery
 
