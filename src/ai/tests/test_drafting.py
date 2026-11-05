@@ -159,6 +159,16 @@ def test_prompt_leaves_room_for_maximum_encoded_selection(character):
     assert len(drafting.INSTRUCTIONS) + len(data) <= gateway.INPUT_LIMIT
 
 
+@pytest.mark.ac("RND-8.6")
+def test_data_part_labels_cleaned_text_in_order_without_ascii_escapes():
+    data = drafting.encode([" 界\u200b first ", "\u3164", "Second\r\nline"])
+    assert data == (
+        '{"criteria": [{"label": "C1", "text": "界 first"}, '
+        '{"label": "C2", "text": ""}, {"label": "C3", "text": "Second\\nline"}]}'
+    )
+    assert drafting.encode(["\u3164", " \u200b "]) is None
+
+
 def test_reply_over_limit_is_rejected():
     with pytest.raises(InvalidReply):
         parse('{"drafts": []}' + " " * 20001, ["C1"])
@@ -224,8 +234,10 @@ def test_unauthorized_labels_are_refused(label):
         ('{"drafts": ["\\ud800"]}', "surrogate"),
         ('{"drafts": NaN}', "json"),
         ('{"drafts": [' + "9" * 5000 + "]}", "json"),
+        ('{"drafts": [{"title": "x", "title": "y"}]}', "repeated-key"),
+        ('{"drafts": []}' + " " * 20001, "too-long"),
     ],
-    ids=["surrogate", "nan", "long-number"],
+    ids=["surrogate", "nan", "long-number", "repeated-key", "too-long"],
 )
 def test_each_parse_guard_rejects_with_its_own_code(value, code):
     with pytest.raises(InvalidReply) as info:

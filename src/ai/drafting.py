@@ -6,6 +6,8 @@ import math
 import unicodedata
 from dataclasses import dataclass
 
+from django.views.decorators.debug import sensitive_variables
+
 from rounds.forms import has_visible_character
 from rounds.models import Case
 
@@ -48,13 +50,14 @@ INSTRUCTIONS = (
     "text around the JSON object."
 )
 
-UNKNOWN = "Drafting is unavailable right now. You can still add test cases yourself."
+UNAVAILABLE = (
+    "Drafting is unavailable right now. You can still add test cases yourself."
+)
 NO_DRAFTS = (
     "No test cases were suggested for these criteria. You can still add test "
     "cases yourself."
 )
 SELECT = "Select 1 to 5 acceptance criteria."
-FOREIGN = "Choose criteria from this round."
 
 # Inclusive code point ranges cleaning rule 3 removes (keeping ZWNJ and ZWJ):
 # Unicode 16.0.0's Default_Ignorable_Code_Point property from its
@@ -116,11 +119,7 @@ def clean(text, *, title=False):
     text = "".join(
         char
         for char in text
-        if char in "\n\t"
-        or (
-            unicodedata.category(char) not in ("Cc", "Cs")
-            and not (0xD800 <= ord(char) <= 0xDFFF)
-        )
+        if char in "\n\t" or unicodedata.category(char) not in ("Cc", "Cs")
     )
     if title:
         text = "".join(
@@ -130,8 +129,28 @@ def clean(text, *, title=False):
     return text
 
 
+def labels(count):
+    """Return the request-only labels C1, C2, ... for `count` selected criteria."""
+    return [f"C{index}" for index in range(1, count + 1)]
+
+
+@sensitive_variables()
+def encode(texts):
+    """Encode criterion texts, cleaned and labelled in order, as the data part.
+
+    Return None when every text is empty after cleaning, so no call is made.
+    """
+    criteria = [
+        {"label": label, "text": clean(text).strip()}
+        for label, text in zip(labels(len(texts)), texts, strict=True)
+    ]
+    if not any(item["text"] for item in criteria):
+        return None
+    return json.dumps({"criteria": criteria}, ensure_ascii=False)
+
+
 def _reject_constant(value):
-    raise ValueError(value)
+    raise InvalidReply("json")
 
 
 def _no_repeated_keys(pairs):
@@ -142,6 +161,21 @@ def _no_repeated_keys(pairs):
             raise InvalidReply("repeated-key")
         value[key] = item
     return value
+
+
+@sensitive_variables()
+def load(reply):
+    """Decode a bounded reply as strict JSON, or raise `InvalidReply` for all of it."""
+    if len(reply) > REPLY_LIMIT:
+        raise InvalidReply("too-long")
+    try:
+        return json.loads(
+            reply,
+            object_pairs_hook=_no_repeated_keys,
+            parse_constant=_reject_constant,
+        )
+    except (ValueError, RecursionError) as error:
+        raise InvalidReply("json") from error
 
 
 def _invalid_numeric(value):
@@ -173,18 +207,7 @@ def _checked_text(value, limit, key, *, title=False):
 
 def parse(reply, labels):
     """Return validated `Draft`s, or raise `InvalidReply` for the whole reply."""
-    if len(reply) > REPLY_LIMIT:
-        raise InvalidReply("too-long")
-    try:
-        value = json.loads(
-            reply,
-            object_pairs_hook=_no_repeated_keys,
-            parse_constant=_reject_constant,
-        )
-    except InvalidReply:
-        raise
-    except (ValueError, RecursionError) as error:
-        raise InvalidReply("json") from error
+    value = load(reply)
     if _invalid_numeric(value):
         raise InvalidReply("surrogate")
     if type(value) is not dict or set(value) != {"drafts"}:

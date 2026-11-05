@@ -206,6 +206,23 @@ def test_parser_recursion_failure_is_fixed_invalid_reply(monkeypatch):
 
 
 @pytest.mark.ac("RES-4.8")
+@pytest.mark.parametrize(
+    ("reply", "code"),
+    [
+        ('{"questions": [NaN]}', "json"),
+        ('{"questions": [{"q": "x", "q": "y"}]}', "repeated-key"),
+        ('{"questions": []}' + " " * 20001, "too-long"),
+        ('{"questions": ["\\ud800"]}', "surrogate"),
+    ],
+    ids=["nan", "repeated-key", "too-long", "surrogate"],
+)
+def test_each_parse_guard_rejects_with_its_own_code(reply, code):
+    with pytest.raises(feedback.InvalidReply) as caught:
+        feedback.parse(reply)
+    assert caught.value.code == code
+
+
+@pytest.mark.ac("RES-4.8")
 @pytest.mark.prompt_injection
 def test_schema_valid_untrusted_text_stays_text_without_interpretation():
     payload = bytes.fromhex(

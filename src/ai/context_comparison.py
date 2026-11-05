@@ -61,7 +61,7 @@ def corpus():
     for index, (name, text) in enumerate(targets):
         feature = "drafting" if index < 2 else "feedback"
         if feature == "drafting":
-            core = {"criteria": [{"label": "C1", "text": drafting.clean(text).strip()}]}
+            core = json.loads(drafting.encode([text]))
             instructions = drafting.INSTRUCTIONS
         else:
             core = json.loads(

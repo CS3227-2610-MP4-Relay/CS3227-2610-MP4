@@ -71,17 +71,7 @@ def corpus():
                 attack = "".join(chr(0xE0000 + ord(char)) for char in attack)
             criterion = "The page opens."
             if feature == "drafting":
-                data = json.dumps(
-                    {
-                        "criteria": [
-                            {
-                                "label": "C1",
-                                "text": drafting.clean(criterion + attack).strip(),
-                            }
-                        ]
-                    },
-                    ensure_ascii=False,
-                )
+                data = drafting.encode([criterion + attack])
                 instructions = drafting.INSTRUCTIONS
             else:
                 values = {
