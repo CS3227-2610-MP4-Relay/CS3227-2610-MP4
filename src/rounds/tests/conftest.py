@@ -152,7 +152,10 @@ def csrf_token(client):
 
 
 def wait_for_lock(pid):
-    """Wait until PostgreSQL reports backend `pid` waiting for a lock; else fail."""
+    """Wait until backend `pid` waits for a lock held by the first request.
+
+    Fail if PostgreSQL never reports it waiting.
+    """
     deadline = time.monotonic() + 5
     while time.monotonic() < deadline:
         with connection.cursor() as cursor:
@@ -162,17 +165,17 @@ def wait_for_lock(pid):
             if cursor.fetchone() == ("Lock",):
                 return
         time.sleep(0.01)
-    pytest.fail("Second operation did not wait for the round lock")
+    pytest.fail("Second operation did not wait for a lock held by the first request")
 
 
-def race(coordinator, first, second, slow, *, wait=True):
-    """Run `first` until it holds the round lock inside `slow`, then `second`.
+def race(coordinator, first, second, slow):
+    """Run `first` until it pauses inside `slow`, then `second`.
 
     `slow` names services, or (object, attribute) pairs such as Round.save,
     whose first call pauses after its work, still inside the view's locked
     transaction. The pause lasts until PostgreSQL reports `second` waiting for
-    a lock, so `second` always arrives while `first` holds it. Pass
-    `wait=False` for a `second` that is answered without taking the lock.
+    a lock held by the first request, so `second` always arrives while
+    `first` holds its locks.
     """
     held, release, started = threading.Event(), threading.Event(), threading.Event()
     responses, pids = {}, {}
@@ -209,10 +212,7 @@ def race(coordinator, first, second, slow, *, wait=True):
         assert held.wait(5), "First request never paused inside `slow`"
         two.start()
         assert started.wait(5), "Second request never connected"
-        if wait:
-            wait_for_lock(pids["second"])
-        else:
-            two.join(10)
+        wait_for_lock(pids["second"])
     finally:
         release.set()
         for thread in (one, two):

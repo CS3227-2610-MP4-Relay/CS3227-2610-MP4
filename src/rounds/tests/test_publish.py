@@ -9,7 +9,15 @@ from django.utils.html import escape
 
 from rounds import services
 from rounds.forms import PublishForm
-from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
+from rounds.models import (
+    Build,
+    BuildCase,
+    Case,
+    CaseCriterion,
+    Criterion,
+    Result,
+    Round,
+)
 
 from .conftest import (
     DENIED,
@@ -275,10 +283,10 @@ def test_an_invalid_label_on_a_round_without_cases_gets_only_the_label_message(
 @pytest.mark.ac("RND-3.4")
 def test_the_published_round_keeps_exactly_what_was_saved(coord_client, draft):
     fill(draft, 3)
-    records = domain_rows(Criterion, Case, CaseCriterion)
+    records = domain_rows(Criterion, Case, CaseCriterion, Result)
     before = page(coord_client.get(detail(draft.pk)))
     coord_client.post(publish_url(draft.pk), {"label": "Synthetic 1.0"})
-    assert domain_rows(Criterion, Case, CaseCriterion) == records
+    assert domain_rows(Criterion, Case, CaseCriterion, Result) == records
     after = page(coord_client.get(detail(draft.pk)))
     for text in ("Synthetic criterion one", "Synthetic criterion two"):
         assert after.count(text) == before.count(text)

@@ -15,6 +15,7 @@ from rounds.models import BuildCase, Case, CaseCriterion, Criterion, Round
 from .conftest import (
     DENIED,
     NOT_FOUND,
+    ROUND_RECORDS,
     UNAVAILABLE,
     csrf_token,
     detail,
@@ -761,13 +762,13 @@ def test_round_opened_after_the_state_check_gets_409_from_the_locked_recheck(
         Round.objects.filter(pk=draft.pk).update(state=Round.State.OPEN)
         return real_is_valid(form)
 
-    before = domain_rows(Criterion, Case, CaseCriterion)
+    before = domain_rows(*ROUND_RECORDS)
     route = url(draft.pk, kind, "new")
     with mock.patch.object(form_class, "is_valid", open_then_validate):
         response = coord_client.post(route, valid_post(route, linked))
     assert response.status_code == 409
     assert CONFLICT.format("Open") in page(response)
-    assert domain_rows(Criterion, Case, CaseCriterion) == before
+    assert domain_rows(*ROUND_RECORDS) == before
 
 
 @pytest.mark.ac("RND-2.8")

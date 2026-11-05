@@ -1,6 +1,6 @@
 # #67 cleanup: unit test helpers
 
-Goal: share duplicated test helpers, make no-write snapshots order-independent and complete, and make the round race harness prove the second request waited for the round lock.
+Goal: share duplicated test helpers, make no-write snapshots order-independent and complete, and make the round race harness prove the second request waited for a lock held by the first.
 
 Tier: Standard (test-only; verifier review). Base: `ebd890c`. Paths: `src/**/tests/**` and `src/**/conftest.py`, excluding `src/e2e/`. No product, spec or criterion changes; non-test `src/` budget 400 lines, expected 0.
 
@@ -18,7 +18,7 @@ Tier: Standard (test-only; verifier review). Base: `ebd890c`. Paths: `src/**/tes
 - Keep a per-round helper only in `test_records.py::test_injected_fields_are_ignored`, which writes to `draft` between the snapshots and must check only the sibling's rows; it gains `order_by("pk")`.
 - `no_store`, `locked`, `title_tag`, `assert_no_raw_markup` and `domain_rows` move to `rounds/tests/conftest.py`. `ai/tests` already imports from `rounds.tests.conftest`, so it reuses them there. `probe` moves to a new `relay/tests/conftest.py`, following the same `<app>.tests.conftest` import pattern.
 - `workspace` (and `test_services.py`'s matching `other_workspace`) overrides are removed; the conftest fixtures differ only in the synthetic name, and no test reads those names.
-- `race()` pauses the first request inside `slow` until PostgreSQL reports the second request's backend waiting on a lock, then releases it. It fails if the second never waits. A caller whose second request is refused before locking passes `wait=False`; any such caller is listed in the T2 checkpoint result.
+- `race()` pauses the first request inside `slow` until PostgreSQL reports the second request's backend waiting on a lock, then releases it. It fails if the second never waits. (A `wait=False` opt-out was planned but had no caller and was removed in review.)
 - A13: ACC-3.7 requires the 503 page, no sign-in and nothing created; it does not require any log text. The idle case will accept the server's reason or the client's connection-loss text, because the only injected fault is a 0.5 s pause under a 100 ms idle timeout. All behaviour assertions stay unchanged. The statement case keeps its exact text.
 
 ## Commit checkpoints
@@ -30,6 +30,23 @@ Tier: Standard (test-only; verifier review). Base: `ebd890c`. Paths: `src/**/tes
 5. [x] `test:` driver-independent ACC-3.7 idle assertion (A13). Path: `accounts/tests/test_limit_views.py`. Orchestrator conditions: the idle case still rejects the statement-timeout text, and its alternative is psycopg's exact connection-loss text, with the source cited. The idle case accepts PostgreSQL's `idle-in-transaction timeout` or libpq's `server closed the connection unexpectedly` (`pqReadData`, `fe-misc.c`; present in the bundled `psycopg_binary/.dylibs/libpq.5.dylib`, libpq 18.0.6). Each case rejects the other case's texts. Result: 6 passed. Mutations: without the injected pause, the 3 idle cases failed (`assert 200/302 == 503`); with the statement fault in the idle case, they failed at the reason check; with the statement fault and the idle reasons widened to the statement text, they failed at the rejection check. Reverted.
 6. [x] Full verification: `ruff check . && ruff format --check . && pytest` through the DB lock wrapper, with Codex CLI on `PATH`: ruff clean, 139 files formatted, 2857 passed, 254 subtests passed in 209.30s (same as the base). After the 2026-11-05 reboot, the unit checks, their mutations and full verification were rerun through `/Users/zheng/Desktop/mp4/.r67/dblock.py` with the same results (full: 2857 passed, 254 subtests passed in 213.24s); the T4 mutation then failed 5 `test_close.py` tests at the shared `no_store`.
 
+## Review
+
+Repair round 1 (verifier, candidate `d97e71e`: no High or Medium; three Low findings, all fixed test-only):
+
+1. `race()` lost its unused `wait=False` parameter and docstring sentence, which checked nothing.
+2. `race()`, `wait_for_lock` and its failure message now say the second operation waits for "a lock held by the first request", not the round lock: `wait_for_lock` accepts any lock, and `test_a_retitle_racing_a_publish_is_saved_first_or_refused[True]` waits on a row update.
+3. Model lists that omitted models the action must not change: `test_records.py` (RND-2.8 locked re-check, which changes only the round row) now compares `domain_rows(*ROUND_RECORDS)`; `test_publish_services.py` (RND-3.4), `test_publish.py` (RND-3.4), `test_retest_services.py` (RND-5.5) and `test_retest.py` (RND-5.5) now include `Result`.
+
+Checks: the 7 affected modules (`test_publish`, `test_publish_services`, `test_retest`, `test_retest_services`, `test_records`, `test_close`, `test_result_services`) gave 356 passed. Mutation (`own_round` without `select_for_update`): 12 race tests failed, with "Second operation did not wait for a lock held by the first request". Reverted. Full verification with the brief's `PATH`: ruff clean, 139 files formatted, 2857 passed, 254 subtests passed in 209.37s.
+
+Out of scope (equivalent inline copies left as they are; no confirmed item covers them):
+
+- Title splitting `split("<title>"` inline in `rounds/tests/test_publish.py`, `test_retest.py`, `test_close.py`, `test_record_rendering.py`.
+- Raw-tag checks `SCRIPT_TAG not in` inline in `rounds/tests/test_results.py`, `test_direction_controls.py`, `test_publish.py`, `test_messages.py`, `test_tester.py`, `test_history.py`, `test_retest.py`, `test_close.py`, `test_review.py`.
+- Inline `select_for_update().get` in `ai/tests/test_feedback_views.py`, `relay/tests/test_access_matrix.py` and `rounds/tests/test_retest.py`, `test_records.py`, `test_close.py`, `test_publish.py`, `test_review.py`, `test_result_services.py`, `test_results.py`, `test_direction_controls.py`.
+- Inline cache-control checks `"no-store" in` in `accounts/tests/test_sign_in.py` and `rounds/tests/test_routes.py`, `test_views.py`, `test_tester.py`.
+
 ## Open items
 
-- None yet. Other builders refactor `src/rounds`, `src/ai` and `src/accounts` in parallel; this slice edits only helper definitions, their call sites and the items above.
+- None. Other builders refactor `src/rounds`, `src/ai` and `src/accounts` in parallel; this slice edits only helper definitions, their call sites and the items above.

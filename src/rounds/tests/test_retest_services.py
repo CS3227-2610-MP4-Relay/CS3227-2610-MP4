@@ -5,7 +5,7 @@ import pytest
 from accounts.models import Workspace
 from rounds import services
 from rounds.forms import RetestForm
-from rounds.models import BuildCase, Case, CaseCriterion, Criterion, Round
+from rounds.models import BuildCase, Case, CaseCriterion, Criterion, Result, Round
 
 from .conftest import domain_rows, locked
 
@@ -182,14 +182,14 @@ def test_the_cap_is_checked_before_the_cases_and_the_label(open_round, workspace
 def test_a_case_can_be_retested_again_and_earlier_builds_stay(open_round):
     round_, (one, two, _) = open_round
     first = current_build(one)
-    records = domain_rows(Criterion, Case, CaseCriterion)
+    records = domain_rows(Criterion, Case, CaseCriterion, Result)
     second = retest(round_, "Synthetic build 1.1", [one, two])
     third = retest(round_, "Synthetic build 1.2", [one])
     assert list(one.builds.order_by("id")) == [first, second, third]
     assert current_build(one) == third and current_build(two) == second
     assert set(first.cases.all()) == set(round_.cases.all())
     assert set(second.cases.all()) == {one, two}
-    assert domain_rows(Criterion, Case, CaseCriterion) == records
+    assert domain_rows(Criterion, Case, CaseCriterion, Result) == records
 
 
 @pytest.mark.ac("RND-5.6")

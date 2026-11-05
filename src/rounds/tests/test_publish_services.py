@@ -6,7 +6,15 @@ from django.db.models import ProtectedError
 
 from rounds import services
 from rounds.forms import PublishForm
-from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
+from rounds.models import (
+    Build,
+    BuildCase,
+    Case,
+    CaseCriterion,
+    Criterion,
+    Result,
+    Round,
+)
 
 from .conftest import domain_rows, locked
 
@@ -95,9 +103,9 @@ def test_the_refusal_names_no_user_text(round_):
 @pytest.mark.ac("RND-3.4")
 def test_publishing_leaves_criteria_cases_and_links_unchanged(round_):
     fill(round_, 3)
-    before = domain_rows(Criterion, Case, CaseCriterion)
+    before = domain_rows(Criterion, Case, CaseCriterion, Result)
     services.publish(locked(round_), "Synthetic build")
-    assert domain_rows(Criterion, Case, CaseCriterion) == before
+    assert domain_rows(Criterion, Case, CaseCriterion, Result) == before
 
 
 @pytest.mark.ac("RND-3.2")

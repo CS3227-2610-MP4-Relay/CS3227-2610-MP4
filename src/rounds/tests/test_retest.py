@@ -12,7 +12,15 @@ from django.utils.html import escape
 
 from rounds import services
 from rounds.forms import RetestForm
-from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
+from rounds.models import (
+    Build,
+    BuildCase,
+    Case,
+    CaseCriterion,
+    Criterion,
+    Result,
+    Round,
+)
 from rounds.templatetags import rounds_text
 
 from .conftest import (
@@ -305,10 +313,10 @@ def test_the_tenth_build_is_created_and_the_eleventh_refused(coord_client, opene
 @pytest.mark.ac("RND-5.5")
 def test_retesting_a_case_again_keeps_earlier_builds_listed(coord_client, opened):
     one, two, _ = cases_of(opened)
-    records = domain_rows(Criterion, Case, CaseCriterion)
+    records = domain_rows(Criterion, Case, CaseCriterion, Result)
     coord_client.post(retest_url(opened.pk), data([one, two], "Synthetic 1.1"))
     coord_client.post(retest_url(opened.pk), data([one], "Synthetic 1.2"))
-    assert domain_rows(Criterion, Case, CaseCriterion) == records
+    assert domain_rows(Criterion, Case, CaseCriterion, Result) == records
     html = page(coord_client.get(detail(opened.pk)))
     builds = html[html.index("<h2>Builds</h2>") :]
     parts = builds.split("<h3>")[1:]
