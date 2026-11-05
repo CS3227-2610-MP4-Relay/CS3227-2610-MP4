@@ -28,8 +28,6 @@ Platform area `PLT`; see the [product spec](../PRODUCT-SPEC.md).
 - **PLT-2.5:** Publication permissions are confined to the Pages deployment job, which uses the `github-pages` environment and publishes the artifact from its own workflow run. Validation retains read-only repository access; the existing Django verification and application behaviour are preserved.
 - **PLT-2.6:** After operator-authorized Pages setup and release, an anonymous visitor can open the configured HTTPS site and follow its landing-page, Reflections and theme-asset links. Record the deployed commit, URL and actual results separately from build evidence. Hosted verification remains pending until setup and release; a passing build alone does not meet it.
 
-PLT-2.6 has no automated test yet: its hosted evidence is in [log 009](../../../logs/Whimsyturtle/009-prepare-checked-product-site-publication.md), and automating the hosted check remains open.
-
 ## PLT-3: Record LLM usage and latency
 
 - **PLT-3.1:** Every successfully reserved gateway call retains its existing quota records and records the same elapsed milliseconds and available provider token counts on both scope rows when the call returns a gateway result. These rows represent one call, not two; readings use one scope only. Existing rows and unfinished calls have unavailable metrics.

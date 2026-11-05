@@ -82,10 +82,10 @@ Drafts are suggestions only: the feature has no tools and cannot save, publish o
 
 ## Requirements on the gateway
 
-Drafting needs the gateway to do the following. The [gateway contract](llm-gateway.md) answers each need, and records the provider confirmations.
+Drafting needs the gateway to do the following. The [gateway contract](llm-gateway.md) answers each need, and records which parts are confirmed and which are pending.
 
 1. Take the fixed instructions and the source data as separate parts, send no tool-calling parameters, and never give the model tools, browsing or code execution.
-2. Return one of success with the reply text, refusal or failure within a total time bound, retries included, short enough for a synchronous page request; drafting needs at most 30 seconds. That bound, the gateway's release margin and the request's own work must stay below the hosting platform's function time limit, which the [release gate](../TECHNICAL-SPEC.md#release-verification) requires to be at least 60 seconds.
+2. Return one of success with the reply text, refusal or failure within a total time bound, retries included, short enough for a synchronous page request; drafting needs at most 30 seconds. That bound, the gateway's release margin and the request's own work must stay below the hosting platform's function time limit that the [release gate](../TECHNICAL-SPEC.md#release-verification) requires.
 3. Accept the input size above, allow a reply of at least 20,000 characters, cap the raw response in bytes before decoding, or tell #22 its limits so the draft count or field limits can shrink.
 4. Account quota per workspace or per user and also deployment-wide, reserve it atomically before each call, count failed and timed-out calls, and report exhaustion as a refusal.
 5. Allow at most one drafting call in flight per user, and a deployment-wide number of calls in flight, refusing any other until one ends. An in-flight marker expires no sooner than the time bound of need 2 and is released on every exit, success, refusal, failure or exception.

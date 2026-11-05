@@ -26,7 +26,7 @@ The [security spec](../SECURITY-SPEC.md#ai-features-and-prompt-injection) owns t
 
 ## Transport contract (proposed)
 
-The rules below are implemented; the historical "proposed" headings remain for existing links. Relay owns these rules; the [aiohttp](https://docs.aiohttp.org/) client library does the networking: name resolution, connecting, TLS, HTTP parsing and knowing when a response is complete.
+The rules below are implemented; confirmation of their design by the gateway owner (#6) and the human remains pending ([plan 22, human decision 3](../../plans/22-test-drafting-spec.md#human-decisions-2026-10-29-confirmed)). The "proposed" headings remain for existing links. Relay owns these rules; the [aiohttp](https://docs.aiohttp.org/) client library does the networking: name resolution, connecting, TLS, HTTP parsing and knowing when a response is complete.
 
 - One fixed HTTPS endpoint from `SOC_LLM_ENDPOINT`, with no credentials or fragment in the URL. The request is one `POST` with the JSON body below. The system message contains only the feature's fixed instructions; the user message contains the feature's source JSON text unchanged as a string, never promoted into instructions or parsed into additional messages. No tool, browsing or function-calling fields are sent. No `max_tokens` value is introduced: MP3's 512-token setting does not establish a suitable cap for Relay's drafting reply. Existing local reply, byte and time bounds still apply. Certificate and hostname verification are on, using a verifying context made for each call; no redirect is followed (a 3xx is `Failed("transport")`); and no proxy is used ([live switch](#live-switch)). No call retries.
 
