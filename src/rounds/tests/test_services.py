@@ -1,22 +1,12 @@
 import pytest
 from django.db import DataError, IntegrityError, transaction
 
-from accounts.models import User, Workspace
+from accounts.models import User
 from accounts.workspaces import workspace_records
 from rounds import services
 from rounds.models import Round
 
 pytestmark = pytest.mark.django_db
-
-
-@pytest.fixture
-def workspace():
-    return Workspace.objects.create(name="Demo workspace rnd00001")
-
-
-@pytest.fixture
-def other_workspace():
-    return Workspace.objects.create(name="Demo workspace rnd00002")
 
 
 def fill(workspace, count):

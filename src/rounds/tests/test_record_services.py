@@ -8,7 +8,7 @@ from accounts.models import Workspace
 from rounds import services
 from rounds.models import Case, CaseCriterion, Criterion, Round
 
-from .conftest import domain_rows
+from .conftest import domain_rows, locked
 
 pytestmark = pytest.mark.django_db
 
@@ -20,11 +20,6 @@ CASE_FIELDS = {
 FOREIGN = "Choose criteria from this round."
 NO_LINK = "Link at least one acceptance criterion."
 LINKED = "This criterion is linked to a test case. Unlink it first."
-
-
-@pytest.fixture
-def workspace():
-    return Workspace.objects.create(name="Demo workspace rnd20001")
 
 
 @pytest.fixture
@@ -42,11 +37,6 @@ def sibling(workspace):
 def foreign_round():
     other = Workspace.objects.create(name="Demo workspace rnd20002")
     return Round.objects.create(workspace=other, title="Synthetic foreign")
-
-
-def locked(round_):
-    """Lock the round row, as the views do before calling a service."""
-    return Round.objects.select_for_update().get(pk=round_.pk)
 
 
 def criteria(round_, count):

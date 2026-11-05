@@ -29,11 +29,11 @@ from .conftest import (
     UNAVAILABLE,
     csrf_token,
     domain_rows,
+    no_store,
     open_with_case,
     page,
     signed_in,
 )
-from .test_results import no_store
 
 pytestmark = pytest.mark.django_db
 

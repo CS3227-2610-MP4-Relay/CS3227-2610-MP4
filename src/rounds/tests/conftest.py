@@ -61,6 +61,28 @@ def domain_rows(*models):
     }
 
 
+def locked(round_):
+    """Lock the round row, as the views do before calling a service."""
+    return Round.objects.select_for_update().get(pk=round_.pk)
+
+
+def no_store(response):
+    """The response is private and must not be stored."""
+    cache_control = response["Cache-Control"]
+    assert "no-store" in cache_control and "private" in cache_control
+
+
+def title_tag(html):
+    """The text of the page's <title> element."""
+    return html.split("<title>", 1)[1].split("</title>", 1)[0]
+
+
+def assert_no_raw_markup(html):
+    """Neither raw tag from `MARKUP` appears in the page."""
+    assert SCRIPT_TAG not in html
+    assert IMG_TAG not in html
+
+
 def detail(round_id):
     """The round page URL."""
     return f"/coordinator/rounds/{round_id}/"
@@ -84,8 +106,7 @@ def open_with_case(make_round):
     """An Open round with one test case, published on build Synthetic 1.0."""
     round_ = draft_with_case(make_round)
     with transaction.atomic():
-        locked = Round.objects.select_for_update().get(pk=round_.pk)
-        services.publish(locked, "Synthetic 1.0")
+        services.publish(locked(round_), "Synthetic 1.0")
     return round_
 
 
@@ -101,8 +122,9 @@ def stored_retest(client, round_, cases, label):
     would, for rendering stored text that the form refuses (rule 5).
     """
     with transaction.atomic():
-        locked = Round.objects.select_for_update().get(pk=round_.pk)
-        build = services.request_retest(locked, label, [case.pk for case in cases])
+        build = services.request_retest(
+            locked(round_), label, [case.pk for case in cases]
+        )
     text = retest_message(len(cases), build.label)
     session = client.session
     session[SessionStorage.session_key] = MessageEncoder().encode(

@@ -26,6 +26,7 @@ from .conftest import (
     csrf_token,
     detail,
     domain_rows,
+    no_store,
     page,
     race,
     signed_in,
@@ -71,11 +72,6 @@ def published(round_, cases=2, criterion="Synthetic criterion", label="Synthetic
         services.publish(Round.objects.select_for_update().get(pk=round_.pk), label)
     round_.refresh_from_db()
     return round_
-
-
-def no_store(response):
-    cache_control = response["Cache-Control"]
-    assert "no-store" in cache_control and "private" in cache_control
 
 
 def stays_open(round_):

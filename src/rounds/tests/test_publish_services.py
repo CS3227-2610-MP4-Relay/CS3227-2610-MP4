@@ -4,12 +4,11 @@ import pytest
 from django.db import DataError, IntegrityError, transaction
 from django.db.models import ProtectedError
 
-from accounts.models import Workspace
 from rounds import services
 from rounds.forms import PublishForm
 from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
 
-from .conftest import domain_rows
+from .conftest import domain_rows, locked
 
 pytestmark = pytest.mark.django_db
 
@@ -21,11 +20,6 @@ E_ACUTE = chr(0x00E9)
 
 
 @pytest.fixture
-def workspace():
-    return Workspace.objects.create(name="Demo workspace rnd30001")
-
-
-@pytest.fixture
 def round_(workspace):
     return Round.objects.create(workspace=workspace, title="Synthetic round")
 
@@ -33,11 +27,6 @@ def round_(workspace):
 @pytest.fixture
 def other_round(workspace):
     return Round.objects.create(workspace=workspace, title="Synthetic other")
-
-
-def locked(round_):
-    """Lock the round row, as the view does before calling `publish`."""
-    return Round.objects.select_for_update().get(pk=round_.pk)
 
 
 def fill(round_, cases=2):

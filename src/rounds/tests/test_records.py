@@ -19,6 +19,7 @@ from .conftest import (
     csrf_token,
     detail,
     domain_rows,
+    no_store,
     page,
     signed_in,
 )
@@ -87,11 +88,6 @@ def message_next_to(html, field, message, following):
 def redirects_to_round(response, round_):
     assert response.status_code == 302
     assert response["Location"] == detail(round_.pk)
-
-
-def no_store(response):
-    cache_control = response["Cache-Control"]
-    assert "no-store" in cache_control and "private" in cache_control
 
 
 @pytest.fixture

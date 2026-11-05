@@ -21,6 +21,7 @@ from .conftest import (
     csrf_token,
     detail,
     domain_rows,
+    no_store,
     page,
     race,
     signed_in,
@@ -63,11 +64,6 @@ def stays_draft(round_):
     round_.refresh_from_db()
     assert (round_.state, round_.published_at) == (Round.State.DRAFT, None)
     assert not Build.objects.filter(round=round_).exists()
-
-
-def no_store(response):
-    cache_control = response["Cache-Control"]
-    assert "no-store" in cache_control and "private" in cache_control
 
 
 def message_next_to_label(html, message):
