@@ -31,7 +31,7 @@ Tokens: 168,582,741 input, 837,634 output, 169,420,375 total, from 2026-11-03 09
 
 Scale: 17 subagents.
 - **Builders:** each builder was reused across its checkpoints.
-- **Repair rounds:** one each for accounts, unit tests, rounds and AI; none for browser tests or status docs.
+- **Repair rounds:** one each for accounts, unit tests, rounds and AI; two for browser tests, both after the cutoff; none for status docs.
 - **Measurement cutoff:** 02:35 UTC on 2026-11-05. This log, the final PR updates and the ready-for-review step come after it and are not counted.
 - **Elapsed span:** it includes two machine restarts and an idle night.
 
@@ -43,6 +43,7 @@ See [token reporting](../../workflow/README.md#token-reporting).
 - **"why did u stop"** after the first restart. The session had ended mid-push; the work resumed.
 - **"pull, continue, open the pr, and assign my teammate once its done"**, then **"i will be going to sleep"** (2026-11-05). `main` was unchanged. The orchestrator continued without further questions. Draft PRs are to be marked ready, with Whimsyturtle added as reviewer and assignee, once each is done.
 - **"send me the list of prs in merge order, with full urls to each pr"**. Sent, with #131 marked as waiting for the user.
+- **"125 has been merged apparently"** and **"after all is done, send me the full list in merge order"**. Whimsyturtle merged #125 at 02:38 UTC as `714ee10`, and `main` was pulled.
 
 ## Agent runs
 
@@ -60,9 +61,9 @@ See [token reporting](../../workflow/README.md#token-reporting).
 
   | Slice | PR | Tier | Head | Non-test `src/` lines | Final full run |
   | --- | --- | --- | --- | ---: | --- |
-  | [Status docs](../../workflow/plans/67-status-docs.md) | #125 | Fast lane | `f4f4df4` | 0 | targeted checks only |
-  | [Unit test helpers](../../workflow/plans/67-unit-test-helpers.md) | #128 | Standard | `cc5b034` | 0 | 2857 passed, 254 subtests |
-  | [Browser test helpers](../../workflow/plans/67-browser-test-helpers.md) | #126 | Standard | `fc878ab` | 0 | 2854 passed, 3 skipped (Codex CLI not on PATH), 119 subtests |
+  | [Status docs](../../workflow/plans/67-status-docs.md) | #125 (merged) | Fast lane | `f4f4df4` | 0 | targeted checks only |
+  | [Unit test helpers](../../workflow/plans/67-unit-test-helpers.md) | #128 | Standard | `f15bdbc` | 0 | 2857 passed, 254 subtests |
+  | [Browser test helpers](../../workflow/plans/67-browser-test-helpers.md) | #126 | Standard | `bf78ae9` | 0 | 2857 passed, 254 subtests |
   | [Accounts](../../workflow/plans/67-accounts-cleanup.md) | #127 | High | `df9abab` | 66 | 2861 passed, 254 subtests |
   | [Rounds](../../workflow/plans/67-rounds-cleanup.md) | #129 | High | `4e74a8c` | 207 | 2858 passed, 254 subtests |
   | [AI, part A](../../workflow/plans/67-ai-cleanup.md) | #130 | High | `479d40d` | 227 | 2864 passed, 254 subtests |
@@ -70,6 +71,9 @@ See [token reporting](../../workflow/README.md#token-reporting).
 
 - **Reviewers** (role files: builder `b6d0d73`, verifier `836ffbf`, security-reviewer `20c26ff`, by SHA-1). None could run commands. The orchestrator and builders supplied the check and mutation results.
   - **Browser tests** (`ebd890c..e65965b`): no High or Medium. Low 1 was the T7 mutation selection. The orchestrator reran it over both modules: 8 failed, covering every tightened site.
+    - After the cutoff, two repair rounds fixed a click-then-reload race in `main`'s browser tests, which had failed #128's CI. The race is a `page.reload()` issued while a submit or link navigation is still loading.
+    - Repair 1 (`dc07abd`) wraps 12 sites in `expect_navigation()`. Repair 2 (`0217311`) wraps the 2 more sites the verifier found.
+    - The verifier rechecked both rounds and found nothing High or Medium. A server-side delay did not reproduce the race locally, so the evidence is repeated green runs plus CI.
   - **Accounts** (`ebd890c..88d7a54`):
     - Security: no findings.
     - Verifier: two Low coverage gaps (the round-list 500, and the smoke check's 64 KiB limit), added in `df9abab`. Both reviewers rechecked `88d7a54..df9abab` and found nothing new.
@@ -105,7 +109,8 @@ See [token reporting](../../workflow/README.md#token-reporting).
   - six further `.last` browser locators are left for a follow-up;
   - some inline test-helper copies remain;
   - `experiments` holds `status`.
-- **Merge order** (tested by the integration merge): #125, #128, #126, #127, #129, #130, then #131 if confirmed, and this log last. The plan links in this log resolve once those merge.
+- **Merge order:** #125 (merged), #126, #128, #127, #129, #130, then #131 if confirmed, and this log last. That is the tested integration order with #126 moved ahead of #128, so #128 runs with the race fix. The branches don't overlap in any file, so the swap needs no new merge test.
+- **Ready for review:** after the cutoff, PRs #126–#130 and #132 were marked ready once CI passed on their final heads, with Whimsyturtle as reviewer and assignee. #131 stays a draft. The plan links in this log resolve once those merge.
 
 ## Problems
 
@@ -116,5 +121,9 @@ See [token reporting](../../workflow/README.md#token-reporting).
   - **Stash command:** the browser-test builder ran `git stash create` once. It writes only a dangling object, with no ref or index change.
   - **Interrupted reruns:** the rounds builder's first post-restart mutation batch didn't run, because of a shell word-splitting slip; it was redone.
 - **Tool PATH:** this session's PATH lacked `gh` and the Codex CLI, so the browser-test builder's full run skipped the 3 Codex approval tests. The other final runs added `$HOME/.local/bin` and ran all of them.
-- **CI flake:** CI on #128 at `fa4a548` failed once in `src/e2e/test_rounds.py::test_coordinator_manages_later_collapsed_case[1440]`. Playwright reported "Page.reload: Not attached to an active page", and the teardown row check then failed. #128 changes no browser test or app code, and the test passed three times locally. The next commit's CI reran it.
+- **CI flake:** CI on #128 failed twice:
+  - at `fa4a548` in `src/e2e/test_rounds.py::test_coordinator_manages_later_collapsed_case[1440]`;
+  - at `cc5b034` in the `[320]` case.
+
+  Each time Playwright reported "Page.reload: Not attached to an active page" right after a submit click. #128 changes no browser test or app code. The race is in `main`'s test, fixed in #126 as above. #128's CI passed on `f15bdbc`.
 - **Missing telemetry:** reasoning-output tokens and effort are unavailable for every agent.
