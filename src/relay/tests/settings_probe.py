@@ -13,7 +13,7 @@ from django.conf import global_settings
 from django.conf import settings as django_settings
 from django.core import checks
 from django.db import connection
-from django.http import HttpResponseServerError
+from django.http import HttpResponse, HttpResponseServerError
 from django.test import Client, RequestFactory
 from django.utils.log import log_response
 from psycopg import pq
@@ -23,7 +23,7 @@ EARLY_LOGGER = logging.getLogger("relay.synthetic_early")
 
 
 def emit_log_records(host):
-    """Log a synthetic 500, an early-logger warning and a gateway INFO outcome."""
+    """Log a synthetic 500 and 429, an early warning and a gateway INFO outcome."""
     request = RequestFactory().get(
         "/synthetic-failure/?query=synthetic-query", HTTP_HOST=host
     )
@@ -38,6 +38,14 @@ def emit_log_records(host):
             request=request,
             exception=error,
         )
+    refused = RequestFactory().post("/sign-in/", HTTP_HOST=host)
+    log_response(
+        "%s: %s",
+        "Too Many Requests",
+        refused.path,
+        response=HttpResponse(status=429),
+        request=refused,
+    )
     EARLY_LOGGER.warning("Synthetic early warning")
     logging.getLogger("ai.gateway").info("LLM gateway outcome: %s", "live-off")
 
@@ -85,6 +93,11 @@ def production_checks(module):
     }
 
 
+def qualified_name(value):
+    """Name a callable in settings, such as a logging filter callback."""
+    return f"{value.__module__}.{value.__qualname__}"
+
+
 def main():
     """Print the selected settings for configuration assertions."""
     run_path(str(Path(__file__).with_name("dotenv_probe.py")))["isolate_dotenv"](
@@ -116,7 +129,8 @@ def main():
                 },
                 "logging": getattr(settings, "LOGGING", None),
                 "runtime": runtime,
-            }
+            },
+            default=qualified_name,
         )
     )
 

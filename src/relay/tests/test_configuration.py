@@ -159,6 +159,7 @@ def test_local_settings_accept_explicit_loopback_configuration(debug):
     assert result.returncode == 0, result.stderr
     settings = json.loads(result.stdout)
     assert settings["debug"] is (debug == "true")
+    assert settings["logging"] is None
     assert settings["database"]["HOST"] == "::1"
     assert settings["database"]["OPTIONS"]["hostaddr"] == "::1"
 
@@ -288,12 +289,19 @@ def test_production_logging_config_sends_warnings_to_one_console_handler():
     assert json.loads(result.stdout)["logging"] == {
         "version": 1,
         "disable_existing_loggers": False,
+        "filters": {
+            "not_refusal": {
+                "()": "django.utils.log.CallbackFilter",
+                "callback": "relay.settings.production._not_refusal",
+            }
+        },
         "formatters": {
             "plain": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"}
         },
         "handlers": {
             "console": {
                 "class": "logging.StreamHandler",
+                "filters": ["not_refusal"],
                 "formatter": "plain",
                 "level": "WARNING",
             }
@@ -327,6 +335,7 @@ def test_production_request_errors_reach_stderr_once_without_info():
         == 1
     )
     assert count("WARNING relay.synthetic_early Synthetic early warning") == 1
+    assert "Too Many Requests" not in result.stderr
     assert "LLM gateway outcome" not in result.stderr
     assert PRODUCTION["DJANGO_SECRET_KEY"] not in result.stderr
     assert "p%40ss" not in result.stderr and "p@ss" not in result.stderr

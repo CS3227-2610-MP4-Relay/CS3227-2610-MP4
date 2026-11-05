@@ -83,17 +83,30 @@ DATABASES = {
     }
 }
 
+
+def _not_refusal(record):
+    """Drop Django's request record for a 429: refusals stay unlogged (#59)."""
+    return getattr(record, "status_code", None) != 429
+
+
 # Standard error only, for the platform's log view; INFO, such as gateway outcomes,
 # is dropped. `django` does not propagate, so each record prints once.
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {
+        "not_refusal": {
+            "()": "django.utils.log.CallbackFilter",
+            "callback": _not_refusal,
+        }
+    },
     "formatters": {
         "plain": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"}
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
+            "filters": ["not_refusal"],
             "formatter": "plain",
             "level": "WARNING",
         }
