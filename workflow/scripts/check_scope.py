@@ -131,9 +131,15 @@ def worktree_relative(path):
         if os.path.dirname(folder) == folder:
             return None
         folder = os.path.dirname(folder)
-    # Resolve links in the existing folders so a linked folder cannot hide where
-    # the edit lands; the not-yet-created tail cannot contain links.
+    # Resolve links in the existing folders so the path compares with Git's
+    # resolved worktree path; the hook separately checks the fully resolved target.
     path = os.path.join(os.path.realpath(folder), os.path.relpath(path, folder))
+    # The client's GIT_* settings must not choose the repository, and a hung Git
+    # must time out (and so block) rather than outlast the client's hook limit.
+    options = {
+        "env": {k: v for k, v in os.environ.items() if not k.startswith("GIT_")},
+        "timeout": 10,
+    }
     try:
         top, common = git(
             folder,
@@ -141,24 +147,37 @@ def worktree_relative(path):
             "--path-format=absolute",
             "--show-toplevel",
             "--git-common-dir",
+            **options,
         ).splitlines()
-        ours = git(ROOT, "rev-parse", "--path-format=absolute", "--git-common-dir")
+        ours = git(
+            ROOT, "rev-parse", "--path-format=absolute", "--git-common-dir", **options
+        )
+        listed = git(ROOT, "worktree", "list", "--porcelain", **options)
     except (OSError, ValueError, subprocess.CalledProcessError):
         return relative_to_root(path, ROOT)  # this checkout outside Git, or none
-    if os.path.normcase(os.path.realpath(common)) != os.path.normcase(
+    same = os.path.normcase(os.path.realpath(common)) == os.path.normcase(
         os.path.realpath(ours.strip())
-    ):
+    )
+    # Only worktrees Git lists for this repository count, not a planted .git file.
+    worktrees = {
+        os.path.normcase(os.path.realpath(line[len("worktree ") :]))
+        for line in listed.splitlines()
+        if line.startswith("worktree ")
+    }
+    if not same or os.path.normcase(os.path.realpath(top)) not in worktrees:
         return None
     return relative_to_root(path, Path(os.path.realpath(top)))
 
 
-def git(root, *args):
+def git(root, *args, env=None, timeout=None):
     """Run git in root and return its output, raising if it fails."""
     return subprocess.run(
         ["git", *args],
         cwd=root,
         capture_output=True,
         check=True,
+        env=env,
+        timeout=timeout,
     ).stdout.decode("utf-8", errors="replace")
 
 
@@ -349,8 +368,12 @@ def check_hook_call():
     for target in targets:
         if not os.path.isabs(target):
             target = os.path.join(event.get("cwd") or ROOT, target)
-        rel = worktree_relative(target)
-        if rel is None or not in_scope(rel, scope):
+        # Judge the path as written and as fully resolved: a link may be the last
+        # part of the path, and `..` after a linked folder leaves that folder.
+        rels = [worktree_relative(path) for path in (target, os.path.realpath(target))]
+        outside = [rel for rel in rels if rel is None or not in_scope(rel, scope)]
+        if outside:
+            rel = outside[0]
             print(
                 f"Blocked: {role} may not write {rel or target}. It is outside "
                 f"the scope in workflow/agents/{role.replace('_', '-')}.md. "

@@ -232,6 +232,22 @@ class HookTest(unittest.TestCase):
                     contextlib.redirect_stderr(io.StringIO()),
                 ):
                     self.assertEqual(check_scope.main(["--hook"]), 2)
+            role.write_text("---\nwrites: [1]\nnever_writes: []\n---\n", "utf-8")
+            with (
+                patch.object(check_scope, "AGENTS_DIR", Path(folder)),
+                self.assertRaisesRegex(ValueError, "not a list of patterns"),
+            ):
+                load_scope("builder")
+
+    def test_a_git_call_that_times_out_blocks(self):
+        event = {"agent_type": "builder", "tool_input": {"file_path": "src/a.py"}}
+        timeout = subprocess.TimeoutExpired("git", 10)
+        with (
+            patch.object(check_scope, "git", side_effect=timeout),
+            patch.object(sys, "stdin", io.StringIO(json.dumps(event))),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            self.assertEqual(check_scope.main(["--hook"]), 2)
 
 
 class SiblingWorktreeTest(unittest.TestCase):
@@ -258,6 +274,8 @@ class SiblingWorktreeTest(unittest.TestCase):
             cwd=repo,
             capture_output=True,
             check=True,
+            # Never act on the real repository, even when run from a Git hook.
+            env={k: v for k, v in os.environ.items() if not k.startswith("GIT_")},
         )
 
     def hook(self, target):
@@ -295,6 +313,41 @@ class SiblingWorktreeTest(unittest.TestCase):
         for target in ["src/linked/agents/builder.md", "src/outside/AGENTS.md"]:
             self.assertEqual(self.hook(self.base / "wt" / target), 2, target)
         self.assertEqual(self.hook(self.base / "wt/src/plain.py"), 0)
+
+    @unittest.skipIf(os.name == "nt", "symlinks need extra rights")
+    def test_a_linked_file_or_dot_dot_after_a_link_cannot_hide_the_target(self):
+        (self.base / "wt/workflow/agents/sub").mkdir(parents=True)
+        (self.base / "wt/AGENTS.md").write_text("x\n", encoding="utf-8")
+        (self.base / "wt/src").mkdir()
+        (self.base / "wt/src/link.md").symlink_to(self.base / "wt/AGENTS.md")
+        (self.base / "wt/src/new.md").symlink_to(
+            self.base / "wt/workflow/agents/new.md"  # dangling
+        )
+        (self.base / "wt/src/l").symlink_to(self.base / "wt/workflow/agents/sub")
+        for target in ["src/link.md", "src/new.md", "src/l/../builder.md"]:
+            self.assertEqual(self.hook(f"{self.base}/wt/{target}"), 2, target)
+
+    def test_a_planted_git_file_is_not_a_worktree(self):
+        notes = self.base / "wt/notes"
+        notes.mkdir()
+        (notes / ".git").write_text(f"gitdir: {self.main / '.git'}\n", "utf-8")
+        # Judged from `notes`, this would be the builder's docs/UserGuide.md.
+        self.assertEqual(self.hook(notes / "docs/UserGuide.md"), 2)
+
+    def test_git_environment_cannot_choose_the_repository(self):
+        loose = self.base / "loose"
+        loose.mkdir()
+        with patch.dict(os.environ, {"GIT_DIR": str(self.main / ".git")}):
+            self.assertEqual(self.hook(loose / "src/new.py"), 2)
+
+    def test_without_git_only_this_checkouts_paths_resolve(self):
+        with (
+            patch.object(check_scope, "ROOT", self.main),
+            patch.object(check_scope, "git", side_effect=FileNotFoundError("git")),
+        ):
+            relative = check_scope.worktree_relative
+            self.assertEqual(relative(self.main / "src/a.py"), "src/a.py")
+            self.assertIsNone(relative(self.base / "wt/src/a.py"))
 
 
 class WorkingTreeTest(unittest.TestCase):

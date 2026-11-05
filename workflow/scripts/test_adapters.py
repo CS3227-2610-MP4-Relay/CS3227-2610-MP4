@@ -156,9 +156,10 @@ class AdapterTest(unittest.TestCase):
             handler = group["hooks"][0]
             for key in [key for key in ("command", "commandWindows") if key in handler]:
                 self.assertIn('workflow/scripts/check_scope.py" --hook', handler[key])
+        # PowerShell leaves $LASTEXITCODE unset when `python` is missing.
         self.assertTrue(
             codex["hooks"]["PreToolUse"][0]["hooks"][0]["commandWindows"].endswith(
-                "; exit $LASTEXITCODE"
+                "; if ($LASTEXITCODE -eq 0) { exit 0 }; exit 2"
             )
         )
 
@@ -170,20 +171,34 @@ class AdapterTest(unittest.TestCase):
         )
         codex = json.loads((ROOT / ".codex" / "hooks.json").read_text(encoding="utf-8"))
         found = f"{Path(sys.executable).parent}{os.pathsep}{os.environ['PATH']}"
+        scratch = Path(self.enterContext(tempfile.TemporaryDirectory()))
         # A machine with only `python3`, as on macOS without a virtual environment.
-        only_python3 = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        only_python3 = scratch / "only-python3"
+        # A `python` that is found but fails, such as Python 2 or a broken shim.
+        broken = scratch / "broken"
+        for folder in (only_python3, broken):
+            folder.mkdir()
+            (folder / "git").symlink_to(shutil.which("git"))
         (only_python3 / "python3").symlink_to(sys.executable)
-        (only_python3 / "git").symlink_to(shutil.which("git"))
-        event = {"agent_type": "builder", "tool_input": {"file_path": "AGENTS.md"}}
+        (broken / "python").write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+        (broken / "python").chmod(0o755)
+        spaced = scratch / "a project"
+        spaced.symlink_to(ROOT)
+        event = json.dumps(
+            {"agent_type": "builder", "tool_input": {"file_path": "AGENTS.md"}}
+        )
         for config in (claude, codex):
             command = config["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
-            for path, stdin, code in [
-                ("/nonexistent", "{}", 2),  # no Python at all
-                (found, "{", 2),  # unreadable input
-                (found, json.dumps(event), 2),  # out-of-scope builder edit
-                (found, "{}", 0),  # main session
-                (str(only_python3), "{}", 0),
-                (str(only_python3), json.dumps(event), 2),
+            for path, project, stdin, code in [
+                ("/nonexistent", ROOT, "{}", 2),  # no Python at all
+                (broken, ROOT, "{}", 2),
+                (found, ROOT, "{", 2),  # unreadable input
+                (found, ROOT, event, 2),  # out-of-scope builder edit
+                (found, ROOT, "{}", 0),  # main session
+                (found, spaced, "{}", 0),
+                (found, spaced, event, 2),
+                (only_python3, ROOT, "{}", 0),
+                (only_python3, ROOT, event, 2),
             ]:
                 result = subprocess.run(
                     ["/bin/sh", "-c", command],
@@ -191,10 +206,10 @@ class AdapterTest(unittest.TestCase):
                     capture_output=True,
                     text=True,
                     cwd=ROOT,
-                    env={"PATH": path, "CLAUDE_PROJECT_DIR": str(ROOT)},
+                    env={"PATH": str(path), "CLAUDE_PROJECT_DIR": str(project)},
                     check=False,
                 )
-                self.assertEqual(result.returncode, code, (path, stdin))
+                self.assertEqual(result.returncode, code, (path, project, stdin))
 
     def test_pip_install_checkpoint_covers_both_python_invocations(self):
         config = json.loads(
