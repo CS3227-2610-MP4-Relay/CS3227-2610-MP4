@@ -12,6 +12,8 @@ The page is headed **Relay** and says:
 
 It has two actions: the **Sign in** link and the **Create a demo workspace** button. If you are already signed in, opening the start page takes you to your own home page.
 
+![The Relay start page with its tagline, the Sign in link and the Create a demo workspace button](images/start-page.png)
+
 ## Accounts
 
 Each account has one role, **Test Coordinator** or **Beta Tester**, in one workspace. Accounts come only from demo workspaces: there is no registration, password reset or way to add accounts.
@@ -21,6 +23,8 @@ Each account has one role, **Test Coordinator** or **Beta Tester**, in one works
 1. While signed out, choose **Create a demo workspace** on the start page.
 2. The **Your demo workspace** page shows `Workspace:` with the new workspace's name, and a table with the **Role**, **Username** and **Password** of one Test Coordinator and two Beta Testers. It says "Save these passwords now. They will not be shown again."
 3. Save the usernames and passwords, then choose **Sign in** to sign in with any of them.
+
+![The Your demo workspace page showing the workspace name and a table of one Test Coordinator and two Beta Testers with their usernames and passwords](images/demo-workspace.png)
 
 Each new workspace starts with one round, **Sample round**, in the **Draft** state. It has 3 acceptance criteria and 4 test cases about an example to-do app, and each test case is linked to at least one criterion. Its Test Coordinator can [publish](#publish-a-round) it straight away by entering only a build label, or change it first like any Draft round. It counts toward the workspace's [limit of 20 rounds](#titles-and-limits).
 
@@ -39,7 +43,7 @@ Choose **Back to home** above the form to return to the start page.
 
 A Test Coordinator lands on **Coordinator home** and a Beta Tester on **Tester home**. Each home page shows `Username:` and `Workspace:` with your username and workspace name.
 
-If the username or password is wrong, or a field is blank, the page shows "Username or password is incorrect." and does not say which field was wrong. You are not signed in; if you were already signed in, you stay signed in as before.
+If the username or password is wrong, or a field is blank, the page shows "Username or password is incorrect." and does not say which field was wrong. You are not signed in; if you were already signed in, you stay signed in as before. If signing in fails in storage, the page says "Relay is temporarily unavailable. Try again later." and you are not signed in.
 
 After 30 failed sign-ins from one network address within 15 minutes, the sign-in page says "Too many sign-in attempts. Try again later." and does not sign anyone in from that address, even with the right password, until 15 minutes after the first of those failures. Successful sign-ins do not add to this count and do not reset it.
 
@@ -61,59 +65,13 @@ Round pages, coordinator results and **My results** have **Contents** links to t
 
 Choose a case title to expand or collapse its details. In **My results**, choose **Show details** or **Hide details** below the saved-result header. The first record starts expanded and the others collapsed; several can stay open together. Following a record's **Contents** link opens its details and brings them into view. A direct link to that record does the same. Reloading restores the starting layout, unless the address links directly to a record. You can use Tab to focus a disclosure control, then Enter or Space to toggle it.
 
-## View available tests
-
-1. Sign in as a **Beta Tester**. On **Tester home**, **Available tests** lists your workspace's Open and Closed rounds, newest first. Each title is a link followed by "(Open)" or "(Closed)". If there are none, it says "No tests available."
-2. Choose a round title. The page shows "State: Open" or "State: Closed" and **Test cases**. Each case's summary shows its title and **Current build**; expand it for **Steps**, **Expected result** and **Linked acceptance criteria**.
-3. Test the software outside Relay using those instructions and the named build. If the coordinator requests a retest, reload the page: only the selected cases change to the new **Current build**; other cases keep their previous build.
-4. Choose **Tester home** to return to the list, or return there to **Sign out**.
-
-Both Beta Testers in a workspace see the same rounds. Draft rounds stay hidden. Each expanded case in an Open round shows **Record result** if you have no result for its current build, **Continue draft** for your saved draft, or **View result** for your submitted result. These actions reflect your own results. A Closed round remains available as read-only reference; after the coordinator closes it, reload to see "State: Closed" and "(Closed)" in the list, with the result-entry links removed.
-
-If reading tests fails, the page says "Relay is temporarily unavailable. Try again later." Opening a Draft, missing or another workspace's round shows "Page not found."
-
-## Save and submit a result
-
-1. In an Open round, expand the case you tested and choose **Record result**, or **Continue draft** to resume your saved fields. The **Record result** page shows **Test case** and **Current build**.
-2. Choose **Pass** or **Fail** under **Outcome** and enter your **Observation**. Fail requires an observation; Pass allows it to be empty.
-3. Choose **Save draft** to keep working later. The page shows "Status: Draft" and your saved fields; they remain when you reload or sign in again. Each tester has a separate private draft for each case and build.
-4. Choose **Submit** when ready. You may submit directly or after saving a draft. The page shows "Status: Submitted", your outcome and your observation as read-only text. An empty observation says "No observation." Submission is final; another attempt to save or submit it says "This result has already been submitted."
-5. Choose **Back to round** to return to the case instructions.
-
-**Save draft**, **Submit** and [**Observation feedback**](#observation-feedback) apply the same checks. A missing outcome says "Choose Pass or Fail." An empty or invisible-only Fail observation says "Enter an observation for Fail." Observations allow at most 2000 characters after surrounding spaces and line breaks are removed; a line break counts as one character. A longer observation says "Enter at most 2000 characters." A nonempty invisible-only Pass observation says "Enter an observation with a visible character." Null characters and hidden text-direction characters get the same messages as [round text fields](#criteria-and-test-case-limits). Invalid input leaves your previously saved result unchanged.
-
-An empty observation appears as italic *No observation.* on submitted result entry, **My results**, observation feedback and coordinator results. If you type "No observation." yourself, it appears as ordinary observation text.
-
-Results belong to the build shown when you opened the entry page. After the coordinator requests a retest, reload the round and check the selected case's **Current build**. Test the fix outside Relay on that build, then choose **Record result**: the new build starts with empty **Outcome** and **Observation** fields. Choose **Pass** or **Fail** and **Submit** a separate result; earlier submissions remain available in [My results](#review-my-results). Cases omitted from the retest keep their existing build and result entry. If the build changes before you save or submit, the page says "This build is no longer current. Reload the round to record a result." Return to the round, reload, and choose **Record result** for the new build.
-
-Choose **View result** to read your submitted result while its build is current and the round is Open. Once the round closes, an entry page says "This action is not available while the round is Closed." and saves nothing. The round's instructions remain available. If storage fails, the page says "Relay is temporarily unavailable. Try again later." and no part of the result change is saved.
-
-## Observation feedback
-
-1. On **Record result**, choose **Observation feedback** while your result is unsubmitted, its round is Open and its build is current. The button is available before your first draft. It saves your current **Outcome** and **Observation** as a draft, including edits made since your last save, then opens **Observation feedback**. The notice says "Observation feedback saves your draft and opens the AI feedback page. Choose an outcome first; Fail also needs an observation." Invalid fields keep you on **Record result** with your entered values and errors, without changing your saved draft.
-2. Review **Saved observation**, **Test case**, **Steps**, **Expected result**, **Linked acceptance criteria** and **Current build**. The page says "AI receives your saved observation, this test case and its linked acceptance criteria. Suggestions may be wrong. Review them and edit your result yourself. Unsaved edits are not included."
-3. Choose **Suggest missing details** to request questions about the saved fields. Saving and opening the feedback page sends no AI request. Any suggestions appear under **Questions to consider**, beside the original source. They do not change your outcome, observation or submission.
-4. Choose **Back to result**, edit **Observation** yourself and choose **Save draft** or **Submit** when ready.
-
-With JavaScript enabled, the request disables **Suggest missing details** and shows "Suggesting missing details…" while you wait.
-
-An empty reply says "No missing details were suggested. You can still edit your result yourself." If the source is too long, the page says "This observation and test case are too long for feedback. You can still edit your result yourself." If feedback is unavailable, it says "Feedback is unavailable right now. You can still edit your result yourself." You can still choose **Back to result** and continue manually.
-
-Questions are not saved. Opening the feedback page again clears them; resubmitting its request asks for new feedback. If your saved source changes during a request, the page says "Your saved draft or test case changed. Reload before requesting feedback." Opening the feedback address directly without a saved draft says "Save a draft before requesting feedback." Submission, a newer build or a closed round prevents feedback with the same messages described under [Save and submit a result](#save-and-submit-a-result).
-
-## Review my results
-
-1. Open an Open or Closed round from **Tester home**, then choose **My results**.
-2. The **My results** page shows the **Round** and its state, followed by your saved drafts and submissions for current and earlier builds. Each card keeps **Test case** with the case title, the original **Build**, **Outcome** and "Status: Draft" or "Status: Submitted" visible in its header. Choose **Show details** immediately below the header for **Linked acceptance criteria**, **Observation** and, for submissions, **Submitted at** in UTC; choose **Hide details** to collapse them. An empty observation says "No observation."; with no saved results, the page says "No results yet."
-3. Choose **Back to round** to return to the instructions.
-
-Only your own results appear. This page is read-only, including drafts. Reload to see later saves or submissions; retesting and closure retain earlier results with their original build and case details.
-
 ## Test rounds
 
 Only a Test Coordinator can prepare, publish, review, retest and close test rounds. A new round is in the **Draft** state; [publishing](#publish-a-round) it makes it **Open**, and [closing](#close-a-round) it makes it **Closed**. Beta Testers [view available tests](#view-available-tests) from their own home page.
 
 **Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". A new demo workspace starts with its [sample round](#create-a-demo-workspace), so its list is not empty; "No rounds yet." appears only for a workspace with no rounds.
+
+![Coordinator home showing the username, workspace, Sign out, the Rounds heading with New round, and Sample round (Draft)](images/coordinator-home.png)
 
 Whenever creating, publishing, retesting or closing a round, or saving or deleting anything in it, fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
 
@@ -141,7 +99,9 @@ A workspace can have up to 20 rounds, including the sample round of a new demo w
 
 The round page has an **Acceptance criteria** heading, listing each criterion's text, and a **Test cases** heading, where you can expand each case to read **Steps**, **Expected result** and **Linked acceptance criteria** with that text. Both are listed in the order they were added. With none, they say "No acceptance criteria yet." and "No test cases yet."
 
-You can add, edit and delete them only while the round is Draft.
+![The Draft Sample round page with Contents in a sidebar, three acceptance criteria with edit and delete buttons, four test cases with the first expanded, and the Build label field with Publish round](images/draft-round.png)
+
+You can add, edit and delete them only while the round is Draft; see [Error pages](#error-pages) for a page left open after publishing.
 
 To add or edit a criterion:
 
@@ -152,6 +112,8 @@ To add or edit a test case:
 
 1. On the round page, choose **Add test case**, or expand a case and choose **Edit test case**.
 2. Enter the **Title**, **Steps** and **Expected result**, tick one or more of the round's criteria under **Linked acceptance criteria**, then choose **Add test case** or **Save**.
+
+![The empty New test case form with Title, Steps and Expected result fields, the round's criteria under Linked acceptance criteria, and the Add test case button](images/test-case-form.png)
 
 Saving opens the round page. Each of these pages has a **Back to round** link.
 
@@ -164,6 +126,26 @@ Criterion text has 1 to 500 characters; a case's title has 1 to 120, its steps 1
 A case with no linked criterion gets "Link at least one acceptance criterion." If a criterion you ticked was deleted meanwhile, the form says "Choose criteria from this round."
 
 A round can have up to 20 acceptance criteria and 30 test cases. Adding a 21st criterion gets "This round has reached its limit of 20 acceptance criteria." and a 31st case "This round has reached its limit of 30 test cases."
+
+### Draft test cases with AI
+
+Use AI to draft suggestions from selected acceptance criteria, then review each one before adding it. You can also add test cases yourself with **Add test case**.
+
+AI requests need the SoC AI service configured, as described in the [Developer Guide](DeveloperGuide.md#soc-llm), and share a per-account and Relay-wide [quota](../workflow/specs/ai/llm-gateway.md#limits-and-accounting-proposed) with [observation feedback](#observation-feedback). Without the service, over the quota or while another of your AI requests is running, each feature shows its unavailable message.
+
+While a round is Draft, its page has a **Draft test cases with AI** link directly after **Add test case**. The drafting page says "Select 1 to 5 acceptance criteria. The selected criteria are sent to the SoC AI service to suggest test cases. Suggestions are not saved; review each one before adding it." It lists the round's criteria under **Acceptance criteria to draft from**, with a **Draft test cases** button, an **Add test case** link and a **Back to round** link.
+
+Tick one to five criteria and choose **Draft test cases**. With JavaScript enabled, the button is disabled and "Drafting test cases…" appears while you wait. When suggestions are returned, **Suggested test cases** shows each title, **Steps**, **Expected result** and **Covers acceptance criteria**. Review these beside the criteria; nothing is saved by drafting.
+
+![The Draft test cases with AI page with two criteria ticked and two Suggested test cases, each with Steps, Expected result, Covers acceptance criteria and a Use this draft button](images/ai-suggestions.png)
+
+The suggestions page says "Opens in a new tab. Keep this suggestions tab open to review another draft." Choose **Use this draft** to open **New test case** in a separate tab with the suggested fields and covered criteria filled in. The new page says "Pre-filled from an AI draft. Review it before adding it." Edit the fields and links as needed, then choose **Add test case** to save under the normal [test case limits](#criteria-and-test-case-limits). Closing a review tab without adding saves nothing.
+
+Return to the original suggestions tab to review another draft from the same response. Each draft needs its own review and **Add test case** action; choosing another suggestion does not request new AI output. Keep the suggestions tab open until you finish reviewing the response.
+
+If the service is unavailable or its reply cannot be used, the page says "Drafting is unavailable right now. You can still add test cases yourself." If it returns no drafts, or every ticked criterion is blank once hidden characters are removed, it says "No test cases were suggested for these criteria. You can still add test cases yourself."
+
+With no criterion ticked, or more than five, the page says "Select 1 to 5 acceptance criteria." A ticked criterion that is no longer in the round, for example because it was deleted meanwhile, gets "Choose criteria from this round." A round with 30 test cases says "This round has reached its limit of 30 test cases." In every case your ticks are kept, the round, its criteria and its cases stay unchanged, and **Add test case** still works.
 
 ### Publish a round
 
@@ -182,6 +164,21 @@ An Open round's page shows "State: Open" and the criteria and cases exactly as t
 
 Each case's summary shows **Current build** with the label of the build the case is tested on. After the test cases, a **Builds** heading lists the round's builds, oldest first: each build's label, then **Covered test cases** with the titles of the cases it covers. A newly published round has one build, covering every case; each [retest](#request-a-retest) adds another.
 
+![The Sample round page after publishing, showing Round published., State: Open, Review results, each case's Current build 1.4.0-beta, and the Builds section with Request a retest, Covered test cases and Close round](images/open-round.png)
+
+### Review results
+
+While a round is Open or Closed, its round page has a **Review results** link directly under its state. A Draft round has no results and no link.
+
+1. On the round page, choose **Review results**.
+2. The page is headed "Results: " followed by the round's title, then "State: Open" or "State: Closed". Each test case follows in the order it was added. Its summary shows the title, **Current build** and the testers and outcomes for that build, or "No results for this build yet." Expand it for **Linked acceptance criteria**, **Results for this build** and any **Earlier builds**.
+3. Each submitted result shows "Tester:" with the Beta Tester's username, "Outcome: Pass" or "Outcome: Fail", "Observation:" with the observation, or "Observation: No observation." when it is empty, and "Submitted at:" with the time in UTC. The newest submission comes first.
+4. Choose **Back to round** to return to the round page.
+
+![The Results: Sample round page with the first case expanded, showing a Fail with an observation and a Pass with No observation. under Results for this build, and No results for this build yet. on the other cases](images/review-results.png)
+
+Only submitted results appear; a Beta Tester's saved draft stays private to them. After a [retest](#request-a-retest), a retested case's earlier results move under **Earlier builds**, newest build first, each starting with "Build:" and its build label, while its new build starts with "No results for this build yet." until someone submits. Results stay listed after the round is [closed](#close-a-round). The page is read-only: it cannot record, change or delete a result. Reload it to see results submitted since you opened it. If reading results fails, the page says "Relay is temporarily unavailable. Try again later."
+
 ### Request a retest
 
 A retest asks for some of an Open round's cases to be tested again on a new build. Only an Open round can be retested: while a round is Open, its round page has a **Request a retest** link directly under the **Builds** heading.
@@ -189,6 +186,8 @@ A retest asks for some of an Open round's cases to be tested again on a new buil
 1. On the Open round's page, choose **Request a retest**.
 2. Under **Test cases to retest**, tick the cases to test again. No case is ticked at first.
 3. Enter a **Build label** for the new build, then choose **Request retest**.
+
+![The Request a retest page with Add a task ticked under Test cases to retest and 1.4.1-beta in the Build label field](images/request-retest.png)
 
 The round page shows, for example, "Retest requested for 2 test cases on build 1.4.1-beta.", or "Retest requested for 1 test case on build 1.4.1-beta." for one case. The cases you ticked now show the new build as their **Current build**, and the other cases keep theirs. The new build is added to the end of the **Builds** list with the cases it covers; earlier builds stay listed with theirs, and the round's criteria and cases do not change. A case can be retested again later on another build. The **Request a retest** page also has a **Back to round** link.
 
@@ -212,29 +211,72 @@ The round page shows "Round closed." and "State: Closed". A Closed round cannot 
 
 A Closed round's page still shows its criteria, its cases with their linked criteria and **Current build**, and the **Builds** list. It has no links or buttons for changing the round, no **Request a retest** link and no **Close round** button, but you can still [review results](#review-results).
 
-### Review results
+## View available tests
 
-While a round is Open or Closed, its round page has a **Review results** link directly under its state. A Draft round has no results and no link.
+1. Sign in as a **Beta Tester**. On **Tester home**, **Available tests** lists your workspace's Open and Closed rounds, newest first. Each title is a link followed by "(Open)" or "(Closed)". If there are none, it says "No tests available."
+2. Choose a round title. The page shows "State: Open" or "State: Closed" and **Test cases**. Each case's summary shows its title and **Current build**; expand it for **Steps**, **Expected result** and **Linked acceptance criteria**.
+3. Test the software outside Relay using those instructions and the named build. If the coordinator requests a retest, reload the page: only the selected cases change to the new **Current build**; other cases keep their previous build.
+4. Choose **Tester home** to return to the list, or return there to **Sign out**.
 
-1. On the round page, choose **Review results**.
-2. The page is headed "Results: " followed by the round's title, then "State: Open" or "State: Closed". Each test case follows in the order it was added. Its summary shows the title, **Current build** and the testers and outcomes for that build, or "No results for this build yet." Expand it for **Linked acceptance criteria**, **Results for this build** and any **Earlier builds**.
-3. Each submitted result shows "Tester:" with the Beta Tester's username, "Outcome: Pass" or "Outcome: Fail", "Observation:" with the observation, or "Observation: No observation." when it is empty, and "Submitted at:" with the time in UTC. The newest submission comes first. A case with no submitted result for its current build says "No results for this build yet."
-4. Choose **Back to round** to return to the round page.
+![Tester home showing the username, workspace, Sign out and Sample round (Open) under Available tests](images/tester-home.png)
 
-Only submitted results appear; a Beta Tester's saved draft stays private to them. After a [retest](#request-a-retest), a retested case's earlier results move under **Earlier builds**, newest build first, each starting with "Build:" and its build label, while its new build starts with "No results for this build yet." until someone submits. Results stay listed after the round is [closed](#close-a-round). The page is read-only: it cannot record, change or delete a result. Reload it to see results submitted since you opened it. If reading results fails, the page says "Relay is temporarily unavailable. Try again later."
+![The tester's Sample round page showing State: Open, My results, and the first test case expanded with its steps, expected result, linked criterion and Record result](images/tester-round.png)
 
-### Draft test cases with AI
+Both Beta Testers in a workspace see the same rounds. Draft rounds stay hidden. Each expanded case in an Open round shows **Record result** if you have no result for its current build, **Continue draft** for your saved draft, or **View result** for your submitted result. These actions reflect your own results. A Closed round remains available as read-only reference; after the coordinator closes it, reload to see "State: Closed" and "(Closed)" in the list, with the result-entry links removed.
 
-Use AI to draft suggestions from selected acceptance criteria, then review each one before adding it. You can also add test cases yourself with **Add test case**.
+If reading tests fails, the page says "Relay is temporarily unavailable. Try again later." Opening a Draft, missing or another workspace's round shows "Page not found."
 
-While a round is Draft, its page has a **Draft test cases with AI** link directly after **Add test case**. The drafting page says "Select 1 to 5 acceptance criteria. The selected criteria are sent to the SoC AI service to suggest test cases. Suggestions are not saved; review each one before adding it." It lists the round's criteria under **Acceptance criteria to draft from**, with a **Draft test cases** button, an **Add test case** link and a **Back to round** link.
+## Save and submit a result
 
-Tick one to five criteria and choose **Draft test cases**. With JavaScript enabled, the button is disabled and "Drafting test cases…" appears while you wait. When suggestions are returned, **Suggested test cases** shows each title, **Steps**, **Expected result** and **Covers acceptance criteria**. Review these beside the criteria; nothing is saved by drafting.
+1. In an Open round, expand the case you tested and choose **Record result**, or **Continue draft** to resume your saved fields. The **Record result** page shows **Test case** and **Current build**.
+2. Choose **Pass** or **Fail** under **Outcome** and enter your **Observation**. Fail requires an observation; Pass allows it to be empty.
+3. Choose **Save draft** to keep working later. The page shows "Status: Draft" and your saved fields; they remain when you reload or sign in again. Each tester has a separate private draft for each case and build.
+4. Choose **Submit** when ready. You may submit directly or after saving a draft. The page shows "Status: Submitted", your outcome and your observation as read-only text. Submission is final; another attempt to save or submit it says "This result has already been submitted."
+5. Choose **Back to round** to return to the case instructions.
 
-The suggestions page says "Opens in a new tab. Keep this suggestions tab open to review another draft." Choose **Use this draft** to open **New test case** in a separate tab with the suggested fields and covered criteria filled in. The new page says "Pre-filled from an AI draft. Review it before adding it." Edit the fields and links as needed, then choose **Add test case** to save under the normal [test case limits](#criteria-and-test-case-limits). Closing a review tab without adding saves nothing.
+![The Record result page for Add a task on build 1.4.0-beta showing Status: Draft, Outcome Fail, an observation, and the Save draft, Submit and Observation feedback buttons](images/record-result.png)
 
-Return to the original suggestions tab to review another draft from the same response. Each draft needs its own review and **Add test case** action; choosing another suggestion does not request new AI output. Keep the suggestions tab open until you finish reviewing the response.
+**Save draft**, **Submit** and [**Observation feedback**](#observation-feedback) apply the same checks. A missing outcome says "Choose Pass or Fail." An empty or invisible-only Fail observation says "Enter an observation for Fail." Observations allow at most 2000 characters after surrounding spaces and line breaks are removed; a line break counts as one character. A longer observation says "Enter at most 2000 characters." A nonempty invisible-only Pass observation says "Enter an observation with a visible character." Null characters and hidden text-direction characters get the same messages as [round text fields](#criteria-and-test-case-limits). Invalid input leaves your previously saved result unchanged.
 
-If the service is unavailable or its reply cannot be used, the page says "Drafting is unavailable right now. You can still add test cases yourself." If it returns no drafts, or every ticked criterion is blank once hidden characters are removed, it says "No test cases were suggested for these criteria. You can still add test cases yourself."
+An empty observation appears as italic *No observation.* on submitted result entry, **My results**, observation feedback and coordinator results. If you type "No observation." yourself, it appears as ordinary observation text.
 
-With no criterion ticked, or more than five, the page says "Select 1 to 5 acceptance criteria." A ticked criterion that is no longer in the round, for example because it was deleted meanwhile, gets "Choose criteria from this round." A round with 30 test cases says "This round has reached its limit of 30 test cases." In every case your ticks are kept, the round, its criteria and its cases stay unchanged, and **Add test case** still works.
+Results belong to the build shown when you opened the entry page. After the coordinator requests a retest, reload the round and check the selected case's **Current build**. Test the fix outside Relay on that build, then choose **Record result**: the new build starts with empty **Outcome** and **Observation** fields. Choose **Pass** or **Fail** and **Submit** a separate result; earlier submissions remain available in [My results](#review-my-results). Cases omitted from the retest keep their existing build and result entry. If the build changes before you save or submit, the page says "This build is no longer current. Reload the round to record a result." Return to the round, reload, and choose **Record result** for the new build.
+
+Choose **View result** to read your submitted result while its build is current and the round is Open. Once the round closes, an entry page says "This action is not available while the round is Closed." and saves nothing. The round's instructions remain available. If storage fails, the page says "Relay is temporarily unavailable. Try again later." and no part of the result change is saved.
+
+## Observation feedback
+
+1. On **Record result**, choose **Observation feedback** while your result is unsubmitted, its round is Open and its build is current. The button is available before your first draft. It saves your current **Outcome** and **Observation** as a draft, including edits made since your last save, then opens **Observation feedback**. The notice says "Observation feedback saves your draft and opens the AI feedback page. Choose an outcome first; Fail also needs an observation." Invalid fields keep you on **Record result** with your entered values and errors, without changing your saved draft.
+2. Review **Saved observation**, **Test case**, **Steps**, **Expected result**, **Linked acceptance criteria** and **Current build**. The page says "AI receives your saved observation, this test case and its linked acceptance criteria. Suggestions may be wrong. Review them and edit your result yourself. Unsaved edits are not included."
+3. Choose **Suggest missing details** to request questions about the saved fields. Saving and opening the feedback page sends no AI request. Any suggestions appear under **Questions to consider**, beside the original source. They do not change your outcome, observation or submission.
+4. Choose **Back to result**, edit **Observation** yourself and choose **Save draft** or **Submit** when ready.
+
+![The Observation feedback page showing the saved observation, the test case's steps, expected result, linked criterion and current build, and three Questions to consider](images/observation-feedback.png)
+
+With JavaScript enabled, the request disables **Suggest missing details** and shows "Suggesting missing details…" while you wait.
+
+An empty reply says "No missing details were suggested. You can still edit your result yourself." If the source is too long, the page says "This observation and test case are too long for feedback. You can still edit your result yourself." If feedback is unavailable, including when the AI service is not configured or the [AI quota](#draft-test-cases-with-ai) is used up, it says "Feedback is unavailable right now. You can still edit your result yourself." You can still choose **Back to result** and continue manually.
+
+Questions are not saved. Opening the feedback page again clears them; resubmitting its request asks for new feedback. If your saved source changes during a request, the page says "Your saved draft or test case changed. Reload before requesting feedback." Opening the feedback address directly without a saved draft says "Save a draft before requesting feedback." Submission, a newer build or a closed round prevents feedback with the same messages described under [Save and submit a result](#save-and-submit-a-result).
+
+## Review my results
+
+1. Open an Open or Closed round from **Tester home**, then choose **My results**.
+2. The **My results** page shows the **Round** and its state, followed by your saved drafts and submissions for current and earlier builds. Each card keeps **Test case** with the case title, the original **Build**, **Outcome** and "Status: Draft" or "Status: Submitted" visible in its header. Choose **Show details** immediately below the header for **Linked acceptance criteria**, **Observation** and, for submissions, **Submitted at** in UTC; choose **Hide details** to collapse them. Results are listed newest build first. With no saved results, the page says "No results yet."
+3. Choose **Back to round** to return to the instructions.
+
+![My results for Sample round showing one submitted Fail for Add a task on build 1.4.0-beta, with its details expanded](images/my-results.png)
+
+Only your own results appear. This page is read-only, including drafts. Reload to see later saves or submissions; retesting and closure retain earlier results with their original build and case details.
+
+## Error pages
+
+Each of these pages shows only its message:
+
+| Message | When |
+| --- | --- |
+| "You do not have access to this page." | You open a page for the other role, and stay signed in, or you send a form Relay cannot verify, such as one left open from before you signed in again. |
+| "Page not found." | The address does not exist, or names a record in another workspace, or a Draft round for a Beta Tester. |
+| A refusal, on a page titled **Action not available** | The action is no longer allowed, so nothing changes. The page shows the reason, such as "This action is not available while the round is Open." (also Draft or Closed) for a coordinator page left open after the round changed state, or the result-entry and feedback messages under [Save and submit a result](#save-and-submit-a-result) and [Observation feedback](#observation-feedback). |
+| "Too many demo workspaces have been created recently. Try again later." | The [demo workspace limit](#create-a-demo-workspace) is reached. The sign-in limit shows its message on the sign-in page instead. |
+| "Relay is temporarily unavailable. Try again later." | Relay could not read or save. Nothing is changed. |
