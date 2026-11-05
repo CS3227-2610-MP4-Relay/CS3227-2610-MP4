@@ -1,6 +1,6 @@
 # User Guide
 
-Relay runs locally only; no public hosted app is available yet. Start the application using the [Developer Guide](DeveloperGuide.md#run-locally), then open <http://127.0.0.1:8000/>.
+Open **[Relay](https://relay-production.vercel.app/)** to use the application. To run it locally instead, follow the [Developer Guide](DeveloperGuide.md#run-locally), then open <http://127.0.0.1:8000/>.
 
 ## Start page
 

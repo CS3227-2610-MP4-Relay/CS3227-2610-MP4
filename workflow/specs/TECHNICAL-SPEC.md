@@ -1,6 +1,6 @@
 # Technical spec
 
-How Relay is built and run. What it does is in [`PRODUCT-SPEC.md`](PRODUCT-SPEC.md). The application runs locally and in CI only. The data model, routes and AI gateway below are built under `src/`; live AI call status belongs in the [gateway contract](ai/llm-gateway.md#live-switch); hosted application environments remain planned ([Environments](#environments)).
+How Relay is built and run. What it does is in [`PRODUCT-SPEC.md`](PRODUCT-SPEC.md). The data model, routes and AI gateway below are built under `src/`; live AI call status belongs in the [gateway contract](ai/llm-gateway.md#live-switch), and application runtimes and the public URL are under [Environments](#environments).
 
 ## Architecture
 
@@ -15,6 +15,71 @@ Shared application presentation ([PLT-4](product/platform.md#plt-4-shared-applic
 
 Long-page contents use server-rendered fragment links to section headings or content inside native `<details>/<summary>` records, with IDs based on fixed section names or authorized record IDs. Native fragment revelation opens a targeted record; shared template includes reuse contents and action/navigation styling, and responsive CSS presents desktop contents beside the single content column and a native contents disclosure above it on smaller screens. Record expansion is browser-local presentation only, with no persisted state or additional requests.
 
+### Architecture overview
+
+This view shows the application boundary and major responsibilities described above; arrows show interactions, not a complete Python import graph. The browser receives server-rendered pages, and only the shared gateway crosses the provider boundary.
+
+```mermaid
+flowchart TB
+    Browser["Coordinator or tester browser"]
+    subgraph Django["Relay Django application"]
+        Web["Routing, views and shared templates"]
+        Accounts["accounts: workspaces and sign-in"]
+        Rounds["rounds: test rounds, builds and results"]
+        AI["ai: drafting and observation feedback"]
+        Gateway["Shared AI gateway"]
+        Web --> Accounts
+        Web --> Rounds
+        Web --> AI
+        AI --> Gateway
+    end
+    Browser <-->|HTTP / HTML| Web
+    Accounts --> DB[(PostgreSQL)]
+    Rounds --> DB
+    AI -->|Authorized source reads| DB
+    Gateway -->|Quota and usage records| DB
+    Gateway -->|HTTPS| Provider["SoC LLM"]
+```
+
+### Drafting request sequence
+
+This UML sequence illustrates [RND-8](product/rounds.md#rnd-8-draft-test-cases-with-ai) and the [drafting architecture](#rounds), with the configured, successfully reserved provider call expanded. Early gateway refusals skip that call; storage errors follow the existing [round-route failure handling](#rounds-routes). The feature's exact input, reply and failure rules remain in the [drafting contract](ai/test-drafting.md). Gateway bookkeeping can write records while the suggestions themselves remain transient.
+
+```mermaid
+sequenceDiagram
+    actor Coordinator
+    participant View as Drafting view
+    participant DB as PostgreSQL
+    participant Gateway as Shared gateway
+    participant Provider as SoC LLM
+    participant Form as Normal case form and service
+    Coordinator->>View: Request drafts for selected criteria
+    View->>DB: Read authorized Draft round and criteria
+    DB-->>View: Selected source
+    View->>Gateway: Fixed instructions and encoded source
+    Gateway->>DB: Reserve quota and slots in a short transaction
+    Note over DB,Gateway: Reservation ends before provider work<br/>No round lock or transaction spans the call
+    Gateway->>Provider: Bounded HTTPS request
+    Provider-->>Gateway: Reply or failure
+    Gateway->>DB: Record metrics and release slots
+    Gateway-->>View: Success, refusal or failure outcome
+    View->>View: Validate successful reply against feature schema
+    alt Valid, nonempty suggestions
+        View-->>Coordinator: Show transient suggestions
+    else Empty, invalid, refused or failed response
+        View-->>Coordinator: Show the corresponding fixed message
+    end
+    opt Coordinator chooses a valid suggestion
+        Coordinator->>View: Use this draft
+        View-->>Coordinator: Prefill the normal case form
+        Coordinator->>Form: Review, edit and submit
+        Form->>DB: Recheck authorization and Draft state<br/>Save under the round lock
+        Form-->>Coordinator: Show the saved case
+    end
+```
+
+Observation feedback has an additional source recheck after the provider returns; see [its architecture](#rounds) and [feature contract](ai/observation-feedback.md). It does not use the case-creation portion of this sequence.
+
 ## Data model
 
 Only the subsections below are specified. Design workspaces, role-based accounts, rounds, requirements, cases, build references and results around the [product areas](PRODUCT-SPEC.md#areas). Before schema implementation, settle ownership, state transitions, published-case edits, submitted-observation edits and result-history/version rules. Do not infer these from a proposed screen or table name.
@@ -25,6 +90,41 @@ Persistence and retention, decided for ACC-1 (see its [plan](../plans/2-sign-in-
 - An expired session is refused by its absolute expiry; its row is not deleted automatically. Signing out a signed-in user deletes their session row, then the sign-out message starts a new anonymous session row, which expires after 8 hours, is emptied once the message is shown, and is replaced at the browser's next sign-in. A signed-out visitor's sign-out, and viewing the sign-in page, create no row.
 - When shared storage is exhausted, a failed write is not retried, and the user gets that route's existing error page: the generic 500 of [PLT-1.3](product/platform.md#plt-1-django-foundation-and-continuous-verification), or the 503 page that [ACC-2.5](product/accounts.md#acc-2-create-an-isolated-demo-workspace) and [ACC-3.7](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation) define. Saving the session at the end of a request is the exception: a failed save of an existing session row gives Django's "Bad Request (400)", and a failed creation of a new one, as at sign-out, the generic 500 ([rounds routes](#rounds-routes)). A route that writes in a transaction rolls the whole transaction back. Existing records, including result history, are never deleted or overwritten to make room.
 - Before peer testing, an operator checks the hosting database's storage use. Exhaustion and unbounded session and counter growth are [accepted residual risks](SECURITY-SPEC.md#sign-in-and-access-control) for the course deployment.
+
+### Domain class diagram
+
+This conceptual UML view follows the stored references in [`accounts/models.py`](../../src/accounts/models.py) and [`rounds/models.py`](../../src/rounds/models.py); fields, Django framework classes, sessions and operational counters are omitted. Ordinary associations do not imply cascading deletion. `CaseCriterion` and `BuildCase` make the two many-to-many relationships explicit; cross-round/workspace consistency also depends on the checks in [Rounds](#rounds), not just foreign keys.
+
+```mermaid
+classDiagram
+    direction TB
+    Workspace "1" -- "0..*" User : accounts
+    Workspace "1" -- "0..*" Round : rounds
+    Round "1" -- "0..*" Criterion : criteria
+    Round "1" -- "0..*" Case : cases
+    Round "1" -- "0..*" Build : builds
+    Case "1" -- "0..*" CaseCriterion : links
+    Criterion "1" -- "0..*" CaseCriterion : links
+    Build "1" -- "0..*" BuildCase : coverage
+    Case "1" -- "0..*" BuildCase : coverage
+    User "1" -- "0..*" Result : tester
+    Case "1" -- "0..*" Result : results
+    Build "1" -- "0..*" Result : results
+```
+
+A result connects a tester, a case and the build tested; its uniqueness, draft/submission rules and retained history are specified under [Rounds](#rounds). Gateway quota and accounting rows have a separate [model contract](#ai-gateway).
+
+### Round state diagram
+
+This UML state view summarizes [publishing](product/rounds.md#rnd-3-publish-a-round-to-beta-testers), [retesting](product/rounds.md#rnd-5-request-a-retest) and [closing](product/rounds.md#rnd-6-close-a-round); each transition still requires its specified authorization and guards. Retesting adds build coverage while the round remains Open; Closed has no outgoing transition.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Draft: Create round
+    Draft --> Open: Publish first build
+    Open --> Open: Request retest on a new build
+    Open --> Closed: Close round
+```
 
 ### Accounts and workspaces
 
@@ -176,7 +276,9 @@ The Vercel project uses the repository root, native Django detection of `src/man
 
 ## Environments
 
-| Environment | Planned runtime | Database | Configuration |
+The public application is available at [Relay](https://relay-production.vercel.app/), separate from the [static project documentation](#product-website). Public reachability and the operational evidence required by [Release verification](#release-verification) are distinct; observations belong in the [session log](../../logs/Whimsyturtle/038-restructure-developer-guide.md).
+
+| Environment | Runtime | Database | Configuration |
 | --- | --- | --- | --- |
 | Local development | Python virtual environment running Django; Docker optional for the database | Local PostgreSQL, separate from production | Developer configuration; local debug only |
 | CI validation | GitHub Actions running lint, formatting, Django checks and tests | Throwaway PostgreSQL 17 on loopback port 55432 | Fixed test settings; no provider calls |
@@ -186,7 +288,7 @@ No dedicated staging environment or Docker app image is planned. Development and
 
 ### Browser verification
 
-`src/e2e/` contains a small pytest suite using the pinned development-only Playwright library and headless Chromium. The existing `verify` job installs Chromium and its Linux system dependencies, then includes these tests in its normal full pytest invocation; no separate application service, browser matrix or production credentials are needed. Local setup and focused commands belong in the [Developer Guide](../../docs/DeveloperGuide.md).
+`src/e2e/` contains a small pytest suite using the pinned development-only Playwright library and headless Chromium. The existing `verify` job installs Chromium and its Linux system dependencies, then includes these tests in its normal full pytest invocation; no separate application service, browser matrix or production credentials are needed. Local setup and focused commands belong in the [runbook](../../docs/Runbook.md#verify).
 
 Tests use pytest-django's loopback-only live server and transactional PostgreSQL test database, with fresh synthetic accounts and a fresh browser context per test. The live-server fixture supplies static/media URL prefixes and empty temporary roots for Django's test-only file handlers. ORM setup completes before starting each test's synchronous Playwright lifecycle, and Playwright stops before database teardown; tests use browser navigation and reloads to check persisted outcomes. Never bypass Django's async-safety check. Only the browser fixture temporarily disables `SESSION_COOKIE_SECURE` and `CSRF_COOKIE_SECURE` for loopback HTTP; CSRF middleware, real forms and session handling remain active, and the fixture restores both settings afterwards.
 
@@ -194,7 +296,7 @@ Browser assertions use visible headings, accessible labels, links, buttons and e
 
 ## Product website
 
-The published [product website](https://cs3227-2610-mp4-relay.github.io/CS3227-2610-MP4/) uses `docs/index.md`, `docs/Reflections.md` and `docs/_config.yml`, with GitHub's Cayman theme. Its organization URL is `https://cs3227-2610-mp4-relay.github.io` and repository base path is `/CS3227-2610-MP4`. GitHub Pages uses GitHub Actions as its source, enforces HTTPS, and restricts the `github-pages` environment to the `main` branch. The guides link to their source in the [team repository](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4) and are excluded from the site build. Observable site behaviour is defined by [PLT-2](product/platform.md#plt-2-validate-and-publish-the-product-website).
+The published [product website](https://cs3227-2610-mp4-relay.github.io/CS3227-2610-MP4/) uses `docs/index.md`, `docs/Reflections.md` and `docs/_config.yml`, with GitHub's Cayman theme. Its organization URL is `https://cs3227-2610-mp4-relay.github.io` and repository base path is `/CS3227-2610-MP4`. GitHub Pages uses GitHub Actions as its source, enforces HTTPS, and restricts the `github-pages` environment to the `main` branch. The guides link to their source in the [team repository](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4); both guides and the [operational runbook](../../docs/Runbook.md) are excluded from the site build. Observable site behaviour is defined by [PLT-2](product/platform.md#plt-2-validate-and-publish-the-product-website).
 
 The existing `.github/workflows/ci.yml` runs a site job on its pull-request and `main`-push events, using official SHA-pinned `actions/jekyll-build-pages` and `actions/upload-pages-artifact`. It builds `docs/` into `_site/` using its existing configuration, without `configure-pages` or a hosted Pages API dependency. A small standard-library Python checker under `src/` verifies the rendered entry pages, local page/asset targets under the configured base path, and guide exclusion before artifact upload; it does not crawl external links or execute site content.
 
@@ -206,7 +308,7 @@ Keep the hosted environment restrictions configured independently of workflow br
 
 For [PLT-1.8 to PLT-1.14](product/platform.md#plt-1-django-foundation-and-continuous-verification), `.github/workflows/ci.yml` adds a production job requiring `verify` and `site` from its own run, a push to `refs/heads/main` and repository variable `PRODUCTION_DEPLOY_ENABLED` exactly `true`. Unset means disabled. Use GitHub environment `production`, read-only repository permissions, checkout without persisted credentials at `github.sha`, and a production concurrency group with `cancel-in-progress: false`. The environment must restrict deployment to `main` independently of the workflow condition, without required reviewers or another manual deployment gate. After initial activation, approval and merge of the pull request authorize automatic deployment of the resulting verified main commit; no separate environment approval or manual trigger is required. Only that job receives production secrets. Existing Pages publication remains separate and unchanged.
 
-An operator supplies `VERCEL_TOKEN`, the direct Neon `DATABASE_URL` and `DJANGO_SECRET_KEY` as production environment secrets, plus non-secret Vercel project/team identifiers and `DJANGO_PRODUCTION_HOST` as variables. Pass the token only to the deployment-helper step and Django/database secrets only to checks/migrations, never package installation. Preserve the external `VERCEL_TEAM_ID` setting, mapping it to the CLI's `VERCEL_ORG_ID` in the child process; keep `VERCEL_PROJECT_ID` fixed. Vercel holds its own production-only Django variables and the pooled database URL. The token is scoped to the owning Vercel account/team with the narrowest available deployment access and an expiry; runtime database credentials are not available to PR validation or preview builds. No GitHub or Neon API credential is introduced. Setup commands and exact operator steps belong in the [Developer Guide](../../docs/DeveloperGuide.md).
+An operator supplies `VERCEL_TOKEN`, the direct Neon `DATABASE_URL` and `DJANGO_SECRET_KEY` as production environment secrets, plus non-secret Vercel project/team identifiers and `DJANGO_PRODUCTION_HOST` as variables. Pass the token only to the deployment-helper step and Django/database secrets only to checks/migrations, never package installation. Preserve the external `VERCEL_TEAM_ID` setting, mapping it to the CLI's `VERCEL_ORG_ID` in the child process; keep `VERCEL_PROJECT_ID` fixed. Vercel holds its own production-only Django variables and the pooled database URL. The token is scoped to the owning Vercel account/team with the narrowest available deployment access and an expiry; runtime database credentials are not available to PR validation or preview builds. No GitHub or Neon API credential is introduced. Setup commands and exact operator steps belong in the [production runbook](../../docs/Runbook.md#production-deployment).
 
 The production job installs the existing pinned Python runtime requirements and the approved exact CLI version, using SHA-pinned setup actions and no production secrets during installation. It validates production settings with `check --deploy --fail-level WARNING` and applies `migrate --noinput` from the checked commit using the direct Neon endpoint. Migrations stay in GitHub, never Vercel's build. Review migration compatibility in the pull request before approval and merge: the old deployment can keep serving while migrations and the Vercel build run, so destructive or incompatible schema changes cannot use this path without a separately agreed rollout. No reverse migration, backup service or automatic rollback is added.
 
@@ -220,7 +322,7 @@ After readiness, verify the deployment's production target/project and query `GE
 
 Emit only stage, checked SHA, known deployment ID and successful configured origin in release output. Suppress raw CLI/provider errors, HTTP bodies, settings values and migration traceback output from the public workflow log; retain a failing exit status and fixed stage failure message. For a known deployment failure, the operator inspects the Vercel dashboard. For an unknown CLI outcome, inspect deployments in the configured project/time window before choosing whether to retry; any supplied commit label is an aid, not source verification. For a migration failure, inspect database state before any retry. Do not describe a failed or ambiguous run as a successful release. These are manual instructions, not a recovery subsystem.
 
-Hosted verification is pending: neither workflow definitions nor local tests prove environment restrictions, public accessibility or release readiness. Before enabling `PRODUCTION_DEPLOY_ENABLED`, an operator must explicitly authorize an initial protected deployment of a verified commit, use the same Vercel project and Neon database to collect the release observations below, and record results without secrets or raw client addresses. Use the common `prepare` operation and ephemeral pinned CLI on the clean source for this manual unlinked-project bootstrap; do not add a workflow trigger. Vercel's built-in Vercel Authentication on All Deployments limits this bootstrap to authorized observers, including production and generated URLs; no automation-bypass secret is introduced. Inspect bootstrap deployment identity/target/protection manually; while it remains protected, anonymous public smoke checks cannot pass and no successful public delivery may be claimed. After successful observations and explicit human release approval, the operator enables verified proxy configuration, switches to the intended public production access with Standard Protection, and enables the protected Actions path. A gate failure keeps public delivery disabled.
+Public availability is recorded under [Environments](#environments); that observation does not establish the other hosted release-gate results or initial public activation approval. Before enabling `PRODUCTION_DEPLOY_ENABLED`, an operator must explicitly authorize an initial protected deployment of a verified commit, use the same Vercel project and Neon database to collect the release observations below, and record results without secrets or raw client addresses. Use the common `prepare` operation and ephemeral pinned CLI on the clean source for this manual unlinked-project bootstrap; do not add a workflow trigger. Vercel's built-in Vercel Authentication on All Deployments limits this bootstrap to authorized observers, including production and generated URLs; no automation-bypass secret is introduced. Inspect bootstrap deployment identity/target/protection manually; while it remains protected, anonymous public smoke checks cannot pass and no successful public delivery may be claimed. After successful observations and explicit human release approval, the operator enables verified proxy configuration, switches to the intended public production access with Standard Protection, and enables the protected Actions path. A gate failure keeps public delivery disabled.
 
 Release gate: production is not released until Vercel's actual client-address source, forwarded-protocol header and function time limit are verified and recorded (the time limit must be at least 60 seconds, as `vercel.json` sets, above both the [limit timeouts](#accounts-and-workspaces) plus a password hash and the [AI call deadline plus its release margin](ai/llm-gateway.md#limits-and-accounting-proposed); an AI request's own work outside that deadline, such as waiting for the reservation lock, reconnecting after the gateway releases the connection and the feedback re-read, is assumed to fit within the remaining headroom and is not measured by the gate), the production database's connection limit and pooler mode are recorded, how long one demo creation holds the `demo-total` lock against the production database, sample round included, is measured and recorded ([residual](SECURITY-SPEC.md#sign-in-and-access-control), accepted by the human on 2026-10-27, #73), and the production settings under [Configuration](#configuration) are checked. The client-address source is verified by observation, not by reading documentation: from two external clients, requests with forged `X-Forwarded-For`, `X-Real-IP` and `Forwarded` headers must produce stored keys that follow each client's real address, and no production request may use the `unknown` key.
 
@@ -234,6 +336,6 @@ Future work:
 
 - Verify the [team repository](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4) is publicly accessible; confirm role ownership and initial slice issues/milestones.
 - Configure and verify hosted environment restrictions.
-- Create the Vercel project and separate managed PostgreSQL database; confirm the actual provider runtime, limits, secure database connection and least-privilege deployment access.
+- Verify the production project/database setup, actual provider runtime, limits, secure database connection and least-privilege deployment access.
 - Keep production credentials in protected production settings, outside development, CI validation and untrusted builds. Verify migration compatibility during pull request review and initial public activation approval before enabling releases.
 - Verify the team's SoC LLM model availability and limits before fixing model and quota settings.
