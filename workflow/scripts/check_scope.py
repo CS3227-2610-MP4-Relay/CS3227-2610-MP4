@@ -34,10 +34,13 @@ import re
 import stat
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 AGENTS_DIR = ROOT / "workflow" / "agents"
+# All of one hook call's Git work must end well inside the client's hook limit.
+GIT_SECONDS = 10
 SCOPE_KEYS = ("writes", "never_writes")
 FLAGS = re.IGNORECASE if os.name == "nt" else 0
 PATCH_PATH = re.compile(
@@ -118,12 +121,13 @@ def relative_to_root(path, root=ROOT):
     return None if rel == ".." or rel.startswith("../") else rel
 
 
-def worktree_relative(path):
+def worktree_relative(path, deadline=None):
     """Return the path relative to its worktree of this repository, or None.
 
     A path in another worktree of the same repository, including one nested
     inside this checkout, is checked against this checkout's role files.
-    Anything outside this repository's worktrees is None.
+    Anything outside this repository's worktrees is None. Git calls share the
+    `time.monotonic()` deadline, or get GIT_SECONDS each without one.
     """
     path = os.path.abspath(path)
     folder = os.path.dirname(path)
@@ -134,25 +138,24 @@ def worktree_relative(path):
     # Resolve links in the existing folders so the path compares with Git's
     # resolved worktree path; the hook separately checks the fully resolved target.
     path = os.path.join(os.path.realpath(folder), os.path.relpath(path, folder))
-    # The client's GIT_* settings must not choose the repository, and a hung Git
+    # The client's GIT_* settings must not choose the repository, and a slow Git
     # must time out (and so block) rather than outlast the client's hook limit.
-    options = {
-        "env": {k: v for k, v in os.environ.items() if not k.startswith("GIT_")},
-        "timeout": 10,
-    }
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+
+    def run(root, *args):
+        left = GIT_SECONDS if deadline is None else deadline - time.monotonic()
+        return git(root, *args, env=env, timeout=max(left, 0.001))
+
     try:
-        top, common = git(
+        top, common = run(
             folder,
             "rev-parse",
             "--path-format=absolute",
             "--show-toplevel",
             "--git-common-dir",
-            **options,
         ).splitlines()
-        ours = git(
-            ROOT, "rev-parse", "--path-format=absolute", "--git-common-dir", **options
-        )
-        listed = git(ROOT, "worktree", "list", "--porcelain", **options)
+        ours = run(ROOT, "rev-parse", "--path-format=absolute", "--git-common-dir")
+        listed = run(ROOT, "worktree", "list", "--porcelain")
     except (OSError, ValueError, subprocess.CalledProcessError):
         return relative_to_root(path, ROOT)  # this checkout outside Git, or none
     same = os.path.normcase(os.path.realpath(common)) == os.path.normcase(
@@ -365,12 +368,16 @@ def check_hook_call():
             file=sys.stderr,
         )
         return 2
+    deadline = time.monotonic() + GIT_SECONDS
     for target in targets:
         if not os.path.isabs(target):
             target = os.path.join(event.get("cwd") or ROOT, target)
         # Judge the path as written and as fully resolved: a link may be the last
         # part of the path, and `..` after a linked folder leaves that folder.
-        rels = [worktree_relative(path) for path in (target, os.path.realpath(target))]
+        rels = [
+            worktree_relative(path, deadline)
+            for path in (target, os.path.realpath(target))
+        ]
         outside = [rel for rel in rels if rel is None or not in_scope(rel, scope)]
         if outside:
             rel = outside[0]

@@ -156,12 +156,36 @@ class AdapterTest(unittest.TestCase):
             handler = group["hooks"][0]
             for key in [key for key in ("command", "commandWindows") if key in handler]:
                 self.assertIn('workflow/scripts/check_scope.py" --hook', handler[key])
-        # PowerShell leaves $LASTEXITCODE unset when `python` is missing.
+        # A missing `python` leaves $LASTEXITCODE from the `git` inside the
+        # command, so `$?` must also be true.
         self.assertTrue(
             codex["hooks"]["PreToolUse"][0]["hooks"][0]["commandWindows"].endswith(
-                "; if ($LASTEXITCODE -eq 0) { exit 0 }; exit 2"
+                "; if ($? -and $LASTEXITCODE -eq 0) { exit 0 }; exit 2"
             )
         )
+
+    @unittest.skipIf(shutil.which("pwsh") is None, "PowerShell not installed")
+    def test_windows_codex_command_blocks_when_python_is_missing(self):
+        codex = json.loads((ROOT / ".codex" / "hooks.json").read_text(encoding="utf-8"))
+        command = codex["hooks"]["PreToolUse"][0]["hooks"][0]["commandWindows"]
+        only_git = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (only_git / "git").symlink_to(shutil.which("git"))
+        result = subprocess.run(
+            [
+                shutil.which("pwsh"),
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                command,
+            ],
+            input="{}",
+            capture_output=True,
+            text=True,
+            cwd=ROOT,
+            env={"PATH": str(only_git), "HOME": os.environ.get("HOME", "/tmp")},
+            check=False,
+        )
+        self.assertEqual(result.returncode, 2, result.stderr)
 
     @unittest.skipIf(os.name == "nt", "POSIX hook commands")
     def test_hook_commands_block_when_python_is_missing_or_fails(self):

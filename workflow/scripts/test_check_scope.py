@@ -249,6 +249,26 @@ class HookTest(unittest.TestCase):
         ):
             self.assertEqual(check_scope.main(["--hook"]), 2)
 
+    def test_one_hook_calls_git_within_one_shared_deadline(self):
+        timeouts = []
+        real_git = check_scope.git
+
+        def recording_git(*args, timeout=None, **kwargs):
+            timeouts.append(timeout)
+            return real_git(*args, timeout=timeout, **kwargs)
+
+        event = {"agent_type": "builder", "tool_input": {"file_path": "src/a.py"}}
+        with (
+            patch.object(check_scope, "git", side_effect=recording_git),
+            patch.object(sys, "stdin", io.StringIO(json.dumps(event))),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            self.assertEqual(check_scope.main(["--hook"]), 0)
+        self.assertGreater(len(timeouts), 1)
+        self.assertTrue(all(0 < t <= check_scope.GIT_SECONDS for t in timeouts))
+        self.assertEqual(timeouts, sorted(timeouts, reverse=True))
+        self.assertLess(timeouts[-1], timeouts[0])
+
 
 class SiblingWorktreeTest(unittest.TestCase):
     """Builders often edit in another worktree of the same repository."""
