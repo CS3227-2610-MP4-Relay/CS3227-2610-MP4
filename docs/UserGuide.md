@@ -39,7 +39,7 @@ Choose **Back to home** above the form to return to the start page.
 
 A Test Coordinator lands on **Coordinator home** and a Beta Tester on **Tester home**. Each home page shows `Username:` and `Workspace:` with your username and workspace name.
 
-If the username or password is wrong, or a field is blank, the page shows "Username or password is incorrect." and does not say which field was wrong. You are not signed in; if you were already signed in, you stay signed in as before.
+If the username or password is wrong, or a field is blank, the page shows "Username or password is incorrect." and does not say which field was wrong. You are not signed in; if you were already signed in, you stay signed in as before. If signing in fails in storage, the page says "Relay is temporarily unavailable. Try again later." and you are not signed in.
 
 After 30 failed sign-ins from one network address within 15 minutes, the sign-in page says "Too many sign-in attempts. Try again later." and does not sign anyone in from that address, even with the right password, until 15 minutes after the first of those failures. Successful sign-ins do not add to this count and do not reset it.
 
@@ -77,7 +77,7 @@ If reading tests fails, the page says "Relay is temporarily unavailable. Try aga
 1. In an Open round, expand the case you tested and choose **Record result**, or **Continue draft** to resume your saved fields. The **Record result** page shows **Test case** and **Current build**.
 2. Choose **Pass** or **Fail** under **Outcome** and enter your **Observation**. Fail requires an observation; Pass allows it to be empty.
 3. Choose **Save draft** to keep working later. The page shows "Status: Draft" and your saved fields; they remain when you reload or sign in again. Each tester has a separate private draft for each case and build.
-4. Choose **Submit** when ready. You may submit directly or after saving a draft. The page shows "Status: Submitted", your outcome and your observation as read-only text. An empty observation says "No observation." Submission is final; another attempt to save or submit it says "This result has already been submitted."
+4. Choose **Submit** when ready. You may submit directly or after saving a draft. The page shows "Status: Submitted", your outcome and your observation as read-only text. Submission is final; another attempt to save or submit it says "This result has already been submitted."
 5. Choose **Back to round** to return to the case instructions.
 
 **Save draft**, **Submit** and [**Observation feedback**](#observation-feedback) apply the same checks. A missing outcome says "Choose Pass or Fail." An empty or invisible-only Fail observation says "Enter an observation for Fail." Observations allow at most 2000 characters after surrounding spaces and line breaks are removed; a line break counts as one character. A longer observation says "Enter at most 2000 characters." A nonempty invisible-only Pass observation says "Enter an observation with a visible character." Null characters and hidden text-direction characters get the same messages as [round text fields](#criteria-and-test-case-limits). Invalid input leaves your previously saved result unchanged.
@@ -97,14 +97,14 @@ Choose **View result** to read your submitted result while its build is current 
 
 With JavaScript enabled, the request disables **Suggest missing details** and shows "Suggesting missing details…" while you wait.
 
-An empty reply says "No missing details were suggested. You can still edit your result yourself." If the source is too long, the page says "This observation and test case are too long for feedback. You can still edit your result yourself." If feedback is unavailable, it says "Feedback is unavailable right now. You can still edit your result yourself." You can still choose **Back to result** and continue manually.
+An empty reply says "No missing details were suggested. You can still edit your result yourself." If the source is too long, the page says "This observation and test case are too long for feedback. You can still edit your result yourself." If feedback is unavailable, including when the AI service is not configured or the [AI quota](#draft-test-cases-with-ai) is used up, it says "Feedback is unavailable right now. You can still edit your result yourself." You can still choose **Back to result** and continue manually.
 
 Questions are not saved. Opening the feedback page again clears them; resubmitting its request asks for new feedback. If your saved source changes during a request, the page says "Your saved draft or test case changed. Reload before requesting feedback." Opening the feedback address directly without a saved draft says "Save a draft before requesting feedback." Submission, a newer build or a closed round prevents feedback with the same messages described under [Save and submit a result](#save-and-submit-a-result).
 
 ## Review my results
 
 1. Open an Open or Closed round from **Tester home**, then choose **My results**.
-2. The **My results** page shows the **Round** and its state, followed by your saved drafts and submissions for current and earlier builds. Each card keeps **Test case** with the case title, the original **Build**, **Outcome** and "Status: Draft" or "Status: Submitted" visible in its header. Choose **Show details** immediately below the header for **Linked acceptance criteria**, **Observation** and, for submissions, **Submitted at** in UTC; choose **Hide details** to collapse them. An empty observation says "No observation."; with no saved results, the page says "No results yet."
+2. The **My results** page shows the **Round** and its state, followed by your saved drafts and submissions for current and earlier builds. Each card keeps **Test case** with the case title, the original **Build**, **Outcome** and "Status: Draft" or "Status: Submitted" visible in its header. Choose **Show details** immediately below the header for **Linked acceptance criteria**, **Observation** and, for submissions, **Submitted at** in UTC; choose **Hide details** to collapse them. Results are listed newest build first. With no saved results, the page says "No results yet."
 3. Choose **Back to round** to return to the instructions.
 
 Only your own results appear. This page is read-only, including drafts. Reload to see later saves or submissions; retesting and closure retain earlier results with their original build and case details.
@@ -141,7 +141,7 @@ A workspace can have up to 20 rounds, including the sample round of a new demo w
 
 The round page has an **Acceptance criteria** heading, listing each criterion's text, and a **Test cases** heading, where you can expand each case to read **Steps**, **Expected result** and **Linked acceptance criteria** with that text. Both are listed in the order they were added. With none, they say "No acceptance criteria yet." and "No test cases yet."
 
-You can add, edit and delete them only while the round is Draft.
+You can add, edit and delete them only while the round is Draft; see [Error pages](#error-pages) for a page left open after publishing.
 
 To add or edit a criterion:
 
@@ -218,7 +218,7 @@ While a round is Open or Closed, its round page has a **Review results** link di
 
 1. On the round page, choose **Review results**.
 2. The page is headed "Results: " followed by the round's title, then "State: Open" or "State: Closed". Each test case follows in the order it was added. Its summary shows the title, **Current build** and the testers and outcomes for that build, or "No results for this build yet." Expand it for **Linked acceptance criteria**, **Results for this build** and any **Earlier builds**.
-3. Each submitted result shows "Tester:" with the Beta Tester's username, "Outcome: Pass" or "Outcome: Fail", "Observation:" with the observation, or "Observation: No observation." when it is empty, and "Submitted at:" with the time in UTC. The newest submission comes first. A case with no submitted result for its current build says "No results for this build yet."
+3. Each submitted result shows "Tester:" with the Beta Tester's username, "Outcome: Pass" or "Outcome: Fail", "Observation:" with the observation, or "Observation: No observation." when it is empty, and "Submitted at:" with the time in UTC. The newest submission comes first.
 4. Choose **Back to round** to return to the round page.
 
 Only submitted results appear; a Beta Tester's saved draft stays private to them. After a [retest](#request-a-retest), a retested case's earlier results move under **Earlier builds**, newest build first, each starting with "Build:" and its build label, while its new build starts with "No results for this build yet." until someone submits. Results stay listed after the round is [closed](#close-a-round). The page is read-only: it cannot record, change or delete a result. Reload it to see results submitted since you opened it. If reading results fails, the page says "Relay is temporarily unavailable. Try again later."
@@ -226,6 +226,8 @@ Only submitted results appear; a Beta Tester's saved draft stays private to them
 ### Draft test cases with AI
 
 Use AI to draft suggestions from selected acceptance criteria, then review each one before adding it. You can also add test cases yourself with **Add test case**.
+
+AI requests need the SoC AI service configured, as described in the [Developer Guide](DeveloperGuide.md#soc-llm), and share a per-account and Relay-wide [quota](../workflow/specs/ai/llm-gateway.md#limits-and-accounting-proposed) with [observation feedback](#observation-feedback). Without the service, over the quota or while another of your AI requests is running, each feature shows its unavailable message.
 
 While a round is Draft, its page has a **Draft test cases with AI** link directly after **Add test case**. The drafting page says "Select 1 to 5 acceptance criteria. The selected criteria are sent to the SoC AI service to suggest test cases. Suggestions are not saved; review each one before adding it." It lists the round's criteria under **Acceptance criteria to draft from**, with a **Draft test cases** button, an **Add test case** link and a **Back to round** link.
 
@@ -238,3 +240,15 @@ Return to the original suggestions tab to review another draft from the same res
 If the service is unavailable or its reply cannot be used, the page says "Drafting is unavailable right now. You can still add test cases yourself." If it returns no drafts, or every ticked criterion is blank once hidden characters are removed, it says "No test cases were suggested for these criteria. You can still add test cases yourself."
 
 With no criterion ticked, or more than five, the page says "Select 1 to 5 acceptance criteria." A ticked criterion that is no longer in the round, for example because it was deleted meanwhile, gets "Choose criteria from this round." A round with 30 test cases says "This round has reached its limit of 30 test cases." In every case your ticks are kept, the round, its criteria and its cases stay unchanged, and **Add test case** still works.
+
+## Error pages
+
+Each of these pages shows only its message:
+
+| Message | When |
+| --- | --- |
+| "You do not have access to this page." | You open a page for the other role, and stay signed in, or you send a form Relay cannot verify, such as one left open from before you signed in again. |
+| "Page not found." | The address does not exist, or names a record in another workspace, or a Draft round for a Beta Tester. |
+| A refusal, on a page titled **Action not available** | The action is no longer allowed, so nothing changes. The page shows the reason, such as "This action is not available while the round is Open." (also Draft or Closed) for a coordinator page left open after the round changed state, or the result-entry and feedback messages under [Save and submit a result](#save-and-submit-a-result) and [Observation feedback](#observation-feedback). |
+| "Too many demo workspaces have been created recently. Try again later." | The [demo workspace limit](#create-a-demo-workspace) is reached. The sign-in limit shows its message on the sign-in page instead. |
+| "Relay is temporarily unavailable. Try again later." | Relay could not read or save. Nothing is changed. |
