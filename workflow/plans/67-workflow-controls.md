@@ -13,7 +13,7 @@ Tier: High (development security controls: the scope hook, its adapters and the 
 
 ## Changes
 
-1. Both hook commands find `python`, else `python3`, exit 2 with a message when neither exists, and map any non-zero hook result to 2. The Windows Codex command is unchanged.
+1. Both hook commands find `python`, else `python3`, exit 2 with a message when neither exists, and map any non-zero hook result to 2. The Windows Codex command was left unchanged at first; repair rounds 1 and 2 made it fail closed too (see Review).
 2. `check_scope.py --hook` exits 2 for unreadable input and for any unexpected exception.
 3. `worktree_relative()` resolves the target's existing folders (so a linked folder cannot hide where the edit lands), asks Git for that folder's worktree, requires the same common Git directory as this checkout, and returns the path relative to that worktree; scopes always come from this checkout's role files.
 4. `load_scope()` rejects a `writes`/`never_writes` value that is not a list of strings; the hook already blocks on that error.
@@ -55,3 +55,13 @@ Tier: High (development security controls: the scope hook, its adapters and the 
   - Case-insensitive scope matching on macOS (`FLAGS` is case-sensitive outside Windows, so `src/.ENV` passes `**/.env`). Pre-existing; it needs its own slice.
   - A lone `000-*.md` log is no longer reported as a gap. Nit; logs start at 001.
 - Repair round 1 on `506aede`: `ruff check .` and `ruff format --check .` clean; workflow unittest 118 OK; full `pytest` 2881 passed, 254 subtests.
+- **Recheck of `506aede..5171ee1`:**
+  - Both reviewers found every round-1 finding resolved except one: the Windows Codex command could still exit 0. The `git rev-parse` inside the command sets `$LASTEXITCODE` to 0 before a missing `python` fails to resolve.
+  - New Low: each target could make up to six Git calls of 10 s each, which could outlast the client's hook limit.
+- **Repair round 2:**
+  - The Windows command exits 0 only when `$?` is true and `$LASTEXITCODE` is 0. A `pwsh` test, which runs where PowerShell is installed (as on CI's Ubuntu runner) and is skipped on this Mac, runs it with `git` but no `python` and expects 2.
+  - All Git calls in one hook call share one 10-second deadline (`GIT_SECONDS`). A test records the timeouts and requires them to shrink.
+  - Mutations failing a named test: per-call timeouts; dropping `$?`; the original Windows command; skipping the resolved-target check (rerun).
+  - `ruff check .` and `ruff format --check .` are clean. Workflow unittest: 120 tests OK, 1 skipped (PowerShell). Full `pytest`: 2882 passed, 1 skipped, 254 subtests.
+- **Accepted as is:** DWF-1.2's wording in SECURITY-SPEC still says "outside" without naming worktrees. The README, which SECURITY-SPEC links for the hook's mechanics, now defines it.
+- **Usage:** reported in the session log rather than here, because the orchestrator implemented this slice in the same session as the others.
