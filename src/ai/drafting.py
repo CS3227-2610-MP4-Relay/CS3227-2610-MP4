@@ -138,7 +138,8 @@ def labels(count):
 def encode(texts):
     """Encode criterion texts, cleaned and labelled in order, as the data part.
 
-    Return None when every text is empty after cleaning, so no call is made.
+    Return None when every text is empty after cleaning and trimming, so no call
+    is made.
     """
     criteria = [
         {"label": label, "text": clean(text).strip()}

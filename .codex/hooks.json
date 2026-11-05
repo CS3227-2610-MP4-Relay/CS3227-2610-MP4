@@ -7,8 +7,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$(git rev-parse --show-toplevel)/workflow/scripts/check_scope.py\" --hook",
-            "commandWindows": "python \"$(git rev-parse --show-toplevel)/workflow/scripts/check_scope.py\" --hook; exit $LASTEXITCODE",
+            "command": "py=$(command -v python || command -v python3) || { echo 'check_scope hook: no Python found' >&2; exit 2; }; \"$py\" \"$(git rev-parse --show-toplevel)/workflow/scripts/check_scope.py\" --hook || exit 2",
+            "commandWindows": "python \"$(git rev-parse --show-toplevel)/workflow/scripts/check_scope.py\" --hook; if ($? -and $LASTEXITCODE -eq 0) { exit 0 }; exit 2",
             "statusMessage": "Checking the agent's write scope"
           }
         ]

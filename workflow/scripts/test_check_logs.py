@@ -1,5 +1,7 @@
 """Tests for check_logs.py. Run: python -m unittest discover -s workflow/scripts"""
 
+import contextlib
+import io
 import tempfile
 import unittest
 from pathlib import Path
@@ -36,6 +38,19 @@ class LogChecks(unittest.TestCase):
             patch.object(check_logs, "LOGS", Path(folder) / "absent"),
         ):
             self.assertEqual(check_logs.main(), 0)
+
+    def test_every_missing_number_is_reported(self):
+        with tempfile.TemporaryDirectory() as folder:
+            for number in (1, 2, 5):
+                write(Path(folder) / "logs/a" / f"{number:03d}-a-session.md", GOOD)
+            output = io.StringIO()
+            with (
+                patch.object(check_logs, "ROOT", Path(folder)),
+                patch.object(check_logs, "LOGS", Path(folder) / "logs"),
+                contextlib.redirect_stdout(output),
+            ):
+                self.assertEqual(check_logs.main(), 1)
+            self.assertIn("no log for number(s) [3, 4]", output.getvalue())
 
     def test_a_complete_log_has_no_findings(self):
         with tempfile.TemporaryDirectory() as folder:

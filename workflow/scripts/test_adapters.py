@@ -4,8 +4,14 @@ Run: python -m unittest discover -s workflow/scripts
 """
 
 import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
 import tomllib
 import unittest
+from pathlib import Path
 
 from check_scope import ROOT, load_scope
 
@@ -150,11 +156,84 @@ class AdapterTest(unittest.TestCase):
             handler = group["hooks"][0]
             for key in [key for key in ("command", "commandWindows") if key in handler]:
                 self.assertIn('workflow/scripts/check_scope.py" --hook', handler[key])
+        # A missing `python` leaves $LASTEXITCODE from the `git` inside the
+        # command, so `$?` must also be true.
         self.assertTrue(
             codex["hooks"]["PreToolUse"][0]["hooks"][0]["commandWindows"].endswith(
-                "; exit $LASTEXITCODE"
+                "; if ($? -and $LASTEXITCODE -eq 0) { exit 0 }; exit 2"
             )
         )
+
+    @unittest.skipIf(shutil.which("pwsh") is None, "PowerShell not installed")
+    def test_windows_codex_command_blocks_when_python_is_missing(self):
+        codex = json.loads((ROOT / ".codex" / "hooks.json").read_text(encoding="utf-8"))
+        command = codex["hooks"]["PreToolUse"][0]["hooks"][0]["commandWindows"]
+        only_git = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (only_git / "git").symlink_to(shutil.which("git"))
+        result = subprocess.run(
+            [
+                shutil.which("pwsh"),
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                command,
+            ],
+            input="{}",
+            capture_output=True,
+            text=True,
+            cwd=ROOT,
+            env={"PATH": str(only_git), "HOME": os.environ.get("HOME", "/tmp")},
+            check=False,
+        )
+        self.assertEqual(result.returncode, 2, result.stderr)
+
+    @unittest.skipIf(os.name == "nt", "POSIX hook commands")
+    def test_hook_commands_block_when_python_is_missing_or_fails(self):
+        """Clients treat exit codes other than 2 as non-blocking."""
+        claude = json.loads(
+            (ROOT / ".claude" / "settings.json").read_text(encoding="utf-8")
+        )
+        codex = json.loads((ROOT / ".codex" / "hooks.json").read_text(encoding="utf-8"))
+        found = f"{Path(sys.executable).parent}{os.pathsep}{os.environ['PATH']}"
+        scratch = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        # A machine with only `python3`, as on macOS without a virtual environment.
+        only_python3 = scratch / "only-python3"
+        # A `python` that is found but fails, such as Python 2 or a broken shim.
+        broken = scratch / "broken"
+        for folder in (only_python3, broken):
+            folder.mkdir()
+            (folder / "git").symlink_to(shutil.which("git"))
+        (only_python3 / "python3").symlink_to(sys.executable)
+        (broken / "python").write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+        (broken / "python").chmod(0o755)
+        spaced = scratch / "a project"
+        spaced.symlink_to(ROOT)
+        event = json.dumps(
+            {"agent_type": "builder", "tool_input": {"file_path": "AGENTS.md"}}
+        )
+        for config in (claude, codex):
+            command = config["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+            for path, project, stdin, code in [
+                ("/nonexistent", ROOT, "{}", 2),  # no Python at all
+                (broken, ROOT, "{}", 2),
+                (found, ROOT, "{", 2),  # unreadable input
+                (found, ROOT, event, 2),  # out-of-scope builder edit
+                (found, ROOT, "{}", 0),  # main session
+                (found, spaced, "{}", 0),
+                (found, spaced, event, 2),
+                (only_python3, ROOT, "{}", 0),
+                (only_python3, ROOT, event, 2),
+            ]:
+                result = subprocess.run(
+                    ["/bin/sh", "-c", command],
+                    input=stdin,
+                    capture_output=True,
+                    text=True,
+                    cwd=ROOT,
+                    env={"PATH": str(path), "CLAUDE_PROJECT_DIR": str(project)},
+                    check=False,
+                )
+                self.assertEqual(result.returncode, code, (path, project, stdin))
 
     def test_pip_install_checkpoint_covers_both_python_invocations(self):
         config = json.loads(

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from django.views.decorators.debug import sensitive_variables
 
-from . import drafting, feedback, gateway
+from . import drafting, experiments, feedback, gateway
 
 CORPUS_VERSION = "context-1"
 # Case/criterion prose visible to either role in the fictional inventory round.
@@ -107,15 +107,7 @@ def corpus():
 @sensitive_variables()
 def score(case, result):
     """Observe schema acceptance and validated counts without grading semantics."""
-    status = (
-        "success"
-        if isinstance(result, gateway.Success)
-        else "refused"
-        if isinstance(result, gateway.Refused)
-        else "failed"
-        if isinstance(result, gateway.Failed)
-        else "unattempted"
-    )
+    status = experiments.status(result)
     usage = gateway._checked_usage(result.usage) if result is not None else None
     row = {
         "id": case.id,

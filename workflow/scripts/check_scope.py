@@ -15,8 +15,9 @@ Usage:
   python workflow/scripts/check_scope.py --hook
       PreToolUse hook for Claude Code (Edit, Write) and Codex (apply_patch).
       Reads the tool call from stdin and exits 2 to block a role agent's edit
-      outside its scope. Calls from the main session or from agents without a
-      role file are allowed.
+      outside its scope, including in another worktree of this repository.
+      Calls from the main session or from agents without a role file are
+      allowed. Unreadable input or any unexpected error also exits 2.
   python workflow/scripts/check_scope.py --snapshot <manifest>
       Save HEAD, index identity and hashes of tracked/nonignored files in a
       manifest outside the repository. Never reads secret .env files.
@@ -33,10 +34,13 @@ import re
 import stat
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 AGENTS_DIR = ROOT / "workflow" / "agents"
+# All of one hook call's Git work must end well inside the client's hook limit.
+GIT_SECONDS = 10
 SCOPE_KEYS = ("writes", "never_writes")
 FLAGS = re.IGNORECASE if os.name == "nt" else 0
 PATCH_PATH = re.compile(
@@ -59,7 +63,13 @@ def load_scope(role):
             break
         key, _, value = line.partition(":")
         if key.strip() in SCOPE_KEYS:
-            scope[key.strip()] = json.loads(value)
+            patterns = json.loads(value)
+            # A bare string would be iterated character by character.
+            if not isinstance(patterns, list) or not all(
+                isinstance(pattern, str) for pattern in patterns
+            ):
+                raise ValueError(f"{path} {key.strip()} is not a list of patterns")
+            scope[key.strip()] = patterns
     missing = [key for key in SCOPE_KEYS if key not in scope]
     if missing:
         raise ValueError(f"{path} front matter lacks {', '.join(missing)}")
@@ -111,13 +121,66 @@ def relative_to_root(path, root=ROOT):
     return None if rel == ".." or rel.startswith("../") else rel
 
 
-def git(root, *args):
+def worktree_relative(path, deadline=None):
+    """Return the path relative to its worktree of this repository, or None.
+
+    A path in another worktree of the same repository, including one nested
+    inside this checkout, is checked against this checkout's role files.
+    Anything outside this repository's worktrees is None. Git calls share the
+    `time.monotonic()` deadline, or get GIT_SECONDS each without one.
+    """
+    path = os.path.abspath(path)
+    folder = os.path.dirname(path)
+    while not os.path.isdir(folder):
+        if os.path.dirname(folder) == folder:
+            return None
+        folder = os.path.dirname(folder)
+    # Resolve links in the existing folders so the path compares with Git's
+    # resolved worktree path; the hook separately checks the fully resolved target.
+    path = os.path.join(os.path.realpath(folder), os.path.relpath(path, folder))
+    # The client's GIT_* settings must not choose the repository, and a slow Git
+    # must time out (and so block) rather than outlast the client's hook limit.
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+
+    def run(root, *args):
+        left = GIT_SECONDS if deadline is None else deadline - time.monotonic()
+        return git(root, *args, env=env, timeout=max(left, 0.001))
+
+    try:
+        top, common = run(
+            folder,
+            "rev-parse",
+            "--path-format=absolute",
+            "--show-toplevel",
+            "--git-common-dir",
+        ).splitlines()
+        ours = run(ROOT, "rev-parse", "--path-format=absolute", "--git-common-dir")
+        listed = run(ROOT, "worktree", "list", "--porcelain")
+    except (OSError, ValueError, subprocess.CalledProcessError):
+        return relative_to_root(path, ROOT)  # this checkout outside Git, or none
+    same = os.path.normcase(os.path.realpath(common)) == os.path.normcase(
+        os.path.realpath(ours.strip())
+    )
+    # Only worktrees Git lists for this repository count, not a planted .git file.
+    worktrees = {
+        os.path.normcase(os.path.realpath(line[len("worktree ") :]))
+        for line in listed.splitlines()
+        if line.startswith("worktree ")
+    }
+    if not same or os.path.normcase(os.path.realpath(top)) not in worktrees:
+        return None
+    return relative_to_root(path, Path(os.path.realpath(top)))
+
+
+def git(root, *args, env=None, timeout=None):
     """Run git in root and return its output, raising if it fails."""
     return subprocess.run(
         ["git", *args],
         cwd=root,
         capture_output=True,
         check=True,
+        env=env,
+        timeout=timeout,
     ).stdout.decode("utf-8", errors="replace")
 
 
@@ -287,7 +350,7 @@ def check_hook_call():
         event = json.load(sys.stdin)
     except ValueError:
         print("check_scope hook: stdin is not a JSON tool call", file=sys.stderr)
-        return 1
+        return 2
     role = event.get("agent_type")
     if not role:
         return 0
@@ -305,11 +368,19 @@ def check_hook_call():
             file=sys.stderr,
         )
         return 2
+    deadline = time.monotonic() + GIT_SECONDS
     for target in targets:
         if not os.path.isabs(target):
             target = os.path.join(event.get("cwd") or ROOT, target)
-        rel = relative_to_root(target)
-        if rel is None or not in_scope(rel, scope):
+        # Judge the path as written and as fully resolved: a link may be the last
+        # part of the path, and `..` after a linked folder leaves that folder.
+        rels = [
+            worktree_relative(path, deadline)
+            for path in (target, os.path.realpath(target))
+        ]
+        outside = [rel for rel in rels if rel is None or not in_scope(rel, scope)]
+        if outside:
+            rel = outside[0]
             print(
                 f"Blocked: {role} may not write {rel or target}. It is outside "
                 f"the scope in workflow/agents/{role.replace('_', '-')}.md. "
@@ -337,7 +408,12 @@ def edited_paths(tool_input):
 def main(args):
     """Run the command in the usage above and return its exit code."""
     if args == ["--hook"]:
-        return check_hook_call()
+        # Clients treat exit codes other than 2 as non-blocking, so fail closed.
+        try:
+            return check_hook_call()
+        except Exception as error:  # noqa: BLE001 - any failure must block
+            print(f"check_scope hook failed: {error!r}", file=sys.stderr)
+            return 2
     if len(args) == 2 and args[0] == "--snapshot":
         target = Path(args[1]).resolve()
         if relative_to_root(target) is not None:

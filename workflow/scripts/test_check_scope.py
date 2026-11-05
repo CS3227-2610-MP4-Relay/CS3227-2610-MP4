@@ -205,7 +205,169 @@ class HookTest(unittest.TestCase):
             text=True,
             check=False,
         )
-        self.assertNotEqual(result.returncode, 0)
+        # Clients treat any exit other than 2 as non-blocking.
+        self.assertEqual(result.returncode, 2)
+
+    def test_unexpected_errors_block(self):
+        event = {"agent_type": "builder", "tool_input": {"file_path": "src/a.py"}}
+        with (
+            patch.object(check_scope, "edited_paths", side_effect=RuntimeError("x")),
+            patch.object(sys, "stdin", io.StringIO(json.dumps(event))),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            self.assertEqual(check_scope.main(["--hook"]), 2)
+
+    def test_a_scope_that_is_not_a_list_blocks(self):
+        with tempfile.TemporaryDirectory() as folder:
+            role = Path(folder) / "builder.md"
+            role.write_text(
+                '---\nwrites: "src/**"\nnever_writes: []\n---\n', encoding="utf-8"
+            )
+            with patch.object(check_scope, "AGENTS_DIR", Path(folder)):
+                with self.assertRaisesRegex(ValueError, "not a list of patterns"):
+                    load_scope("builder")
+                event = {"agent_type": "builder", "tool_input": {"file_path": "x"}}
+                with (
+                    patch.object(sys, "stdin", io.StringIO(json.dumps(event))),
+                    contextlib.redirect_stderr(io.StringIO()),
+                ):
+                    self.assertEqual(check_scope.main(["--hook"]), 2)
+            role.write_text("---\nwrites: [1]\nnever_writes: []\n---\n", "utf-8")
+            with (
+                patch.object(check_scope, "AGENTS_DIR", Path(folder)),
+                self.assertRaisesRegex(ValueError, "not a list of patterns"),
+            ):
+                load_scope("builder")
+
+    def test_a_git_call_that_times_out_blocks(self):
+        event = {"agent_type": "builder", "tool_input": {"file_path": "src/a.py"}}
+        timeout = subprocess.TimeoutExpired("git", 10)
+        with (
+            patch.object(check_scope, "git", side_effect=timeout),
+            patch.object(sys, "stdin", io.StringIO(json.dumps(event))),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            self.assertEqual(check_scope.main(["--hook"]), 2)
+
+    def test_one_hook_calls_git_within_one_shared_deadline(self):
+        timeouts = []
+        real_git = check_scope.git
+
+        def recording_git(*args, timeout=None, **kwargs):
+            timeouts.append(timeout)
+            return real_git(*args, timeout=timeout, **kwargs)
+
+        event = {"agent_type": "builder", "tool_input": {"file_path": "src/a.py"}}
+        with (
+            patch.object(check_scope, "git", side_effect=recording_git),
+            patch.object(sys, "stdin", io.StringIO(json.dumps(event))),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            self.assertEqual(check_scope.main(["--hook"]), 0)
+        self.assertGreater(len(timeouts), 1)
+        self.assertTrue(all(0 < t <= check_scope.GIT_SECONDS for t in timeouts))
+        self.assertEqual(timeouts, sorted(timeouts, reverse=True))
+        self.assertLess(timeouts[-1], timeouts[0])
+
+
+class SiblingWorktreeTest(unittest.TestCase):
+    """Builders often edit in another worktree of the same repository."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.base = Path(self.tmp.name).resolve()
+        self.main = self.base / "main"
+        for repo in (self.main, self.base / "other"):
+            repo.mkdir()
+            self.git(repo, "init", "-q")
+            (repo / "README.md").write_text("x\n", encoding="utf-8")
+            self.git(repo, "add", "README.md")
+            self.git(repo, "commit", "-q", "-m", "init")
+        self.git(self.main, "worktree", "add", "-q", str(self.base / "wt"))
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def git(self, repo, *args):
+        subprocess.run(
+            ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
+            cwd=repo,
+            capture_output=True,
+            check=True,
+            # Never act on the real repository, even when run from a Git hook.
+            env={k: v for k, v in os.environ.items() if not k.startswith("GIT_")},
+        )
+
+    def hook(self, target):
+        event = {"agent_type": "builder", "tool_input": {"file_path": str(target)}}
+        with (
+            patch.object(check_scope, "ROOT", self.main),
+            patch.object(sys, "stdin", io.StringIO(json.dumps(event))),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            return check_scope.main(["--hook"])
+
+    def test_paths_resolve_within_this_repositorys_worktrees_only(self):
+        with patch.object(check_scope, "ROOT", self.main):
+            relative = check_scope.worktree_relative
+            self.assertEqual(relative(self.main / "src/a.py"), "src/a.py")
+            self.assertEqual(relative(self.base / "wt/src/a.py"), "src/a.py")
+            self.assertEqual(relative(self.base / "wt/new/dir/b.py"), "new/dir/b.py")
+            self.assertIsNone(relative(self.base / "other/src/a.py"))
+            self.assertIsNone(relative(self.base / "loose.py"))
+            self.git(self.main, "worktree", "add", "-q", str(self.main / "nested"))
+            self.assertEqual(relative(self.main / "nested/src/a.py"), "src/a.py")
+
+    def test_sibling_worktree_edits_use_this_checkouts_role_files(self):
+        self.assertEqual(self.hook(self.base / "wt/src/a.py"), 0)
+        self.assertEqual(self.hook(self.base / "wt/AGENTS.md"), 2)
+        self.assertEqual(self.hook(self.base / "wt/../wt/AGENTS.md"), 2)
+        self.assertEqual(self.hook(self.base / "other/src/a.py"), 2)
+
+    @unittest.skipIf(os.name == "nt", "directory symlinks need extra rights")
+    def test_a_linked_folder_cannot_hide_where_the_edit_lands(self):
+        (self.base / "wt/workflow/agents").mkdir(parents=True)
+        (self.base / "wt/src").mkdir()
+        (self.base / "wt/src/linked").symlink_to(self.base / "wt/workflow")
+        (self.base / "wt/src/outside").symlink_to(self.main)
+        for target in ["src/linked/agents/builder.md", "src/outside/AGENTS.md"]:
+            self.assertEqual(self.hook(self.base / "wt" / target), 2, target)
+        self.assertEqual(self.hook(self.base / "wt/src/plain.py"), 0)
+
+    @unittest.skipIf(os.name == "nt", "symlinks need extra rights")
+    def test_a_linked_file_or_dot_dot_after_a_link_cannot_hide_the_target(self):
+        (self.base / "wt/workflow/agents/sub").mkdir(parents=True)
+        (self.base / "wt/AGENTS.md").write_text("x\n", encoding="utf-8")
+        (self.base / "wt/src").mkdir()
+        (self.base / "wt/src/link.md").symlink_to(self.base / "wt/AGENTS.md")
+        (self.base / "wt/src/new.md").symlink_to(
+            self.base / "wt/workflow/agents/new.md"  # dangling
+        )
+        (self.base / "wt/src/l").symlink_to(self.base / "wt/workflow/agents/sub")
+        for target in ["src/link.md", "src/new.md", "src/l/../builder.md"]:
+            self.assertEqual(self.hook(f"{self.base}/wt/{target}"), 2, target)
+
+    def test_a_planted_git_file_is_not_a_worktree(self):
+        notes = self.base / "wt/notes"
+        notes.mkdir()
+        (notes / ".git").write_text(f"gitdir: {self.main / '.git'}\n", "utf-8")
+        # Judged from `notes`, this would be the builder's docs/UserGuide.md.
+        self.assertEqual(self.hook(notes / "docs/UserGuide.md"), 2)
+
+    def test_git_environment_cannot_choose_the_repository(self):
+        loose = self.base / "loose"
+        loose.mkdir()
+        with patch.dict(os.environ, {"GIT_DIR": str(self.main / ".git")}):
+            self.assertEqual(self.hook(loose / "src/new.py"), 2)
+
+    def test_without_git_only_this_checkouts_paths_resolve(self):
+        with (
+            patch.object(check_scope, "ROOT", self.main),
+            patch.object(check_scope, "git", side_effect=FileNotFoundError("git")),
+        ):
+            relative = check_scope.worktree_relative
+            self.assertEqual(relative(self.main / "src/a.py"), "src/a.py")
+            self.assertIsNone(relative(self.base / "wt/src/a.py"))
 
 
 class WorkingTreeTest(unittest.TestCase):
