@@ -6,7 +6,7 @@ from functools import wraps
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db import DatabaseError, transaction
-from django.db.models import F, Prefetch
+from django.db.models import Prefetch
 from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
@@ -15,10 +15,9 @@ from django.views.decorators.http import require_http_methods
 from accounts.models import User
 from accounts.workspaces import workspace_records
 
-from . import services
+from . import results, services
 from .forms import CaseForm, CriterionForm, PublishForm, RetestForm, RoundForm
-from .models import Build, Case, Criterion, Result, Round
-from .services import RoundLimitReached, create_round
+from .models import Case, Criterion, Round
 from .templatetags.rounds_text import retest_message
 
 logger = logging.getLogger(__name__)
@@ -60,8 +59,12 @@ def own_round(request, round_id, *, lock=False):
 
 def state_conflict(request, round_):
     """Refuse an action the round's state does not allow."""
-    context = {"state": round_.get_state_display()}
-    return render(request, "rounds/conflict.html", context, status=409)
+    return conflict_page(request, results.state_message(round_))
+
+
+def conflict_page(request, message):
+    """Render a fixed-text refusal as the shared 409 page."""
+    return render(request, "rounds/conflict.html", {"message": message}, status=409)
 
 
 def form_page(request, form, title, button, round_=None):
@@ -78,8 +81,10 @@ def new_round(request):
     form = RoundForm(request.POST)
     if form.is_valid():
         try:
-            made = create_round(request.user.workspace, form.cleaned_data["title"])
-        except RoundLimitReached as limit:
+            made = services.create_round(
+                request.user.workspace, form.cleaned_data["title"]
+            )
+        except services.RoundLimitReached as limit:
             form.add_error("title", str(limit))
         else:
             return redirect(made)
@@ -199,13 +204,9 @@ def record_form(request, round_id, kind, criterion_id=None, case_id=None):
             form.add_error(refused.field, str(refused))
         else:
             return redirect(round_)
-    context = {
-        "form": form,
-        "title": f"{'New' if record is None else 'Edit'} {noun}",
-        "button": f"Add {noun}" if record is None else "Save",
-        "round": round_,
-    }
-    return render(request, "rounds/round_form.html", context)
+    title = f"{'New' if record is None else 'Edit'} {noun}"
+    button = f"Add {noun}" if record is None else "Save"
+    return form_page(request, form, title, button, round_)
 
 
 @coordinator_view(["POST"])
@@ -288,13 +289,7 @@ def retest_round(request, round_id):
             text = retest_message(len(set(ids)), build.label)
             messages.success(request, text, extra_tags="retest")
             return redirect(round_)
-    context = {
-        "form": form,
-        "title": "Request a retest",
-        "button": "Request retest",
-        "round": round_,
-    }
-    return render(request, "rounds/round_form.html", context)
+    return form_page(request, form, "Request a retest", "Request retest", round_)
 
 
 @coordinator_view(["GET"])
@@ -307,22 +302,10 @@ def results_page(request, round_id):
     round_ = own_round(request, round_id)
     if round_.state == Round.State.DRAFT:
         return state_conflict(request, round_)
-    cases = list(
-        round_.cases.prefetch_related(
-            Prefetch("criteria", queryset=Criterion.objects.filter(round=round_)),
-            Prefetch(
-                "builds", queryset=Build.objects.filter(round=round_).order_by("-id")
-            ),
-        )
-    )
+    cases = results.cases_with_current_build(round_)
     submitted = (
-        Result.objects.filter(
-            submitted_at__isnull=False,
-            case__round=round_,
-            build__round=round_,
-            build__cases=F("case_id"),
-            tester__workspace=round_.workspace_id,
-        )
+        results.covered_results(round_)
+        .filter(submitted_at__isnull=False, tester__workspace=round_.workspace_id)
         .select_related("tester", "build")
         .order_by("-build_id", "-submitted_at", "-id")
     )
@@ -330,7 +313,6 @@ def results_page(request, round_id):
     for result in submitted:
         by_case.setdefault(result.case_id, []).append(result)
     for case in cases:
-        case.current_build = next(iter(case.builds.all()), None)
         current = getattr(case.current_build, "pk", None)
         rows = by_case.get(case.pk, [])
         case.current_results = [row for row in rows if row.build_id == current]

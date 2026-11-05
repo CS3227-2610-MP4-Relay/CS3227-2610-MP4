@@ -1,17 +1,22 @@
-"""Private result entry and persistence under the shared round lock (RES-2)."""
+"""Result entry, persistence and round-scoped reads (RES-2, RES-3, RND-4).
+
+Entry and saving run under the shared round lock; the read helpers limit
+cases, criteria, builds and results to one round for the review and history.
+"""
 
 from contextlib import contextmanager
 from dataclasses import dataclass
 
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.db.models import F, Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
 from accounts.models import User
 from accounts.workspaces import workspace_records
 
-from .models import Build, Case, Result, Round
+from .models import Build, Case, Criterion, Result, Round
 
 STALE = "This build is no longer current. Reload the round to record a result."
 SUBMITTED = "This result has already been submitted."
@@ -19,6 +24,38 @@ SUBMITTED = "This result has already been submitted."
 
 class Conflict(Exception):
     """A fixed-text state/build/submission refusal, rendered by entry as 409."""
+
+
+def state_message(round_):
+    """The refusal of an action `round_`'s state does not allow."""
+    state = round_.get_state_display()
+    return f"This action is not available while the round is {state}."
+
+
+def cases_with_current_build(round_):
+    """Return the round's cases with their criteria and builds limited to it.
+
+    Each case's `current_build` is its newest covering build in the round, or
+    None; the link tables alone do not tie criteria or builds to the round.
+    """
+    cases = list(
+        round_.cases.prefetch_related(
+            Prefetch("criteria", queryset=Criterion.objects.filter(round=round_)),
+            Prefetch(
+                "builds", queryset=Build.objects.filter(round=round_).order_by("-id")
+            ),
+        )
+    )
+    for case in cases:
+        case.current_build = next(iter(case.builds.all()), None)
+    return cases
+
+
+def covered_results(round_):
+    """Return results whose case and build are in the round, the build covering it."""
+    return Result.objects.filter(
+        case__round=round_, build__round=round_, build__cases=F("case_id")
+    )
 
 
 @dataclass
@@ -50,10 +87,7 @@ def entry(tester, round_id, case_id, build_id, *, write=False):
         case = get_object_or_404(round_.cases, pk=case_id)
         build = get_object_or_404(round_.builds.filter(cases=case), pk=build_id)
         if round_.state != Round.State.OPEN:
-            raise Conflict(
-                "This action is not available while the round is "
-                f"{round_.get_state_display()}."
-            )
+            raise Conflict(state_message(round_))
         if round_.builds.filter(cases=case).order_by("-pk").first().pk != build.pk:
             raise Conflict(STALE)
         result = Result.objects.filter(tester=tester, case=case, build=build).first()

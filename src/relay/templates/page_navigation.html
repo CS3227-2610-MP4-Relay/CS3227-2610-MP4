@@ -1,4 +1,4 @@
 <nav class="page-navigation" aria-label="Page navigation">
-  {% if tester %}<a class="action secondary" href="{% url 'accounts:tester' %}">Tester home</a>{% else %}<a class="action secondary" href="{% url 'accounts:coordinator' %}">Coordinator home</a>{% endif %}
+  {% if user.role == "tester" %}<a class="action secondary" href="{% url 'accounts:tester' %}">Tester home</a>{% else %}<a class="action secondary" href="{% url 'accounts:coordinator' %}">Coordinator home</a>{% endif %}
   {% if back %}<a class="action secondary" href="{{ back }}">{{ back_label|default:"Back to round" }}</a>{% endif %}
 </nav>

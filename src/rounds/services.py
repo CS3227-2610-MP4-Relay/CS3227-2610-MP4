@@ -42,7 +42,7 @@ FOREIGN = "Choose criteria from this round."
 
 
 class Refused(Exception):
-    """A criterion or case write the RND-2 rules refuse.
+    """A write the RND-2 record, RND-3.3 publish or RND-5 retest rules refuse.
 
     `str()` is the user-facing message; `field` names the form field it
     belongs next to, or is None for a refused deletion.
@@ -53,8 +53,8 @@ class Refused(Exception):
         self.field = field
 
 
-# Every function below runs inside the caller's transaction, after the caller
-# has locked the round row and re-checked that the round is Draft.
+# The criterion and case writes below run inside the caller's transaction, after
+# the caller has locked the round row and re-checked that the round is Draft.
 
 
 def add_criterion(round_, text):

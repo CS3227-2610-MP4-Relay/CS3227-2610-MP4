@@ -4,6 +4,6 @@
 {% if cases %}<ul>{% for case in cases %}<li><a href="#case-{{ case.pk }}">{{ case.title|isolated_lines }}</a></li>{% endfor %}</ul>{% endif %}
 </li>{% endif %}
 {% if history_contents %}{% for result in results %}<li><a href="#result-{{ result.pk }}">{{ result.case.title|isolated_lines }} — {{ result.build.label|isolated_lines }}</a></li>{% endfor %}
-{% elif not round_contents and not tester_contents %}{% for case in cases %}<li><a href="#case-{{ case.pk }}">{{ case.title|isolated_lines }}</a></li>{% endfor %}{% endif %}
+{% elif results_contents %}{% for case in cases %}<li><a href="#case-{{ case.pk }}">{{ case.title|isolated_lines }}</a></li>{% endfor %}{% endif %}
 {% if round_contents and builds %}<li><a href="#builds">Builds</a></li>{% endif %}
 </ul>

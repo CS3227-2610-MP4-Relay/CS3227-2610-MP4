@@ -5,7 +5,7 @@
 {% include "page_navigation.html" with back=round.get_absolute_url %}
 <h1>Results: {{ round.title|isolated_lines }}</h1>
 <div class="state"><p>State: {{ round.get_state_display }}</p></div>
-<div class="reading-layout">{% include "rounds/contents.html" %}<div class="records">
+<div class="reading-layout">{% include "rounds/contents.html" with results_contents=True %}<div class="records">
 {% for case in cases %}<details class="record"{% if forloop.first %} open{% endif %}><summary><h2>{{ case.title|isolated_lines }}</h2>
 <span class="record-meta"><span>Current build</span> {{ case.current_build.label|isolated_lines }}</span>
 {% for result in case.current_results %}<span class="record-meta">{{ result.tester.username|isolated_lines }} — {{ result.get_outcome_display }}</span>{% empty %}<span class="record-meta">No results for this build yet.</span>{% endfor %}</summary>

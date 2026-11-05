@@ -1,12 +1,11 @@
 {% extends "base.html" %}
 {% load rounds_text %}
-{% block title %}{% if conflict %}Action not available{% else %}Observation feedback{% endif %}{% endblock %}
+{% block title %}Observation feedback{% endblock %}
 {% block pending_forms %}{% include "pending_forms.html" %}{% endblock %}
 {% block content %}
-{% if conflict %}<div class="error"><h1>{{ conflict }}</h1></div>
-{% else %}{% url 'accounts:tester-result' entry.round.pk entry.case.pk entry.build.pk as back_url %}{% include "page_navigation.html" with tester=True back=back_url back_label="Back to result" %}<h1>Observation feedback</h1>
+{% url 'accounts:tester-result' entry.round.pk entry.case.pk entry.build.pk as back_url %}{% include "page_navigation.html" with back=back_url back_label="Back to result" %}<h1>Observation feedback</h1>
 <p>AI receives your saved observation, this test case and its linked acceptance criteria. Suggestions may be wrong. Review them and edit your result yourself. Unsaved edits are not included.</p>
-<h2>Saved observation</h2><p>{% if entry.result.observation %}{{ entry.result.observation|isolated_lines }}{% else %}<em>No observation.</em>{% endif %}</p>
+<h2>Saved observation</h2><p>{% include "rounds/observation.html" with observation=entry.result.observation %}</p>
 <h2>Test case</h2><p>{{ entry.case.title|isolated_lines }}</p>
 <h2>Steps</h2><p>{{ entry.case.steps|isolated_lines }}</p>
 <h2>Expected result</h2><p>{{ entry.case.expected_result|isolated_lines }}</p>
@@ -16,5 +15,4 @@
 <form method="post" data-pending-message="Suggesting missing details…">{% csrf_token %}<button type="submit">Suggest missing details</button><p class="pending-status" role="status" aria-live="polite" aria-atomic="true"></p></form>
 {% if message %}<div class="error"><p>{{ message }}</p></div>{% endif %}
 {% if questions %}<h2>Questions to consider</h2><ol>{% for question in questions %}<li>{{ question|isolated_lines }}</li>{% endfor %}</ol>{% endif %}
-{% endif %}
 {% endblock %}

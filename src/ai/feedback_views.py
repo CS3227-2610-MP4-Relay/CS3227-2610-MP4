@@ -8,6 +8,7 @@ from django.views.decorators.debug import sensitive_post_parameters, sensitive_v
 
 from rounds import results
 from rounds.tester import tester_view
+from rounds.views import conflict_page
 
 from . import feedback, gateway
 
@@ -21,6 +22,7 @@ TOO_LONG = (
     "You can still edit your result yourself."
 )
 CHANGED = "Your saved draft or test case changed. Reload before requesting feedback."
+NO_DRAFT = "Save a draft before requesting feedback."
 
 
 @sensitive_variables()
@@ -28,7 +30,7 @@ def _load(user, round_id, case_id, build_id):
     """Read authorized eligible source fully inside a short read transaction."""
     with results.entry(user, round_id, case_id, build_id) as entry:
         if entry.result is None:
-            raise results.Conflict("Save a draft before requesting feedback.")
+            raise results.Conflict(NO_DRAFT)
         if entry.result.submitted_at is not None:
             raise results.Conflict(results.SUBMITTED)
         criteria = list(entry.case.criteria.filter(round=entry.round).order_by("pk"))
@@ -83,6 +85,4 @@ def feedback_page(request, round_id, case_id, build_id):
             },
         )
     except results.Conflict as conflict:
-        return render(
-            request, "ai/feedback.html", {"conflict": str(conflict)}, status=409
-        )
+        return conflict_page(request, str(conflict))
