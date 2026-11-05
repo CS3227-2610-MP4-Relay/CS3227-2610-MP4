@@ -235,6 +235,25 @@ def _endpoint():
     return url
 
 
+@sensitive_variables("api_key")
+def _configuration():
+    """Return the endpoint, model and API key, or None unless all are usable."""
+    url = _endpoint()
+    api_key = os.environ.get("SOC_LLM_API_KEY", "").strip()
+    model = os.environ.get("SOC_LLM_MODEL", "").strip()
+    usable_key = api_key.isascii() and api_key.isprintable()
+    if url is None or not model or not api_key or not usable_key:
+        return None
+    return url, model, api_key
+
+
+@sensitive_variables("configuration")
+def configured_model():
+    """Return the model name when endpoint, model and key are usable, else None."""
+    configuration = _configuration()
+    return None if configuration is None else configuration[1]
+
+
 def _remaining(deadline):
     """Return the seconds left before `deadline`, or raise TimeoutError."""
     left = deadline - time.monotonic()
@@ -458,17 +477,17 @@ def _reply(value):
     return Success(text)
 
 
-@sensitive_variables("api_key", "headers", "body", "instructions", "data")
+@sensitive_variables(
+    "configuration", "api_key", "headers", "body", "instructions", "data"
+)
 def _transport(instructions, data, deadline):
     """Send one request without redirects or retries, returning a result."""
     if not settings.SOC_LLM_LIVE:
         return Refused("live-off")
-    url = _endpoint()
-    api_key = os.environ.get("SOC_LLM_API_KEY", "").strip()
-    model = os.environ.get("SOC_LLM_MODEL", "").strip()
-    usable_key = api_key.isascii() and api_key.isprintable()
-    if url is None or not model or not api_key or not usable_key:
+    configuration = _configuration()
+    if configuration is None:
         return Refused("not-configured")
+    url, model, api_key = configuration
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",

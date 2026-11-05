@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from django.views.decorators.debug import sensitive_variables
 
-from . import drafting, feedback, gateway
+from . import drafting, experiments, feedback
 
 CORPUS_VERSION = "injection-1"
 # Fully escaped attack directives; decoded only by tests or the explicit live command.
@@ -96,15 +96,7 @@ def corpus():
 @sensitive_variables()
 def score(case, result):
     """Observe markers separately in raw replies and accepted cleaned text."""
-    status = (
-        "success"
-        if isinstance(result, gateway.Success)
-        else "refused"
-        if isinstance(result, gateway.Refused)
-        else "failed"
-        if isinstance(result, gateway.Failed)
-        else "unattempted"
-    )
+    status = experiments.status(result)
     row = {
         "id": case.id,
         "feature": case.feature,
