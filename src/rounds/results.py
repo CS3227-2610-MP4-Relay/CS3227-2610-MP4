@@ -1,4 +1,8 @@
-"""Private result entry and persistence under the shared round lock (RES-2)."""
+"""Result entry, persistence and round-scoped reads (RES-2, RES-3, RND-4).
+
+Entry and saving run under the shared round lock; the read helpers limit
+cases, criteria, builds and results to one round for the review and history.
+"""
 
 from contextlib import contextmanager
 from dataclasses import dataclass
