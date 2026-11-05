@@ -4,7 +4,9 @@ import pytest
 
 from accounts.models import Workspace
 from rounds import services
-from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
+from rounds.models import Case, CaseCriterion, Criterion, Round
+
+from .conftest import ROUND_RECORDS, domain_rows, locked
 
 pytestmark = pytest.mark.django_db
 
@@ -13,11 +15,6 @@ pytestmark = pytest.mark.django_db
 def round_():
     workspace = Workspace.objects.create(name="Demo workspace rnd60001")
     return Round.objects.create(workspace=workspace, title="Synthetic round")
-
-
-def locked(round_):
-    """Lock the round row, as the view does before calling `close`."""
-    return Round.objects.select_for_update().get(pk=round_.pk)
 
 
 def published(round_, cases=2):
@@ -36,21 +33,10 @@ def published(round_, cases=2):
     return round_
 
 
-def snapshot(round_):
-    """Everything RND-2 and RND-3 store for a round."""
-    return (
-        list(Criterion.objects.filter(round=round_).values()),
-        list(Case.objects.filter(round=round_).values()),
-        list(CaseCriterion.objects.filter(case__round=round_).values()),
-        list(Build.objects.filter(round=round_).values()),
-        list(BuildCase.objects.filter(build__round=round_).values()),
-    )
-
-
 @pytest.mark.ac("RND-6.1")
 def test_close_makes_an_open_round_closed_and_keeps_its_records(round_):
     published(round_)
-    before = snapshot(round_)
+    before = domain_rows(*ROUND_RECORDS)
     published_at = round_.published_at
     services.close(locked(round_))
     round_.refresh_from_db()
@@ -59,7 +45,7 @@ def test_close_makes_an_open_round_closed_and_keeps_its_records(round_):
     assert round_.closed_at >= published_at
     assert round_.published_at == published_at
     assert round_.title == "Synthetic round"
-    assert snapshot(round_) == before
+    assert domain_rows(*ROUND_RECORDS) == before
 
 
 @pytest.mark.ac("RND-6.2")
@@ -88,9 +74,9 @@ def test_close_refuses_a_round_that_is_not_open(round_, state):
         services.close(locked(round_))
         target = round_
     target.refresh_from_db()
-    before = (target.state, target.closed_at, snapshot(target))
+    before = (target.state, target.closed_at, domain_rows())
     with pytest.raises(services.RoundNotOpen) as refused:
         services.close(locked(target))
     assert str(refused.value) == "The round is not Open."
     target.refresh_from_db()
-    assert (target.state, target.closed_at, snapshot(target)) == before
+    assert (target.state, target.closed_at, domain_rows()) == before

@@ -36,10 +36,12 @@ from .conftest import (
     UNAVAILABLE,
     csrf_token,
     detail,
+    domain_rows,
+    no_store,
     page,
     signed_in,
+    title_tag,
 )
-from .test_result_services import snapshot
 
 pytestmark = pytest.mark.django_db
 
@@ -57,18 +59,9 @@ def results_url(round_id):
     return f"/coordinator/rounds/{round_id}/results/"
 
 
-def title_tag(html):
-    return html.split("<title>", 1)[1].split("</title>", 1)[0]
-
-
 def span(text):
     """One line of user text as the per-line rendering filter shows it."""
     return f'<span dir="auto">{escape(text)}</span>'
-
-
-def no_store(response):
-    assert "no-store" in response["Cache-Control"]
-    assert "private" in response["Cache-Control"]
 
 
 def lock_and(round_, action, *args):
@@ -440,14 +433,14 @@ def test_drafts_and_rows_outside_the_rounds_covering_builds_never_appear(
 @pytest.mark.ac("RND-4.4")
 def test_the_page_offers_no_controls_and_changes_nothing(coord_client, review, tester):
     submit(tester, review.case, review.build, T1, observation="Synthetic read")
-    before = snapshot()
+    before = domain_rows()
     response = coord_client.get(results_url(review.round.pk))
     assert response.status_code == 200
     html = page(response)
     for control in ("<form", "<button", "<input", "<textarea", "<select"):
         assert control not in html, control
     assert "Record result" not in html and "/result/" not in html
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-4.4")
@@ -557,12 +550,12 @@ def test_every_line_separator_splits_an_observation(
 )
 def test_other_methods_get_405_uncached(coordinator, review, signed, method):
     client = signed_in(coordinator) if signed else Client()
-    before = snapshot()
+    before = domain_rows()
     response = getattr(client, method)(results_url(review.round.pk))
     assert response.status_code == 405
     assert response["Allow"] == "GET"
     no_store(response)
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-4.6")
@@ -614,14 +607,14 @@ def test_other_workspace_round_gets_the_same_404_in_every_state(
 @pytest.mark.ac("RND-4.6")
 def test_a_draft_round_gets_409_uncached(coord_client, make_round):
     draft = make_round("Synthetic draft round")
-    before = snapshot()
+    before = domain_rows()
     response = coord_client.get(results_url(draft.pk))
     assert response.status_code == 409
     html = page(response)
     assert f"<h1>{CONFLICT.format('Draft')}</h1>" in html
     assert "Synthetic draft round" not in html
     no_store(response)
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-4.6")
@@ -644,7 +637,7 @@ def test_storage_failures_give_the_uncached_503_without_results(
     request.user = coordinator
     error = OperationalError("synthetic storage failure")
     models = {"cases": Case, "criteria": Criterion, "builds": Build, "results": Result}
-    before = snapshot()
+    before = domain_rows()
     if failure == "lazy-user":
 
         def fail_user():
@@ -683,4 +676,4 @@ def test_storage_failures_give_the_uncached_503_without_results(
     assert "Synthetic secret" not in caplog.text
     assert "A round request failed in storage." in caplog.text
     no_store(response)
-    assert snapshot() == before
+    assert domain_rows() == before

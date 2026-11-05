@@ -4,10 +4,19 @@ import pytest
 from django.db import DataError, IntegrityError, transaction
 from django.db.models import ProtectedError
 
-from accounts.models import Workspace
 from rounds import services
 from rounds.forms import PublishForm
-from rounds.models import Build, BuildCase, Case, CaseCriterion, Criterion, Round
+from rounds.models import (
+    Build,
+    BuildCase,
+    Case,
+    CaseCriterion,
+    Criterion,
+    Result,
+    Round,
+)
+
+from .conftest import domain_rows, locked
 
 pytestmark = pytest.mark.django_db
 
@@ -19,11 +28,6 @@ E_ACUTE = chr(0x00E9)
 
 
 @pytest.fixture
-def workspace():
-    return Workspace.objects.create(name="Demo workspace rnd30001")
-
-
-@pytest.fixture
 def round_(workspace):
     return Round.objects.create(workspace=workspace, title="Synthetic round")
 
@@ -31,11 +35,6 @@ def round_(workspace):
 @pytest.fixture
 def other_round(workspace):
     return Round.objects.create(workspace=workspace, title="Synthetic other")
-
-
-def locked(round_):
-    """Lock the round row, as the view does before calling `publish`."""
-    return Round.objects.select_for_update().get(pk=round_.pk)
 
 
 def fill(round_, cases=2):
@@ -53,15 +52,6 @@ def fill(round_, cases=2):
         CaseCriterion.objects.create(case=case, criterion=one if n % 2 else two)
         made.append(case)
     return made
-
-
-def snapshot(round_):
-    """Everything RND-2 stores for a round."""
-    return (
-        list(Criterion.objects.filter(round=round_).values()),
-        list(Case.objects.filter(round=round_).values()),
-        list(CaseCriterion.objects.filter(case__round=round_).values()),
-    )
 
 
 def build(round_, label):
@@ -113,9 +103,9 @@ def test_the_refusal_names_no_user_text(round_):
 @pytest.mark.ac("RND-3.4")
 def test_publishing_leaves_criteria_cases_and_links_unchanged(round_):
     fill(round_, 3)
-    before = snapshot(round_)
+    before = domain_rows(Criterion, Case, CaseCriterion, Result)
     services.publish(locked(round_), "Synthetic build")
-    assert snapshot(round_) == before
+    assert domain_rows(Criterion, Case, CaseCriterion, Result) == before
 
 
 @pytest.mark.ac("RND-3.2")

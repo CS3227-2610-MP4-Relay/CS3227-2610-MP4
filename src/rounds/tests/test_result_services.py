@@ -1,7 +1,6 @@
 """RES-2 persistence, ownership and serialized result lifecycle checks."""
 
 import threading
-import time
 from unittest.mock import patch
 
 import pytest
@@ -16,13 +15,11 @@ from rounds.models import (
     Build,
     BuildCase,
     Case,
-    CaseCriterion,
-    Criterion,
     Result,
     Round,
 )
 
-from .conftest import open_with_case
+from .conftest import domain_rows, open_with_case, wait_for_lock
 
 pytestmark = pytest.mark.django_db
 
@@ -45,14 +42,6 @@ def save(user, target, *, submit=False, outcome="pass", observation=""):
         return results.save(current, outcome, observation, submit=submit)
 
 
-def snapshot():
-    """Capture domain rows to prove refused actions change nothing."""
-    return {
-        model: list(model.objects.order_by("pk").values())
-        for model in (Round, Criterion, Case, CaseCriterion, Build, BuildCase, Result)
-    }
-
-
 @pytest.mark.ac("RES-2.1", "RES-2.5")
 def test_draft_replace_submit_then_frozen(tester, target):
     with entry(tester, target) as current:
@@ -67,11 +56,11 @@ def test_draft_replace_submit_then_frozen(tester, target):
     assert submitted.pk == first.pk and submitted.submitted_at is not None
     with entry(tester, target) as current:
         assert current.result == submitted
-    before = snapshot()
+    before = domain_rows()
     for submit in (False, True):
         with pytest.raises(results.Conflict, match="already been submitted"):
             save(tester, target, submit=submit)
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-2.1", "RES-2.3")
@@ -93,7 +82,7 @@ def test_direct_submit_and_other_tester_have_independent_rows(tester, target):
 def test_role_and_workspace_denials_precede_lookup(
     coordinator, tester, target, other_workspace
 ):
-    before = snapshot()
+    before = domain_rows()
     with patch("rounds.results.workspace_records") as lookup:
         with pytest.raises(PermissionDenied):
             save(coordinator, target)
@@ -103,7 +92,7 @@ def test_role_and_workspace_denials_precede_lookup(
     )
     with pytest.raises(Http404):
         save(outsider, target)
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-2.3", "RES-2.4")
@@ -127,10 +116,10 @@ def test_invalid_membership_is_404_before_state(tester, target, make_round, inva
         Round.objects.filter(pk=round_.pk).update(state=Round.State.DRAFT)
     if invalid != "draft":
         Round.objects.filter(pk=round_.pk).update(state=Round.State.CLOSED)
-    before = snapshot()
+    before = domain_rows()
     with pytest.raises(Http404):
         save(tester, (round_, case, build))
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-5.1", "RND-5.5", "RES-2.1", "RES-2.4", "RES-2.5")
@@ -168,7 +157,7 @@ def test_retest_keeps_old_row_and_unselected_case_entry(tester, target):
             locked = Round.objects.select_for_update().get(pk=round_.pk)
             new = services.request_retest(locked, label, [item.pk for item in selected])
         assert list(Result.objects.order_by("pk").values()) == old_rows
-        before = snapshot()
+        before = domain_rows()
         for item in selected:
             stale_targets.append((round_, item, current_rows[item.pk].build))
             with entry(tester, (round_, item, new)) as current:
@@ -185,7 +174,7 @@ def test_retest_keeps_old_row_and_unselected_case_entry(tester, target):
                 previous = current_rows[item.pk]
                 with entry(tester, (round_, item, previous.build)) as current:
                     assert current.result == previous
-        assert snapshot() == before
+        assert domain_rows() == before
         for item in selected:
             submitted = save(tester, (round_, item, new), submit=True)
             assert submitted.pk not in old_ids
@@ -205,13 +194,13 @@ def test_closed_entry_is_refused_without_changes(tester, target, write):
     save(tester, target)
     with transaction.atomic():
         services.close(Round.objects.select_for_update().get(pk=target[0].pk))
-    before = snapshot()
+    before = domain_rows()
     with (
         pytest.raises(results.Conflict, match="while the round is Closed"),
         entry(tester, target, write=write),
     ):
         pytest.fail("A Closed entry was allowed")
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-2.6")
@@ -219,7 +208,7 @@ def test_closed_entry_is_refused_without_changes(tester, target, write):
 def test_failed_storage_rolls_back_create_or_update(tester, target, existing):
     if existing:
         save(tester, target, observation="Synthetic before")
-    before = snapshot()
+    before = domain_rows()
     original = Result.save
 
     def failing_save(self, *args, **kwargs):
@@ -228,7 +217,7 @@ def test_failed_storage_rolls_back_create_or_update(tester, target, existing):
 
     with patch.object(Result, "save", failing_save), pytest.raises(OperationalError):
         save(tester, target, submit=True, observation="Synthetic after")
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 def test_database_constraints_and_protected_references(tester, target):
@@ -278,18 +267,7 @@ def race(first, second):
         assert held.wait(5), "First operation never held its lock"
         two.start()
         assert started.wait(5), "Second connection never started"
-        deadline = time.monotonic() + 5
-        while time.monotonic() < deadline:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT wait_event_type FROM pg_stat_activity WHERE pid = %s",
-                    [pids["second"]],
-                )
-                if cursor.fetchone() == ("Lock",):
-                    break
-            time.sleep(0.01)
-        else:
-            pytest.fail("Second operation did not wait for the real round lock")
+        wait_for_lock(pids["second"])
     finally:
         release.set()
         one.join(10)
@@ -368,7 +346,7 @@ def test_real_races_serialize_results_and_round_actions(
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.ac("RES-2.5")
 def test_two_concurrent_draft_saves_keep_last_serialized_values(tester, target):
-    before = snapshot()
+    before = domain_rows()
 
     def first(held, release):
         with entry(tester, target, write=True) as current:
@@ -390,7 +368,7 @@ def test_two_concurrent_draft_saves_keep_last_serialized_values(tester, target):
         "Synthetic last",
         None,
     )
-    after = snapshot()
+    after = domain_rows()
     assert {model: rows for model, rows in after.items() if model is not Result} == {
         model: rows for model, rows in before.items() if model is not Result
     }

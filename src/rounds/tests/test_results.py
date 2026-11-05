@@ -24,11 +24,12 @@ from .conftest import (
     SCRIPT_TAG,
     UNAVAILABLE,
     csrf_token,
+    domain_rows,
+    no_store,
     open_with_case,
     page,
     signed_in,
 )
-from .test_result_services import snapshot
 
 pytestmark = pytest.mark.django_db
 
@@ -49,12 +50,6 @@ def url(target):
 def payload(outcome="pass", observation="", action="save"):
     """One independently valid request unless a test overrides a field."""
     return {"outcome": outcome, "observation": observation, "action": action}
-
-
-def no_store(response):
-    """Result-view responses retain the shared private/no-store policy."""
-    assert "private" in response["Cache-Control"]
-    assert "no-store" in response["Cache-Control"]
 
 
 @pytest.mark.ac("RES-1.5", "RES-2.1", "RES-2.4")
@@ -178,13 +173,13 @@ def test_invalid_fields_independently_leave_draft_unchanged(
         client.post(url(target), payload(observation="Synthetic before")).status_code
         == 302
     )
-    before = snapshot()
+    before = domain_rows()
     data = payload("fail", "Synthetic valid", action) | changes
     response = client.post(url(target), data)
     assert response.status_code == 200 and message in page(response)
     assert list(response.context["form"].errors) == [field]
     assert response.context["form"]["observation"].value() == data["observation"]
-    assert snapshot() == before
+    assert domain_rows() == before
     no_store(response)
 
 
@@ -317,7 +312,7 @@ def test_missing_foreign_and_cross_round_ids_are_fixed_404(
     else:
         BuildCase.objects.filter(case=case, build=build).delete()
         Round.objects.filter(pk=round_.pk).update(state=Round.State.CLOSED)
-    before = snapshot()
+    before = domain_rows()
     client = signed_in(tester)
     response = getattr(client, method)(
         url((round_, case, build)), payload(action=action)
@@ -328,7 +323,7 @@ def test_missing_foreign_and_cross_round_ids_are_fixed_404(
     assert response.status_code == 404 and response.content == missing.content
     assert NOT_FOUND in page(response)
     assert case.title not in page(response) and build.label not in page(response)
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-2.4", "RES-2.5", "RES-4.9")
@@ -354,7 +349,7 @@ def test_conflicts_precede_invalid_form_and_preserve_rows(
         message = results.STALE
     else:
         message = results.SUBMITTED
-    before = snapshot()
+    before = domain_rows()
     response = client.post(url(target), {} if action is None else {"action": action})
     assert response.status_code == 409 and message in page(response)
     no_store(response)
@@ -362,17 +357,17 @@ def test_conflicts_precede_invalid_form_and_preserve_rows(
         response = client.get(url(target))
         assert response.status_code == 409 and message in page(response)
         no_store(response)
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-2.7", "RES-2.6")
 @pytest.mark.parametrize("method", ["head", "put", "delete", "options", "trace"])
 def test_other_methods_are_uncached_405(tester, target, method):
-    before = snapshot()
+    before = domain_rows()
     response = getattr(signed_in(tester), method)(url(target))
     assert response.status_code == 405
     no_store(response)
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-2.7", "RES-4.9")
@@ -388,12 +383,12 @@ def test_csrf_rejects_before_any_result_write(tester, target, token, origin, act
         data["csrfmiddlewaretoken"] = (
             csrf_token(client) if token == "valid" else "x" * 32
         )
-    before = snapshot()
+    before = domain_rows()
     response = client.post(
         url(target), data, **({"HTTP_ORIGIN": origin} if origin else {})
     )
     assert response.status_code == 403 and DENIED in page(response)
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-2.7")
@@ -420,7 +415,7 @@ def test_database_failures_are_fixed_503_without_observation_logging(
         else RequestFactory().get(location)
     )
     request.user = tester
-    before = snapshot()
+    before = domain_rows()
     error = OperationalError("Synthetic sensitive")
     if failure == "lazy-user":
 
@@ -453,7 +448,7 @@ def test_database_failures_are_fixed_503_without_observation_logging(
         and "Synthetic sensitive" not in page(response)
     )
     no_store(response)
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-2.6", "RES-4.9")
@@ -465,11 +460,11 @@ def test_failure_after_insert_rolls_back_at_route_boundary(tester, target, actio
         original(self, *args, **kwargs)
         raise OperationalError("Synthetic failure")
 
-    before = snapshot()
+    before = domain_rows()
     with patch.object(Result, "save", fail_after_save):
         response = signed_in(tester).post(url(target), payload(action=action))
     assert response.status_code == 503
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-2.8")

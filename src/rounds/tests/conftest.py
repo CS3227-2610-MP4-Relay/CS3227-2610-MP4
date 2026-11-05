@@ -13,7 +13,15 @@ from django.test import Client
 
 from accounts.models import User, Workspace
 from rounds import services
-from rounds.models import Case, Round
+from rounds.models import (
+    Build,
+    BuildCase,
+    Case,
+    CaseCriterion,
+    Criterion,
+    Result,
+    Round,
+)
 from rounds.templatetags.rounds_text import retest_message
 
 PASSWORD = "Synthetic16Chars"
@@ -34,6 +42,45 @@ MARKUP = (
 SCRIPT_TAG = "\x3cscript\x3e"
 IMG_TAG = "\x3cimg"
 assert SCRIPT_TAG in MARKUP and IMG_TAG in MARKUP
+
+
+# What a round holds besides its own row, and the whole rounds domain.
+ROUND_RECORDS = (Criterion, Case, CaseCriterion, Build, BuildCase, Result)
+DOMAIN_MODELS = (Round, *ROUND_RECORDS)
+
+
+def domain_rows(*models):
+    """Every stored row of `models`, or of all domain models, ordered by pk.
+
+    Compare two calls to show an action changed nothing. Name only the models
+    that must stay unchanged when the action legitimately writes others.
+    """
+    return {
+        model: list(model.objects.order_by("pk").values())
+        for model in models or DOMAIN_MODELS
+    }
+
+
+def locked(round_):
+    """Lock the round row, as the views do before calling a service."""
+    return Round.objects.select_for_update().get(pk=round_.pk)
+
+
+def no_store(response):
+    """The response is private and must not be stored."""
+    cache_control = response["Cache-Control"]
+    assert "no-store" in cache_control and "private" in cache_control
+
+
+def title_tag(html):
+    """The text of the page's <title> element."""
+    return html.split("<title>", 1)[1].split("</title>", 1)[0]
+
+
+def assert_no_raw_markup(html):
+    """Neither raw tag from `MARKUP` appears in the page."""
+    assert SCRIPT_TAG not in html
+    assert IMG_TAG not in html
 
 
 def detail(round_id):
@@ -59,8 +106,7 @@ def open_with_case(make_round):
     """An Open round with one test case, published on build Synthetic 1.0."""
     round_ = draft_with_case(make_round)
     with transaction.atomic():
-        locked = Round.objects.select_for_update().get(pk=round_.pk)
-        services.publish(locked, "Synthetic 1.0")
+        services.publish(locked(round_), "Synthetic 1.0")
     return round_
 
 
@@ -76,8 +122,9 @@ def stored_retest(client, round_, cases, label):
     would, for rendering stored text that the form refuses (rule 5).
     """
     with transaction.atomic():
-        locked = Round.objects.select_for_update().get(pk=round_.pk)
-        build = services.request_retest(locked, label, [case.pk for case in cases])
+        build = services.request_retest(
+            locked(round_), label, [case.pk for case in cases]
+        )
     text = retest_message(len(cases), build.label)
     session = client.session
     session[SessionStorage.session_key] = MessageEncoder().encode(
@@ -104,31 +151,53 @@ def csrf_token(client):
     return client.cookies[django_settings.CSRF_COOKIE_NAME].value
 
 
+def wait_for_lock(pid):
+    """Wait until backend `pid` waits for a lock held by the first request.
+
+    Fail if PostgreSQL never reports it waiting.
+    """
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT wait_event_type FROM pg_stat_activity WHERE pid = %s", [pid]
+            )
+            if cursor.fetchone() == ("Lock",):
+                return
+        time.sleep(0.01)
+    pytest.fail("Second operation did not wait for a lock held by the first request")
+
+
 def race(coordinator, first, second, slow):
-    """Run `first` until it holds the round lock inside `slow`, then `second`.
+    """Run `first` until it pauses inside `slow`, then `second`.
 
     `slow` names services, or (object, attribute) pairs such as Round.save,
-    whose call pauses after its work, still inside the view's locked
-    transaction, so `second` arrives while `first` holds it.
+    whose first call pauses after its work, still inside the view's locked
+    transaction. The pause lasts until PostgreSQL reports `second` waiting for
+    a lock held by the first request, so `second` always arrives while
+    `first` holds its locks.
     """
-    inside = threading.Event()
-    responses = {}
+    held, release, started = threading.Event(), threading.Event(), threading.Event()
+    responses, pids = {}, {}
     targets = [(services, name) if isinstance(name, str) else name for name in slow]
     reals = {target: getattr(*target) for target in targets}
 
     def pausing(target):
         def run(*args, **kwargs):
             result = reals[target](*args, **kwargs)
-            inside.set()
-            time.sleep(0.3)
+            if not held.is_set():
+                held.set()
+                release.wait(10)
             return result
 
         return run
 
     def send(key, request):
         try:
+            connection.ensure_connection()
+            pids[key] = connection.connection.info.backend_pid
             if key == "second":
-                inside.wait(5)
+                started.set()
             responses[key] = request(signed_in(coordinator))
         finally:
             connection.close()
@@ -136,18 +205,22 @@ def race(coordinator, first, second, slow):
     patches = [mock.patch.object(*target, pausing(target)) for target in targets]
     for patch in patches:
         patch.start()
+    one = threading.Thread(target=send, args=("first", first))
+    two = threading.Thread(target=send, args=("second", second))
     try:
-        threads = [
-            threading.Thread(target=send, args=(key, request))
-            for key, request in (("first", first), ("second", second))
-        ]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
+        one.start()
+        assert held.wait(5), "First request never paused inside `slow`"
+        two.start()
+        assert started.wait(5), "Second request never connected"
+        wait_for_lock(pids["second"])
     finally:
+        release.set()
+        for thread in (one, two):
+            if thread.ident is not None:
+                thread.join(10)
         for patch in patches:
             patch.stop()
+    assert not one.is_alive() and not two.is_alive()
     return responses["first"], responses["second"]
 
 

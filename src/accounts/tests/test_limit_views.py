@@ -527,13 +527,19 @@ def pg_sleep():
         cursor.execute("SELECT pg_sleep(0.5)")
 
 
+# Each case's fault and the logged reasons that identify it. When the server
+# ends an idle session, PostgreSQL's FATAL "terminating connection due to
+# idle-in-transaction timeout" may not reach the client first; libpq's
+# pqReadData (src/interfaces/libpq/fe-misc.c, bundled in psycopg-binary) then
+# reports "server closed the connection unexpectedly", as seen on Windows
+# (logs/Whimsyturtle/036, 037).
 TIMEOUT_CASES = {
     "idle": (
         "idle_in_transaction_session_timeout",
         lambda: time.sleep(0.5),
-        "idle-in-transaction timeout",
+        ("idle-in-transaction timeout", "server closed the connection unexpectedly"),
     ),
-    "statement": ("statement_timeout", pg_sleep, "statement timeout"),
+    "statement": ("statement_timeout", pg_sleep, ("statement timeout",)),
 }
 
 
@@ -545,7 +551,7 @@ def test_timeout_inside_a_limited_transaction_gives_503(caplog, user, timeout, r
     set_count(limits.SIGN_IN, 3)
     set_count(limits.DEMO, 3)
     before = snapshot()
-    setting, action, reason = TIMEOUT_CASES[timeout]
+    setting, action, reasons = TIMEOUT_CASES[timeout]
     client = Client()
     with (
         mock.patch.dict(limits.TIMEOUTS, {setting: "100ms"}),
@@ -561,5 +567,8 @@ def test_timeout_inside_a_limited_transaction_gives_503(caplog, user, timeout, r
     assert Session.objects.count() == 0
     assert snapshot() == before
     assert Workspace.objects.count() == 1
-    assert reason in caplog.text
+    assert any(reason in caplog.text for reason in reasons)
+    for other, (_, _, wrong) in TIMEOUT_CASES.items():
+        if other != timeout:
+            assert not any(reason in caplog.text for reason in wrong)
     assert PASSWORD not in caplog.text

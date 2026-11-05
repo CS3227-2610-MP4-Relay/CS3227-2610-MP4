@@ -8,6 +8,8 @@ from accounts.models import Workspace
 from rounds import services
 from rounds.models import Case, CaseCriterion, Criterion, Round
 
+from .conftest import domain_rows, locked
+
 pytestmark = pytest.mark.django_db
 
 CASE_FIELDS = {
@@ -18,11 +20,6 @@ CASE_FIELDS = {
 FOREIGN = "Choose criteria from this round."
 NO_LINK = "Link at least one acceptance criterion."
 LINKED = "This criterion is linked to a test case. Unlink it first."
-
-
-@pytest.fixture
-def workspace():
-    return Workspace.objects.create(name="Demo workspace rnd20001")
 
 
 @pytest.fixture
@@ -42,11 +39,6 @@ def foreign_round():
     return Round.objects.create(workspace=other, title="Synthetic foreign")
 
 
-def locked(round_):
-    """Lock the round row, as the views do before calling a service."""
-    return Round.objects.select_for_update().get(pk=round_.pk)
-
-
 def criteria(round_, count):
     return [
         Criterion.objects.create(round=round_, text=f"Synthetic criterion {n}")
@@ -59,15 +51,6 @@ def make_case(round_, linked, title="Synthetic case"):
     for criterion in linked:
         CaseCriterion.objects.create(case=case, criterion=criterion)
     return case
-
-
-def snapshot(round_):
-    """Everything RND-2 stores for a round, to show a refusal changed nothing."""
-    return (
-        list(Criterion.objects.filter(round=round_).values()),
-        list(Case.objects.filter(round=round_).values()),
-        list(CaseCriterion.objects.filter(case__round=round_).values()),
-    )
 
 
 @pytest.mark.ac("RND-2.1")
@@ -138,19 +121,19 @@ def test_delete_criterion_removes_an_unlinked_criterion(round_):
 def test_delete_criterion_refuses_a_linked_criterion(round_):
     one, two = criteria(round_, 2)
     make_case(round_, [one, two])
-    before = snapshot(round_)
+    before = domain_rows()
     with pytest.raises(services.Refused) as refused:
         services.delete_criterion(one)
     assert str(refused.value) == LINKED
     assert refused.value.field is None
-    assert snapshot(round_) == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-2.6")
 def test_a_case_needs_at_least_one_criterion(round_):
     (one,) = criteria(round_, 1)
     case = make_case(round_, [one])
-    before = snapshot(round_)
+    before = domain_rows()
     for write in (
         lambda: services.add_case(locked(round_), CASE_FIELDS, []),
         lambda: services.save_case(case, {"title": "Edited"}, []),
@@ -159,7 +142,7 @@ def test_a_case_needs_at_least_one_criterion(round_):
             write()
         assert str(refused.value) == NO_LINK
         assert refused.value.field == "criteria"
-        assert snapshot(round_) == before
+        assert domain_rows() == before
 
 
 @pytest.mark.ac("RND-2.7")
@@ -171,7 +154,7 @@ def test_criteria_from_elsewhere_are_refused(request, round_, source):
     else:
         wrong = criteria(request.getfixturevalue(source), 1)[0].pk
     case = make_case(round_, [own])
-    before = snapshot(round_)
+    before = domain_rows()
     for write in (
         lambda: services.add_case(locked(round_), CASE_FIELDS, [own.pk, wrong]),
         lambda: services.save_case(case, {"title": "Edited"}, [own.pk, wrong]),
@@ -180,7 +163,7 @@ def test_criteria_from_elsewhere_are_refused(request, round_, source):
             write()
         assert str(refused.value) == FOREIGN
         assert refused.value.field == "criteria"
-        assert snapshot(round_) == before
+        assert domain_rows() == before
     assert not CaseCriterion.objects.filter(criterion_id=wrong).exists()
 
 
@@ -210,12 +193,12 @@ def test_thirtieth_case_is_added_and_thirty_first_refused(round_, sibling):
         make_case(round_, [own], title=f"Synthetic case {n}")
     services.add_case(locked(round_), CASE_FIELDS, [own.pk])
     assert round_.cases.count() == 30
-    before = snapshot(round_)
+    before = domain_rows()
     with pytest.raises(services.Refused) as refused:
         services.add_case(locked(round_), CASE_FIELDS, [own.pk])
     assert str(refused.value) == "This round has reached its limit of 30 test cases."
     assert refused.value.field == "title"
-    assert snapshot(round_) == before
+    assert domain_rows() == before
 
 
 @pytest.mark.parametrize(
@@ -247,7 +230,7 @@ def test_foreign_keys_protect_linked_records(round_):
     for record in (one, case, round_):
         with pytest.raises(ProtectedError), transaction.atomic():
             record.delete()
-    assert snapshot(round_)[2]
+    assert CaseCriterion.objects.filter(case__round=round_).exists()
 
 
 @pytest.mark.ac("RND-2.3")

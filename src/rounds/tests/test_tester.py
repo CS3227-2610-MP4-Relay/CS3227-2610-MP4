@@ -17,7 +17,6 @@ from accounts.models import User
 from rounds import services
 from rounds.models import (
     Build,
-    BuildCase,
     Case,
     CaseCriterion,
     Criterion,
@@ -34,6 +33,7 @@ from .conftest import (
     SCRIPT_TAG,
     UNAVAILABLE,
     csrf_token,
+    domain_rows,
     page,
     signed_in,
 )
@@ -45,14 +45,6 @@ HOME = "/tester/"
 def detail(round_):
     """The tester detail URL, intentionally usable before its route exists."""
     return f"/tester/rounds/{round_.pk}/"
-
-
-def snapshot():
-    """Capture all domain data, excluding authentication/session bookkeeping."""
-    return {
-        model: list(model.objects.order_by("pk").values())
-        for model in (Round, Case, Criterion, CaseCriterion, Build, BuildCase)
-    }
 
 
 @pytest.fixture
@@ -212,7 +204,7 @@ def test_detail_shows_ordered_cases_links_and_latest_covering_build(
         services.request_retest(round_, "Synthetic repeated", [cases[0].pk])
         if closed:
             services.close(round_)
-    before = snapshot()
+    before = domain_rows()
     response = client.get(detail(round_))
     assert response.status_code == 200
     body = page(response)
@@ -249,7 +241,7 @@ def test_detail_shows_ordered_cases_links_and_latest_covering_build(
     ):
         assert absent not in body
     assert "<form" not in body and "/coordinator/" not in body
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-1.4")
@@ -349,7 +341,7 @@ def test_methods_are_read_only_and_uncached(
             services.close(round_)
     client = signed_in(tester, enforce_csrf_checks=True)
     token = csrf_token(client)
-    before = snapshot()
+    before = domain_rows()
     response = client.generic(
         method, detail(round_) if detail_page else HOME, HTTP_X_CSRFTOKEN=token
     )
@@ -359,7 +351,7 @@ def test_methods_are_read_only_and_uncached(
         "private" in response["Cache-Control"]
         and "no-store" in response["Cache-Control"]
     )
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-1.5")
@@ -382,7 +374,7 @@ def test_success_and_storage_failures_are_uncached(tester, published, detail_pag
     round_, _, _ = published
     client = signed_in(tester)
     url = detail(round_) if detail_page else HOME
-    before = snapshot()
+    before = domain_rows()
     response = client.get(url)
     assert response.status_code == 200
     assert (
@@ -414,7 +406,7 @@ def test_success_and_storage_failures_are_uncached(tester, published, detail_pag
             "private" in response["Cache-Control"]
             and "no-store" in response["Cache-Control"]
         )
-    assert snapshot() == before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-1.6")
@@ -493,7 +485,7 @@ def test_publish_and_close_change_next_request(tester, coordinator, make_round):
     original = client.get(detail(round_))
     assert original.status_code == 200
     assert coord.post(f"/coordinator/rounds/{round_.pk}/close/").status_code == 302
-    before = snapshot()
+    before = domain_rows()
     closed_home = client.get(HOME)
     assert round_.title in page(closed_home) and "(Closed)" in page(closed_home)
     closed_detail = client.get(detail(round_))
@@ -506,4 +498,4 @@ def test_publish_and_close_change_next_request(tester, coordinator, make_round):
     assert page(original).replace(entry_link, "").replace(
         "State: Open", "State: Closed"
     ) == page(closed_detail)
-    assert snapshot() == before
+    assert domain_rows() == before

@@ -10,7 +10,7 @@ from django.core.management.base import CommandError
 
 from ai import drafting, evaluation, gateway
 from ai.management.commands.evaluate_injection import Command
-from rounds.tests.test_result_services import snapshot
+from rounds.tests.conftest import domain_rows
 
 pytestmark = [pytest.mark.django_db, pytest.mark.ac("SEC-INJ-1.1", "SEC-INJ-1.4")]
 REVISION = "a" * 40
@@ -61,7 +61,7 @@ def test_command_fixed_calls_safe_summary_and_interruption(
     cases, calls, output = evaluation.corpus(), [], io.StringIO()
     errors = io.StringIO()
     make_round()
-    before = list(get_user_model().objects.values()), snapshot()
+    before = list(get_user_model().objects.values()), domain_rows()
 
     def complete(user, instructions, data):
         calls.append((user.pk, instructions, data))
@@ -99,7 +99,7 @@ def test_command_fixed_calls_safe_summary_and_interruption(
     assert "private-source-reply-error" not in output.getvalue()
     assert "synthetic-key" not in output.getvalue()
     assert all(c.data not in output.getvalue() for c in cases)
-    assert (list(get_user_model().objects.values()), snapshot()) == before
+    assert (list(get_user_model().objects.values()), domain_rows()) == before
     assert errors.getvalue() == ""
 
 
