@@ -82,3 +82,24 @@ DATABASES = {
         },
     }
 }
+
+# Standard error only, for the platform's log view; INFO, such as gateway outcomes,
+# is dropped. `django` does not propagate, so each record prints once.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "plain": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"}
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "plain",
+            "level": "WARNING",
+        }
+    },
+    "root": {"handlers": ["console"], "level": "WARNING"},
+    "loggers": {
+        "django": {"handlers": ["console"], "level": "WARNING", "propagate": False}
+    },
+}

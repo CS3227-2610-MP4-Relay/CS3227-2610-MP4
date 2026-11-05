@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -67,6 +68,7 @@ def test_test_settings_ignore_runtime_environment():
     settings = json.loads(result.stdout)
     assert settings["secret"] == "relay-test-only-not-a-production-secret"
     assert settings["debug"] is False
+    assert settings["logging"] is None
     assert settings["hosts"] == ["testserver", "localhost", "127.0.0.1"]
     assert settings["database"] == {
         "ENGINE": "django.db.backends.postgresql",
@@ -277,6 +279,57 @@ def test_production_configuration_uses_verified_tls_and_secure_responses(pooled)
     for key, value in database["OPTIONS"].items():
         assert runtime["connection"][key] == value
     assert runtime["libpq"] >= 160000  # sslrootcert=system support.
+
+
+@pytest.mark.ac("PLT-1.8")
+def test_production_logging_config_sends_warnings_to_one_console_handler():
+    result = probe("relay.settings.production", **PRODUCTION)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["logging"] == {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "plain": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"}
+        },
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+                "formatter": "plain",
+                "level": "WARNING",
+            }
+        },
+        "root": {"handlers": ["console"], "level": "WARNING"},
+        "loggers": {
+            "django": {"handlers": ["console"], "level": "WARNING", "propagate": False}
+        },
+    }
+
+
+@pytest.mark.ac("PLT-1.8")
+def test_production_request_errors_reach_stderr_once_without_info():
+    result = probe("relay.settings.production", **PRODUCTION)
+    assert result.returncode == 0, result.stderr
+    stamp = r"\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3}"
+
+    def count(record):
+        return len(re.findall(rf"^{stamp} {record}$", result.stderr, re.MULTILINE))
+
+    assert count("ERROR django.request Internal Server Error: /synthetic-failure/") == 1
+    assert "RuntimeError: synthetic failure" in result.stderr
+    assert "synthetic-query" not in result.stderr
+    assert count("WARNING django.request Not Found: /missing/") == 1
+    assert (
+        count(
+            r"ERROR django\.security\.DisallowedHost Invalid HTTP_HOST header: "
+            r"'foreign\.invalid'\. You may need to add 'foreign\.invalid' to "
+            r"ALLOWED_HOSTS\."
+        )
+        == 1
+    )
+    assert count("WARNING relay.synthetic_early Synthetic early warning") == 1
+    assert "LLM gateway outcome" not in result.stderr
+    assert PRODUCTION["DJANGO_SECRET_KEY"] not in result.stderr
+    assert "p%40ss" not in result.stderr and "p@ss" not in result.stderr
 
 
 @pytest.mark.ac("PLT-1.8")

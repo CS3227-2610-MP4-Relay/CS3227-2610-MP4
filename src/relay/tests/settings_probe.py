@@ -2,6 +2,7 @@
 
 import importlib
 import json
+import logging
 import os
 import sys
 from pathlib import Path
@@ -12,8 +13,33 @@ from django.conf import global_settings
 from django.conf import settings as django_settings
 from django.core import checks
 from django.db import connection
-from django.test import Client
+from django.http import HttpResponseServerError
+from django.test import Client, RequestFactory
+from django.utils.log import log_response
 from psycopg import pq
+
+# Created before Django configures logging, as module loggers are.
+EARLY_LOGGER = logging.getLogger("relay.synthetic_early")
+
+
+def emit_log_records(host):
+    """Log a synthetic 500, an early-logger warning and a gateway INFO outcome."""
+    request = RequestFactory().get(
+        "/synthetic-failure/?query=synthetic-query", HTTP_HOST=host
+    )
+    try:
+        raise RuntimeError("synthetic failure")
+    except RuntimeError as error:
+        log_response(
+            "%s: %s",
+            "Internal Server Error",
+            request.path,
+            response=HttpResponseServerError(),
+            request=request,
+            exception=error,
+        )
+    EARLY_LOGGER.warning("Synthetic early warning")
+    logging.getLogger("ai.gateway").info("LLM gateway outcome: %s", "live-off")
 
 
 def production_checks(module):
@@ -27,6 +53,7 @@ def production_checks(module):
         client.get(path, secure=True) for path in ("/", "/sign-in/", "/missing/")
     ]
     proxy_response = client.get("/", HTTP_X_FORWARDED_PROTO="https")
+    emit_log_records(django_settings.ALLOWED_HOSTS[0])
     return {
         "headers": [dict(response.headers) for response in responses],
         "statuses": [response.status_code for response in responses],
@@ -87,6 +114,7 @@ def main():
                     "session_secure": settings.SESSION_COOKIE_SECURE,
                     "csrf_secure": settings.CSRF_COOKIE_SECURE,
                 },
+                "logging": getattr(settings, "LOGGING", None),
                 "runtime": runtime,
             }
         )
