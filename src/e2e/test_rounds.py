@@ -82,7 +82,8 @@ def test_coordinator_manages_later_collapsed_case(managed_round, request, width)
     page.get_by_label("Title", exact=True).fill(revised)
     page.get_by_role("checkbox", name=criteria[0].text, exact=True).uncheck()
     page.get_by_role("checkbox", name=criteria[1].text, exact=True).check()
-    page.get_by_role("button", name="Save", exact=True).click()
+    with page.expect_navigation():
+        page.get_by_role("button", name="Save", exact=True).click()
     page.reload()
     expect(page.locator(target)).to_have_count(1)
     later = page.locator("details.record").filter(
@@ -116,13 +117,15 @@ def test_coordinator_manages_later_collapsed_case(managed_round, request, width)
     expect(later).not_to_have_attribute("open", "")
     later.locator("summary").click()
     expect(later.locator(".record-body li")).to_have_text([criteria[1].text])
-    later.get_by_role("button", name="Delete test case", exact=True).click()
+    with page.expect_navigation():
+        later.get_by_role("button", name="Delete test case", exact=True).click()
     page.reload()
     expect(later).to_have_count(0)
     expect(page.locator("details.record")).to_have_count(1)
     expect(criterion_rows).to_have_count(2)
     expect(page.locator(f'a[href="{target}"]')).to_have_count(0)
-    linked.get_by_role("button", name="Delete criterion", exact=True).click()
+    with page.expect_navigation():
+        linked.get_by_role("button", name="Delete criterion", exact=True).click()
     page.reload()
     expect(criterion_rows).to_have_count(1)
     expect(linked).to_have_count(0)
@@ -167,7 +170,8 @@ def test_coordinator_prepares_and_publishes_linked_case(page, browser_accounts):
     page.get_by_label("Steps", exact=True).fill(steps)
     page.get_by_label("Expected result", exact=True).fill(expected)
     page.get_by_role("checkbox", name=criterion, exact=True).check()
-    page.get_by_role("button", name="Add test case", exact=True).click()
+    with page.expect_navigation():
+        page.get_by_role("button", name="Add test case", exact=True).click()
     page.reload()
     expect(page.get_by_role("heading", name=title, exact=True)).to_be_visible()
     expect(page.get_by_role("heading", name=case_title, exact=True)).to_be_visible()
@@ -228,7 +232,8 @@ def test_case_without_link_is_refused_without_saving(page, browser_accounts):
         expect(page.get_by_label(label, exact=True)).to_have_value(value)
     expect(page.get_by_role("checkbox", name=criterion, exact=True)).not_to_be_checked()
 
-    page.get_by_role("link", name="Back to round", exact=True).last.click()
+    with page.expect_navigation():
+        page.get_by_role("link", name="Back to round", exact=True).last.click()
     page.reload()
     expect(page.get_by_text("State: Draft", exact=True)).to_be_visible()
     expect(page.get_by_text(criterion, exact=True)).to_be_visible()

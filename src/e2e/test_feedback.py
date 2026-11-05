@@ -218,7 +218,8 @@ def test_feedback_preserves_saved_fields_until_manual_edit_and_is_private(
     expect(page.get_by_label("Observation", exact=True)).to_have_value(current)
     expect(page.get_by_label("Outcome", exact=True)).to_have_value("fail")
     page.get_by_label("Observation", exact=True).fill(EDITED)
-    page.get_by_role("button", name="Save draft", exact=True).click()
+    with page.expect_navigation():
+        page.get_by_role("button", name="Save draft", exact=True).click()
     page.reload()
     expect(page.get_by_label("Observation", exact=True)).to_have_value(EDITED)
     expect(page.get_by_label("Outcome", exact=True)).to_have_value("fail")
@@ -313,7 +314,8 @@ def test_empty_or_invalid_feedback_keeps_saved_source_and_manual_editing(
     expect(page.get_by_label("Outcome", exact=True)).to_have_value("fail")
     expect(page.get_by_label("Observation", exact=True)).to_have_value(ORIGINAL)
     page.get_by_label("Observation", exact=True).fill(EDITED)
-    page.get_by_role("button", name="Save draft", exact=True).click()
+    with page.expect_navigation():
+        page.get_by_role("button", name="Save draft", exact=True).click()
     page.reload()
     expect(page.get_by_label("Observation", exact=True)).to_have_value(EDITED)
     expect(page.get_by_text("Status: Draft", exact=True)).to_be_visible()

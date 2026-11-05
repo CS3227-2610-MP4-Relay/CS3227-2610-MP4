@@ -300,9 +300,10 @@ def test_drafting_reply_without_usable_suggestions_keeps_manual_flow(
         ).to_be_visible()
         for label in ("Title", "Steps", "Expected result"):
             expect(page.get_by_label(label, exact=True)).to_have_value("")
-        page.get_by_role("navigation", name="Page navigation").get_by_role(
-            "link", name="Back to round", exact=True
-        ).click()
+        with page.expect_navigation():
+            page.get_by_role("navigation", name="Page navigation").get_by_role(
+                "link", name="Back to round", exact=True
+            ).click()
         page.reload()
         expect(page.locator("#acceptance-criteria")).to_have_text(source)
         expect(page.get_by_text("No test cases yet.", exact=True)).to_be_visible()
@@ -355,16 +356,18 @@ def test_reviewed_draft_saves_only_after_explicit_add(page, browser_accounts):
             page.get_by_role("checkbox", name=one, exact=True).check()
             page.get_by_role("checkbox", name=two, exact=True).uncheck()
             if attempt == 0:
-                page.get_by_role("navigation", name="Page navigation").get_by_role(
-                    "link", name="Back to round", exact=True
-                ).click()
+                with page.expect_navigation():
+                    page.get_by_role("navigation", name="Page navigation").get_by_role(
+                        "link", name="Back to round", exact=True
+                    ).click()
                 page.reload()
                 expect(
                     page.get_by_text("No test cases yet.", exact=True)
                 ).to_be_visible()
                 expect(page.locator("details.record")).to_have_count(0)
             else:
-                page.get_by_role("button", name="Add test case", exact=True).click()
+                with page.expect_navigation():
+                    page.get_by_role("button", name="Add test case", exact=True).click()
                 accounts["reviewed"] = reviewed
         assert gateway.call_count == 2
     page.reload()

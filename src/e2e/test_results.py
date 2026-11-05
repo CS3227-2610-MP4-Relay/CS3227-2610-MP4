@@ -90,7 +90,8 @@ def test_native_validation_and_observation_limits_preserve_saved_draft(
 
         below_limit = "a" * 1999
         observation.fill(below_limit)
-        page.get_by_role("button", name="Save draft", exact=True).click()
+        with page.expect_navigation():
+            page.get_by_role("button", name="Save draft", exact=True).click()
         page.reload()
         expect(observation).to_have_value(below_limit)
         posts.clear()
@@ -182,7 +183,8 @@ def test_private_draft_validation_reload_and_immutable_submission(
             "href", entry_url.removeprefix(live_server.url)
         )
         expect(continued).to_have_class("action")
-        continued.click()
+        with page.expect_navigation():
+            continued.click()
         page.reload()
         expect(page.get_by_label("Observation", exact=True)).to_have_value(observation)
         page.goto("/tester/")
