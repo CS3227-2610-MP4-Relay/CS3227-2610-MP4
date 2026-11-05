@@ -151,31 +151,50 @@ def csrf_token(client):
     return client.cookies[django_settings.CSRF_COOKIE_NAME].value
 
 
-def race(coordinator, first, second, slow):
+def wait_for_lock(pid):
+    """Wait until PostgreSQL reports backend `pid` waiting for a lock; else fail."""
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT wait_event_type FROM pg_stat_activity WHERE pid = %s", [pid]
+            )
+            if cursor.fetchone() == ("Lock",):
+                return
+        time.sleep(0.01)
+    pytest.fail("Second operation did not wait for the round lock")
+
+
+def race(coordinator, first, second, slow, *, wait=True):
     """Run `first` until it holds the round lock inside `slow`, then `second`.
 
     `slow` names services, or (object, attribute) pairs such as Round.save,
-    whose call pauses after its work, still inside the view's locked
-    transaction, so `second` arrives while `first` holds it.
+    whose first call pauses after its work, still inside the view's locked
+    transaction. The pause lasts until PostgreSQL reports `second` waiting for
+    a lock, so `second` always arrives while `first` holds it. Pass
+    `wait=False` for a `second` that is answered without taking the lock.
     """
-    inside = threading.Event()
-    responses = {}
+    held, release, started = threading.Event(), threading.Event(), threading.Event()
+    responses, pids = {}, {}
     targets = [(services, name) if isinstance(name, str) else name for name in slow]
     reals = {target: getattr(*target) for target in targets}
 
     def pausing(target):
         def run(*args, **kwargs):
             result = reals[target](*args, **kwargs)
-            inside.set()
-            time.sleep(0.3)
+            if not held.is_set():
+                held.set()
+                release.wait(10)
             return result
 
         return run
 
     def send(key, request):
         try:
+            connection.ensure_connection()
+            pids[key] = connection.connection.info.backend_pid
             if key == "second":
-                inside.wait(5)
+                started.set()
             responses[key] = request(signed_in(coordinator))
         finally:
             connection.close()
@@ -183,18 +202,25 @@ def race(coordinator, first, second, slow):
     patches = [mock.patch.object(*target, pausing(target)) for target in targets]
     for patch in patches:
         patch.start()
+    one = threading.Thread(target=send, args=("first", first))
+    two = threading.Thread(target=send, args=("second", second))
     try:
-        threads = [
-            threading.Thread(target=send, args=(key, request))
-            for key, request in (("first", first), ("second", second))
-        ]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
+        one.start()
+        assert held.wait(5), "First request never paused inside `slow`"
+        two.start()
+        assert started.wait(5), "Second request never connected"
+        if wait:
+            wait_for_lock(pids["second"])
+        else:
+            two.join(10)
     finally:
+        release.set()
+        for thread in (one, two):
+            if thread.ident is not None:
+                thread.join(10)
         for patch in patches:
             patch.stop()
+    assert not one.is_alive() and not two.is_alive()
     return responses["first"], responses["second"]
 
 

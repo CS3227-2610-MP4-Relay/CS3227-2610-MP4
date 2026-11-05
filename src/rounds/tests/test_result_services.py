@@ -1,7 +1,6 @@
 """RES-2 persistence, ownership and serialized result lifecycle checks."""
 
 import threading
-import time
 from unittest.mock import patch
 
 import pytest
@@ -20,7 +19,7 @@ from rounds.models import (
     Round,
 )
 
-from .conftest import domain_rows, open_with_case
+from .conftest import domain_rows, open_with_case, wait_for_lock
 
 pytestmark = pytest.mark.django_db
 
@@ -268,18 +267,7 @@ def race(first, second):
         assert held.wait(5), "First operation never held its lock"
         two.start()
         assert started.wait(5), "Second connection never started"
-        deadline = time.monotonic() + 5
-        while time.monotonic() < deadline:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT wait_event_type FROM pg_stat_activity WHERE pid = %s",
-                    [pids["second"]],
-                )
-                if cursor.fetchone() == ("Lock",):
-                    break
-            time.sleep(0.01)
-        else:
-            pytest.fail("Second operation did not wait for the real round lock")
+        wait_for_lock(pids["second"])
     finally:
         release.set()
         one.join(10)
