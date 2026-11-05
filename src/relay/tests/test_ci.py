@@ -2,6 +2,12 @@ from pathlib import Path
 
 import pytest
 
+# Multi-arch index digest of the official postgres:17.6 image, read 2026-11-05.
+POSTGRES_IMAGE = (
+    "postgres:17.6@sha256:"
+    "00bc86618629af00d2937fdc5a5d63db3ff8450acf52f0636ec813c7f4902929"
+)
+
 
 @pytest.mark.ac("PLT-1.7")
 def test_ci_runs_isolated_application_verification():
@@ -13,7 +19,7 @@ def test_ci_runs_isolated_application_verification():
         "- main",
         "contents: read",
         "persist-credentials: false",
-        "postgres:17.6",
+        f"image: {POSTGRES_IMAGE}\n",
         '"55432:5432"',
         "POSTGRES_DB: relay_test",
         "POSTGRES_USER: relay_test",
