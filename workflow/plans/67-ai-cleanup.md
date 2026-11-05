@@ -43,3 +43,7 @@ Owned paths: `src/ai/**` except `src/ai/feedback_views.py` and `src/ai/templates
   - Mutations, each failing the named tests: `_configuration` ignoring key presence or usability → `test_unusable_settings_are_a_refusal[...]` and the key/config preflight cases; preflight skipping configuration → the key/model/endpoint/config preflight cases; preflight skipping the count check → both `[corpus]` cases; `status` returning "failed" for a refusal → the evaluation, comparison and context-command tests; `show_response` printing every result → the opt-in response tests.
 - Checkpoint 5 (R6): new docstrings in `ai/__init__.py`, `ai/apps.py` and `ai/forms.py`; `gateway.USER_IN_FLIGHT` removed (a grep of the repository found only its definition, and the per-user cap is structural, one `USER_SCOPE` slot per user). Checks: ruff clean, and the full suite below.
 - Final: `ruff check .` and `ruff format --check .` clean; dblock `pytest -q -p no:cacheprovider` with the Codex CLI on PATH gave 2864 passed and 254 subtests passed (base 2857 plus the 7 added tests).
+
+## Delivery
+
+- The whole slice changes 450 non-test `src/` lines (146 + 241 tracked, plus the new 63-line `experiments.py`), above the 400-line budget, although it removes 32 lines net. The coordinator split it into two PRs that each fit: `67-ai-cleanup` holds the plan, R4 and R3 (`ebd890c..479d40d`, 227 lines); `67-ai-commands`, stacked on it, holds R5 and R6 (223 lines). Both PRs keep this one plan.
