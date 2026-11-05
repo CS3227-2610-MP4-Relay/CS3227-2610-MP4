@@ -4,14 +4,7 @@ import pytest
 from playwright.sync_api import expect
 
 from e2e.disclosures import expand_records
-
-
-def sign_in(page, accounts, role):
-    """Authenticate each role in its own browser context through the real form."""
-    page.goto("/sign-in/")
-    page.get_by_label("Username", exact=True).fill(accounts[role])
-    page.get_by_label("Password", exact=True).fill(accounts["password"])
-    page.get_by_role("button", name="Sign in", exact=True).click()
+from e2e.sessions import separate_context, sign_in
 
 
 def assert_read_only(page):
@@ -57,9 +50,7 @@ def test_tester_reads_published_retested_and_closed_round(
     expect(page.get_by_role("heading", name="Tester home", exact=True)).to_be_visible()
     expect(page.get_by_text("No tests available.", exact=True)).to_be_visible()
 
-    coordinator_context = page.context.browser.new_context(base_url=live_server.url)
-    coordinator_context.set_default_timeout(5000)
-    coordinator_context.set_default_navigation_timeout(10000)
+    coordinator_context = separate_context(page, live_server)
     try:
         coordinator = coordinator_context.new_page()
         sign_in(coordinator, browser_accounts, "coordinator")

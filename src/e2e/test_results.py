@@ -5,46 +5,14 @@ import re
 import pytest
 from playwright.sync_api import expect
 
-from accounts.models import User
 from e2e.disclosures import expand_records, result_links
-from rounds.models import Result
+from e2e.sessions import second_tester_accounts, separate_context, sign_in
 
 
 @pytest.fixture
 def browser_accounts(browser_accounts):
     """Create another tester before Playwright, check rows after it has stopped."""
-    accounts = browser_accounts
-    owner = User.objects.get(username=accounts["tester"])
-    other = User.objects.create_user(
-        "tester2-browser1",
-        accounts["password"],
-        workspace=owner.workspace,
-        role="tester",
-    )
-    accounts["tester2"] = other.username
-    yield accounts
-    # The page fixture depends on this fixture, so its event loop has stopped.
-    expected = accounts.get("expected_results")
-    if expected is not None:
-        assert Result.objects.count() == len(expected)
-        for fields in expected:
-            assert Result.objects.filter(**fields).count() == 1
-
-
-def sign_in(page, accounts, role):
-    """Authenticate through the real form in this page's own browser context."""
-    page.goto("/sign-in/")
-    page.get_by_label("Username", exact=True).fill(accounts[role])
-    page.get_by_label("Password", exact=True).fill(accounts["password"])
-    page.get_by_role("button", name="Sign in", exact=True).click()
-
-
-def context(page, live_server):
-    """Create an isolated session with the existing harness's bounded waits."""
-    separate = page.context.browser.new_context(base_url=live_server.url)
-    separate.set_default_timeout(5000)
-    separate.set_default_navigation_timeout(10000)
-    return separate
+    yield from second_tester_accounts(browser_accounts)
 
 
 def publish(coordinator, accounts):
@@ -88,7 +56,7 @@ def open_round(page, accounts, role="tester"):
 def test_native_validation_and_observation_limits_preserve_saved_draft(
     browser_accounts, page, live_server, action
 ):
-    coordinator_context = context(page, live_server)
+    coordinator_context = separate_context(page, live_server)
     try:
         publish(coordinator_context.new_page(), browser_accounts)
         open_round(page, browser_accounts)
@@ -122,7 +90,8 @@ def test_native_validation_and_observation_limits_preserve_saved_draft(
 
         below_limit = "a" * 1999
         observation.fill(below_limit)
-        page.get_by_role("button", name="Save draft", exact=True).click()
+        with page.expect_navigation():
+            page.get_by_role("button", name="Save draft", exact=True).click()
         page.reload()
         expect(observation).to_have_value(below_limit)
         posts.clear()
@@ -136,7 +105,7 @@ def test_native_validation_and_observation_limits_preserve_saved_draft(
         assert posts == []
         page.reload()
         expect(observation).to_have_value(below_limit)
-        page.get_by_role("link", name="Back to round", exact=True).last.click()
+        page.get_by_role("link", name="Back to round", exact=True).click()
         page.get_by_role("link", name="My results", exact=True).click()
         rows = page.locator("main section")
         expect(rows).to_have_count(1)
@@ -155,7 +124,7 @@ def test_native_validation_and_observation_limits_preserve_saved_draft(
         else:
             expect(observation).to_have_value(at_limit)
             expect(outcome).to_have_value("pass")
-        page.get_by_role("link", name="Back to round", exact=True).last.click()
+        page.get_by_role("link", name="Back to round", exact=True).click()
         page.get_by_role("link", name="My results", exact=True).click()
         expect(rows).to_have_count(1)
         expect(rows.get_by_text(at_limit, exact=True)).to_be_visible()
@@ -177,8 +146,8 @@ def test_native_validation_and_observation_limits_preserve_saved_draft(
 def test_private_draft_validation_reload_and_immutable_submission(
     browser_accounts, page, live_server
 ):
-    coordinator_context = context(page, live_server)
-    other_context = context(page, live_server)
+    coordinator_context = separate_context(page, live_server)
+    other_context = separate_context(page, live_server)
     dialogs = []
 
     def dismiss(dialog):
@@ -214,7 +183,8 @@ def test_private_draft_validation_reload_and_immutable_submission(
             "href", entry_url.removeprefix(live_server.url)
         )
         expect(continued).to_have_class("action")
-        continued.click()
+        with page.expect_navigation():
+            continued.click()
         page.reload()
         expect(page.get_by_label("Observation", exact=True)).to_have_value(observation)
         page.goto("/tester/")
@@ -237,7 +207,8 @@ def test_private_draft_validation_reload_and_immutable_submission(
         other.get_by_label("Observation", exact=True).fill(
             "Synthetic other private draft"
         )
-        other.get_by_role("button", name="Save draft", exact=True).click()
+        with other.expect_navigation():
+            other.get_by_role("button", name="Save draft", exact=True).click()
 
         page.reload()
         expect(page.get_by_label("Observation", exact=True)).to_have_value(observation)
@@ -298,7 +269,7 @@ def test_private_draft_validation_reload_and_immutable_submission(
 def test_selected_retest_and_close_refuse_stale_forms_preserving_results(
     browser_accounts, page, live_server
 ):
-    coordinator_context = context(page, live_server)
+    coordinator_context = separate_context(page, live_server)
     try:
         coordinator = coordinator_context.new_page()
         round_url = publish(coordinator, browser_accounts)
@@ -425,8 +396,8 @@ def test_selected_retest_and_close_refuse_stale_forms_preserving_results(
 def test_private_history_preserves_drafts_submissions_after_retest_and_close(
     browser_accounts, page, live_server
 ):
-    coordinator_context = context(page, live_server)
-    other_context = context(page, live_server)
+    coordinator_context = separate_context(page, live_server)
+    other_context = separate_context(page, live_server)
     try:
         coordinator = coordinator_context.new_page()
         publish(coordinator, browser_accounts)

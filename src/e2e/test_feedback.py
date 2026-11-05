@@ -1,8 +1,6 @@
 """Saved-observation feedback followed by explicit manual editing (RES-4)."""
 
 import json
-from pathlib import Path
-from tempfile import gettempdir
 from unittest import mock
 
 import pytest
@@ -12,7 +10,8 @@ from playwright.sync_api import expect
 from accounts.models import User
 from ai.gateway import Failed, Success
 from e2e.pending import assert_pending_submit
-from e2e.test_presentation import assert_layout
+from e2e.presentation import assert_layout
+from e2e.sessions import separate_context, sign_in
 from rounds import services
 from rounds.models import Case, Criterion, Result, Round
 
@@ -72,17 +71,9 @@ def browser_accounts(browser_accounts):
         assert round_.builds.count() == 1
 
 
-def sign_in(page, accounts, role="tester"):
-    """Use real credentials and the real form in this browser context."""
-    page.goto("/sign-in/")
-    page.get_by_label("Username", exact=True).fill(accounts[role])
-    page.get_by_label("Password", exact=True).fill(accounts["password"])
-    page.get_by_role("button", name="Sign in", exact=True).click()
-
-
 def save_draft(page, accounts, outcome, observation, *, save=True):
     """Fill result entry and optionally save before testing feedback navigation."""
-    sign_in(page, accounts)
+    sign_in(page, accounts, "tester")
     page.get_by_role("link", name="Synthetic feedback round", exact=True).click()
     page.get_by_role("link", name="Record result", exact=True).click()
     page.get_by_label("Outcome", exact=True).select_option(outcome)
@@ -109,10 +100,6 @@ def test_feedback_before_first_draft_validates_then_saves_without_ai(
         )
     ).to_be_visible()
     assert_layout(page, width)
-    page.screenshot(
-        path=str(Path(gettempdir()) / f"relay-feedback-entry-{width}.png"),
-        full_page=True,
-    )
     with mock.patch("ai.feedback_views.gateway.complete") as complete:
         action.click()
         expect(
@@ -207,9 +194,7 @@ def test_feedback_preserves_saved_fields_until_manual_edit_and_is_private(
         expect(page.get_by_text(QUESTION, exact=True)).to_have_count(0)
         complete.assert_called_once()
 
-    peer_context = page.context.browser.new_context(base_url=live_server.url)
-    peer_context.set_default_timeout(5000)
-    peer_context.set_default_navigation_timeout(10000)
+    peer_context = separate_context(page, live_server)
     try:
         peer = peer_context.new_page()
         sign_in(peer, accounts, "peer")
@@ -229,11 +214,12 @@ def test_feedback_preserves_saved_fields_until_manual_edit_and_is_private(
     finally:
         peer_context.close()
 
-    page.get_by_role("link", name="Back to result", exact=True).last.click()
+    page.get_by_role("link", name="Back to result", exact=True).click()
     expect(page.get_by_label("Observation", exact=True)).to_have_value(current)
     expect(page.get_by_label("Outcome", exact=True)).to_have_value("fail")
     page.get_by_label("Observation", exact=True).fill(EDITED)
-    page.get_by_role("button", name="Save draft", exact=True).click()
+    with page.expect_navigation():
+        page.get_by_role("button", name="Save draft", exact=True).click()
     page.reload()
     expect(page.get_by_label("Observation", exact=True)).to_have_value(EDITED)
     expect(page.get_by_label("Outcome", exact=True)).to_have_value("fail")
@@ -263,7 +249,7 @@ def test_unavailable_feedback_keeps_manual_result_submission_usable(
     expect(
         page.get_by_role("button", name="Suggest missing details", exact=True)
     ).to_be_visible()
-    page.get_by_role("link", name="Back to result", exact=True).last.click()
+    page.get_by_role("link", name="Back to result", exact=True).click()
     expect(page.get_by_label("Outcome", exact=True)).to_have_value("pass")
     expect(page.get_by_label("Observation", exact=True)).to_have_value("")
     page.get_by_label("Outcome", exact=True).select_option("fail")
@@ -324,11 +310,12 @@ def test_empty_or_invalid_feedback_keeps_saved_source_and_manual_editing(
         expect(page.get_by_text(message, exact=True)).to_have_count(0)
         expect(page.get_by_text(QUESTION, exact=True)).to_have_count(0)
         complete.assert_called_once()
-    page.get_by_role("link", name="Back to result", exact=True).last.click()
+    page.get_by_role("link", name="Back to result", exact=True).click()
     expect(page.get_by_label("Outcome", exact=True)).to_have_value("fail")
     expect(page.get_by_label("Observation", exact=True)).to_have_value(ORIGINAL)
     page.get_by_label("Observation", exact=True).fill(EDITED)
-    page.get_by_role("button", name="Save draft", exact=True).click()
+    with page.expect_navigation():
+        page.get_by_role("button", name="Save draft", exact=True).click()
     page.reload()
     expect(page.get_by_label("Observation", exact=True)).to_have_value(EDITED)
     expect(page.get_by_text("Status: Draft", exact=True)).to_be_visible()

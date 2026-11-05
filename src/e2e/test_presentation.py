@@ -1,8 +1,6 @@
 """Shared presentation at phone and desktop widths, using real existing pages."""
 
 import json
-from pathlib import Path
-from tempfile import gettempdir
 from unittest import mock
 
 import pytest
@@ -11,6 +9,13 @@ from playwright.sync_api import expect
 
 from accounts.models import User
 from ai.gateway import Failed, Success
+from e2e.presentation import (
+    assert_action_link_states,
+    assert_contrast,
+    assert_layout,
+    contrast,
+)
+from e2e.sessions import sign_in
 from rounds import services
 from rounds.models import Case, Criterion, Result, Round
 
@@ -53,79 +58,6 @@ def browser_accounts(browser_accounts):
     return accounts
 
 
-def contrast(colors):
-    """Return WCAG contrast for computed opaque RGB foreground/background."""
-
-    def luminance(color):
-        components = [int(value) / 255 for value in color[4:-1].split(",")]
-        linear = [
-            v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
-            for v in components
-        ]
-        return sum(v * weight for v, weight in zip(linear, (0.2126, 0.7152, 0.0722)))
-
-    a, b = sorted(luminance(color) for color in colors)
-    return (b + 0.05) / (a + 0.05)
-
-
-def assert_contrast(locator):
-    """Resolve transparent ancestors when checking a rendered text color."""
-    colors = locator.evaluate("""el => {
-      const foreground = getComputedStyle(el).color;
-      while (getComputedStyle(el).backgroundColor === 'rgba(0, 0, 0, 0)')
-        el = el.parentElement;
-      return [foreground, getComputedStyle(el).backgroundColor];
-    }""")
-    assert contrast(colors) >= 4.5
-
-
-def assert_layout(page, width):
-    """Check shared shell, real element bounds and readable palette."""
-    surface = page.locator("main")
-    expect(surface).to_be_visible()
-    metrics = surface.evaluate("""el => {
-      const s = getComputedStyle(el), b = getComputedStyle(document.body);
-      const box = el.getBoundingClientRect();
-      return {background: s.backgroundColor, surrounding: b.backgroundColor,
-        font: parseFloat(b.fontSize), line: parseFloat(b.lineHeight),
-        left: box.left, right: box.right, width: box.width,
-        padding: parseFloat(s.paddingLeft),
-        overflow: document.documentElement.scrollWidth > innerWidth};
-    }""")
-    assert metrics["background"] == "rgb(255, 255, 255)"
-    assert metrics["surrounding"] not in ("rgb(255, 255, 255)", "rgba(0, 0, 0, 0)")
-    assert metrics["font"] >= 16
-    assert metrics["line"] >= metrics["font"] * 1.4
-    assert (
-        page.locator("h1").evaluate("el => parseFloat(getComputedStyle(el).fontSize)")
-        > metrics["font"]
-    )
-    assert metrics["padding"] >= 12
-    assert not metrics["overflow"]
-    assert metrics["left"] >= 8 and metrics["right"] <= width - 8
-    if width > 1000:
-        assert metrics["width"] <= 1100
-        assert abs(metrics["left"] - (width - metrics["right"])) <= 1
-    for control in page.locator(
-        "input:not([type=hidden]), textarea, select, button, fieldset, table"
-    ).all():
-        box = control.bounding_box()
-        assert box and box["x"] >= metrics["left"]
-        assert box["x"] + box["width"] <= metrics["right"]
-    assert_contrast(surface)
-    for locator in page.locator(
-        "a, button, h1, h2, h3, h4, label, legend, th, td, textarea, select, "
-        "input:not([type=hidden]), .state, .error, [role=status], [role=alert]"
-    ).all():
-        assert_contrast(locator)
-    for link in page.locator("a").all():
-        decoration = link.evaluate("el => getComputedStyle(el).textDecorationLine")
-        if "action" in (link.get_attribute("class") or "").split():
-            assert decoration == "none"
-        else:
-            assert "underline" in decoration
-
-
 def assert_keyboard_focus(page, count):
     """Tab through native controls and check the visible focus treatment."""
     for _ in range(count):
@@ -143,14 +75,6 @@ def assert_keyboard_focus(page, count):
         assert box["x"] + box["width"] + style[1] <= page.viewport_size["width"]
 
 
-def sign_in(page, accounts, role):
-    """Use the existing authentication form and follow its redirect."""
-    page.goto("/sign-in/")
-    page.get_by_label("Username", exact=True).fill(accounts[role])
-    page.get_by_label("Password", exact=True).fill(accounts["password"])
-    page.get_by_role("button", name="Sign in", exact=True).click()
-
-
 def background(locator):
     """Read rendered action emphasis without depending on class names."""
     return locator.evaluate("el => getComputedStyle(el).backgroundColor")
@@ -166,20 +90,6 @@ def assert_top_navigation(page, home, back=None):
         "el => el.getBoundingClientRect().bottom < "
         "document.querySelector('main h2, main form')?.getBoundingClientRect().top"
     )
-
-
-def assert_action_link_states(page, link):
-    """Action labels remain undecorated and readable during native interaction."""
-    assert link.evaluate("el => el.tagName") == "A"
-    page.mouse.move(0, 0)
-    for state in ("rest", "hover", "focus"):
-        if state == "hover":
-            link.hover()
-        elif state == "focus":
-            page.mouse.move(0, 0)
-            link.focus()
-        assert link.evaluate("el => getComputedStyle(el).textDecorationLine") == "none"
-        assert_contrast(link)
 
 
 def assert_short_navigation(page, home, back=None):
@@ -242,7 +152,6 @@ def test_public_actions_are_compact_grouped_native_controls(page, width):
     assert form.evaluate("el => getComputedStyle(el).margin") == "0px"
     assert_action_link_states(page, sign_in_link)
     assert_layout(page, width)
-    page.screenshot(path=str(Path(gettempdir()) / f"relay-121-public-{width}.png"))
     group.evaluate("el => el.style.maxWidth = '160px'")
     assert assert_compact_label(demo) > 1
     assert_compact_label(sign_in_link)
@@ -279,19 +188,12 @@ def test_repeated_edit_delete_groups_have_compact_targets(
         assert form.get_attribute("method") == "post"
         expect(form.locator("input[name=csrfmiddlewaretoken]")).to_have_count(1)
         assert_action_link_states(page, edit)
-        group.screenshot(
-            path=str(
-                Path(gettempdir())
-                / f"relay-121-{kind.replace(' ', '-')}-group-{width}.png"
-            )
-        )
     publish = page.get_by_role("button", name="Publish round", exact=True)
     assert 38 <= publish.bounding_box()["height"] <= 42
     assert_action_link_states(
         page, page.get_by_role("link", name="Edit round", exact=True)
     )
     assert_layout(page, width)
-    page.screenshot(path=str(Path(gettempdir()) / f"relay-121-dense-{width}.png"))
 
 
 @pytest.mark.ac("PLT-4.5")
@@ -337,7 +239,6 @@ def test_coordinator_action_hierarchy_and_top_context(page, browser_accounts, wi
     )
     new_round.click()
     assert_short_navigation(page, "Coordinator home")
-    page.screenshot(path=str(Path(gettempdir()) / f"relay-121-new-round-{width}.png"))
     page.goto(browser_accounts["draft"])
     assert_top_navigation(page, "Coordinator home")
     edit = page.get_by_role("link", name="Edit criterion", exact=True)
@@ -354,7 +255,6 @@ def test_coordinator_action_hierarchy_and_top_context(page, browser_accounts, wi
     assert group.evaluate("el => getComputedStyle(el).flexWrap") == "wrap"
     assert delete.locator("..").get_attribute("method") == "post"
     assert_layout(page, width)
-    page.screenshot(path=str(Path(gettempdir()) / f"relay-117-actions-{width}.png"))
     edit.click()
     assert_short_navigation(page, "Coordinator home", "Back to round")
     page.get_by_role("navigation", name="Page navigation").get_by_role(
@@ -453,7 +353,6 @@ def test_public_pages_controls_messages_and_credentials(page, browser_accounts, 
     error_background = error.evaluate("el => getComputedStyle(el).backgroundColor")
     assert error.evaluate("el => parseFloat(getComputedStyle(el).borderLeftWidth)") >= 3
     assert_layout(page, width)
-    page.screenshot(path=str(Path(gettempdir()) / f"relay-108-sign-in-{width}.png"))
     sign_in(page, browser_accounts, "coordinator")
     page.get_by_role("button", name="Sign out", exact=True).click()
     status = page.get_by_role("status")
@@ -504,9 +403,6 @@ def test_coordinator_forms_long_text_and_ai_states(page, browser_accounts, width
     page.set_viewport_size({"width": width, "height": 900})
     sign_in(page, browser_accounts, "coordinator")
     assert_layout(page, width)
-    page.screenshot(
-        path=str(Path(gettempdir()) / f"relay-108-coordinator-home-{width}.png")
-    )
     page.goto(browser_accounts["draft"])
     assert_layout(page, width)
     assert (
@@ -525,7 +421,6 @@ def test_coordinator_forms_long_text_and_ai_states(page, browser_accounts, width
         "../.."
     )
     expect(criterion_row.locator(":scope > span[dir=auto]")).to_have_text(LONG)
-    page.screenshot(path=str(Path(gettempdir()) / f"relay-108-coordinator-{width}.png"))
     page.get_by_role("link", name="Add test case", exact=True).click()
     assert_layout(page, width)
     assert_keyboard_focus(page, 3)
@@ -601,8 +496,6 @@ def test_tester_result_and_feedback_long_content(page, browser_accounts, width):
     expect(page.get_by_role("heading", name="Questions to consider")).to_be_visible()
     assert_short_navigation(page, "Tester home", "Back to result")
     assert_layout(page, width)
-    if width == 320:
-        page.screenshot(path=str(Path(gettempdir()) / "relay-108-narrow.png"))
 
 
 @pytest.mark.ac("PLT-4.1", "PLT-4.3", "PLT-4.4", "PLT-4.5")

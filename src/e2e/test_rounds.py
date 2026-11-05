@@ -4,7 +4,8 @@ import pytest
 from playwright.sync_api import expect
 
 from accounts.models import Workspace
-from e2e.test_presentation import assert_layout
+from e2e.presentation import assert_layout
+from e2e.sessions import sign_in
 from rounds.models import Case, Criterion, Round
 
 
@@ -54,7 +55,7 @@ def test_coordinator_manages_later_collapsed_case(managed_round, request, width)
     page = request.getfixturevalue("page")
     accounts, round_, criteria, cases = managed_round
     page.set_viewport_size({"width": width, "height": 900})
-    sign_in_coordinator(page, accounts)
+    sign_in(page, accounts, "coordinator")
     page.get_by_role("link", name=round_.title, exact=True).click()
     later = page.locator("details.record").filter(
         has=page.get_by_role("heading", name=cases[1].title, exact=True)
@@ -81,7 +82,8 @@ def test_coordinator_manages_later_collapsed_case(managed_round, request, width)
     page.get_by_label("Title", exact=True).fill(revised)
     page.get_by_role("checkbox", name=criteria[0].text, exact=True).uncheck()
     page.get_by_role("checkbox", name=criteria[1].text, exact=True).check()
-    page.get_by_role("button", name="Save", exact=True).click()
+    with page.expect_navigation():
+        page.get_by_role("button", name="Save", exact=True).click()
     page.reload()
     expect(page.locator(target)).to_have_count(1)
     later = page.locator("details.record").filter(
@@ -115,13 +117,15 @@ def test_coordinator_manages_later_collapsed_case(managed_round, request, width)
     expect(later).not_to_have_attribute("open", "")
     later.locator("summary").click()
     expect(later.locator(".record-body li")).to_have_text([criteria[1].text])
-    later.get_by_role("button", name="Delete test case", exact=True).click()
+    with page.expect_navigation():
+        later.get_by_role("button", name="Delete test case", exact=True).click()
     page.reload()
     expect(later).to_have_count(0)
     expect(page.locator("details.record")).to_have_count(1)
     expect(criterion_rows).to_have_count(2)
     expect(page.locator(f'a[href="{target}"]')).to_have_count(0)
-    linked.get_by_role("button", name="Delete criterion", exact=True).click()
+    with page.expect_navigation():
+        linked.get_by_role("button", name="Delete criterion", exact=True).click()
     page.reload()
     expect(criterion_rows).to_have_count(1)
     expect(linked).to_have_count(0)
@@ -129,14 +133,6 @@ def test_coordinator_manages_later_collapsed_case(managed_round, request, width)
     expect(page.get_by_text("State: Draft", exact=True)).to_be_visible()
     expect(page.get_by_role("heading", name="Builds", exact=True)).to_have_count(0)
     assert_layout(page, width)
-
-
-def sign_in_coordinator(page, accounts):
-    """Open the coordinator home through the real sign-in form."""
-    page.goto("/sign-in/")
-    page.get_by_label("Username", exact=True).fill(accounts["coordinator"])
-    page.get_by_label("Password", exact=True).fill(accounts["password"])
-    page.get_by_role("button", name="Sign in", exact=True).click()
 
 
 def create_draft_round(page, title):
@@ -155,7 +151,7 @@ def test_coordinator_prepares_and_publishes_linked_case(page, browser_accounts):
     expected = "The synthetic confirmation appears."
     build = "Synthetic build 1.0"
 
-    sign_in_coordinator(page, browser_accounts)
+    sign_in(page, browser_accounts, "coordinator")
     create_draft_round(page, title)
     expect(page.get_by_role("heading", name=title, exact=True)).to_be_visible()
     expect(page.get_by_text("State: Draft", exact=True)).to_be_visible()
@@ -174,7 +170,8 @@ def test_coordinator_prepares_and_publishes_linked_case(page, browser_accounts):
     page.get_by_label("Steps", exact=True).fill(steps)
     page.get_by_label("Expected result", exact=True).fill(expected)
     page.get_by_role("checkbox", name=criterion, exact=True).check()
-    page.get_by_role("button", name="Add test case", exact=True).click()
+    with page.expect_navigation():
+        page.get_by_role("button", name="Add test case", exact=True).click()
     page.reload()
     expect(page.get_by_role("heading", name=title, exact=True)).to_be_visible()
     expect(page.get_by_role("heading", name=case_title, exact=True)).to_be_visible()
@@ -209,7 +206,7 @@ def test_coordinator_prepares_and_publishes_linked_case(page, browser_accounts):
 
 @pytest.mark.ac("RND-2.6")
 def test_case_without_link_is_refused_without_saving(page, browser_accounts):
-    sign_in_coordinator(page, browser_accounts)
+    sign_in(page, browser_accounts, "coordinator")
     create_draft_round(page, "Synthetic unlinked case round")
     criterion = "The synthetic response appears."
     page.get_by_role("link", name="Add acceptance criterion", exact=True).click()
@@ -235,7 +232,8 @@ def test_case_without_link_is_refused_without_saving(page, browser_accounts):
         expect(page.get_by_label(label, exact=True)).to_have_value(value)
     expect(page.get_by_role("checkbox", name=criterion, exact=True)).not_to_be_checked()
 
-    page.get_by_role("link", name="Back to round", exact=True).last.click()
+    with page.expect_navigation():
+        page.get_by_role("link", name="Back to round", exact=True).last.click()
     page.reload()
     expect(page.get_by_text("State: Draft", exact=True)).to_be_visible()
     expect(page.get_by_text(criterion, exact=True)).to_be_visible()
@@ -248,7 +246,7 @@ def test_case_without_link_is_refused_without_saving(page, browser_accounts):
 
 @pytest.mark.ac("RND-3.3")
 def test_empty_round_publish_is_refused_without_creating_build(page, browser_accounts):
-    sign_in_coordinator(page, browser_accounts)
+    sign_in(page, browser_accounts, "coordinator")
     create_draft_round(page, "Synthetic empty publish round")
     round_url = page.url
     label = "Synthetic refused build 1.0"
@@ -272,7 +270,7 @@ def test_empty_round_publish_is_refused_without_creating_build(page, browser_acc
 @pytest.mark.ac("RND-8.4")
 def test_drafting_page_keeps_manual_workflow_when_unavailable(page, browser_accounts):
     """Test settings disable live calls; manual drafting remains available."""
-    sign_in_coordinator(page, browser_accounts)
+    sign_in(page, browser_accounts, "coordinator")
     create_draft_round(page, "Synthetic drafting browser round")
     criterion = "The synthetic drafting criterion is visible."
     page.get_by_role("link", name="Add acceptance criterion", exact=True).click()

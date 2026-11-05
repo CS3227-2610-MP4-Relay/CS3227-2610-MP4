@@ -7,6 +7,7 @@ from django.test import override_settings
 from playwright.sync_api import Error, sync_playwright
 
 from accounts.models import User, Workspace
+from e2e.sessions import bounded
 
 
 @pytest.fixture(scope="session")
@@ -68,10 +69,8 @@ def page(browser_accounts, live_server, tmp_path, request):
     ):
         browser = playwright.chromium.launch()
         try:
-            context = browser.new_context(base_url=live_server.url)
+            context = bounded(browser.new_context(base_url=live_server.url))
             try:
-                context.set_default_timeout(5000)
-                context.set_default_navigation_timeout(10000)
                 context.tracing.start(screenshots=True, snapshots=True, sources=False)
                 browser_page = context.new_page()
                 yield browser_page
