@@ -29,3 +29,29 @@ Tier: High (development security controls: the scope hook, its adapters and the 
 
 ## Progress
 - Implemented on `26e77cc`. `ruff check .` and `ruff format --check .` clean; `python -m unittest discover -s workflow/scripts` 113 tests OK; full `pytest` 2876 passed, 254 subtests (base 2869 plus the 7 new tests). Mutation results as listed under Checks.
+
+## Review
+
+- Verifier and security reviewer on `26e77cc..506aede`: no High.
+  - Both found that the Windows Codex command (`python ...; exit $LASTEXITCODE`) still failed open: a missing `python` leaves `$LASTEXITCODE` unset, so it exits 0.
+  - Security found that a link as the last path component, or `..` after a linked folder, was judged on the unresolved path.
+  - The verifier found that no test pinned `|| exit 2`.
+  - Lows: no Git timeout; inherited `GIT_*` settings could choose the repository; a planted `.git` file could choose the folder paths are judged from; missing tests for Git being absent and for `[1]`; the README did not say the main session is blocked too without Python.
+- **Repair round 1:**
+  - The Windows Codex command exits 0 only when `$LASTEXITCODE` is 0, else 2.
+  - The hook judges both the path as written and `os.path.realpath(target)`.
+  - Git runs without `GIT_*` settings and with a 10-second timeout; a timeout reaches the catch-all and blocks.
+  - Only worktrees that `git worktree list` reports for this repository count.
+  - New tests: a broken `python` and a project path with a space in the adapter test; Windows command form; a linked file, a dangling link and `link/../`; a planted `.git` file; `GIT_DIR` in the environment; no Git; `[1]` as a scope; a Git timeout.
+  - The README states the Windows form and that the main session is blocked too.
+- **Mutations rerun, each failing a named test:** unreadable input exiting 1; catching only `ValueError`; dropping the list check; judging by this checkout's root only; skipping the resolved-target check; skipping the worktree-list check; the `python`-only command; no `python3` fallback; no `|| exit 2`; the old Windows command; counting logs by `len`.
+- **Covered only by overlap:**
+  - Dropping the existing-folder resolution, or keeping `GIT_*` settings, no longer fails a test on its own. The resolved-target check and the worktree-list check block the same paths.
+  - The folder resolution remains so that unresolved paths such as `/var` versus `/private/var` compare with Git's resolved worktree path.
+- **Deviations recorded, not rewritten:**
+  - Implementation came before the plan and unit commits. The three commits were made together after the focused checks.
+  - The live check in each client is still to do. Hooks load when a session starts, so after this merges, a new Claude Code session should ask a builder to edit `AGENTS.md` from the main checkout and from a sibling worktree (refused) and `src/` in a sibling worktree (allowed). The same applies to Codex where it is used.
+- **Deferred:**
+  - Case-insensitive scope matching on macOS (`FLAGS` is case-sensitive outside Windows, so `src/.ENV` passes `**/.env`). Pre-existing; it needs its own slice.
+  - A lone `000-*.md` log is no longer reported as a gap. Nit; logs start at 001.
+- Repair round 1 on `506aede`: `ruff check .` and `ruff format --check .` clean; workflow unittest 118 OK; full `pytest` 2881 passed, 254 subtests.
