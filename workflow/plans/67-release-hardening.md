@@ -17,7 +17,8 @@ Tier High (production configuration and CI). Base `26e77cc`; branch `67-release-
 - **Production only.** Local and test settings keep Django's defaults; tests capture logs themselves.
 - **One handler.** A console `StreamHandler` on stderr, format `%(asctime)s %(levelname)s %(name)s %(message)s`, at WARNING, on the root logger and on `django`. `django` does not propagate, so each record prints once. `disable_existing_loggers` is false, so module loggers created before configuration still log. No mail handler, file or service.
 - **Gateway INFO stays out.** [llm-gateway.md](../specs/ai/llm-gateway.md#transport-contract-proposed) says the gateway logs only the fixed outcome code but not whether that line reaches production; SECURITY-SPEC says to record only necessary operational metadata. So production keeps WARNING for every logger, and the per-call `ai.gateway` INFO outcome is dropped; its WARNING loop reports still print.
-- **What tracebacks may carry.** The 500 tracebacks Django now prints are the same kind the 503 routes already log "with its traceback only": exception and database error text, such as a constraint violation naming an existing username or workspace name, never a plain password or frame variables. Request warnings print the escaped path without the query string; `DisallowedHost` prints the rejected Host header escaped by `repr`.
+- **What logs may carry.** Stated once, in [SECURITY-SPEC Secrets and settings](../specs/SECURITY-SPEC.md#secrets-and-settings): the same exposure as the accepted 503 tracebacks, plus escaped `Host`, CSRF `Origin`/`Referer` values and 4xx tracebacks, with an unlimited-volume residual.
+- **Refusals stay unlogged** (repair round 1, orchestrator's decision keeping the human's #59 rule). A `CallbackFilter` on the console handler drops records whose `status_code` is 429, so Django's "Too Many Requests" warning for sign-in and `/demo/` refusals never prints.
 - **Criterion.** No new product criterion: logging is production configuration under [PLT-1.8](../specs/product/platform.md#plt-1-django-foundation-and-continuous-verification), whose policy lives in TECHNICAL-SPEC Configuration, so the tests carry `PLT-1.8`.
 - **Digest.** The multi-arch index digest of `postgres:17.6` from `docker buildx imagetools inspect postgres:17.6` on 2026-11-05: `sha256:00bc86618629af00d2937fdc5a5d63db3ff8450acf52f0636ec813c7f4902929`. The tag stays in the reference for readability; Docker resolves by digest. The Developer Guide's `docker run` examples keep the tag (another builder is editing that guide).
 
@@ -27,6 +28,8 @@ Tier High (production configuration and CI). Base `26e77cc`; branch `67-release-
 - Checkpoint 3: red first, 2 failed (`LOGGING` absent; no formatted 500 line). Green 61 passed in `test_configuration.py`. Mutations, each restored: removing the `django` entry fails the config test; `django` propagating (record printed twice), `disable_existing_loggers` true (early logger silenced) and INFO levels each fail both tests.
 - Checkpoint 4: red first, `test_ci_runs_isolated_application_verification` failed on the tag-only image; green 3 passed; one changed digest character fails it again. `docker buildx imagetools inspect` resolves the pinned reference to the same index, with `linux/amd64` in it.
 - `check --deploy --fail-level WARNING` on production settings with throwaway values through `env -i`: "no issues (2 silenced)".
+- Review of `7456e18`: no High findings; verifier and security reviewer both raised M1, the printed 429 refusal records.
+- Repair round 1: spec rewording first (snapshot `.r67/harden/repair1-spec-before-code.diff`). The probe also logs a 429 through `log_response`; the stream test now asserts "Too Many Requests" is absent (red: 1 failed), and the local-settings test asserts no `LOGGING`. Green 61 passed after the filter. Mutations, each restored: handler without the filter fails both tests; a callback keeping every record fails the stream test. `check --deploy`: "no issues (2 silenced)".
 
 ## Open
 
@@ -34,4 +37,4 @@ Tier High (production configuration and CI). Base `26e77cc`; branch `67-release-
 
 ## Next
 
-Independent verification and security review of the final candidate.
+Re-review of the repaired candidate.
