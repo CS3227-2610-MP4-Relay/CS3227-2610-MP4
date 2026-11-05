@@ -109,7 +109,7 @@ def main():
                 problems.append(
                     (folder, f"number {number:03d} used by {', '.join(names)}")
                 )
-        expected = list(range(1, len(numbers) + 1))
+        expected = list(range(1, max(numbers, default=0) + 1))
         gaps = sorted(set(expected) - set(numbers))
         if gaps:
             problems.append((folder, f"no log for number(s) {gaps}"))
