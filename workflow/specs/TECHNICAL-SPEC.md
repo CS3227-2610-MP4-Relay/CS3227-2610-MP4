@@ -1,15 +1,15 @@
 # Technical spec
 
-How Relay will be built and run. What it will do is in [`PRODUCT-SPEC.md`](PRODUCT-SPEC.md). The application runs locally and in CI only. Workspaces, accounts and sessions (ACC-1), demo workspace creation (ACC-2), abuse-limit counters (ACC-3), test rounds with their title and state (RND-1), their acceptance criteria, test cases and links (RND-2), builds with publishing (RND-3), retests as further builds (RND-5), closing with its closing time (RND-6), each new demo workspace's sample round (RND-7), and the AI gateway with its operational rows and drafting pages (RND-8) exist; live AI call status belongs in the [gateway contract](ai/llm-gateway.md#live-switch); other business schema and hosted application environments remain planned.
+How Relay is built and run. What it does is in [`PRODUCT-SPEC.md`](PRODUCT-SPEC.md). The application runs locally and in CI only. The data model, routes and AI gateway below are built under `src/`; live AI call status belongs in the [gateway contract](ai/llm-gateway.md#live-switch); hosted application environments remain planned ([Environments](#environments)).
 
 ## Architecture
 
-- One Django project that renders HTML on the server, with no separate front end. Application code and its tests will live under `src/`.
+- One Django project that renders HTML on the server, with no separate front end. Application code and its tests live under `src/`.
 - PostgreSQL for application storage and database-backed tests.
 - Configuration from environment variables, with no committed credentials.
 - SoC LLM through one shared gateway; feature code selects authorized context before invoking it. The boundary is built; its live-call status and contract are in [`ai/llm-gateway.md`](ai/llm-gateway.md).
 
-`src/manage.py` starts the `relay` Django project; `relay.wsgi` is its WSGI entry point and `relay.pages` owns public presentation. Shared templates live in `src/relay/templates/`. The `accounts` app (`src/accounts/`) owns the [workspace and account models](#accounts-and-workspaces) and the accounts routes, with Django's `auth`, `contenttypes`, `sessions` and `messages` apps; `django.contrib.admin` is never installed. The `rounds` app (`src/rounds/`), added by RND-1, owns the [round models](#rounds) and the [rounds routes](#rounds-routes). The `ai` app (`src/ai/`) owns the [gateway's rows](#ai-gateway), the gateway and the RND-8 drafting views. ACC-1 adds the accounts apps; until then no auth/session apps or business models are installed. Runtime and dependency pins belong in the root configuration files.
+`src/manage.py` starts the `relay` Django project; `relay.wsgi` is its WSGI entry point and `relay.pages` owns public presentation. Shared templates live in `src/relay/templates/`. The `accounts` app (`src/accounts/`) owns the [workspace and account models](#accounts-and-workspaces) and the accounts routes, with Django's `auth`, `contenttypes`, `sessions` and `messages` apps; `django.contrib.admin` is never installed. The `rounds` app (`src/rounds/`), added by RND-1, owns the [round models](#rounds) and the [rounds routes](#rounds-routes). The `ai` app (`src/ai/`) owns the [gateway's rows](#ai-gateway), the gateway, the RND-8 drafting views and the RES-4 feedback views. Runtime and dependency pins belong in the root configuration files.
 
 Shared application presentation ([PLT-4](product/platform.md#plt-4-shared-application-presentation)) uses a CSS template include inside the existing `base.html` head's `<style>` element. Semantic selectors and small presentation-only classes reuse the current server-rendered markup, without external fonts, static-file serving, routes or dependencies. A shared inline script progressively enhances only marked AI submission forms: the submit event sets a pending guard, disables the submit button and fills a live status; `pageshow` clears that presentation state for history restoration. It uses normal browser form navigation and makes no fetch requests. Existing template autoescaping and user-text isolation filters remain in place.
 
@@ -72,7 +72,7 @@ For [RND](product/rounds.md). Field limits, caps and messages are in its criteri
 
 ### AI gateway
 
-For the [shared gateway](ai/llm-gateway.md#limits-and-accounting), whose limits are proposals pending confirmation. Neither table holds prompt, source or reply text.
+For the [shared gateway](ai/llm-gateway.md#limits-and-accounting-proposed), whose limits are proposals pending confirmation. Neither table holds prompt, source or reply text.
 
 - **Call slot** (`ai.CallSlot`): a scope, a key and an expiry time, unique on scope and key. Scope `user` has one row per user who has called the gateway, keyed by the user's ID and created at their first call; scope `deployment` has two fixed rows, keys `0` and `1`, created by a migration. A slot is free once its expiry has passed. Rows are kept for the life of the deployment.
 - **Call record** (`ai.CallRecord`): a scope (`user-calls`, keyed by user ID, or `deployment-calls`, key `all`), a key and a creation time, indexed on all three. Each counted call adds one row per scope. Nullable nonnegative big-integer fields `prompt_tokens`, `completion_tokens`, `total_tokens` and `elapsed_ms` hold the [gateway accounting contract's](ai/llm-gateway.md#usage-and-latency) metrics; existing rows migrate as null. Both rows represent the same call, so aggregate only one scope. Reservation returns both record IDs along with its existing slots/start; completion updates those IDs atomically without holding a transaction across provider work. While reserving a call, the gateway deletes that scope and key's rows older than the window, so a user's old rows remain until that user calls again.
@@ -84,7 +84,7 @@ For the [shared gateway](ai/llm-gateway.md#limits-and-accounting), whose limits 
 
 `/` is a public GET/HEAD route rendering `home.html`, with no input and no writes. Other methods return 405; unresolved paths and uncaught exceptions use generic nondebug 404/500 responses, the 404 rendering `404.html` from ACC-2. Its observable contract is [PLT-1](product/platform.md#plt-1-django-foundation-and-continuous-verification); from ACC-1 the page also links to `/sign-in/` (PLT-1.1). From ACC-2 it reads the session to redirect a signed-in user to their role home, and its button's form carries Django's CSRF token, which sets the CSRF cookie; the view stays CSRF-exempt so other methods keep PLT-1.2's 405. Future routes must define authorization, validation and state contracts before implementation.
 
-The accounts and rounds routes below are planned for their implementation slices; ACC-2 turns `/` into the accounts start page in the table below. Each route contract must name its method, role/workspace/ownership checks, input validation, state preconditions, success result and denied/failure behaviour before implementation.
+ACC-2 turns `/` into the accounts start page in the table below. Each route contract must name its method, role/workspace/ownership checks, input validation, state preconditions, success result and denied/failure behaviour before implementation.
 
 ### Accounts routes
 

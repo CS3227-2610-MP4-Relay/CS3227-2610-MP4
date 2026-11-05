@@ -15,7 +15,3 @@ ignore = ["RUF012"]
 [tool.ruff.lint.per-file-ignores]
 # Test files need no docstrings.
 "**/test_*.py" = ["D"]
-"**/*_test.py" = ["D"]
-"**/tests.py" = ["D"]
-# Django's generated settings hold dotted paths too long to wrap.
-"**/settings.py" = ["E501"]
