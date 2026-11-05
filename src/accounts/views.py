@@ -4,6 +4,7 @@ import logging
 from datetime import timedelta
 
 from django import db
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import PermissionDenied
@@ -16,7 +17,6 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from rounds import tester
 from rounds.models import Round
 
 from . import demo, limits
@@ -26,7 +26,7 @@ from .workspaces import workspace_records
 
 logger = logging.getLogger(__name__)
 
-SESSION_LIFETIME = timedelta(hours=8)
+SESSION_LIFETIME = timedelta(seconds=settings.SESSION_COOKIE_AGE)
 HOMES = {
     User.Role.COORDINATOR: "accounts:coordinator",
     User.Role.TESTER: "accounts:tester",
@@ -96,29 +96,19 @@ def sign_out(request):
     return redirect("accounts:sign-in")
 
 
-def _role_home(role, title, template="accounts/home.html", sections=None):
-    """Build a GET-only home page for one role, with optional page sections."""
-
-    @never_cache
-    @require_GET
-    def home(request):
-        if not request.user.is_authenticated:
-            return redirect("accounts:sign-in")
-        if request.user.role != role:
-            raise PermissionDenied
-        context = {"title": title, **(sections(request.user) if sections else {})}
-        return render(request, template, context)
-
-    return home
-
-
-coordinator_home = _role_home(
-    User.Role.COORDINATOR,
-    "Coordinator home",
-    "rounds/coordinator_home.html",
-    lambda user: {"rounds": workspace_records(user, Round)},
-)
-tester_home = tester.home
+@never_cache
+@require_GET
+def coordinator_home(request):
+    """Show the coordinator's rounds; others are redirected or refused."""
+    if not request.user.is_authenticated:
+        return redirect("accounts:sign-in")
+    if request.user.role != User.Role.COORDINATOR:
+        raise PermissionDenied
+    context = {
+        "title": "Coordinator home",
+        "rounds": workspace_records(request.user, Round),
+    }
+    return render(request, "rounds/coordinator_home.html", context)
 
 
 def _demo_counts(read, key):

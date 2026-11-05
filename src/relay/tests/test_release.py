@@ -625,3 +625,12 @@ def test_git_archive_selects_literal_filenames(monkeypatch):
     assert commands == [
         ["git", "--literal-pathspecs", "archive", SHA, "--", "src/relay/*"]
     ]
+
+
+@pytest.mark.ac("PLT-1.13")
+@pytest.mark.parametrize(("path", "status", "heading"), release.SMOKE_PAGES)
+def test_smoke_headings_match_the_rendered_pages(client, path, status, heading):
+    response = client.get(path)
+    assert response.status_code == status
+    assert heading in response.content
+    assert len(response.content) <= 65536

@@ -529,6 +529,16 @@ def test_coordinator_home_keeps_the_accounts_storage_rule(coord_client):
     assert UNAVAILABLE not in page(response)
 
 
+def test_coordinator_home_round_list_keeps_the_accounts_storage_rule(coord_client):
+    coord_client.raise_request_exception = False
+    with mock.patch(
+        "accounts.views.workspace_records", side_effect=DatabaseError("synthetic")
+    ):
+        response = coord_client.get("/coordinator/")
+    assert response.status_code == 500
+    assert UNAVAILABLE not in page(response)
+
+
 # RND-1.7: CSRF and Origin come before 405 and the sign-in redirect
 
 

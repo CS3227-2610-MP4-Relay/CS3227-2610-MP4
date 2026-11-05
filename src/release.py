@@ -165,12 +165,16 @@ def _ready(deployment, project, token, query):
     raise TimeoutError("Readiness deadline")
 
 
+# Each smoke page's path, status and heading; tests render these pages to match.
+SMOKE_PAGES = (
+    ("/", 200, b"<h1>Relay</h1>"),
+    ("/sign-in/", 200, b"<h1>Sign in</h1>"),
+    ("/relay-release-check-not-found/", 404, b"<h1>Page not found.</h1>"),
+)
+
+
 def _smoke(host):
-    for path, status, heading in (
-        ("/", 200, b"<h1>Relay</h1>"),
-        ("/sign-in/", 200, b"<h1>Sign in</h1>"),
-        ("/relay-release-check-not-found/", 404, b"<h1>Page not found.</h1>"),
-    ):
+    for path, status, heading in SMOKE_PAGES:
         actual, headers, body = request(
             f"https://{host}{path}",
             timeout=10,
