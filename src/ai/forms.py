@@ -1,4 +1,4 @@
-"""Form fields for the two RND-8 drafting routes."""
+"""The criteria selection form for the RND-8 drafting page."""
 
 from django import forms
 
