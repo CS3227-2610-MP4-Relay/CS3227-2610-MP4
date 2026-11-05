@@ -31,10 +31,12 @@ Tier High (production configuration and CI). Base `26e77cc`; branch `67-release-
 - Review of `7456e18`: no High findings; verifier and security reviewer both raised M1, the printed 429 refusal records.
 - Repair round 1: spec rewording first (snapshot `.r67/harden/repair1-spec-before-code.diff`). The probe also logs a 429 through `log_response`; the stream test now asserts "Too Many Requests" is absent (red: 1 failed), and the local-settings test asserts no `LOGGING`. Green 61 passed after the filter. Mutations, each restored: handler without the filter fails both tests; a callback keeping every record fails the stream test. `check --deploy`: "no issues (2 silenced)".
 
+- Review of `fd91733`: the verifier resolved everything; the security reviewer raised a new Low, that SECURITY-SPEC called a failing row's coordinator-written text an accepted exposure. Repair round 2 (docs only, orchestrator's option b): the bullet now names that text as a residual gap not yet accepted by the human, and says tester observations stay out because `rounds.tester.tester_view` logs storage failures as a fixed line without a traceback.
+
 ## Open
 
-- None.
+- Human acceptance of the failing-row residual in [SECURITY-SPEC Secrets and settings](../specs/SECURITY-SPEC.md#secrets-and-settings) is not recorded.
 
 ## Next
 
-Re-review of the repaired candidate.
+Re-review of the repaired candidate; ask the human about the failing-row residual.
