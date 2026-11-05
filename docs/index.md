@@ -5,9 +5,11 @@ layout: default
 
 Relay is a beta-testing portal for small software teams. Test Coordinators prepare, publish, retest and close test rounds and review their results; Beta Testers run the checks, record results with observations and retest fixes. Coordinators can draft test cases with AI, and testers can ask AI to suggest missing details in an observation. The software being tested runs outside Relay.
 
-## Project status
+**[Open Relay](https://relay-production.vercel.app/)**
 
-Relay's coordinator and tester workflows are built and currently run locally; public application hosting remains planned. See the [User Guide](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/main/docs/UserGuide.md) for available workflows and the [Developer Guide](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/main/docs/DeveloperGuide.md) for setup.
+## Guides
+
+See the [User Guide](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/main/docs/UserGuide.md) for available workflows and the [Developer Guide](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/main/docs/DeveloperGuide.md) for architecture and local development.
 
 ## Project
 
