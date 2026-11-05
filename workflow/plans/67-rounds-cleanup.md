@@ -37,6 +37,7 @@ Tier: High (touches round- and workspace-isolation query constraints). Base `ebd
   - the wording at TECHNICAL-SPEC lines 118 and 122 is still accurate;
   - templates rendered without a request (unit renders) now show "Coordinator home".
 - Repair round 1: the `rounds/results.py` module docstring now covers the round-scoped reads, and the checkpoint 4 path list no longer names `contents.html`, which the candidate never changed.
+- Verifier and security recheck of `1956c09..db6bc7e`: Lows 1 and 3 resolved; security assessment unchanged. Accepted as is: commit `1956c09` combines R7, A11 and R6 as planned in checkpoint 4 (no history rewrite; for the human reviewer to judge), and the `results.py` docstring names the review and history pages but not the tester round page, which also uses the read helpers.
 
 ## Progress
 
