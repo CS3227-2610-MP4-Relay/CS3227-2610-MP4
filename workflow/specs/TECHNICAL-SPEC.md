@@ -15,6 +15,71 @@ Shared application presentation ([PLT-4](product/platform.md#plt-4-shared-applic
 
 Long-page contents use server-rendered fragment links to section headings or content inside native `<details>/<summary>` records, with IDs based on fixed section names or authorized record IDs. Native fragment revelation opens a targeted record; shared template includes reuse contents and action/navigation styling, and responsive CSS presents desktop contents beside the single content column and a native contents disclosure above it on smaller screens. Record expansion is browser-local presentation only, with no persisted state or additional requests.
 
+### Architecture overview
+
+This view shows the application boundary and major responsibilities described above; arrows show interactions, not a complete Python import graph. The browser receives server-rendered pages, and only the shared gateway crosses the provider boundary.
+
+```mermaid
+flowchart TB
+    Browser["Coordinator or tester browser"]
+    subgraph Django["Relay Django application"]
+        Web["Routing, views and shared templates"]
+        Accounts["accounts: workspaces and sign-in"]
+        Rounds["rounds: test rounds, builds and results"]
+        AI["ai: drafting and observation feedback"]
+        Gateway["Shared AI gateway"]
+        Web --> Accounts
+        Web --> Rounds
+        Web --> AI
+        AI --> Gateway
+    end
+    Browser <-->|HTTP / HTML| Web
+    Accounts --> DB[(PostgreSQL)]
+    Rounds --> DB
+    AI -->|Authorized source reads| DB
+    Gateway -->|Quota and usage records| DB
+    Gateway -->|HTTPS| Provider["SoC LLM"]
+```
+
+### Drafting request sequence
+
+This UML sequence illustrates [RND-8](product/rounds.md#rnd-8-draft-test-cases-with-ai) and the [drafting architecture](#rounds), with the configured, successfully reserved provider call expanded. Early gateway refusals skip that call; storage errors follow the existing [round-route failure handling](#rounds-routes). The feature's exact input, reply and failure rules remain in the [drafting contract](ai/test-drafting.md). Gateway bookkeeping can write records while the suggestions themselves remain transient.
+
+```mermaid
+sequenceDiagram
+    actor Coordinator
+    participant View as Drafting view
+    participant DB as PostgreSQL
+    participant Gateway as Shared gateway
+    participant Provider as SoC LLM
+    participant Form as Normal case form and service
+    Coordinator->>View: Request drafts for selected criteria
+    View->>DB: Read authorized Draft round and criteria
+    DB-->>View: Selected source
+    View->>Gateway: Fixed instructions and encoded source
+    Gateway->>DB: Reserve quota and slots in a short transaction
+    Note over DB,Gateway: Reservation ends before provider work;<br/>no round lock or transaction spans the call
+    Gateway->>Provider: Bounded HTTPS request
+    Provider-->>Gateway: Reply or failure
+    Gateway->>DB: Record metrics and release slots
+    Gateway-->>View: Success, refusal or failure outcome
+    View->>View: Validate successful reply against feature schema
+    alt Valid, nonempty suggestions
+        View-->>Coordinator: Show transient suggestions
+    else Empty, invalid, refused or failed response
+        View-->>Coordinator: Show the corresponding fixed message
+    end
+    opt Coordinator chooses a valid suggestion
+        Coordinator->>View: Use this draft
+        View-->>Coordinator: Prefill the normal case form
+        Coordinator->>Form: Review, edit and submit
+        Form->>DB: Recheck authorization and Draft state;<br/>save under the round lock
+        Form-->>Coordinator: Show the saved case
+    end
+```
+
+Observation feedback has an additional source recheck after the provider returns; see [its architecture](#rounds) and [feature contract](ai/observation-feedback.md). It does not use the case-creation portion of this sequence.
+
 ## Data model
 
 Only the subsections below are specified. Design workspaces, role-based accounts, rounds, requirements, cases, build references and results around the [product areas](PRODUCT-SPEC.md#areas). Before schema implementation, settle ownership, state transitions, published-case edits, submitted-observation edits and result-history/version rules. Do not infer these from a proposed screen or table name.
@@ -25,6 +90,41 @@ Persistence and retention, decided for ACC-1 (see its [plan](../plans/2-sign-in-
 - An expired session is refused by its absolute expiry; its row is not deleted automatically. Signing out a signed-in user deletes their session row, then the sign-out message starts a new anonymous session row, which expires after 8 hours, is emptied once the message is shown, and is replaced at the browser's next sign-in. A signed-out visitor's sign-out, and viewing the sign-in page, create no row.
 - When shared storage is exhausted, a failed write is not retried, and the user gets that route's existing error page: the generic 500 of [PLT-1.3](product/platform.md#plt-1-django-foundation-and-continuous-verification), or the 503 page that [ACC-2.5](product/accounts.md#acc-2-create-an-isolated-demo-workspace) and [ACC-3.7](product/accounts.md#acc-3-limit-abuse-of-sign-in-and-demo-workspace-creation) define. Saving the session at the end of a request is the exception: a failed save of an existing session row gives Django's "Bad Request (400)", and a failed creation of a new one, as at sign-out, the generic 500 ([rounds routes](#rounds-routes)). A route that writes in a transaction rolls the whole transaction back. Existing records, including result history, are never deleted or overwritten to make room.
 - Before peer testing, an operator checks the hosting database's storage use. Exhaustion and unbounded session and counter growth are [accepted residual risks](SECURITY-SPEC.md#sign-in-and-access-control) for the course deployment.
+
+### Domain class diagram
+
+This conceptual UML view follows the stored references in [`accounts/models.py`](../../src/accounts/models.py) and [`rounds/models.py`](../../src/rounds/models.py); fields, Django framework classes, sessions and operational counters are omitted. Ordinary associations do not imply cascading deletion. `CaseCriterion` and `BuildCase` make the two many-to-many relationships explicit; cross-round/workspace consistency also depends on the checks in [Rounds](#rounds), not just foreign keys.
+
+```mermaid
+classDiagram
+    direction TB
+    Workspace "1" -- "0..*" User : accounts
+    Workspace "1" -- "0..*" Round : rounds
+    Round "1" -- "0..*" Criterion : criteria
+    Round "1" -- "0..*" Case : cases
+    Round "1" -- "0..*" Build : builds
+    Case "1" -- "0..*" CaseCriterion : links
+    Criterion "1" -- "0..*" CaseCriterion : links
+    Build "1" -- "0..*" BuildCase : coverage
+    Case "1" -- "0..*" BuildCase : coverage
+    User "1" -- "0..*" Result : tester
+    Case "1" -- "0..*" Result : results
+    Build "1" -- "0..*" Result : results
+```
+
+A result connects a tester, a case and the build tested; its uniqueness, draft/submission rules and retained history are specified under [Rounds](#rounds). Gateway quota and accounting rows have a separate [model contract](#ai-gateway).
+
+### Round state diagram
+
+This UML state view summarizes [publishing](product/rounds.md#rnd-3-publish-a-round-to-beta-testers), [retesting](product/rounds.md#rnd-5-request-a-retest) and [closing](product/rounds.md#rnd-6-close-a-round); each transition still requires its specified authorization and guards. Retesting adds build coverage while the round remains Open; Closed has no outgoing transition.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Draft: Create round
+    Draft --> Open: Publish first build
+    Open --> Open: Request retest on a new build
+    Open --> Closed: Close round
+```
 
 ### Accounts and workspaces
 
