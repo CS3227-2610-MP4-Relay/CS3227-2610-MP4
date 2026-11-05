@@ -43,6 +43,7 @@ See [token reporting](../../workflow/README.md#token-reporting).
 - **"why did u stop"** after the first restart. The session had ended mid-push; the work resumed.
 - **"pull, continue, open the pr, and assign my teammate once its done"**, then **"i will be going to sleep"** (2026-11-05). `main` was unchanged. The orchestrator continued without further questions. Draft PRs are to be marked ready, with Whimsyturtle added as reviewer and assignee, once each is done.
 - **"send me the list of prs in merge order, with full urls to each pr"**. Sent, with #131 marked as waiting for the user.
+- **"the 400 line budget, how much does it exceed by?"**, then **"thats fine"**: the user confirmed #131's overrun.
 - **"125 has been merged apparently"** and **"after all is done, send me the full list in merge order"**. Whimsyturtle merged #125 at 02:38 UTC as `714ee10`, and `main` was pulled.
 
 ## Agent runs
@@ -100,17 +101,17 @@ See [token reporting](../../workflow/README.md#token-reporting).
   - the AI case-limit message stays copied, because sharing it needs a `rounds.services` constant;
   - the flaky ACC-3.7 idle test also accepts libpq's connection-loss text, while still rejecting the statement-timeout fault;
   - the role-derived navigation compares against the literal `"tester"`.
-- **AI budget (open, for the user):**
+- **AI budget (confirmed by the user on 2026-11-05):**
   - The AI slice reached 450 non-test `src/` lines, above the 400 budget. The overrun was found after implementation, and no human confirmed it.
   - The orchestrator split the work into #130 (227 lines) and the stacked #131 (223 lines, 226 after its docstring repair).
-  - #131 stays a draft until the user confirms. #130 stands alone.
+  - #131 stayed a draft until the user confirmed. The user asked "the 400 line budget, how much does it exceed by?" and was told 451 lines as one diff, 51 over, with 31 lines removed net. The user replied "thats fine", and #131 was then marked ready.
 - **Accepted reviewer nits,** recorded in the plans:
   - a few checkpoint commits bundle related units as planned;
   - six further `.last` browser locators are left for a follow-up;
   - some inline test-helper copies remain;
   - `experiments` holds `status`.
 - **Merge order:** #125 (merged), #126, #128, #127, #129, #130, then #131 if confirmed, and this log last. That is the tested integration order with #126 moved ahead of #128, so #128 runs with the race fix. The branches don't overlap in any file, so the swap needs no new merge test.
-- **Ready for review:** after the cutoff, PRs #126–#130 and #132 were marked ready once CI passed on their final heads, with Whimsyturtle as reviewer and assignee. #131 stays a draft. The plan links in this log resolve once those merge.
+- **Ready for review:** after the cutoff, PRs #126–#130 and #132 were marked ready once CI passed on their final heads, with Whimsyturtle as reviewer and assignee. #131 followed after the user's budget confirmation. The plan links in this log resolve once those merge.
 
 ## Problems
 
