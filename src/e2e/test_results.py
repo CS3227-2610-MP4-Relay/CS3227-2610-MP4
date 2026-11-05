@@ -207,7 +207,8 @@ def test_private_draft_validation_reload_and_immutable_submission(
         other.get_by_label("Observation", exact=True).fill(
             "Synthetic other private draft"
         )
-        other.get_by_role("button", name="Save draft", exact=True).click()
+        with other.expect_navigation():
+            other.get_by_role("button", name="Save draft", exact=True).click()
 
         page.reload()
         expect(page.get_by_label("Observation", exact=True)).to_have_value(observation)

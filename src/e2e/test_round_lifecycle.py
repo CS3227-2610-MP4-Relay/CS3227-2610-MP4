@@ -272,9 +272,10 @@ def test_coordinator_recovers_from_retest_refusals(page, browser_accounts):
             choices.get_by_role("checkbox", name=FIRST_CASE, exact=True)
         ).not_to_be_checked()
         expect(page.get_by_role("status")).to_have_count(0)
-        page.get_by_role("navigation", name="Page navigation").get_by_role(
-            "link", name="Back to round", exact=True
-        ).click()
+        with page.expect_navigation():
+            page.get_by_role("navigation", name="Page navigation").get_by_role(
+                "link", name="Back to round", exact=True
+            ).click()
         expect(page).to_have_url(round_url)
         page.reload()
         expect(page.get_by_text("State: Open", exact=True)).to_be_visible()
