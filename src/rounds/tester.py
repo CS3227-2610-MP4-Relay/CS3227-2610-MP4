@@ -5,7 +5,7 @@ from functools import wraps
 
 from django.core.exceptions import PermissionDenied
 from django.db import DatabaseError
-from django.db.models import F, Prefetch
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
@@ -14,7 +14,7 @@ from accounts.models import User
 from accounts.workspaces import workspace_records
 
 from . import results
-from .models import Build, Criterion, Result, Round
+from .models import Criterion, Round
 from .result_forms import ResultForm
 from .views import conflict_page
 
@@ -62,41 +62,31 @@ def home(request):
 def detail(request, round_id):
     """Show cases and latest covering builds in one authorized published round."""
     round_ = get_object_or_404(available_rounds(request.user), pk=round_id)
-    cases = list(
-        round_.cases.prefetch_related(
-            Prefetch("criteria", queryset=Criterion.objects.filter(round=round_)),
-            Prefetch(
-                "builds",
-                queryset=Build.objects.filter(round=round_).order_by("-id"),
-            ),
-        )
-    )
-    for case in cases:
-        case.current_build = next(iter(case.builds.all()), None)
+    cases = results.cases_with_current_build(round_)
     saved = (
         {
             (case_id, build_id): submitted_at
-            for case_id, build_id, submitted_at in Result.objects.filter(
+            for case_id, build_id, submitted_at in results.covered_results(round_)
+            .filter(
                 tester=request.user,
-                case__round=round_,
                 case_id__in=[case.pk for case in cases],
-                build__round=round_,
-                build__cases=F("case_id"),
                 build_id__in=[
                     case.current_build.pk for case in cases if case.current_build
                 ],
-            ).values_list("case_id", "build_id", "submitted_at")
+            )
+            .values_list("case_id", "build_id", "submitted_at")
         }
         if round_.state == Round.State.OPEN
         else {}
     )
     for case in cases:
         pair = (case.pk, case.current_build.pk) if case.current_build else None
-        case.result_action = (
-            ("View result" if saved[pair] is not None else "Continue draft")
-            if pair in saved
-            else "Record result"
-        )
+        if pair not in saved:
+            case.result_action = "Record result"
+        elif saved[pair] is None:
+            case.result_action = "Continue draft"
+        else:
+            case.result_action = "View result"
     return render(
         request, "rounds/tester_round.html", {"round": round_, "cases": cases}
     )
@@ -107,12 +97,8 @@ def history(request, round_id):
     """Read this tester's saved results with their original authorized context."""
     round_ = get_object_or_404(available_rounds(request.user), pk=round_id)
     saved = (
-        Result.objects.filter(
-            tester=request.user,
-            case__round=round_,
-            build__round=round_,
-            build__cases=F("case_id"),
-        )
+        results.covered_results(round_)
+        .filter(tester=request.user)
         .select_related("case", "build")
         .prefetch_related(
             Prefetch("case__criteria", queryset=Criterion.objects.filter(round=round_))

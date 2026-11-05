@@ -249,6 +249,21 @@ def test_owner_round_and_coverage_scope_ignores_forged_selectors(
 
 
 @pytest.mark.ac("RES-3.4")
+def test_forged_coverage_of_another_rounds_case_stays_hidden(
+    tester, target, make_round
+):
+    round_, _, build = target
+    own = save_row(tester, target, observation="Synthetic own")
+    other_case = open_with_case(make_round).cases.get()
+    BuildCase.objects.create(build=build, case=other_case)
+    save_row(tester, (round_, other_case, build), observation="Synthetic forged link")
+    response = signed_in(tester).get(url(round_))
+    assert response.status_code == 200
+    assert list(response.context["results"]) == [own]
+    assert "Synthetic forged link" not in page(response)
+
+
+@pytest.mark.ac("RES-3.4")
 @pytest.mark.parametrize("state", ["draft", "open", "closed"])
 def test_unavailable_rounds_share_fixed_404(tester, target, other_workspace, state):
     round_, _, _ = target
