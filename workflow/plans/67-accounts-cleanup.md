@@ -25,6 +25,14 @@ Tier: High (coordinator-home role check, session lifetime, release smoke check).
 - Checkpoint 3 (rerun after the reboot, wrapper `/Users/zheng/Desktop/mp4/.r67/dblock.py`): `release.SMOKE_PAGES` holds the smoke paths, statuses and headings; `_smoke` iterates it unchanged. New `test_smoke_headings_match_the_rendered_pages` (PLT-1.13) renders each through the test client. `src/relay/tests/test_release.py` → 68 passed. Mutations (backed up, restored, compared): `home.html` heading → `Relay portal` → new test `[/-200-<h1>Relay</h1>]` fails (1 failed, 67 passed); constant sign-in heading changed → `test_cli_upload_and_bounded_anonymous_smoke`, `test_ready_response_at_deadline_is_too_late[599-True]` and the new test fail (3 failed, 65 passed).
 - Final (rerun after the reboot): with `$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin` on PATH, `ruff check .` pass, `ruff format --check .` pass, full pytest via dblock → 2860 passed, 254 subtests passed in 216.86s (base 2857 + 3 new). Non-test `src/` total: 4 files, +32 −34.
 
+## Review
+
+Candidate 88d7a54: verifier and security reviewer found no High/Medium. Repair round 1 (test-only, no `src` change):
+
+- Verifier Low 1: `test_coordinator_home_round_list_keeps_the_accounts_storage_rule` in `src/rounds/tests/test_views.py` patches `accounts.views.workspace_records` to raise `DatabaseError`; expects 500 without the 503 text. Mutation (view catches `db.Error` and renders `503.html` with 503; backed up, restored, compared) → the new test fails (1 failed, 1 passed).
+- Verifier Low 2: `test_smoke_headings_match_the_rendered_pages` also asserts `len(response.content) <= 65536`. Mutation (70 000-character comment in `home.html`) → `[/-200-<h1>Relay</h1>]` fails (1 failed, 2 passed).
+- Checks: ruff check/format pass; `src/rounds/tests/test_views.py src/relay/tests/test_release.py src/accounts/tests` → 346 passed; full pytest via `/Users/zheng/Desktop/mp4/.r67/dblock.py` with the brief's PATH → 2861 passed, 254 subtests passed in 233.92s. Non-test `src/` unchanged at 4 files, +32 −34.
+
 ## Decisions and open items
 
 - Scope hook does not run in this environment (orchestrator diagnosis); scope is checked post hoc with `check_scope.py builder` per checkpoint. Hook fix held for the human.

@@ -633,3 +633,4 @@ def test_smoke_headings_match_the_rendered_pages(client, path, status, heading):
     response = client.get(path)
     assert response.status_code == status
     assert heading in response.content
+    assert len(response.content) <= 65536
