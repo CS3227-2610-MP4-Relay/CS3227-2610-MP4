@@ -18,7 +18,6 @@ from accounts.workspaces import workspace_records
 from . import results, services
 from .forms import CaseForm, CriterionForm, PublishForm, RetestForm, RoundForm
 from .models import Case, Criterion, Round
-from .services import RoundLimitReached, create_round
 from .templatetags.rounds_text import retest_message
 
 logger = logging.getLogger(__name__)
@@ -82,8 +81,10 @@ def new_round(request):
     form = RoundForm(request.POST)
     if form.is_valid():
         try:
-            made = create_round(request.user.workspace, form.cleaned_data["title"])
-        except RoundLimitReached as limit:
+            made = services.create_round(
+                request.user.workspace, form.cleaned_data["title"]
+            )
+        except services.RoundLimitReached as limit:
             form.add_error("title", str(limit))
         else:
             return redirect(made)
@@ -203,13 +204,9 @@ def record_form(request, round_id, kind, criterion_id=None, case_id=None):
             form.add_error(refused.field, str(refused))
         else:
             return redirect(round_)
-    context = {
-        "form": form,
-        "title": f"{'New' if record is None else 'Edit'} {noun}",
-        "button": f"Add {noun}" if record is None else "Save",
-        "round": round_,
-    }
-    return render(request, "rounds/round_form.html", context)
+    title = f"{'New' if record is None else 'Edit'} {noun}"
+    button = f"Add {noun}" if record is None else "Save"
+    return form_page(request, form, title, button, round_)
 
 
 @coordinator_view(["POST"])
@@ -292,13 +289,7 @@ def retest_round(request, round_id):
             text = retest_message(len(set(ids)), build.label)
             messages.success(request, text, extra_tags="retest")
             return redirect(round_)
-    context = {
-        "form": form,
-        "title": "Request a retest",
-        "button": "Request retest",
-        "round": round_,
-    }
-    return render(request, "rounds/round_form.html", context)
+    return form_page(request, form, "Request a retest", "Request retest", round_)
 
 
 @coordinator_view(["GET"])

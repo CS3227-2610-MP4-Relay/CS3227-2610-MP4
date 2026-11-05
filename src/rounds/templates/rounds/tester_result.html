@@ -2,7 +2,7 @@
 {% load rounds_text %}
 {% block title %}Record result{% endblock %}
 {% block content %}
-{% url 'accounts:tester-round' entry.round.id as back_url %}{% include "page_navigation.html" with tester=True back=back_url %}<h1>Record result</h1>
+{% url 'accounts:tester-round' entry.round.id as back_url %}{% include "page_navigation.html" with back=back_url %}<h1>Record result</h1>
 <h2>Test case</h2>
 <p>{{ entry.case.title|isolated_lines }}</p>
 <h2>Current build</h2>
@@ -11,7 +11,7 @@
 <div class="state"><p>Status: Submitted</p></div>
 <h2>Outcome</h2><p>{{ entry.result.get_outcome_display }}</p>
 <h2>Observation</h2>
-<p>{% if entry.result.observation %}{{ entry.result.observation|isolated_lines }}{% else %}<em>No observation.</em>{% endif %}</p>
+<p>{% include "rounds/observation.html" with observation=entry.result.observation %}</p>
 {% else %}
 {% if entry.result %}<div class="state"><p>Status: Draft</p></div>{% endif %}
 <form method="post">
