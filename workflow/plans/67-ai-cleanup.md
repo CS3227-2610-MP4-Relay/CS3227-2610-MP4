@@ -58,3 +58,4 @@ Owned paths: `src/ai/**` except `src/ai/feedback_views.py` and `src/ai/templates
 ## Delivery
 
 - The whole slice changes 450 non-test `src/` lines (146 + 241 tracked, plus the new 63-line `experiments.py`), above the 400-line budget, although it removes 32 lines net. The coordinator split it into two PRs that each fit: `67-ai-cleanup` holds the plan, R4 and R3 (`ebd890c..479d40d`, 227 lines); `67-ai-commands`, stacked on it, holds R5 and R6 (223 lines). Both PRs keep this one plan.
+- On 2026-11-05 the human confirmed the overrun after seeing the figures (451 lines as one diff from `ebd890c`, 51 over the budget; net 31 lines removed): "thats fine". PR B (#131) then left draft.
