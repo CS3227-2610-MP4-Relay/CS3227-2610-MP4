@@ -19,3 +19,15 @@ Focused checks for 2 and 3: the scratch script `.r67/32/check_quotes.py <worktre
 Decisions: AI quota and configuration get one sentence each with a link to the [gateway spec](../specs/ai/llm-gateway.md) and the Developer Guide rather than restating either. "Relay runs locally only" stays, since release is still held.
 
 Open: the Developer Guide anchors `#run-locally` and `#soc-llm` may change in the parallel Developer Guide slice; recheck them before the final commit.
+
+## Review repair 1
+
+Request: the member review on PR #134 (CHANGES_REQUESTED) asked for screenshots so readers can follow the steps. Confirmed scope: real-app screenshots in the guide plus a small script to regenerate them; no dependencies, product code, spec or other guide changes.
+
+Decision: generate the images with [`src/e2e/screenshots.py`](../../src/e2e/screenshots.py) rather than by hand. It reuses the browser harness, drives the demo workspace's sample round from the start page through results, retest and **My results** with the AI gateway mocked, and saves 1280-wide PNGs to `docs/images/`. Its name keeps it out of the default `pytest` run; refresh with `pytest src/e2e/screenshots.py` and review each image. Each guide section gets one image line after the steps it shows; prose is unchanged.
+
+Checkpoints:
+1. `plan: Record the screenshot repair (#32)`: this section.
+2. `docs: Add screenshots to the User Guide (#32)`: `src/e2e/screenshots.py`, `docs/images/*.png`, `docs/UserGuide.md`.
+
+Focused checks: `ruff check . && ruff format --check .`; the screenshot script passing; `pytest --collect-only -q src/e2e` not listing it; `src/relay/tests/test_site.py`; every image path, relative link and anchor resolving; each PNG inspected.
