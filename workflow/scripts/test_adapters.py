@@ -4,8 +4,14 @@ Run: python -m unittest discover -s workflow/scripts
 """
 
 import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
 import tomllib
 import unittest
+from pathlib import Path
 
 from check_scope import ROOT, load_scope
 
@@ -155,6 +161,40 @@ class AdapterTest(unittest.TestCase):
                 "; exit $LASTEXITCODE"
             )
         )
+
+    @unittest.skipIf(os.name == "nt", "POSIX hook commands")
+    def test_hook_commands_block_when_python_is_missing_or_fails(self):
+        """Clients treat exit codes other than 2 as non-blocking."""
+        claude = json.loads(
+            (ROOT / ".claude" / "settings.json").read_text(encoding="utf-8")
+        )
+        codex = json.loads((ROOT / ".codex" / "hooks.json").read_text(encoding="utf-8"))
+        found = f"{Path(sys.executable).parent}{os.pathsep}{os.environ['PATH']}"
+        # A machine with only `python3`, as on macOS without a virtual environment.
+        only_python3 = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        (only_python3 / "python3").symlink_to(sys.executable)
+        (only_python3 / "git").symlink_to(shutil.which("git"))
+        event = {"agent_type": "builder", "tool_input": {"file_path": "AGENTS.md"}}
+        for config in (claude, codex):
+            command = config["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+            for path, stdin, code in [
+                ("/nonexistent", "{}", 2),  # no Python at all
+                (found, "{", 2),  # unreadable input
+                (found, json.dumps(event), 2),  # out-of-scope builder edit
+                (found, "{}", 0),  # main session
+                (str(only_python3), "{}", 0),
+                (str(only_python3), json.dumps(event), 2),
+            ]:
+                result = subprocess.run(
+                    ["/bin/sh", "-c", command],
+                    input=stdin,
+                    capture_output=True,
+                    text=True,
+                    cwd=ROOT,
+                    env={"PATH": path, "CLAUDE_PROJECT_DIR": str(ROOT)},
+                    check=False,
+                )
+                self.assertEqual(result.returncode, code, (path, stdin))
 
     def test_pip_install_checkpoint_covers_both_python_invocations(self):
         config = json.loads(

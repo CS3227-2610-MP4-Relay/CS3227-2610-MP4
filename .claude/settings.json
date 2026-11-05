@@ -177,7 +177,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/workflow/scripts/check_scope.py\" --hook",
+            "command": "py=$(command -v python || command -v python3) || { echo 'check_scope hook: no Python found' >&2; exit 2; }; \"$py\" \"$CLAUDE_PROJECT_DIR/workflow/scripts/check_scope.py\" --hook || exit 2",
             "statusMessage": "Checking the agent's write scope"
           }
         ]
