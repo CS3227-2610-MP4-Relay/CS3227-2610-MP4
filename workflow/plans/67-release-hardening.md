@@ -21,10 +21,17 @@ Tier High (production configuration and CI). Base `26e77cc`; branch `67-release-
 - **Criterion.** No new product criterion: logging is production configuration under [PLT-1.8](../specs/product/platform.md#plt-1-django-foundation-and-continuous-verification), whose policy lives in TECHNICAL-SPEC Configuration, so the tests carry `PLT-1.8`.
 - **Digest.** The multi-arch index digest of `postgres:17.6` from `docker buildx imagetools inspect postgres:17.6` on 2026-11-05: `sha256:00bc86618629af00d2937fdc5a5d63db3ff8450acf52f0636ec813c7f4902929`. The tag stays in the reference for readability; Docker resolves by digest. The Developer Guide's `docker run` examples keep the tag (another builder is editing that guide).
 
+## Progress
+
+- Plan `9715f3b`, spec `5f6b583`.
+- Checkpoint 3: red first, 2 failed (`LOGGING` absent; no formatted 500 line). Green 61 passed in `test_configuration.py`. Mutations, each restored: removing the `django` entry fails the config test; `django` propagating (record printed twice), `disable_existing_loggers` true (early logger silenced) and INFO levels each fail both tests.
+- Checkpoint 4: red first, `test_ci_runs_isolated_application_verification` failed on the tag-only image; green 3 passed; one changed digest character fails it again. `docker buildx imagetools inspect` resolves the pinned reference to the same index, with `linux/amd64` in it.
+- `check --deploy --fail-level WARNING` on production settings with throwaway values through `env -i`: "no issues (2 silenced)".
+
 ## Open
 
 - None.
 
 ## Next
 
-Checkpoint 3 after the orchestrator commits the plan and spec.
+Independent verification and security review of the final candidate.
