@@ -226,6 +226,8 @@ If the round was closed in the meantime, the page says "This action is not avail
 
 Closing ends testing on an Open round and makes it read-only. While a round is Open, its round page ends with "Closing makes this round read-only. It cannot be reopened." and a **Close round** button. A round can be closed at any time while it is Open, even if some cases have not been tested.
 
+If testers have saved drafts still eligible for submission on current builds, the page also says "Saved drafts are still pending for current builds. Closing will prevent their submission." and "This reflects saved drafts at page load. Unsaved browser changes are unknown." This reveals only that pending drafts exist; their contents and authors stay private. Reload to refresh the warning. Earlier-build drafts do not trigger it, and changes after page load can make it out of date. You can still close the round while drafts are pending.
+
 1. On the Open round's page, choose **Close round**. There is no further confirmation.
 
 The round page shows "Round closed." and "State: Closed". A Closed round cannot be reopened or returned to Draft.
