@@ -16,7 +16,7 @@ It has two actions: the **Sign in** link and the **Create a demo workspace** but
 
 ## Accounts
 
-Each account has one role, **Test Coordinator** or **Beta Tester**, in one workspace. Start with a demo workspace; its coordinator can [add Beta Testers](#add-a-beta-tester). There is no registration or password reset.
+Each account has one role, **Test Coordinator** or **Beta Tester**, in one workspace. Start with a demo workspace; its coordinator can [add Beta Testers](#add-a-beta-tester) and [reset their passwords](#reset-a-beta-testers-password). Registration and coordinator account recovery are unavailable.
 
 ## Create a demo workspace
 
@@ -40,9 +40,24 @@ Each network address can create up to 10 workspaces an hour, and Relay up to 200
 2. The **Beta Tester added** page shows the workspace and the new account's **Role**, **Username** and **Password**. Save the credentials when it says "Save this password now. It will not be shown again." Share them with the tester outside Relay.
 3. Choose **Coordinator home** to return. You stay signed in as coordinator; the new account signs in to **Tester home** in your workspace.
 
-A workspace can have 10 Beta Testers, including its initial two. Once full, the page says "This workspace already has 10 Beta Testers." and creates nothing. There is no member list, account editing, removal or credential recovery.
+![The Beta Tester added page showing the workspace, the new tester's Role, Username and Password, the save-password reminder and Coordinator home link](images/beta-tester-added.png)
+
+A workspace can have 10 Beta Testers, including its initial two. Once full, the page says "This workspace already has 10 Beta Testers." and creates nothing. Use **Beta Tester passwords** to find tester usernames and reset their passwords; account editing, removal and retrieval of earlier passwords are unavailable.
 
 Reloading and confirming browser resubmission can create another tester until the limit is reached. Returning home does not show the password again, although your browser's back button may redisplay an earlier response. If creation fails, "Relay is temporarily unavailable. Try again later." appears and no account is created.
+
+## Reset a Beta Tester's password
+
+1. Sign in as the workspace's Test Coordinator and choose **Beta Tester passwords** on **Coordinator home**.
+2. The **Beta Tester passwords** page lists your workspace's tester usernames. It explains: "Resetting a password stops the old password and existing tester sessions from working. Save the new password and share it with the tester outside Relay." Choose **Reset password** beside the intended tester.
+3. The **Beta Tester password reset** page shows the workspace and the tester's **Role**, **Username** and new **Password**. Save it when the page says "Save this password now. It will not be shown again." Share the credentials with the tester outside Relay.
+4. Choose **Beta Tester passwords** to return to the list, or **Coordinator home**. You remain signed in as coordinator.
+
+![The Beta Tester passwords page listing three tester usernames with Reset password buttons and a warning that resetting stops the old password and existing tester sessions from working](images/beta-tester-passwords.png)
+
+The username, workspace and testing history stay the same. The old password stops working, and existing tester sessions lose access on their next request. The tester signs in with the replacement password.
+
+Returning to the list or home does not show the new password again. Reloading and confirming browser resubmission resets it again; only the latest successful reset's password works. Your browser's back button may redisplay an earlier response. If reset fails, "Relay is temporarily unavailable. Try again later." appears and the existing password and tester sessions remain usable. These controls reset only Beta Tester passwords; coordinator account recovery is unavailable.
 
 ## Sign in
 
@@ -81,7 +96,7 @@ Only a Test Coordinator can prepare, publish, review, retest and close test roun
 
 **Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". A new demo workspace starts with its [sample round](#create-a-demo-workspace), so its list is not empty; "No rounds yet." appears only for a workspace with no rounds.
 
-![Coordinator home showing the username, workspace, Sign out, the Rounds heading with New round, and Sample round (Draft)](images/coordinator-home.png)
+![Coordinator home showing the username, workspace, Sign out, Add Beta Tester, Beta Tester passwords, and the Rounds section with New round and Sample round (Draft)](images/coordinator-home.png)
 
 Whenever creating, publishing, retesting or closing a round, or saving or deleting anything in it, fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
 

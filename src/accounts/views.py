@@ -9,8 +9,8 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.http import HttpResponse
-from django.shortcuts import redirect, render
+from django.http import Http404, HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
@@ -197,4 +197,60 @@ def add_tester(request):
     except Exception:  # noqa: BLE001 -- exception text may contain a password.
         # Catch every creation failure without emitting exception text or frames.
         logger.error("Beta Tester creation failed.")
+        return render(request, "503.html", status=503)
+
+
+@never_cache
+@require_GET
+def tester_passwords(request):
+    """List own-workspace testers for coordinator-managed reset (ACC-5)."""
+    try:
+        if not request.user.is_authenticated:
+            return redirect("accounts:sign-in")
+        if request.user.role != User.Role.COORDINATOR:
+            return render(request, "403.html", status=403)
+        return render(
+            request,
+            "accounts/tester_passwords.html",
+            {
+                "workspace": request.user.workspace,
+                "testers": testers.tester_records(request.user).order_by("username"),
+            },
+        )
+    except Exception:  # noqa: BLE001 -- keep account data out of failure logs.
+        logger.error("Beta Tester password list failed.")
+        return render(request, "503.html", status=503)
+
+
+@never_cache
+@require_POST
+@sensitive_variables()
+def reset_tester_password(request, tester_id):
+    """Replace one authorized tester's password and render before commit."""
+    try:
+        if not request.user.is_authenticated:
+            return redirect("accounts:sign-in")
+        if request.user.role != User.Role.COORDINATOR:
+            return render(request, "403.html", status=403)
+        get_object_or_404(testers.tester_records(request.user), pk=tester_id)
+        password, hashed = demo.generate_password()
+        with transaction.atomic():
+            limits.start()
+            tester = get_object_or_404(
+                testers.tester_records(request.user).select_for_update(), pk=tester_id
+            )
+            tester.password = hashed
+            tester.save(update_fields=["password"])
+            credential = demo.Credential(
+                tester.get_role_display(), tester.username, password
+            )
+            page = render_to_string(
+                "accounts/tester_password_reset.html",
+                {"workspace": request.user.workspace, "credential": credential},
+            )
+        return HttpResponse(page)
+    except Http404:
+        return render(request, "404.html", status=404)
+    except Exception:  # noqa: BLE001 -- exceptions may contain credentials.
+        logger.error("Beta Tester password reset failed.")
         return render(request, "503.html", status=503)

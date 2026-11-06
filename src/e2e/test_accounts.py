@@ -5,12 +5,76 @@ import re
 import pytest
 from playwright.sync_api import expect
 
+from e2e.sessions import separate_context
+
 
 def submit_sign_in(page, username, password):
     """Submit credentials through the visible sign-in form."""
     page.get_by_label("Username", exact=True).fill(username)
     page.get_by_label("Password", exact=True).fill(password)
     page.get_by_role("button", name="Sign in", exact=True).click()
+
+
+@pytest.mark.ac("ACC-5.1", "ACC-5.2", "ACC-5.5")
+def test_coordinator_resets_tester_password_and_ends_existing_tester_session(
+    page, browser_accounts, live_server
+):
+    with separate_context(page, live_server) as tester_context:
+        tester_page = tester_context.new_page()
+        tester_page.goto("/sign-in/")
+        submit_sign_in(
+            tester_page, browser_accounts["tester"], browser_accounts["password"]
+        )
+        expect(tester_page).to_have_url(f"{live_server.url}/tester/")
+        page.goto("/sign-in/")
+        submit_sign_in(
+            page, browser_accounts["coordinator"], browser_accounts["password"]
+        )
+        page.get_by_role("link", name="Beta Tester passwords", exact=True).click()
+        expect(page).to_have_title("Beta Tester passwords")
+        expect(
+            page.get_by_text(f"Workspace: {browser_accounts['workspace']}", exact=True)
+        ).to_be_visible()
+        expect(page.get_by_text(browser_accounts["tester"], exact=True)).to_be_visible()
+        expect(page.get_by_text("Resetting a password", exact=False)).to_be_visible()
+        page.get_by_role("button", name="Reset password", exact=True).click()
+        expect(page).to_have_title("Beta Tester password reset")
+        expect(page.get_by_role("columnheader")).to_have_text(
+            ["Role", "Username", "Password"]
+        )
+        cells = (
+            page.get_by_role("row")
+            .filter(has=page.get_by_role("cell"))
+            .get_by_role("cell")
+        )
+        expect(cells.nth(1)).to_have_text(browser_accounts["tester"])
+        password = cells.nth(2).inner_text()
+        expect(
+            page.get_by_text(
+                "Save this password now. It will not be shown again.", exact=True
+            )
+        ).to_be_visible()
+        page.get_by_role("link", name="Beta Tester passwords", exact=True).click()
+        expect(page.locator("body")).not_to_contain_text(password)
+        page.get_by_role("link", name="Coordinator home", exact=True).click()
+        expect(
+            page.get_by_text(f"Username: {browser_accounts['coordinator']}", exact=True)
+        ).to_be_visible()
+        tester_page.goto("/tester/")
+        expect(tester_page).to_have_url(f"{live_server.url}/sign-in/")
+        submit_sign_in(
+            tester_page, browser_accounts["tester"], browser_accounts["password"]
+        )
+        expect(tester_page.get_by_role("alert")).to_have_text(
+            "Username or password is incorrect."
+        )
+        submit_sign_in(tester_page, browser_accounts["tester"], password)
+        expect(tester_page).to_have_url(f"{live_server.url}/tester/")
+        expect(
+            tester_page.get_by_text(
+                f"Workspace: {browser_accounts['workspace']}", exact=True
+            )
+        ).to_be_visible()
 
 
 @pytest.mark.ac("ACC-1.1", "ACC-1.3", "ACC-1.5")
