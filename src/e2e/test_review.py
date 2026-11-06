@@ -1,8 +1,11 @@
 """RND-4: the coordinator reviews submitted results from the round page."""
 
 import re
+from unittest import mock
 
 import pytest
+from django.contrib.sessions.models import Session
+from django.db import OperationalError
 from playwright.sync_api import expect
 
 from e2e.disclosures import expand_records, result_links
@@ -47,6 +50,31 @@ def publish(page, accounts):
     page.get_by_label("Build label", exact=True).fill(FIRST)
     page.get_by_role("button", name="Publish round", exact=True).click()
     expect(page.get_by_text("State: Open", exact=True)).to_be_visible()
+
+
+@pytest.mark.ac("RND-6.1", "RND-6.5")
+def test_close_session_failure_shows_unavailable_and_allows_retry(
+    page, browser_accounts
+):
+    publish(page, browser_accounts)
+    round_url = page.url
+    with mock.patch.object(Session, "save", side_effect=OperationalError("synthetic")):
+        with page.expect_response(
+            lambda response: response.url.endswith("/close/")
+        ) as failed:
+            page.get_by_role("button", name="Close round", exact=True).click()
+        assert failed.value.status == 503
+        expect(
+            page.get_by_text("Relay is temporarily unavailable. Try again later.")
+        ).to_be_visible()
+    page.goto(round_url)
+    expect(page.get_by_text("State: Open", exact=True)).to_be_visible()
+    expect(page.get_by_text("Round closed.", exact=True)).to_have_count(0)
+    page.get_by_role("button", name="Close round", exact=True).click()
+    expect(page.get_by_role("status")).to_have_text("Round closed.")
+    expect(page.get_by_text("State: Closed", exact=True)).to_be_visible()
+    page.reload()
+    expect(page.get_by_role("status")).to_have_count(0)
 
 
 def record(page, index, outcome, observation, button):

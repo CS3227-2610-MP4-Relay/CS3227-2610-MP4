@@ -4,6 +4,7 @@ import logging
 from functools import wraps
 
 from django.contrib import messages
+from django.contrib.sessions.backends.base import UpdateError
 from django.core.exceptions import PermissionDenied
 from django.db import DatabaseError, transaction
 from django.db.models import Prefetch
@@ -252,6 +253,23 @@ def publish_round(request, round_id):
     return redirect(round_)
 
 
+def save_close_message(request, response):
+    """Persist close notification in its transaction, with no middleware retry."""
+    storage = messages.get_messages(request)
+    messages.success(request, "Round closed.")
+    try:
+        storage.update(response)
+        request.session.save()
+    except UpdateError as error:
+        raise DatabaseError("The close session could not be saved.") from error
+    finally:
+        # MessageMiddleware would otherwise store the queue again and make the
+        # session dirty after the transaction. Also discard it on rollback.
+        storage.added_new = False
+        storage.used = False
+        request.session.modified = False
+
+
 @coordinator_view(["POST"])
 def close_round(request, round_id):
     """Close an Open round for good; nothing reopens it (RND-6)."""
@@ -260,8 +278,9 @@ def close_round(request, round_id):
         if round_.state != Round.State.OPEN:
             return state_conflict(request, round_)
         services.close(round_)
-    messages.success(request, "Round closed.")
-    return redirect(round_)
+        response = redirect(round_)
+        save_close_message(request, response)
+    return response
 
 
 @coordinator_view(["GET", "POST"])
