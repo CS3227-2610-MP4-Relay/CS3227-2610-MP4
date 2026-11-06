@@ -18,7 +18,7 @@ Estimate: 200–300 changed non-test source lines, 600–900 total changed lines
 
 ## Verification environment and next step
 
-Use the shared parent `.venv` with the coordinator-provided external test settings override: isolated PostgreSQL 17.6 on loopback port 56442, existing synthetic test database names/credentials. No environment files or dependencies change. Coordinator's database smoke test passed; builder has not run database tests. Three existing fixed-port configuration probes may fail locally because 55432 is reserved; report exact actual failures if encountered, and require hosted Linux CI evidence for a full pass. Browser tests use the existing Chromium loopback harness.
+Use the shared parent `.venv` with the coordinator-provided external test settings override: isolated PostgreSQL 17.6 on loopback port 56442, existing synthetic test database names/credentials. No environment files or dependencies change. Coordinator's database smoke test passed; builder results follow below. Three existing fixed-port configuration probes may fail locally because 55432 is reserved; report exact actual failures if encountered, and require hosted Linux CI evidence for a full pass. Browser tests use the existing Chromium loopback harness.
 
 ## Checkpoint evidence
 
@@ -28,4 +28,21 @@ Use the shared parent `.venv` with the coordinator-provided external test settin
 - Focused serial run with the external settings override: `pytest --ds=relay_slice142_settings src/accounts/tests/test_add_tester.py src/relay/tests/test_access_matrix.py src/e2e/test_accounts.py -q -p no:cacheprovider` passed, 812 tests. Pytest reported 3290.45 seconds amid host scheduling delays; this is not active-work measurement. Tightened the statement-timeout assertion afterwards to require an actual database timeout; then `pytest --ds=relay_slice142_settings src/accounts/tests -q -p no:cacheprovider` passed, 204 tests in 17.71 seconds, including the tightened test. Matrix/browser inputs and implementation were unchanged.
 - Ruff lint and format checks passed for accounts and changed matrix/browser files. Guides and full-suite validation remain checkpoint 3; no whole-slice completion claim yet.
 
-Current checkpoint: implementation ready for coordinator scope check/commit/fresh snapshot, then guides and integrated validation. Usage is collected by the coordinator's aggregate baseline; missing builder-local counters remain unavailable.
+Implementation committed by coordinator at `35b2e13e553dcd01e1d36c6deed3512fcbe69ba4`; docs snapshot: `%TEMP%/relay-142-builder-docs.json`. Guides describe the built action and were read back with changed links checked. Usage is collected by the coordinator's aggregate baseline; missing builder-local counters remain unavailable. Observed builder runtime: `gpt-6.1-sol`, medium reasoning, as mapped by coordinator telemetry.
+
+Full local verification ran once in Git Bash with the shared venv and external settings/PYTHONPATH override: `ruff check . && ruff format --check . && pytest --ds=relay_slice142_settings`. Ruff passed; all 145 Python files passed formatting. Pytest: **3 failed, 2920 passed, 5 skipped**, 2 cache-write warnings, 600.94 seconds. All failures are `src/relay/tests/test_configuration.py::test_driver_ignores_inherited_hostaddr` at line 145, parameters `relay.settings.test-127.0.0.1`, `relay.settings.local-localhost`, `relay.settings.local-127.0.0.1`: their subprocesses force port 55432 and return 1 with `psycopg.errors.ConnectionTimeout: connection timeout expired`. Coordinator separately verified that Windows reserves 55419–55518; the isolated application test database uses 56442. Cache warnings report WinError 183 while creating `.pytest_cache/v/cache`; no tests were changed or skipped to hide these outcomes. Full local verification did not pass; hosted Linux CI must establish a full pass. Next: coordinator docs commit and fixed-candidate independent reviews/delivery.
+
+## Criterion evidence
+
+Backend names below refer to `src/accounts/tests/test_add_tester.py`. Browser journey: `src/e2e/test_accounts.py::test_coordinator_adds_tester_then_hits_capacity_and_new_tester_signs_in`. Matrix entry: `accounts:add-tester` in `src/relay/tests/test_access_matrix.py`. All listed automated checks passed in checkpoint 2.
+
+| Criterion | Checks |
+| --- | --- |
+| ACC-4.1 | `test_create_ignores_identity_fields_and_shows_working_credentials_once`, matrix, browser journey |
+| ACC-4.2 | `test_capacity_counts_only_own_testers_and_refuses_before_generation`, browser journey |
+| ACC-4.3 | `test_concurrent_posts_fill_only_the_last_place` |
+| ACC-4.4 | Creation/identity test, `test_roles_methods_and_csrf_deny_without_writes`, matrix |
+| ACC-4.5 | Role/method/CSRF test, matrix |
+| ACC-4.6 | Creation test, `test_failures_roll_back_and_redact_error_reports`, `test_hashing_precedes_transaction_and_commit_failure_rolls_back`, browser journey |
+| ACC-4.7 | Failure/redaction, collision, commit-failure, workspace-lock timeout, statement-timeout and session-loading-failure tests |
+| ACC-4.8 | Creation test's repeated POST and return-home checks, browser journey |
