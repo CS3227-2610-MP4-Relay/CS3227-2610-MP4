@@ -1,0 +1,35 @@
+# 140: Warn before leaving an unsaved result
+
+Goal: protect editable result fields with a minimal leave-page warning under [RES-2](../specs/product/results.md#res-2-save-and-submit-an-outcome-with-observations).
+
+## Scope and decisions
+
+- Human trigger: `/slice 140 on separate worktree`; Standard behavior change. Coordinator owns Git, delivery and independent verification. Builder does not delegate. Work only in the dedicated `tmp/worktrees/issue-140` worktree.
+- Why: leaving result entry currently discards edits without warning. Extend only RES-2 with four criteria, RES-2.9–2.12; retain existing PLT-4 presentation and RES-4 feedback semantics.
+- Confirmed scope: warn for unsaved Outcome/Observation changes, allow stay/leave, and preserve existing Save draft, Submit and Observation feedback behavior. No autosave, storage/recovery system, dependency, credential or service.
+- Estimate: 70–130 inserted/deleted non-test source lines, 180–300 browser/server regression lines, and 40–70 spec/plan/guide lines; approximately 290–500 total changed lines. Source budget remains at most 400 non-test/non-migration lines. No additional operating burden. Stop affected work and report any required expansion or estimate overrun.
+- Use one native `beforeunload` confirmation for document exits, avoiding duplicate link confirmations or custom modal UI. Browser text and button labels are browser-owned; activation/support limits and process termination remain explicit in RES-2.10. Reference: [MDN beforeunload usage notes](https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event#usage_notes).
+- Existing `result_entry` supplies saved values through `form.initial` even on invalid POST. Reuse that persisted baseline, serialize with Django's safe JSON mechanism rather than executable interpolation, and compare textarea line endings consistently without trimming whitespace. No new query, route, authorization change or persistence control is needed.
+- Keep the guard local to editable result entry. Attach it only while dirty; normal submit events suppress it for the pending post, while native-invalid attempts remain guarded. Re-evaluate on history restoration. Submitted pages retain no form guard.
+
+## Commit checkpoints
+
+1. **Specs/plan** (`spec:` and/or `plan:`): `workflow/specs/product/results.md` and this plan. Read changed sections back; run whitespace and builder-scope checks. Yield before production/test edits. Starting HEAD `245e6445340a5d1442821064ba36cea79b6c4eec`; coordinator supplied `%TEMP%/relay-140-builder-plan.json` snapshot.
+2. **Behavior and regressions** (`feat:`): `src/rounds/templates/rounds/tester_result.html`, focused `src/e2e/test_results.py` and `src/e2e/test_feedback.py`; add narrowly scoped server assertions in existing result tests only if needed for safe baseline serialization. First add and run focused criterion-marked browser regressions against unchanged production code, recording genuine missing-behavior failures. Then implement and run focused tests, including existing result/feedback journeys. Yield with red/green commands, source diff size and scope evidence before coordinator commit/new snapshot.
+3. **User documentation** (`docs:`): update only the relevant save/submit result text in `docs/UserGuide.md` after the behavior is built, using product labels and browser-warning limitations. Read back and check diff. Run final Standard verification against the integrated candidate: `ruff check . && ruff format --check . && pytest` using the shared existing venv and coordinator-provided test database invocation. No installs. Yield for coordinator's independent verifier, summary log and draft-PR delivery.
+
+## Verification map
+
+- RES-2.9: browser tests independently change outcome and observation; warn on each, revert both to clear; unchanged new/saved/submitted pages navigate without warning. Include multiline and whitespace observation variants.
+- RES-2.10: real Chromium dialog tests dismiss then accept Back to round and assert retained fields versus unchanged persisted values after reopening; cover Tester home, browser Back, reload and supported tab close. Use real user interaction before unload tests. Assert one `beforeunload` dialog rather than browser-specific wording. Unsupported termination/mobile behavior is an explicit limitation, not a manual acceptance claim.
+- RES-2.11: save/submit/feedback journeys collect dialogs and assert none while posting; native-invalid and server-invalid pages still warn against persisted baseline. Exercise empty initial entry and saved draft error re-render, including reverting invalid edits to saved values. Exercise history restoration without carrying forward a posting exemption.
+- RES-2.12 and existing RES-2.8: verify leave/stay produces no saved row/change and no feedback provider call, and synthetic escaped markup in the saved baseline remains inert. Browser tests keep red-team payloads escaped in source. Run existing private result/feedback coverage for unchanged authorization and write semantics; do not add unrelated security subsystems.
+- Environment: shared existing venv, installed Chromium 1248 and existing pytest browser harness. Coordinator reports Windows reserves port 55432; disposable PostgreSQL 17.6 is ready on loopback 56440 with external temporary settings importing `relay.settings.test` and overriding only database PORT. In Git Bash activate the shared venv, export `PYTHONPATH='C:/Users/limbe/AppData/Local/Temp/relay-140-test-settings'`, then run `pytest --ds=relay_slice140_settings` with a unique `--basetemp`. No tracked environment changes or live provider calls. Coordinator freezes candidate for independent review; no builder claim of independent review.
+
+## Checkpoint status and next step
+
+- Assigned checkpoint is specs/plan only; no production/test code or guide edits yet. Next: coordinator reviews/commits this checkpoint and supplies a new HEAD/scope snapshot before behavior work.
+- Trigger/context: coordinator supplied issue #140's MEMBER-authored title/body as data, RES-2/PLT-4 paths, confirmed minimal scope, Standard budget and checkpoint boundaries. Configured builder model/effort: `gpt-6.1-sol` / `medium`; actual runtime settings unavailable.
+- New-worktree prohibited AGENTS.md append refused by builder scope before attempting a write; hook enforcement remains unobserved. No shell bypass.
+- Initial usage snapshot/report attempts without a selected telemetry source were rejected with `select at least one --codex or --claude file`. Once coordinator identified this session, a snapshot was saved outside the tracked tree as `%TEMP%/relay-140-builder-plan-usage.json`; one encoding retry was needed. Snapshot/report then succeeded, but their immediate cutoff excludes the checkpoint work and is not a task usage measurement. Coordinator's combined baseline covers task sources. No raw telemetry retained.
+- Open product decisions: none. No repairs yet. Coordinator owns summary logging and hosted validation.
