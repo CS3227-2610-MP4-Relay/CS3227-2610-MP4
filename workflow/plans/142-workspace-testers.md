@@ -46,3 +46,7 @@ Backend names below refer to `src/accounts/tests/test_add_tester.py`. Browser jo
 | ACC-4.6 | Creation test, `test_failures_roll_back_and_redact_error_reports`, `test_hashing_precedes_transaction_and_commit_failure_rolls_back`, browser journey |
 | ACC-4.7 | Failure/redaction, collision, commit-failure, workspace-lock timeout, statement-timeout and session-loading-failure tests |
 | ACC-4.8 | Creation test's repeated POST and return-home checks, browser journey |
+
+## Review and delivery
+
+Independent verifier and security-reviewer inspected fixed range `4cc6166b..f9a7fad` and returned no actionable findings; their scope checks and the candidate snapshot comparison passed. Review limits and measured resources are in the [session log](../../logs/Whimsyturtle/040-add-workspace-beta-testers.md). [Draft PR #153](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/pull/153) contains the coherent checkpoints; subsequent work is summary-only. At the log cutoff, site CI passed and required verify CI was pending. Next: verify successful configured checks on the final summary head; human log/manual review, merge and release remain pending.
