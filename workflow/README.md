@@ -55,7 +55,7 @@ After changing a role, skill, adapter or hook, run `python -m unittest discover 
 
 ## Resource-aware coordination
 
-The main session chooses the risk tier, scopes the request and coordinates work. One builder session works through [commit checkpoints](../AGENTS.md#git), yielding for coordinator commits before the next unit. The verifier independently checks the final behaviour; a security-reviewer joins under the [slice review triggers](skills/slice.md). Cosmetic changes use targeted checks and human diff review. Reclassify when scope changes.
+The main session chooses the risk tier, scopes the request and coordinates work. One builder session works through assigned units or batches under the [commit guidance](../AGENTS.md#git). The verifier independently checks the final behaviour; a security-reviewer joins under the [slice review triggers](skills/slice.md). Cosmetic changes use targeted checks and human diff review. Reclassify when scope changes.
 
 Pass relevant paths and excerpts, decisions, acceptance/security criteria, checks and open findings. Retrieve other context when needed rather than forwarding the conversation. Run focused checks during edits, then the [slice tier's required checks](skills/slice.md) on the final integrated candidate. Reuse passing evidence only while code, inputs and environment remain unchanged. Give concurrent builders separate worktrees, file ownership and test resources; review their integrated candidate afterwards.
 
