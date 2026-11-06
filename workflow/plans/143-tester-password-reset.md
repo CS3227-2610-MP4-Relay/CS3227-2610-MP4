@@ -39,4 +39,14 @@ Commands below ran from the issue-143 worktree in Git Bash with the shared venv,
 
 Criterion coverage in `src/accounts/tests/test_reset_tester_password.py`: the happy/history/session/repeated-POST test covers ACC-5.1/2/3/5/7; list boundaries cover 5.1/5; invalid targets and locked authorization recheck cover 5.3; method/CSRF/Origin tests cover 5.3/4/5; generation/hash/read/write/render/report/commit/timeout failures cover 5.2/5/6; three simultaneous resets cover 5.2/7. The criterion-marked browser journey verifies the full visible reset and replacement sign-in plus loss of the prior tester session. Matrix list and reset entries cover role/method/target denials and password-only state change.
 
-Next: coordinator scope-checks and commits this implementation checkpoint, captures a fresh snapshot, then resumes guides and integrated validation. No Git state changes or whole-slice completion claim by builder.
+Implementation committed by coordinator at `67623094a853d1a902e2cd496df15a0a7077ae06`; docs scope baseline: `%TEMP%/relay-143-builder-docs.json`.
+
+## Checkpoint 3 documentation and superseded validation
+
+Applied the maintain-docs skill to `docs/UserGuide.md` and `docs/DeveloperGuide.md`: exact built reset labels/journey, password/session/history effects and existing design links. Updated the account spec's implementation-status introduction. Changed sections and link destinations were read back; no duplicated headings, orphaned fragments or lost rules found. No source or test changes in this checkpoint.
+
+Started Git Bash validation from the worktree: `source ../../../.venv/Scripts/activate && export PYTHONPATH='C:/Users/limbe/Documents/GitHub/CS3227-2610-MP4/tmp/slice143-harness;C:/Users/limbe/Documents/GitHub/CS3227-2610-MP4/tmp/worktrees/issue-143/src' && (ruff check . && ruff format --check . && pytest --ds=relay_slice143_settings)`. Full output is outside the worktree at root `tmp/slice143-harness/full-verification.log`. Ruff lint passed and all 146 Python files passed formatting; pytest collected 2982 tests. One earlier shell launch failed quoting before any checks and was corrected. Cacheprovider was enabled.
+
+Coordinator reported PR #153 merged and newer main changes requiring integration, then requested stopping this run and yielding docs. Ctrl-C to plain-pipe exec session `70521` did not stop it. Terminating identified pytest process tree `30376` (Python children `47040`, `52392`) failed with Windows access denied, including an escalated attempt; coordinator informed. At this checkpoint pytest remains running/superseded (last observed at 62%), with no final summary. This is incomplete verification, not a full pass or a verified interruption; no tests were modified or skipped.
+
+Next: coordinator commits docs and integrates current main, captures a fresh snapshot and resumes final integrated verification once the superseded test process has ended. No Git state changes or whole-slice completion claim by builder.

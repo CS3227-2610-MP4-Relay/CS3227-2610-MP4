@@ -1,6 +1,6 @@
 # Accounts
 
-Planning area `ACC`. ACC-1 to ACC-4 are implemented, including ACC-2's sample draft round from RND-7. See the [roles](../PRODUCT-SPEC.md#roles); storage and routes are in the [technical spec](../TECHNICAL-SPEC.md#accounts-and-workspaces), and controls in the [security spec](../SECURITY-SPEC.md#sign-in-and-access-control).
+Planning area `ACC`. ACC-1 to ACC-5 are implemented, including ACC-2's sample draft round from RND-7. See the [roles](../PRODUCT-SPEC.md#roles); storage and routes are in the [technical spec](../TECHNICAL-SPEC.md#accounts-and-workspaces), and controls in the [security spec](../SECURITY-SPEC.md#sign-in-and-access-control).
 
 Every account belongs to exactly one workspace and has exactly one role, Test Coordinator or Beta Tester. Accounts originate in demo workspace creation (ACC-2), with additional Beta Testers defined by ACC-4 and coordinator-managed tester password reset defined by ACC-5. Self-registration, coordinator account recovery, self-service password reset, invitations, editing or removing accounts, email, MFA and SSO are not part of Relay.
 
