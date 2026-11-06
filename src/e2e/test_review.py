@@ -13,6 +13,10 @@ RETESTED, STEADY = "Synthetic retested case", "Synthetic steady case"
 FIRST, SECOND = "Synthetic first build", "Synthetic second build"
 FAILURE = "Synthetic first failure"
 DRAFT = "Synthetic private draft"
+PENDING = (
+    "Saved drafts are still pending for current builds. "
+    "Closing will prevent their submission."
+)
 SUBMITTED_AT = re.compile(r"^Submitted at: \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC$")
 
 
@@ -105,7 +109,7 @@ def expect_retested(page, accounts):
     expect(page.get_by_text(SUBMITTED_AT)).to_have_count(2)
 
 
-@pytest.mark.ac("RND-4.1", "RND-4.2", "RND-4.3", "RND-4.4")
+@pytest.mark.ac("RND-4.1", "RND-4.2", "RND-4.3", "RND-4.4", "RND-6.6")
 def test_coordinator_reviews_results_through_retest_and_close(
     page, browser_accounts, live_server
 ):
@@ -114,6 +118,7 @@ def test_coordinator_reviews_results_through_retest_and_close(
     try:
         publish(page, browser_accounts)
         round_url = page.url
+        expect(page.get_by_text(PENDING, exact=True)).to_have_count(0)
         record_as(
             tester,
             browser_accounts,
@@ -124,6 +129,7 @@ def test_coordinator_reviews_results_through_retest_and_close(
         record_as(other, browser_accounts, "tester2", (0, "pass", DRAFT, "Save draft"))
 
         page.reload()
+        expect(page.get_by_text(PENDING, exact=True)).to_be_visible()
         open_results(page, "Open")
         current = under(page, "Results for this build")
         expect(current).to_have_count(2)
@@ -150,6 +156,7 @@ def test_coordinator_reviews_results_through_retest_and_close(
         page.get_by_role("checkbox", name=RETESTED, exact=True).check()
         page.get_by_label("Build label", exact=True).fill(SECOND)
         page.get_by_role("button", name="Request retest", exact=True).click()
+        expect(page.get_by_text(PENDING, exact=True)).to_have_count(0)
         open_results(page, "Open")
         expect(page.get_by_text(SECOND, exact=True)).to_be_visible()
         expect_retested(page, browser_accounts)
@@ -166,4 +173,30 @@ def test_coordinator_reviews_results_through_retest_and_close(
         ]
     finally:
         other.context.close()
+        tester.context.close()
+
+
+@pytest.mark.ac("RND-6.6", "RND-6.2")
+def test_close_with_pending_draft_warns_without_exposing_or_blocking(
+    page, browser_accounts, live_server
+):
+    tester = separate_context(page, live_server).new_page()
+    try:
+        publish(page, browser_accounts)
+        record_as(tester, browser_accounts, "tester", (0, "pass", DRAFT, "Save draft"))
+        page.reload()
+        expect(page.get_by_text(PENDING, exact=True)).to_be_visible()
+        expect(page.get_by_text(DRAFT, exact=True)).to_have_count(0)
+        expect(page.locator("main")).not_to_contain_text(browser_accounts["tester"])
+        expect(page.locator("p").filter(has_text=PENDING).locator("+ p")).to_have_text(
+            "This reflects saved drafts at page load. "
+            "Unsaved browser changes are unknown."
+        )
+        page.get_by_role("button", name="Close round", exact=True).click()
+        expect(page.get_by_text("State: Closed", exact=True)).to_be_visible()
+        expect(page.get_by_text(PENDING, exact=True)).to_have_count(0)
+        browser_accounts["expected_results"] = [
+            {"observation": DRAFT, "submitted_at__isnull": True}
+        ]
+    finally:
         tester.context.close()
