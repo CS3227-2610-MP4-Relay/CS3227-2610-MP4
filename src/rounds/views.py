@@ -110,6 +110,8 @@ def show_round(request, round_, refused=None, publish_form=None):
         "round": round_,
         "draft": draft,
         "open": round_.state == Round.State.OPEN,
+        "pending_drafts": round_.state == Round.State.OPEN
+        and results.has_pending_drafts(round_, current),
         "cases": cases,
         "builds": builds,
         "refused": refused,

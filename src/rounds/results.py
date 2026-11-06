@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import F, Prefetch
+from django.db.models import F, Prefetch, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
@@ -55,6 +55,23 @@ def covered_results(round_):
     """Return results whose case and build are in the round, the build covering it."""
     return Result.objects.filter(
         case__round=round_, build__round=round_, build__cases=F("case_id")
+    )
+
+
+def has_pending_drafts(round_, current):
+    """Read only eligible draft existence for an authorized Open round's builds."""
+    pairs = Q(pk__in=[])
+    for case_id, build in current.items():
+        pairs |= Q(case_id=case_id, build_id=build.pk)
+    return (
+        covered_results(round_)
+        .filter(
+            pairs,
+            submitted_at__isnull=True,
+            tester__workspace_id=round_.workspace_id,
+            tester__role=User.Role.TESTER,
+        )
+        .exists()
     )
 
 

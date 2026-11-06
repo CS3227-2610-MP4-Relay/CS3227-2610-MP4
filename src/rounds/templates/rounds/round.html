@@ -46,7 +46,9 @@
   {% for error in field.errors %}<div class="error"><p>{{ error }}</p></div>{% endfor %}
   <button type="submit">Publish round</button>
 </form>{% endwith %}{% endif %}
-{% if open %}<p>Closing makes this round read-only. It cannot be reopened.</p>
+{% if open %}{% if pending_drafts %}<p>Saved drafts are still pending for current builds. Closing will prevent their submission.</p>
+<p>This reflects saved drafts at page load. Unsaved browser changes are unknown.</p>{% endif %}
+<p>Closing makes this round read-only. It cannot be reopened.</p>
 <form method="post" action="{% url 'rounds:close' round.pk %}">{% csrf_token %}<button class="destructive" type="submit">Close round</button></form>{% endif %}
 <p><a class="action secondary" href="{% url 'accounts:coordinator' %}">Coordinator home</a></p>
 </div></div>
