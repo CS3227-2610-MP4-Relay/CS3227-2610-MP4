@@ -63,9 +63,11 @@ def state_conflict(request, round_):
     return conflict_page(request, results.state_message(round_))
 
 
-def conflict_page(request, message):
-    """Render a fixed-text refusal as the shared 409 page."""
-    return render(request, "rounds/conflict.html", {"message": message}, status=409)
+def conflict_page(request, message, *, back=None):
+    """Render a fixed-text 409, optionally linking back to an authorized page."""
+    return render(
+        request, "rounds/conflict.html", {"message": message, "back": back}, status=409
+    )
 
 
 def form_page(request, form, title, button, round_=None):
