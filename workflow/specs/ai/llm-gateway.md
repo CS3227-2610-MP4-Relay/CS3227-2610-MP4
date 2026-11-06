@@ -24,9 +24,11 @@ The [security spec](../SECURITY-SPEC.md#ai-features-and-prompt-injection) owns t
 - The transport connects directly and ignores `HTTPS_PROXY` and the other proxy variables. Operators must confirm direct provider reachability in the deployment environment; this integration adds no proxy support.
 - RND-8's [notice](../product/rounds.md#rnd-8-draft-test-cases-with-ai) says what is sent. Its drafting UI is built; broader manual usefulness evaluation remains pending.
 
-## Transport contract (proposed)
+<a id="transport-contract-proposed"></a>
 
-The rules below are implemented; confirmation of their design by the gateway owner (#6) and the human remains pending ([plan 22, human decision 3](../../plans/22-test-drafting-spec.md#human-decisions-2026-10-29-confirmed)). The "proposed" headings remain for existing links. Relay owns these rules; the [aiohttp](https://docs.aiohttp.org/) client library does the networking: name resolution, connecting, TLS, HTTP parsing and knowing when a response is complete.
+## Transport contract
+
+On 2026-11-06, the human and gateway owner (Whimsyturtle) confirmed the current implemented gateway design, resolving the pending design decision recorded in [plan 22, human decision 3](../../plans/22-test-drafting-spec.md#human-decisions-2026-10-29-confirmed). This is design acceptance, not evidence of additional testing or production readiness; the evaluation and residual-risk qualifications still apply. Legacy anchors preserve existing links. Relay owns these rules; the [aiohttp](https://docs.aiohttp.org/) client library does the networking: name resolution, connecting, TLS, HTTP parsing and knowing when a response is complete.
 
 - One fixed HTTPS endpoint from `SOC_LLM_ENDPOINT`, with no credentials or fragment in the URL. The request is one `POST` with the JSON body below. The system message contains only the feature's fixed instructions; the user message contains the feature's source JSON text unchanged as a string, never promoted into instructions or parsed into additional messages. No tool, browsing or function-calling fields are sent. No `max_tokens` value is introduced: MP3's 512-token setting does not establish a suitable cap for Relay's drafting reply. Existing local reply, byte and time bounds still apply. Certificate and hostname verification are on, using a verifying context made for each call; no redirect is followed (a 3xx is `Failed("transport")`); and no proxy is used ([live switch](#live-switch)). No call retries.
 
@@ -44,7 +46,9 @@ The rules below are implemented; confirmation of their design by the gateway own
 - HTTP 400, 401 and 403 and the chat refusals above are `Refused("provider-refused")`; 429 is `Refused("quota")`; a missing or invalid setting is `Refused("not-configured")`; 3xx, 5xx and other non-2xx statuses are `Failed("transport")`. Exceptions map to fixed codes, timeouts first: the total timeout is `Failed("timeout")`; an aiohttp client error (connection, TLS, malformed HTTP or an incomplete body), `OSError`, `ValueError` (such as a host name that cannot be encoded) or any other `Exception` is `Failed("transport")`; cancellation and interpreter-exit exceptions (`BaseException`) propagate after the slots are released. Provider bodies and exception text never reach the feature or logs.
 - The gateway logs only the fixed outcome code, never instructions, data, reply text or exception text.
 
-## Limits and accounting (proposed)
+<a id="limits-and-accounting-proposed"></a>
+
+## Limits and accounting
 
 - A request whose instructions plus data exceed 8,000 characters is `Refused("input-too-large")` before any reservation.
 - Each user has at most 1 call in flight and the deployment at most 2. Quota is 20 calls per user per rolling hour and 200 per deployment per rolling hour. One transaction locks the call slots, checks both quotas and records the call before the call starts, so failed, refused and timed-out calls count; any refusal is `Refused("busy-or-quota")`.
