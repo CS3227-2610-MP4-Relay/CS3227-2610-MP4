@@ -33,9 +33,15 @@ def cli_calls():
 
 
 @pytest.fixture
-def setup(monkeypatch, cli_calls):
+def freshness():
+    return [], [api(main_ref())]
+
+
+@pytest.fixture
+def setup(monkeypatch, cli_calls, freshness):
     values = {
         "GITHUB_SHA": SHA,
+        "GITHUB_REPOSITORY": "synthetic/relay",
         "VERCEL_TOKEN": "synthetic-token-never-print",
         "VERCEL_PROJECT_ID": "prj_synthetic",
         "VERCEL_TEAM_ID": "team_synthetic",
@@ -61,6 +67,13 @@ def setup(monkeypatch, cli_calls):
     replies = []
 
     def open_request(request, timeout):
+        if request.full_url.startswith("https://api.github.com/"):
+            head_calls, head_replies = freshness
+            head_calls.append((request, timeout))
+            reply = head_replies.pop(0)
+            if isinstance(reply, Exception):
+                raise reply
+            return reply
         calls.append((request, timeout))
         reply = replies.pop(0)
         if isinstance(reply, Exception):
@@ -83,6 +96,197 @@ def ready(**changes):
 
 def api(value):
     return Response(json.dumps(value).encode())
+
+
+def main_ref(**changes):
+    return {
+        "ref": "refs/heads/main",
+        "object": {"type": "commit", "sha": SHA},
+        **changes,
+    }
+
+
+@pytest.mark.ac("PLT-1.16")
+@pytest.mark.parametrize("operation", ["migrate", "deploy"])
+def test_superseded_run_cannot_migrate_or_deploy(
+    setup, freshness, cli_calls, capsys, operation
+):
+    calls, replies = setup
+    success(replies)
+    head_calls, head_replies = freshness
+    head_replies[:] = [api(main_ref(object={"type": "commit", "sha": "b" * 40}))]
+    assert release.main([operation]) == 1
+    assert cli_calls == []
+    assert calls == []
+    assert len(head_calls) == 1
+    assert capsys.readouterr().err == (
+        f"stage=freshness commit={SHA} deployment=unknown result=superseded\n"
+    )
+
+
+@pytest.mark.ac("PLT-1.16")
+def test_main_advances_after_migration_preventing_cli_creation(
+    setup, freshness, cli_calls, monkeypatch, capsys
+):
+    head_calls, head_replies = freshness
+    head_replies.append(api(main_ref(object={"type": "commit", "sha": "b" * 40})))
+
+    def migrate(command, **options):
+        assert len(head_calls) == 1
+        cli_calls.append((command, options))
+
+    monkeypatch.setattr(release.subprocess, "run", migrate)
+    assert release.main(["migrate"]) == 0
+    completed = list(cli_calls)
+    assert len(completed) == 2
+    assert release.main(["deploy"]) == 1
+    assert cli_calls == completed
+    assert len(head_calls) == 2
+    assert "result=superseded" in capsys.readouterr().err
+
+
+@pytest.mark.ac("PLT-1.16")
+@pytest.mark.parametrize("operation", ["migrate", "deploy"])
+@pytest.mark.parametrize(
+    "reply",
+    [
+        None,
+        [],
+        {},
+        main_ref(ref="refs/heads/other"),
+        main_ref(object=None),
+        main_ref(object={"type": "tag", "sha": SHA}),
+        main_ref(object={"type": "commit"}),
+        *[
+            main_ref(object={"type": "commit", "sha": sha})
+            for sha in [None, 123, "a" * 39, "a" * 41, "A" * 40, "\n::error::private"]
+        ],
+        b"not-json-private",
+        b"x" * 65537,
+        TimeoutError("private"),
+        URLError("private"),
+        HTTPError("https://api.github.com/", 302, "private", {}, None),
+        HTTPError("https://api.github.com/", 403, "private", {}, None),
+    ],
+    ids=lambda reply: type(reply).__name__,
+)
+def test_uncheckable_head_fails_closed_without_side_effects(
+    setup, freshness, cli_calls, capsys, operation, reply
+):
+    calls, replies = setup
+    success(replies)
+    head_calls, head_replies = freshness
+    head_replies[:] = [
+        reply
+        if isinstance(reply, Exception)
+        else Response(reply)
+        if isinstance(reply, bytes)
+        else api(reply)
+    ]
+    assert release.main([operation]) == 1
+    assert cli_calls == []
+    assert calls == []
+    assert len(head_calls) == 1
+    assert capsys.readouterr().err == (
+        f"stage=freshness commit={SHA} deployment=unknown result=failure\n"
+    )
+
+
+@pytest.mark.ac("PLT-1.16")
+@pytest.mark.parametrize("operation", ["migrate", "deploy"])
+@pytest.mark.parametrize("status", [201, 204, 503])
+def test_freshness_requires_successful_ref_status(
+    setup, freshness, cli_calls, capsys, operation, status
+):
+    freshness[1][:] = [Response(json.dumps(main_ref()).encode(), status)]
+    assert release.main([operation]) == 1
+    assert cli_calls == []
+    assert "stage=freshness" in capsys.readouterr().err
+
+
+@pytest.mark.ac("PLT-1.16")
+@pytest.mark.parametrize("operation", ["migrate", "deploy"])
+@pytest.mark.parametrize(
+    "sha", [None, "", "a" * 39, "a" * 41, "A" * 40, "\n::error::private"]
+)
+def test_invalid_tested_sha_is_private_configuration_failure(
+    setup, freshness, cli_calls, monkeypatch, capsys, operation, sha
+):
+    if sha is None:
+        monkeypatch.delenv("GITHUB_SHA", raising=False)
+    else:
+        monkeypatch.setenv("GITHUB_SHA", sha)
+    assert release.main([operation]) == 1
+    assert cli_calls == [] and freshness[0] == []
+    assert capsys.readouterr().err == (
+        "stage=configuration commit=unavailable deployment=unknown result=failure\n"
+    )
+
+
+@pytest.mark.ac("PLT-1.16")
+@pytest.mark.parametrize("operation", ["migrate", "deploy"])
+@pytest.mark.parametrize(
+    "repository",
+    [None, "", "owner", "../repo", "a/b/c", "a/b?x=1", "a/b\n::error::private"],
+)
+def test_invalid_repository_is_configuration_failure(
+    setup, freshness, cli_calls, monkeypatch, capsys, operation, repository
+):
+    if repository is None:
+        monkeypatch.delenv("GITHUB_REPOSITORY", raising=False)
+    else:
+        monkeypatch.setenv("GITHUB_REPOSITORY", repository)
+    assert release.main([operation]) == 1
+    assert cli_calls == [] and freshness[0] == []
+    assert capsys.readouterr().err == (
+        f"stage=configuration commit={SHA} deployment=unknown result=failure\n"
+    )
+
+
+@pytest.mark.ac("PLT-1.16")
+@pytest.mark.parametrize("operation", ["migrate", "deploy"])
+@pytest.mark.parametrize("size,valid", [(65535, True), (65536, True), (65537, False)])
+def test_freshness_request_is_bounded_anonymous_and_precedes_side_effects(
+    setup, freshness, cli_calls, monkeypatch, capsys, operation, size, valid
+):
+    _, replies = setup
+    success(replies)
+    head_calls, head_replies = freshness
+    body = json.dumps(main_ref()).encode()
+    head_replies[:] = [Response(body + b" " * (size - len(body)))]
+    original = release.subprocess.run
+
+    def run(command, **options):
+        assert len(head_calls) == 1
+        return original(command, **options)
+
+    monkeypatch.setattr(release.subprocess, "run", run)
+    assert release.main([operation]) == (0 if valid else 1)
+    assert len(cli_calls) == ((2 if operation == "migrate" else 1) if valid else 0)
+    request, timeout = head_calls[0]
+    assert (
+        request.full_url
+        == "https://api.github.com/repos/synthetic/relay/git/ref/heads/main"
+    )
+    assert request.method == "GET" and timeout == 30
+    assert request.get_header("Authorization") is None
+    assert "private" not in str(capsys.readouterr())
+
+
+@pytest.mark.ac("PLT-1.16")
+def test_deploy_checks_main_after_preparing_exact_tested_source(
+    setup, freshness, monkeypatch
+):
+    success(setup[1])
+
+    def prepare(sha, path):
+        assert sha == SHA
+        assert freshness[0] == []
+        path.mkdir()
+
+    monkeypatch.setattr(release, "prepare", prepare)
+    assert release.main(["deploy"]) == 0
+    assert len(freshness[0]) == 1
 
 
 def success(replies):
@@ -303,7 +507,7 @@ def test_smoke_failure_fails_release_without_writes(setup, change):
     assert all(request.method == "GET" for request, _ in calls[1:])
 
 
-@pytest.mark.ac("PLT-1.12", "PLT-1.13")
+@pytest.mark.ac("PLT-1.12", "PLT-1.13", "PLT-1.16")
 def test_http_transport_refuses_redirects_and_accepts_only_expected_404(monkeypatch):
     handler = next(
         item for item in release.OPENER.handlers if isinstance(item, release.NoRedirect)
