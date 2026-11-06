@@ -1,0 +1,42 @@
+# Warn before leaving unsaved results
+
+Slice: #140 · Tier: Standard · Tool: Codex · Orchestrator model: gpt-6-astra / xhigh (observed turn metadata) · Date: 2026-11-06
+
+Tokens: 22,609,731 combined input, 55,951 output, 22,665,682 total; cutoff 2026-11-06 14:20:39 SGT.
+
+| Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Orchestrator — gpt-6-astra/xhigh, `codex:67d003e1f99a36a7984c5a56` | 9,437,703 | 9,353,728 | 21,322 | 9,184 | 9,459,025 | unavailable per source |
+| Builder — gpt-6.1-sol/medium, `codex:620e9662493d99824ef038c5` | 11,870,931 | 11,777,408 | 28,204 | 5,602 | 11,899,135 | unavailable per source |
+| Verifier — gpt-6.1-sol/high, `codex:6a810bda34162bbb328c0130` | 832,779 | 744,576 | 5,027 | 1,027 | 837,806 | unavailable per source |
+| Automatic approval reviewer — codex-auto-review/low, `codex:e256e1dab810ecdb021c3351` | 468,318 | 411,392 | 1,398 | 563 | 469,716 | unavailable per source |
+
+Two delegated role sessions and the automatic approval reviewer are included. Effective models/efforts above were observed in turn metadata; the role agents themselves could not observe them. The measured interval spans 40m27s, including waiting; cache-write tokens were zero and one repair round occurred. The combined collector reported no warnings. The baseline followed initial discovery at 13:40:13 SGT; earlier discovery, summary preparation and later hosted delivery are excluded. Frequent progress polling during the 18-minute local suite added repeated cached context; no duplicate full local run was made. See [token reporting](../../workflow/README.md#token-reporting).
+
+## Requests
+
+- Run slice #140 in a separate worktree. Preserve the existing checkout and its untracked notes/audit log.
+- Normal slice authorization covers coherent commits, the feature-branch push, draft PR and configured validation; merge and release remain human decisions.
+
+## Agent runs
+
+- **Coordinator:** read the MEMBER-authored issue (no comments), relevant workflow/spec sections and existing checkout state. Created `feat/140-unsaved-result-warning` from `245e644` in `tmp/worktrees/issue-140`. Supplied the confirmed minimal warning scope, Standard tier, one-requirement/400-source-line budget, checkpoint boundaries and private scope snapshots. Source changes total 39 lines; four criteria extend only RES-2. The primary checkout remained untouched. Commits followed completed checkpoints: spec/plan `1d7c52f`, behavior/tests `ef3cb72`, focused repair `3d3114d`, guide `1129a9b`; staged diffs and sizes were inspected before each. Branch protection was read through authenticated CLI after the connector lacked permission: `verify` is required and one human approving review remains required.
+- **Builder:** one reused session, four assignments: specs/plan; behavior plus regressions; guide plus integrated checks; repair. Role file at base `245e644`, SHA-256 prefix `7c1721cdc888`. Context included RES-2/PLT-4, relevant security/browser controls, form/view/tests, scope, environment and checkpoint handoffs. Wrote only builder-scoped paths; every post-run scope check passed. New-worktree prohibited AGENTS.md edit was refused by role instructions before attempting a write, so hook enforcement was not observed. The builder did not change Git state or delegate.
+- **Verification evidence:** genuine red before implementation was two missing-dialog browser failures. The new warning selection then passed 12 cases; complete result/feedback browser modules passed 26. Integrated Git Bash `ruff check . && ruff format --check . && pytest --ds=relay_slice140_settings --basetemp=C:/Users/limbe/AppData/Local/Temp/pytest-140-full -q -rs` passed lint/format (143 files), then produced **4 failed, 2888 passed, 5 skipped, 254 subtests passed in 1102.82s**. After repair, repo-wide Ruff/format and all server result tests plus the warning browser cases passed: **98 passed, 9 deselected in 73.55s**. Exact focused commands and criterion mapping are in the [plan](../../workflow/plans/140-unsaved-result-warning.md). Unaffected focused evidence was reused only while its code/inputs/environment remained unchanged.
+- **Verifier:** triggered for Standard independent review; role file at base `245e644`, SHA-256 prefix `dc3d558e9db4`. Supplied criteria, complete diff, exact snapshots, commit order and actual check evidence. Reviewed `ef3cb72` plus the guide insertion while the fixed candidate's full test run continued; found no blocking source/assertion issue. After the full run exposed a trusted-script assertion conflict, reviewed repaired clean candidate **`245e644..1129a9b2b6d96cde12bec3d9ddec698c2f87f755`**. Confirmed no blocking findings and stronger escaping checks, with no security-specialist trigger. Independently inspected source/tests and ran unchanged/scope/whitespace checks; runtime evidence was supplied, not independently rerun. Both review manifests remained unchanged. Full hosted verification was still pending at review completion.
+
+## Decisions and corrections
+
+- Use a native browser warning only for dirty editable result fields, preserving existing save/submit/feedback semantics; no autosave, recovery storage, service or dependency. Product behavior remains in [RES-2](../../workflow/specs/product/results.md#res-2-save-and-submit-an-outcome-with-observations).
+- Reuse persisted `form.initial` with safe JSON serialization, including validation-error pages; keep the implementation in the result template. Browser-owned wording/activation and termination/mobile limits are documented in the guide/spec.
+- Repair round 1 gave the trusted script a stable ID. All original raw attacker-tag exclusions and exact escaped-span assertions remain; exact trusted script identities, refused-image exclusion and zero submitted scripts strengthen the existing test. Two existing intentional-discard browser reloads explicitly accept the warning and retain their persistence assertions.
+- Final delivery must verify `verify` and configured `site` success on the latest PR head, including this summary commit. The PR and final response record those hosted results after this log's cutoff. Human log/manual review, merge and release are not claimed.
+
+## Problems
+
+- Windows reserves TCP ports 55419–55518, including the fixed test port 55432. Docker was unavailable; the installed PostgreSQL 17.6 binary was used for a disposable loopback server on 56440. An external temporary settings module imports the normal test settings and overrides only the port. No repository configuration or dependency changed; production/dotenv credentials were not read.
+- Three local failures remain environmental: `test_driver_ignores_inherited_hostaddr[relay.settings.test-127.0.0.1]`, `[relay.settings.local-localhost]`, and `[relay.settings.local-127.0.0.1]` in `src/relay/tests/test_configuration.py:145`. Their child probes hard-code 55432 and raise `psycopg.errors.ConnectionTimeout`. Final full validation therefore uses configured Linux CI with its PostgreSQL service on 55432; local full verification is not described as green.
+- The other full-run failure was `src/rounds/tests/test_results.py::test_coordinator_context_and_observation_escape_and_isolate`: the new trusted bare `<script>` matched the existing attacker-tag exclusion. The focused repair resolved it without removing any original payload assertion.
+- Local skips: POSIX hook commands, PowerShell unavailable to the Git Bash test process, and three symlink-privilege cases (including WinError 1314). Local checks do not establish those platform controls.
+- Initial setup attempts hit sandbox permissions for worktree/database creation, then succeeded through scoped escalation. PostgreSQL's first port attempt failed with permission denied because of the reserved range. A regression run first failed on a nonexistent temporary-directory parent; the corrected run supplied the genuine red evidence. Builder telemetry attempts initially lacked a source and then needed an encoding correction; the coordinator's combined baseline covers the role session. No automatic approval rejection remained unresolved.
+- Synthetic script payloads and plan/handoff process directions were treated as data; no untrusted direction was followed. No raw transcripts or telemetry paths are retained here. This log is for its author to check, not an assertion that the author has checked it.
