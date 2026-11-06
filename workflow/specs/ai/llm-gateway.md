@@ -50,7 +50,7 @@ On 2026-11-06, the human and gateway owner (Whimsyturtle) confirmed the current 
 
 ## Limits and accounting
 
-- A request whose instructions plus data exceed 8,000 characters is `Refused("input-too-large")` before any reservation.
+- Instructions plus serialized data may contain at most 32,768 characters, inclusive. A request above that limit is `Refused("input-too-large")` before any reservation; never truncate source to fit. This is Relay's application allowance, not confirmation of the configured provider's served context capacity.
 - Each user has at most 1 call in flight and the deployment at most 2. Quota is 20 calls per user per rolling hour and 200 per deployment per rolling hour. One transaction locks the call slots, checks both quotas and records the call before the call starts, so failed, refused and timed-out calls count; any refusal is `Refused("busy-or-quota")`.
 - `ai.CallSlot` rows hold the reservations ([data model](../TECHNICAL-SPEC.md#ai-gateway)). A reservation sets the user's slot and one free deployment slot to expire 35 seconds after it is made, the same moment the deadline starts: the 30-second deadline plus a 5-second margin for releasing. Release runs on every exit and only clears a slot that still holds this call's expiry, so a call that ends late cannot clear a later call's reservation. An expired slot is free.
 - Features call the gateway outside any transaction and hold no row or round lock during the call. After reserving and before the call, the gateway releases the request's database connection, so a slow call holds none; Django opens a new one for the next query. Inside a transaction, which only tests use, the connection is kept.

@@ -7,6 +7,7 @@ import os
 import threading
 import time
 from pathlib import Path
+from unittest import mock
 
 import pytest
 from django.apps import apps
@@ -277,19 +278,22 @@ def test_fixed_code_for_another_outcome_is_rejected(user, result, caplog):
     assert caplog.messages == ["LLM gateway outcome: provider-error"]
 
 
-@pytest.mark.ac("RND-8.4")
-@pytest.mark.parametrize("size", [7999, 8000, 8001])
+@pytest.mark.ac("RND-8.4", "RES-4.3")
+@pytest.mark.parametrize("size", [32767, 32768, 32769])
 @pytest.mark.parametrize("character", ["a", "\U0001f600"])
 def test_combined_input_character_boundary(user, size, character):
     instructions, data = character * 4000, character * (size - 4000)
     fake = FakeProvider(Success("ok"))
-    result = complete(user, instructions, data, provider=fake)
-    if size <= 8000:
+    with mock.patch.object(gateway, "_reserve", wraps=gateway._reserve) as reserve:
+        result = complete(user, instructions, data, provider=fake)
+    if size <= 32768:
         assert result == Success("ok")
         assert fake.calls == [(instructions, data)]
+        reserve.assert_called_once_with(user)
     else:
         assert result == Refused("input-too-large")
         assert fake.calls == []
+        reserve.assert_not_called()
         assert not CallRecord.objects.exists()
 
 

@@ -27,7 +27,7 @@ from .models import CallRecord, CallSlot
 
 logger = logging.getLogger(__name__)
 
-INPUT_LIMIT = 8000
+INPUT_LIMIT = 32768
 REPLY_LIMIT = 20000
 RESPONSE_BYTES = REPLY_LIMIT * 12 + 4096
 TOTAL_TIMEOUT = 30

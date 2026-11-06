@@ -75,7 +75,10 @@ def test_preflight_denials_make_zero_calls(operator, invalid, settings, monkeypa
         elif invalid == "duplicate":
             cases = (cases[0],) * 8
         else:
-            cases = (replace(cases[0], data="x" * 8001), *cases[1:])
+            cases = (
+                replace(cases[0], data="x" * (gateway.INPUT_LIMIT + 1)),
+                *cases[1:],
+            )
         monkeypatch.setattr(comparison, "corpus", lambda: cases)
     with pytest.raises(CommandError, match="preflight refused"):
         call_command("compare_context", **options)
