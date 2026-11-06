@@ -304,7 +304,7 @@ Only your own results appear. This page is read-only, including drafts. Reload t
 
 ## Error pages
 
-Each of these pages shows only its message:
+These pages show the messages below. Result-entry refusals also include the navigation described under [Save and submit a result](#save-and-submit-a-result).
 
 | Message | When |
 | --- | --- |
