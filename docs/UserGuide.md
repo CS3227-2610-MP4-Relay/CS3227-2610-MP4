@@ -16,7 +16,7 @@ It has two actions: the **Sign in** link and the **Create a demo workspace** but
 
 ## Accounts
 
-Each account has one role, **Test Coordinator** or **Beta Tester**, in one workspace. Accounts come only from demo workspaces: there is no registration, password reset or way to add accounts.
+Each account has one role, **Test Coordinator** or **Beta Tester**, in one workspace. Start with a demo workspace; its coordinator can [add Beta Testers](#add-a-beta-tester). There is no registration or password reset.
 
 ## Create a demo workspace
 
@@ -33,6 +33,16 @@ Creating a workspace does not sign you in. Each workspace is separate: its accou
 If creation fails, the page says "Relay is temporarily unavailable. Try again later." and nothing is created.
 
 Each network address can create up to 10 workspaces an hour, and Relay up to 200 a day in total. After that, the page says "Too many demo workspaces have been created recently. Try again later." and nothing is created.
+
+## Add a Beta Tester
+
+1. Sign in as the workspace's Test Coordinator and choose **Add Beta Tester** on **Coordinator home**.
+2. The **Beta Tester added** page shows the workspace and the new account's **Role**, **Username** and **Password**. Save the credentials when it says "Save this password now. It will not be shown again." Share them with the tester outside Relay.
+3. Choose **Coordinator home** to return. You stay signed in as coordinator; the new account signs in to **Tester home** in your workspace.
+
+A workspace can have 10 Beta Testers, including its initial two. Once full, the page says "This workspace already has 10 Beta Testers." and creates nothing. There is no member list, account editing, removal or credential recovery.
+
+Reloading and confirming browser resubmission can create another tester until the limit is reached. Returning home does not show the password again, although your browser's back button may redisplay an earlier response. If creation fails, "Relay is temporarily unavailable. Try again later." appears and no account is created.
 
 ## Sign in
 

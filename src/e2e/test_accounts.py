@@ -152,3 +152,60 @@ def test_demo_workspace_credentials_sign_in_to_coordinator_home(page, live_serve
     expect(page.get_by_text(f"Username: {username}", exact=True)).to_be_visible()
     # The sample round is observed only; RND-7 has its own tests.
     expect(page.get_by_role("listitem")).to_have_text(["Sample round (Draft)"])
+
+
+@pytest.mark.ac("ACC-4.1", "ACC-4.2", "ACC-4.6", "ACC-4.8")
+def test_coordinator_adds_tester_then_hits_capacity_and_new_tester_signs_in(
+    page, browser_accounts, live_server
+):
+    page.goto("/sign-in/")
+    submit_sign_in(page, browser_accounts["coordinator"], browser_accounts["password"])
+    page.get_by_role("button", name="Add Beta Tester", exact=True).click()
+    expect(page).to_have_title("Beta Tester added")
+    expect(
+        page.get_by_role("heading", name="Beta Tester added", exact=True)
+    ).to_be_visible()
+    expect(page.get_by_role("columnheader")).to_have_text(
+        ["Role", "Username", "Password"]
+    )
+    cells = (
+        page.get_by_role("row").filter(has=page.get_by_role("cell")).get_by_role("cell")
+    )
+    expect(cells.first).to_have_text("Beta Tester")
+    username, password = cells.nth(1).inner_text(), cells.nth(2).inner_text()
+    expect(
+        page.get_by_text(
+            "Save this password now. It will not be shown again.", exact=True
+        )
+    ).to_be_visible()
+    page.get_by_role("link", name="Coordinator home", exact=True).click()
+    expect(page.locator("body")).not_to_contain_text(password)
+    expect(
+        page.get_by_text(f"Username: {browser_accounts['coordinator']}", exact=True)
+    ).to_be_visible()
+    # The browser fixture starts with one tester; eight more successes fill it.
+    for _ in range(8):
+        page.get_by_role("button", name="Add Beta Tester", exact=True).click()
+        expect(page).to_have_title("Beta Tester added")
+        page.get_by_role("link", name="Coordinator home", exact=True).click()
+    with page.expect_response(
+        lambda response: response.url.endswith("/coordinator/testers/add/")
+    ) as response:
+        page.get_by_role("button", name="Add Beta Tester", exact=True).click()
+    assert response.value.status == 409
+    expect(page).to_have_title("Tester limit reached")
+    expect(
+        page.get_by_role(
+            "heading", name="This workspace already has 10 Beta Testers.", exact=True
+        )
+    ).to_be_visible()
+    page.get_by_role("link", name="Coordinator home", exact=True).click()
+    page.get_by_role("button", name="Sign out", exact=True).click()
+    submit_sign_in(page, username, password)
+    expect(page).to_have_url(f"{live_server.url}/tester/")
+    expect(
+        page.get_by_text(f"Workspace: {browser_accounts['workspace']}", exact=True)
+    ).to_be_visible()
+    expect(
+        page.get_by_role("button", name="Add Beta Tester", exact=True)
+    ).to_have_count(0)

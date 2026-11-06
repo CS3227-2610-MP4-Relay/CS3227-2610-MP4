@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Tester limit reached{% endblock %}
+{% block content %}
+<h1>This workspace already has 10 Beta Testers.</h1>
+<p><a class="action secondary" href="{% url 'accounts:coordinator' %}">Coordinator home</a></p>
+{% endblock %}

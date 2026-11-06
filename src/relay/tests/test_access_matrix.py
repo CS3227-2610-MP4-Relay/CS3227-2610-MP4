@@ -89,12 +89,13 @@ OWN_HOME = "302 to own role home"
 DONE = "302 to the round page after a change"
 RENDERED = "200 page after a POST that saves nothing"
 DEMO = "200 Your demo workspace"
+TESTER_ADDED = "200 Beta Tester added"
 SIGN_IN_FAILED = "200 sign-in failure"
 FORBIDDEN = "403 page"
 NOT_FOUND_PAGE = "404 page"
 NOT_ALLOWED = "405"
 CONFLICT = "409 page"
-CHANGES = {DONE, DEMO}
+CHANGES = {DONE, DEMO, TESTER_ADDED}
 
 
 @dataclass(frozen=True)
@@ -370,6 +371,8 @@ def check(world, caller, response, expect, before):
             assert owner == world.users[caller].workspace_id
     elif outcome == DEMO:
         assert status == 200 and "Your demo workspace" in body
+    elif outcome == TESTER_ADDED:
+        assert status == 200 and "<h1>Beta Tester added</h1>" in body
     elif outcome == SIGN_IN_FAILED:
         assert status == 200 and FAILED in body
     elif outcome == FORBIDDEN:
@@ -399,6 +402,19 @@ def check(world, caller, response, expect, before):
     assert not [mark for mark in hidden if mark in body.lower()], "leaked"
     assert GATEWAY.call_count == expect.calls, f"{GATEWAY.call_count} gateway calls"
     after = snapshot(world)
+    if outcome == TESTER_ADDED:
+        # This action may add exactly one own-workspace tester and nothing else.
+        old_ids = {row["id"] for row in before["all"]["User"]}
+        created = [row for row in after["all"]["User"] if row["id"] not in old_ids]
+        assert len(created) == 1
+        assert created[0]["workspace_id"] == world.users[caller].workspace_id
+        assert created[0]["role"] == "tester"
+        unchanged = {
+            **after["all"],
+            "User": [row for row in after["all"]["User"] if row["id"] in old_ids],
+        }
+        assert unchanged == before["all"]
+        return
     if outcome in CHANGES:
         assert after["all"] != before["all"], "changed nothing"
         assert caller in BYSTANDERS, f"no bystander rows recorded for {caller}"
@@ -676,6 +692,15 @@ ACCOUNTS = {
         GET_ONLY,
         ("ACC-1.3", "ACC-1.4", "ACC-2.4"),
         {GET: by_caller(SIGN_IN, OK, FORBIDDEN, OK), **ROLE_HOME_REFUSALS},
+    ),
+    "accounts:add-tester": AccountsRoute(
+        "/coordinator/testers/add/",
+        POST_ONLY,
+        ("ACC-4.1", "ACC-4.4", "ACC-4.5"),
+        {
+            **POST_ONLY_REFUSALS,
+            POST: by_caller(SIGN_IN, TESTER_ADDED, FORBIDDEN, TESTER_ADDED),
+        },
     ),
     "accounts:tester": AccountsRoute(
         "/tester/",

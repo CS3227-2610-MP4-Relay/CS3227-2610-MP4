@@ -1,8 +1,8 @@
 # Accounts
 
-Planning area `ACC`. ACC-1, ACC-2 and ACC-3 are implemented, including ACC-2's sample draft round from RND-7. See the [roles](../PRODUCT-SPEC.md#roles); storage and routes are in the [technical spec](../TECHNICAL-SPEC.md#accounts-and-workspaces), and controls in the [security spec](../SECURITY-SPEC.md#sign-in-and-access-control).
+Planning area `ACC`. ACC-1 to ACC-4 are implemented, including ACC-2's sample draft round from RND-7. See the [roles](../PRODUCT-SPEC.md#roles); storage and routes are in the [technical spec](../TECHNICAL-SPEC.md#accounts-and-workspaces), and controls in the [security spec](../SECURITY-SPEC.md#sign-in-and-access-control).
 
-Every account belongs to exactly one workspace and has exactly one role, Test Coordinator or Beta Tester. Accounts exist only through demo workspace creation (ACC-2). Self-registration, password reset, invitations, adding or removing accounts, email, MFA and SSO are not part of Relay.
+Every account belongs to exactly one workspace and has exactly one role, Test Coordinator or Beta Tester. Accounts originate in demo workspace creation (ACC-2), with additional Beta Testers defined by ACC-4. Self-registration, password reset, invitations, editing or removing accounts, email, MFA and SSO are not part of Relay.
 
 Each criterion is labelled happy, boundary, failure, adversarial or ambiguous.
 
@@ -47,3 +47,16 @@ A limited sign-in shows the sign-in page, titled and headed "Sign in", with its 
 - **ACC-3.6** (adversarial) Concurrent creations cannot exceed a limit: with 2 demo creations left for an address, 5 simultaneous requests create at most 2 workspaces.
 - **ACC-3.7** (failure) If a limit count cannot be read or recorded, including a lock or statement timeout, the request gets the 503 page from ACC-2.5, signs no one in and creates nothing.
 - **ACC-3.8** (adversarial) Concurrent sign-ins cannot exceed the limit: with 1 failed sign-in left for an address, 5 simultaneous wrong-password sign-ins give at most 1 normal failure, and the rest get the 429 page.
+
+## ACC-4 Add a Beta Tester to my workspace
+
+A Test Coordinator can choose the "Add Beta Tester" button on Coordinator home. There are no account fields or member roster. A successful action shows a page titled and headed "Beta Tester added", with "Workspace: <workspace name>", a table with columns "Role", "Username" and "Password" and one Beta Tester row, then "Save this password now. It will not be shown again." and a "Coordinator home" link. The coordinator shares these credentials outside Relay. No invitation, credential recovery or password reset is provided.
+
+- **ACC-4.1** (happy) One action creates exactly one Beta Tester in the signed-in coordinator's workspace and shows its generated credentials. The coordinator stays signed in as the same account; the new credentials sign in to Tester home in that workspace. Existing accounts, rounds and results are unchanged.
+- **ACC-4.2** (boundary) A workspace may have at most 10 Beta Testers, including its initial two. Adding the tenth succeeds; at 10 or more the action creates nothing and returns status 409, titled "Tester limit reached", headed "This workspace already has 10 Beta Testers." with a "Coordinator home" link. Other workspaces' accounts and the coordinator do not count toward this limit. Refusal happens before password generation when the limit is already reached.
+- **ACC-4.3** (adversarial) Simultaneous actions cannot exceed the cap: with one place remaining, five simultaneous actions create at most one tester; actions that observe the filled cap receive the same 409. Each successful action has its own credentials.
+- **ACC-4.4** (adversarial) Only a signed-in Test Coordinator may act. A signed-out visitor is redirected to sign-in; a Beta Tester gets the 403 of ACC-1.4. Posted fields or query parameters cannot choose a username, password, role, workspace, account or redirect target. No denied request creates an account or exposes workspace data.
+- **ACC-4.5** (adversarial) Only POST is accepted; other methods, including GET and HEAD, return 405 and create nothing. A POST without a valid CSRF token or with a foreign Origin returns 403 and creates nothing. CSRF checks precede method and role checks; otherwise method checks precede sign-in and role checks.
+- **ACC-4.6** (adversarial) The generated password is stored only as a hash and appears only in the successful action's response, never in later GET pages, logs, error reports, session data or cookies. Every response returned by the action, including redirects, 405, 409 and 503 responses, carries `Cache-Control: private, no-store`; middleware-generated 403 responses show no credentials. No GET route retrieves the credential response.
+- **ACC-4.7** (failure) A failure in storage, password generation, committing or rendering the credential response creates no account and shows the existing 503 page from ACC-2.5 without credentials. Database lock waits and statements use the existing bounded transaction timeouts. A username collision that cannot be resolved within the existing three-draw approach also fails this way.
+- **ACC-4.8** (boundary) Every successful POST is a separate creation: reloading and confirming browser resubmission can create another tester until the cap is reached. Returning to Coordinator home shows no generated password. Browser back/forward caching may redisplay a prior response despite `no-store`; Relay provides no replay, deduplication or recovery mechanism.

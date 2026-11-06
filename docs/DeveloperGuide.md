@@ -24,7 +24,7 @@ These are conceptual views of the existing implementation; field definitions, ro
 | Package | Responsibility | Design reference |
 | --- | --- | --- |
 | [`relay`](../src/relay/) | Project configuration, routing and shared presentation | [Architecture](../workflow/specs/TECHNICAL-SPEC.md#architecture) |
-| [`accounts`](../src/accounts/) | Workspace and account identity, sign-in and demo creation | [Accounts and workspaces](../workflow/specs/TECHNICAL-SPEC.md#accounts-and-workspaces) |
+| [`accounts`](../src/accounts/) | Workspace and account identity, sign-in, demo creation and coordinator-added testers | [Accounts and workspaces](../workflow/specs/TECHNICAL-SPEC.md#accounts-and-workspaces) |
 | [`rounds`](../src/rounds/) | Round preparation, build coverage, results and retained history | [Rounds](../workflow/specs/TECHNICAL-SPEC.md#rounds) |
 | [`ai`](../src/ai/) | Feature-specific drafting/feedback and the shared provider gateway | [AI contracts](../workflow/specs/ai/llm-gateway.md) |
 
@@ -88,6 +88,8 @@ Use the [local startup procedure](Runbook.md#run-locally), which includes Postgr
 ### Create accounts for manual testing
 
 Follow [demo account creation](Runbook.md#create-accounts-for-manual-testing), then use the [User Guide](UserGuide.md) for the role journeys.
+
+The coordinator can [add Beta Testers](UserGuide.md#add-a-beta-tester) to that workspace; the existing account model supports the action without a migration, with its transaction and credential handling defined in [accounts and workspaces](../workflow/specs/TECHNICAL-SPEC.md#accounts-and-workspaces).
 
 ### Verify
 

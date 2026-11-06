@@ -15,6 +15,7 @@ urlpatterns = [
     path("sign-in/", views.sign_in, name="sign-in"),
     path("sign-out/", views.sign_out, name="sign-out"),
     path("coordinator/", views.coordinator_home, name="coordinator"),
+    path("coordinator/testers/add/", views.add_tester, name="add-tester"),
     path("tester/", tester.home, name="tester"),
     path("tester/rounds/<int:round_id>/", tester.detail, name="tester-round"),
     path(
