@@ -1,10 +1,34 @@
 """Public presentation for the application foundation."""
 
+from django.db import DatabaseError, InterfaceError, connection
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_safe
 
 from accounts.views import HOMES
+
+
+@csrf_exempt
+@never_cache
+@require_safe
+def readiness(request):
+    """Check runtime database connectivity without accessing application records."""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+    except (DatabaseError, InterfaceError):
+        status, body = 503, "unavailable\n"
+    else:
+        status, body = 200, "ready\n"
+    return HttpResponse(
+        "" if request.method == "HEAD" else body,
+        status=status,
+        content_type="text/plain; charset=utf-8",
+        headers={"Content-Length": str(len(body))},
+    )
 
 
 @csrf_exempt
