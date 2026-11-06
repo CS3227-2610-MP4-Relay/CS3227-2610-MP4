@@ -51,6 +51,8 @@ def browser_accounts(browser_accounts):
         f"/tester/rounds/{round_.pk}/cases/{case.pk}/builds/{build.pk}/result/"
     )
     yield accounts
+    if accounts.get("expect_no_results"):
+        assert Result.objects.count() == 0
     if "expected" in accounts:
         assert Result.objects.count() == 1
         saved = Result.objects.get(tester=owner, case=case, build=build)
@@ -81,6 +83,179 @@ def save_draft(page, accounts, outcome, observation, *, save=True):
     if save:
         page.get_by_role("button", name="Save draft", exact=True).click()
         expect(page.get_by_text("Status: Draft", exact=True)).to_be_visible()
+
+
+def leave_warning(page, action, *, stay=False):
+    """Require one real native dialog and respond without matching browser text."""
+    dialogs = []
+
+    def respond(dialog):
+        dialogs.append(dialog.type)
+        dialog.dismiss() if stay else dialog.accept()
+
+    page.once("dialog", respond)
+    with page.expect_event("dialog"):
+        action()
+    assert dialogs == ["beforeunload"]
+
+
+@pytest.mark.ac("RES-2.9", "RES-2.10", "RES-2.12")
+@pytest.mark.parametrize("field", ["Outcome", "Observation"])
+def test_unsaved_result_stay_then_leave_discards_only_edits(
+    page, browser_accounts, field
+):
+    sign_in(page, browser_accounts, "tester")
+    page.goto(browser_accounts["entry"])
+    entry_url = page.url
+    if field == "Outcome":
+        page.get_by_label(field, exact=True).select_option("pass")
+    else:
+        page.get_by_label(field, exact=True).fill("Synthetic unsaved\nobservation ")
+    back = page.get_by_role("link", name="Back to round", exact=True)
+    with mock.patch("ai.feedback_views.gateway.complete") as complete:
+        leave_warning(page, back.click, stay=True)
+        expect(page).to_have_url(entry_url)
+        expect(page.get_by_label(field, exact=True)).to_have_value(
+            "pass" if field == "Outcome" else "Synthetic unsaved\nobservation "
+        )
+        leave_warning(page, back.click)
+        page.get_by_role("link", name="Record result", exact=True).click()
+        expect(page.get_by_label("Outcome", exact=True)).to_have_value("")
+        expect(page.get_by_label("Observation", exact=True)).to_have_value("")
+        complete.assert_not_called()
+    browser_accounts["expect_no_results"] = True
+
+
+@pytest.mark.ac("RES-2.9", "RES-2.8", "RES-2.12")
+def test_reverted_result_values_and_unchanged_pages_do_not_warn(page, browser_accounts):
+    dialogs = []
+    page.on("dialog", lambda dialog: (dialogs.append(dialog.type), dialog.accept()))
+    sign_in(page, browser_accounts, "tester")
+    page.goto(browser_accounts["entry"])
+    page.get_by_role("link", name="Back to round", exact=True).click()
+    page.get_by_role("link", name="Record result", exact=True).click()
+    # Escaped red-team source is decoded only inside the browser test.
+    original = "Synthetic \x3c/script\x3e\x3cscript\x3ealert(1)\x3c/script\x3e\nline"
+    page.get_by_label("Outcome", exact=True).select_option("pass")
+    page.get_by_label("Observation", exact=True).fill(original)
+    page.get_by_role("button", name="Save draft", exact=True).click()
+    expect(page.get_by_text("Status: Draft", exact=True)).to_be_visible()
+    page.reload()
+    outcome = page.get_by_label("Outcome", exact=True)
+    observation = page.get_by_label("Observation", exact=True)
+    expect(observation).to_have_value(original)
+    outcome.select_option("fail")
+    observation.fill(original + " ")
+    outcome.select_option("pass")
+    observation.fill(original)
+    page.get_by_role("link", name="Back to round", exact=True).click()
+    page.get_by_role("link", name="Continue draft", exact=True).click()
+    page.get_by_role("link", name="Tester home", exact=True).click()
+    assert dialogs == []
+    browser_accounts["expected"] = ("pass", original, False)
+
+
+@pytest.mark.ac("RES-2.9", "RES-2.10", "RES-2.12")
+@pytest.mark.parametrize("destination", ["home", "back", "reload", "close"])
+def test_unsaved_result_browser_exits_warn_without_saving(
+    page, browser_accounts, destination
+):
+    save_draft(page, browser_accounts, "pass", ORIGINAL)
+    page.get_by_role("link", name="Back to round", exact=True).click()
+    page.get_by_role("link", name="Continue draft", exact=True).click()
+    page.get_by_label("Observation", exact=True).fill(ORIGINAL + " ")
+    if destination == "home":
+        action = page.get_by_role("link", name="Tester home", exact=True).click
+    elif destination == "back":
+        action = page.go_back
+    elif destination == "reload":
+        action = page.reload
+    else:
+        action = lambda: page.close(run_before_unload=True)
+    leave_warning(page, action)
+    if destination == "close":
+        with page.context.expect_page() as opened:
+            page.context.new_page()
+        reopened = opened.value
+    else:
+        reopened = page
+    reopened.goto(browser_accounts["entry"])
+    expect(reopened.get_by_label("Observation", exact=True)).to_have_value(ORIGINAL)
+    browser_accounts["expected"] = ("pass", ORIGINAL, False)
+
+
+@pytest.mark.ac("RES-2.9", "RES-2.11", "RES-2.12")
+@pytest.mark.parametrize("saved", [False, True])
+def test_invalid_result_keeps_persisted_baseline_and_native_validation_guard(
+    page, browser_accounts, saved
+):
+    save_draft(page, browser_accounts, "pass", ORIGINAL, save=saved)
+    outcome = page.get_by_label("Outcome", exact=True)
+    observation = page.get_by_label("Observation", exact=True)
+    outcome.select_option("")
+    observation.fill(EDITED)
+    page.get_by_role("button", name="Save draft", exact=True).click()
+    expect(page.locator("select:invalid")).to_have_count(1)
+    back = page.get_by_role("link", name="Back to round", exact=True)
+    leave_warning(page, back.click, stay=True)
+    outcome.select_option("fail")
+    observation.fill("")
+    page.get_by_role("button", name="Save draft", exact=True).click()
+    expect(
+        page.get_by_text("Enter an observation for Fail.", exact=True)
+    ).to_be_visible()
+    leave_warning(page, back.click, stay=True)
+    expect(outcome).to_have_value("fail")
+    expect(observation).to_have_value("")
+    outcome.select_option("pass" if saved else "")
+    observation.fill(ORIGINAL if saved else "")
+    dialogs = []
+    page.on("dialog", lambda dialog: (dialogs.append(dialog.type), dialog.accept()))
+    back.click()
+    expect(
+        page.get_by_role("heading", name="Synthetic feedback round", exact=True)
+    ).to_be_visible()
+    assert dialogs == []
+    if saved:
+        browser_accounts["expected"] = ("pass", ORIGINAL, False)
+    else:
+        browser_accounts["expect_no_results"] = True
+
+
+@pytest.mark.ac("RES-2.9", "RES-2.11", "RES-2.12", "RES-4.9")
+@pytest.mark.parametrize("action", ["Save draft", "Submit", "Observation feedback"])
+def test_result_post_actions_do_not_warn_and_history_restores_guard(
+    page, browser_accounts, action
+):
+    save_draft(page, browser_accounts, "pass", ORIGINAL, save=False)
+    dialogs = []
+
+    def respond(dialog):
+        dialogs.append(dialog.type)
+        dialog.accept()
+
+    page.on("dialog", respond)
+    with mock.patch("ai.feedback_views.gateway.complete") as complete:
+        page.get_by_role("button", name=action, exact=True).click()
+        heading = (
+            "Observation feedback"
+            if action == "Observation feedback"
+            else "Record result"
+        )
+        expect(page.get_by_role("heading", name=heading, exact=True)).to_be_visible()
+        assert dialogs == []
+        if action == "Observation feedback":
+            page.remove_listener("dialog", respond)
+            page.go_back()
+            page.get_by_label("Observation", exact=True).fill(EDITED)
+            leave_warning(
+                page, page.get_by_role("link", name="Back to round", exact=True).click
+            )
+        else:
+            page.get_by_role("link", name="Back to round", exact=True).click()
+            assert dialogs == []
+        complete.assert_not_called()
+    browser_accounts["expected"] = ("pass", ORIGINAL, action == "Submit")
 
 
 @pytest.mark.ac("RES-4.9", "PLT-4.4")
