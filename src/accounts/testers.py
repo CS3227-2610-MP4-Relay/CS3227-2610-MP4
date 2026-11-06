@@ -14,6 +14,11 @@ def tester_count(user):
     return workspace_records(user, User).filter(role=User.Role.TESTER).count()
 
 
+def tester_records(user):
+    """Select only testers in the caller's workspace for ACC-5."""
+    return workspace_records(user, User).filter(role=User.Role.TESTER)
+
+
 @sensitive_variables()
 def create_tester(user, password, hashed):
     """Write one tester while the caller holds its workspace lock below the cap.

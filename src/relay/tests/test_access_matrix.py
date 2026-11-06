@@ -90,6 +90,7 @@ DONE = "302 to the round page after a change"
 RENDERED = "200 page after a POST that saves nothing"
 DEMO = "200 Your demo workspace"
 TESTER_ADDED = "200 Beta Tester added"
+TESTER_RESET = "200 Beta Tester password reset"
 SIGN_IN_FAILED = "200 sign-in failure"
 FORBIDDEN = "403 page"
 NOT_FOUND_PAGE = "404 page"
@@ -373,6 +374,8 @@ def check(world, caller, response, expect, before):
         assert status == 200 and "Your demo workspace" in body
     elif outcome == TESTER_ADDED:
         assert status == 200 and "<h1>Beta Tester added</h1>" in body
+    elif outcome == TESTER_RESET:
+        assert status == 200 and "<h1>Beta Tester password reset</h1>" in body
     elif outcome == SIGN_IN_FAILED:
         assert status == 200 and FAILED in body
     elif outcome == FORBIDDEN:
@@ -402,6 +405,20 @@ def check(world, caller, response, expect, before):
     assert not [mark for mark in hidden if mark in body.lower()], "leaked"
     assert GATEWAY.call_count == expect.calls, f"{GATEWAY.call_count} gateway calls"
     after = snapshot(world)
+    if outcome == TESTER_RESET:
+        target = world.users[TESTER_A]
+        target.refresh_from_db()
+        rows = re.findall(
+            r"<tr><td>Beta Tester</td><td>([^<]*)</td><td>([^<]*)</td></tr>", body
+        )
+        assert len(rows) == 1 and rows[0][0] == target.username
+        assert target.check_password(rows[0][1])
+        changed = next(row for row in after["all"]["User"] if row["id"] == target.pk)
+        original = next(row for row in before["all"]["User"] if row["id"] == target.pk)
+        assert changed["password"] != original["password"]
+        changed["password"] = original["password"]
+        assert after["all"] == before["all"]
+        return
     if outcome == TESTER_ADDED:
         # This action may add exactly one own-workspace tester and nothing else.
         old_ids = {row["id"] for row in before["all"]["User"]}
@@ -707,6 +724,12 @@ ACCOUNTS = {
         GET_ONLY,
         ("ACC-1.3", "ACC-1.4", "ACC-2.4"),
         {GET: by_caller(SIGN_IN, FORBIDDEN, OK, FORBIDDEN), **ROLE_HOME_REFUSALS},
+    ),
+    "accounts:tester-passwords": AccountsRoute(
+        "/coordinator/testers/",
+        GET_ONLY,
+        ("ACC-5.1", "ACC-5.3", "ACC-5.4"),
+        {GET: by_caller(SIGN_IN, OK, FORBIDDEN, OK), **ROLE_HOME_REFUSALS},
     ),
 }
 
@@ -1020,7 +1043,7 @@ def test_every_route_has_a_matrix_entry():
         set(ACCOUNTS)
         | set(ROUNDS)
         | set(TESTER_READ_ONLY)
-        | {TESTER_RESULT, TESTER_FEEDBACK}
+        | {TESTER_RESULT, TESTER_FEEDBACK, "accounts:reset-tester-password"}
     )
     assert set(names) == expected
 
@@ -1041,6 +1064,41 @@ def test_accounts_route_matrix(name, caller):
     for kind in KINDS:
         expect = Expect(route.outcomes[kind][caller], allow=route.methods)
         exchange(world, caller, kind, route.path, None, expect, failures)
+    failures.assert_none()
+
+
+@pytest.mark.ac("ACC-5.2", "ACC-5.3", "ACC-5.4")
+@pytest.mark.parametrize("caller", CALLERS)
+@pytest.mark.parametrize(
+    "target", ["tester", "coordinator", "foreign coordinator", "missing", "huge"]
+)
+def test_reset_password_route_matrix(caller, target):
+    world = build_world(DRAFT)
+    target_id = {
+        "tester": world.users[TESTER_A].pk,
+        "coordinator": world.users[COORD_A].pk,
+        "foreign coordinator": world.users[COORD_B].pk,
+        "missing": MISSING,
+        "huge": HUGE,
+    }[target]
+    path = url("accounts:reset-tester-password", {"tester_id": target_id})
+    failures = Failures()
+    for kind in KINDS:
+        if kind.fails_csrf():
+            outcome = FORBIDDEN
+        elif kind.method != "POST":
+            outcome = NOT_ALLOWED
+        elif caller == ANON:
+            outcome = SIGN_IN
+        elif caller == TESTER_A:
+            outcome = FORBIDDEN
+        elif caller != COORD_A or target != "tester":
+            outcome = NOT_FOUND_PAGE
+        else:
+            outcome = TESTER_RESET
+        exchange(
+            world, caller, kind, path, None, Expect(outcome, allow=POST_ONLY), failures
+        )
     failures.assert_none()
 
 

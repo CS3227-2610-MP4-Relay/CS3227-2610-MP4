@@ -16,6 +16,12 @@ urlpatterns = [
     path("sign-out/", views.sign_out, name="sign-out"),
     path("coordinator/", views.coordinator_home, name="coordinator"),
     path("coordinator/testers/add/", views.add_tester, name="add-tester"),
+    path("coordinator/testers/", views.tester_passwords, name="tester-passwords"),
+    path(
+        "coordinator/testers/<int:tester_id>/reset-password/",
+        views.reset_tester_password,
+        name="reset-tester-password",
+    ),
     path("tester/", tester.home, name="tester"),
     path("tester/rounds/<int:round_id>/", tester.detail, name="tester-round"),
     path(

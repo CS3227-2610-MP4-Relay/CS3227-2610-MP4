@@ -5,6 +5,7 @@
   {% csrf_token %}
   <button type="submit">Add Beta Tester</button>
 </form>
+<p><a class="action secondary" href="{% url 'accounts:tester-passwords' %}">Beta Tester passwords</a></p>
 <h2>Rounds</h2>
 <p><a class="action" href="{% url 'rounds:new' %}">New round</a></p>
 {% if rounds %}
