@@ -234,7 +234,9 @@ If testers have saved drafts still eligible for submission on current builds, th
 
 1. On the Open round's page, choose **Close round**. There is no further confirmation.
 
-The round page shows "Round closed." and "State: Closed". A Closed round cannot be reopened or returned to Draft.
+The round page shows "Round closed." once and "State: Closed". A Closed round cannot be reopened or returned to Draft.
+
+If saving the close fails, the page says "Relay is temporarily unavailable. Try again later." The round remains Open and no close notification is saved. Return to the round page to try again later.
 
 A Closed round's page still shows its criteria, its cases with their linked criteria and **Current build**, and the **Builds** list. It has no links or buttons for changing the round, no **Request a retest** link and no **Close round** button, but you can still [review results](#review-results).
 

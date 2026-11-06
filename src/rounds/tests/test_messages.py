@@ -1,13 +1,17 @@
 """Success messages stay in the server-side session, never in a cookie (#57)."""
 
+from concurrent.futures import ThreadPoolExecutor
 from unittest import mock
 
 import pytest
 from django.contrib.messages import constants
 from django.contrib.messages.storage.base import Message
 from django.contrib.messages.storage.cookie import CookieStorage
+from django.contrib.messages.storage.session import SessionStorage
+from django.contrib.sessions.backends.db import SessionStore
 from django.contrib.sessions.models import Session
-from django.db import OperationalError
+from django.db import OperationalError, connection, connections
+from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.utils.html import escape
 
@@ -15,9 +19,11 @@ from rounds.models import Round
 
 from .conftest import (
     MARKUP,
+    ROUND_RECORDS,
     SCRIPT_TAG,
     close,
     detail,
+    domain_rows,
     draft_with_case,
     open_with_case,
     page,
@@ -150,22 +156,117 @@ def test_sign_out_discards_an_unread_round_message(coord_client, make_round, act
 
 
 @pytest.mark.ac("RND-6.5")
-def test_a_failed_session_save_after_a_close_gives_400_with_the_round_closed(
-    coordinator, make_round
-):
-    # Accepted residual (#57): the session row is saved after the view commits,
-    # and Django reports a failed update of it as SessionInterrupted (400).
+def test_a_failed_session_save_rolls_back_close_with_503(coordinator, make_round):
     round_ = open_with_case(make_round)
     client = signed_in(coordinator, raise_request_exception=False)
+    before = domain_rows(*ROUND_RECORDS)
     failing = mock.patch.object(
         Session, "save", side_effect=OperationalError("synthetic")
     )
-    with failing:
+    with failing as save:
         response = close(client, round_)
     round_.refresh_from_db()
-    assert response.status_code == 400
-    assert "Bad Request (400)" in page(response)
-    assert round_.state == Round.State.CLOSED
+    assert response.status_code == 503
+    assert "Relay is temporarily unavailable. Try again later." in page(response)
+    assert "no-store" in response["Cache-Control"]
+    assert (round_.state, round_.closed_at) == (Round.State.OPEN, None)
+    assert "Round closed." not in stored_messages(client)
+    assert save.call_count == 1
+    assert domain_rows(*ROUND_RECORDS) == before
+
+
+@pytest.mark.ac("RND-6.1", "RND-6.5")
+@pytest.mark.django_db(transaction=True)
+def test_close_keeps_unread_messages_and_saves_session_before_commit(
+    coord_client, make_round
+):
+    round_ = open_with_case(make_round)
+    session = coord_client.session
+    request = HttpRequest()
+    request.session = session
+    session["_messages"] = SessionStorage(request).serialize_messages(
+        [Message(constants.SUCCESS, "Synthetic earlier notification.")]
+    )
+    session.save()
+    key = session.session_key
+    original_save = SessionStore.save
+    calls = []
+
+    def save_in_transaction(store, *args, **kwargs):
+        calls.append(connection.in_atomic_block)
+        assert Round.objects.get(pk=round_.pk).state == Round.State.CLOSED
+        return original_save(store, *args, **kwargs)
+
+    with mock.patch.object(SessionStore, "save", save_in_transaction):
+        response = close(coord_client, round_)
+    assert response.status_code == 302
+    assert calls == [True]
+    assert coord_client.cookies["sessionid"].value == key
+    assert COOKIE not in response.cookies
+    html = page(coord_client.get(detail(round_.pk)))
+    assert html.count("Synthetic earlier notification.") == 1
+    assert html.count("Round closed.") == 1
+    html = page(coord_client.get(detail(round_.pk)))
+    assert "Synthetic earlier notification." not in html
+    assert "Round closed." not in html
+
+
+@pytest.mark.ac("RND-6.5")
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("failure", ["close-write", "commit"])
+def test_close_transaction_failure_keeps_session_and_round_unchanged(
+    coordinator, make_round, failure
+):
+    round_ = open_with_case(make_round)
+    client = signed_in(coordinator, raise_request_exception=False)
+    before = domain_rows(*ROUND_RECORDS)
+    key = client.cookies["sessionid"].value
+    session_before = Session.objects.get(session_key=key).session_data
+    target = connection if failure == "commit" else QuerySet
+    method = "commit" if failure == "commit" else "update"
+    with mock.patch.object(target, method, side_effect=OperationalError("synthetic")):
+        response = close(client, round_)
+    assert response.status_code == 503
+    assert "no-store" in response["Cache-Control"]
+    round_.refresh_from_db()
+    assert (round_.state, round_.closed_at) == (Round.State.OPEN, None)
+    assert domain_rows(*ROUND_RECORDS) == before
+    assert Session.objects.get(session_key=key).session_data == session_before
+    assert "Round closed." not in page(client.get(detail(round_.pk)))
+
+
+def delete_session_elsewhere(key):
+    """Commit a concurrent sign-out's session deletion on another connection."""
+    try:
+        Session.objects.filter(session_key=key).delete()
+    finally:
+        connections.close_all()
+
+
+@pytest.mark.ac("RND-6.5")
+@pytest.mark.django_db(transaction=True)
+def test_close_does_not_resurrect_a_concurrently_deleted_session(
+    coordinator, make_round
+):
+    round_ = open_with_case(make_round)
+    client = signed_in(coordinator, raise_request_exception=False)
+    key = client.cookies["sessionid"].value
+    original_save = SessionStore.save
+    calls = []
+
+    def save_after_sign_out(store, *args, **kwargs):
+        calls.append(store.session_key)
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            executor.submit(delete_session_elsewhere, key).result(timeout=10)
+        return original_save(store, *args, **kwargs)
+
+    with mock.patch.object(SessionStore, "save", save_after_sign_out):
+        response = close(client, round_)
+    assert response.status_code == 503
+    assert calls == [key]
+    round_.refresh_from_db()
+    assert (round_.state, round_.closed_at) == (Round.State.OPEN, None)
+    assert not Session.objects.exists()
 
 
 @pytest.mark.ac("RND-5.8")

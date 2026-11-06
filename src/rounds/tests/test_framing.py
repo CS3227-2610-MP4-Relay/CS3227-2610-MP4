@@ -83,15 +83,28 @@ def failing_session_save():
     return mock.patch.object(Session, "save", side_effect=OperationalError("synthetic"))
 
 
-def test_a_failed_session_save_after_a_view_still_refuses_framing(
-    coordinator, make_round
+@pytest.mark.parametrize(
+    ("action", "status"),
+    [
+        ("publish", 400),
+        pytest.param("close", 503, marks=pytest.mark.ac("RND-6.5")),
+    ],
+)
+def test_a_failed_session_save_still_refuses_framing(
+    coordinator, make_round, action, status
 ):
-    # SessionMiddleware makes this 400 (SessionInterrupted) after the view, so
-    # only middleware above it sees the response.
-    opened = open_with_case(make_round)
+    # Publish still fails in SessionMiddleware; close fails inside its view.
+    round_ = (
+        draft_with_case(make_round)
+        if action == "publish"
+        else open_with_case(make_round)
+    )
     client = signed_in(coordinator, raise_request_exception=False)
     with failing_session_save():
-        refuses_framing(close(client, opened), 400)
+        response = client.post(
+            f"{detail(round_.pk)}{action}/", {"label": "Synthetic build"}
+        )
+        refuses_framing(response, status)
 
 
 def test_a_failed_new_session_at_sign_out_still_refuses_framing(coordinator):
