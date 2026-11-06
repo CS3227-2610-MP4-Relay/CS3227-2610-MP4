@@ -1,5 +1,6 @@
 """RES-2 tester result entry through real Django forms and requests."""
 
+import re
 from unittest.mock import patch
 
 import pytest
@@ -479,9 +480,16 @@ def test_coordinator_context_and_observation_escape_and_isolate(tester, target):
     for text in (MARKUP, "Synthetic context\u202e", MARKUP + "\u2069"):
         assert f'<span dir="auto">{escape(text)}</span>' in initial
     assert SCRIPT_TAG not in initial and IMG_TAG not in initial
+    expected_scripts = [
+        '<script id="saved-result-values" type="application/json">',
+        '<script id="unsaved-result-warning">',
+    ]
+    assert re.findall(r"<script\b[^>]*>", initial) == expected_scripts
     refused = client.post(url(target), payload("fail", MARKUP + "\u202e"))
     assert refused.status_code == 200
     assert escape(MARKUP) in page(refused) and SCRIPT_TAG not in page(refused)
+    assert IMG_TAG not in page(refused)
+    assert re.findall(r"<script\b[^>]*>", page(refused)) == expected_scripts
     assert 'dir="auto"' in page(refused)
     assert (
         client.post(
@@ -497,3 +505,4 @@ def test_coordinator_context_and_observation_escape_and_isolate(tester, target):
         '<span dir="auto">Synthetic line\u200b</span>' in body
     )
     assert SCRIPT_TAG not in body and IMG_TAG not in body and "<form" not in body
+    assert re.findall(r"<script\b[^>]*>", body) == []

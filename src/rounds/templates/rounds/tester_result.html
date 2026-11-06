@@ -27,7 +27,7 @@
 <button class="secondary" type="submit" name="action" value="feedback">Observation feedback</button>
 </form>
 {{ form.initial|json_script:"saved-result-values" }}
-<script>
+<script id="unsaved-result-warning">
 (() => {
   const form = document.getElementById("result-form");
   const saved = JSON.parse(document.getElementById("saved-result-values").textContent);
