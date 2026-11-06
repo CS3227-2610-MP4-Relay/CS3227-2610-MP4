@@ -14,7 +14,7 @@
 <p>{% include "rounds/observation.html" with observation=entry.result.observation %}</p>
 {% else %}
 {% if entry.result %}<div class="state"><p>Status: Draft</p></div>{% endif %}
-<form method="post">
+<form method="post" id="result-form">
 {% csrf_token %}
 {% for error in form.non_field_errors %}<div class="error"><p>{{ error }}</p></div>{% endfor %}
 {% for field in form %}
@@ -26,5 +26,42 @@
 <p>Observation feedback saves your draft and opens the AI feedback page. Choose an outcome first; Fail also needs an observation.</p>
 <button class="secondary" type="submit" name="action" value="feedback">Observation feedback</button>
 </form>
+{{ form.initial|json_script:"saved-result-values" }}
+<script>
+(() => {
+  const form = document.getElementById("result-form");
+  const saved = JSON.parse(document.getElementById("saved-result-values").textContent);
+  const outcome = form.elements.namedItem("outcome");
+  const observation = form.elements.namedItem("observation");
+  const lineEndings = value => value.replace(/\r\n?/g, "\n");
+  let posting = false;
+  const dirty = () => outcome.value !== (saved.outcome || "") ||
+    lineEndings(observation.value) !== lineEndings(saved.observation || "");
+  const warn = event => {
+    if (!posting && dirty()) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+  };
+  const update = () => {
+    if (!posting && dirty()) {
+      window.addEventListener("beforeunload", warn);
+    } else {
+      window.removeEventListener("beforeunload", warn);
+    }
+  };
+  form.addEventListener("input", update);
+  form.addEventListener("change", update);
+  form.addEventListener("submit", () => {
+    posting = true;
+    update();
+  });
+  window.addEventListener("pageshow", () => {
+    posting = false;
+    update();
+  });
+  update();
+})();
+</script>
 {% endif %}
 {% endblock %}

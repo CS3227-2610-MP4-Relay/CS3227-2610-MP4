@@ -84,6 +84,8 @@ def test_native_validation_and_observation_limits_preserve_saved_draft(
         expect(page.locator("select:invalid")).to_have_count(1)
         expect(observation).to_have_value("Synthetic unsaved valid observation")
         assert posts == []
+        # This journey deliberately discards invalid edits to inspect saved state.
+        page.once("dialog", lambda dialog: dialog.accept())
         page.reload()
         expect(outcome).to_have_value("pass")
         expect(observation).to_have_value("Synthetic saved draft")
@@ -103,6 +105,7 @@ def test_native_validation_and_observation_limits_preserve_saved_draft(
         at_limit = "b" * 2000
         expect(observation).to_have_value(at_limit)
         assert posts == []
+        page.once("dialog", lambda dialog: dialog.accept())
         page.reload()
         expect(observation).to_have_value(below_limit)
         page.get_by_role("link", name="Back to round", exact=True).click()
