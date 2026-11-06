@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Beta Tester added{% endblock %}
+{% block content %}
+<h1>Beta Tester added</h1>
+<p>Workspace: {{ workspace.name }}</p>
+<table>
+  <thead><tr><th>Role</th><th>Username</th><th>Password</th></tr></thead>
+  <tbody><tr><td>{{ credential.role }}</td><td>{{ credential.username }}</td><td>{{ credential.password }}</td></tr></tbody>
+</table>
+<p>Save this password now. It will not be shown again.</p>
+<p><a class="action secondary" href="{% url 'accounts:coordinator' %}">Coordinator home</a></p>
+{% endblock %}

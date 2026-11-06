@@ -19,9 +19,9 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 
 from rounds.models import Round
 
-from . import demo, limits
+from . import demo, limits, testers
 from .forms import SignInForm
-from .models import User
+from .models import User, Workspace
 from .workspaces import workspace_records
 
 logger = logging.getLogger(__name__)
@@ -165,3 +165,36 @@ def create_demo(request):
 def csrf_failure(request, reason=""):
     """Refuse a request that failed CSRF or Origin checks with the 403 page."""
     return render(request, "403.html", status=403)
+
+
+@never_cache
+@require_POST
+@sensitive_variables()
+def add_tester(request):
+    """Create one own-workspace tester and render credentials atomically (ACC-4)."""
+    try:
+        if not request.user.is_authenticated:
+            return redirect("accounts:sign-in")
+        if request.user.role != User.Role.COORDINATOR:
+            return render(request, "403.html", status=403)
+        page = None
+        if testers.tester_count(request.user) < testers.TESTER_LIMIT:
+            password, hashed = demo.generate_password()
+            with transaction.atomic():
+                limits.start()
+                workspace = Workspace.objects.select_for_update().get(
+                    pk=request.user.workspace_id
+                )
+                if testers.tester_count(request.user) < testers.TESTER_LIMIT:
+                    credential = testers.create_tester(request.user, password, hashed)
+                    page = render_to_string(
+                        "accounts/tester_added.html",
+                        {"workspace": workspace, "credential": credential},
+                    )
+        if page is None:
+            return render(request, "accounts/tester_limit.html", status=409)
+        return HttpResponse(page)
+    except Exception:  # noqa: BLE001 -- exception text may contain a password.
+        # Catch every creation failure without emitting exception text or frames.
+        logger.error("Beta Tester creation failed.")
+        return render(request, "503.html", status=503)

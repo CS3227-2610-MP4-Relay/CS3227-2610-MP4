@@ -1,6 +1,10 @@
 {% extends "accounts/home.html" %}
 {% load rounds_text %}
 {% block sections %}
+<form method="post" action="{% url 'accounts:add-tester' %}">
+  {% csrf_token %}
+  <button type="submit">Add Beta Tester</button>
+</form>
 <h2>Rounds</h2>
 <p><a class="action" href="{% url 'rounds:new' %}">New round</a></p>
 {% if rounds %}

@@ -49,8 +49,14 @@ def draw_suffix():
 @sensitive_variables("password", "passwords")
 def generate_passwords():
     """Return a (password, hash) pair per demo account, hashed before any write."""
-    passwords = [_random(PASSWORD_ALPHABET, 16) for _ in ACCOUNTS]
-    return [(password, make_password(password)) for password in passwords]
+    return [generate_password() for _ in ACCOUNTS]
+
+
+@sensitive_variables()
+def generate_password():
+    """Return one generated password and its hash, before taking any lock."""
+    password = _random(PASSWORD_ALPHABET, 16)
+    return password, make_password(password)
 
 
 def _usernames(suffix):
