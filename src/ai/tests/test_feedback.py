@@ -92,16 +92,20 @@ def test_snapshot_freezes_criteria_values(change):
 
 
 @pytest.mark.ac("RES-4.3")
-@pytest.mark.parametrize("size", [7999, 8000, 8001])
-def test_encoded_input_limit_includes_instructions_and_json_escaping(size):
+@pytest.mark.parametrize("size", [32767, 32768, 32769])
+@pytest.mark.parametrize("character", ['"', "\U0001f600"])
+def test_encoded_input_limit_includes_instructions_and_json_escaping(size, character):
     entry = source_entry()
     entry.result.observation = ""
     base = len(feedback.INSTRUCTIONS) + len(
         feedback.encode(feedback.snapshot(entry, []))
     )
-    entry.result.observation = '"' * ((size - base) // 2) + "x" * ((size - base) % 2)
+    width = 2 if character == '"' else 1
+    entry.result.observation = character * ((size - base) // width) + "x" * (
+        (size - base) % width
+    )
     source = feedback.snapshot(entry, [])
-    if size > 8000:
+    if size > 32768:
         with pytest.raises(feedback.InputTooLarge):
             feedback.encode(source)
     else:

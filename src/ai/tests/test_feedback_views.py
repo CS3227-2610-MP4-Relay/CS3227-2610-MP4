@@ -15,6 +15,7 @@ from django.views.debug import ExceptionReporter
 
 from accounts.models import User
 from ai import feedback, feedback_views, gateway
+from ai.models import CallRecord
 from rounds import services
 from rounds.models import Case, CaseCriterion, Criterion, Result, Round
 from rounds.tests.conftest import (
@@ -256,14 +257,64 @@ def test_empty_or_unavailable_keeps_source_and_manual_navigation(
 
 
 @pytest.mark.ac("RES-4.3")
-def test_oversize_source_is_refused_before_gateway_without_truncation(tester, target):
-    Case.objects.filter(pk=target[1].pk).update(
-        steps='"' * 2000, expected_result='"' * 1000
+@pytest.mark.parametrize(
+    ("character", "size"), [("x", 17129), ("\\", 32249), ('"', 32249)]
+)
+def test_maximum_valid_source_reaches_gateway_without_truncation(
+    tester, target, character, size
+):
+    expected = maximum_source(target, character)
+    before = domain_rows()
+    response, complete = post(signed_in(tester), target)
+    assert (
+        response.status_code == 200
+        and "Questions to consider" in response.content.decode()
     )
-    Result.objects.filter(pk=target[3].pk).update(observation='"' * 2000)
+    complete.assert_called_once()
+    _, instructions, data = complete.call_args.args
+    assert instructions == feedback.INSTRUCTIONS
+    assert len(instructions) + len(data) == size
+    assert json.loads(data) == expected
+    assert len(expected["criteria"]) == 20
+    assert domain_rows() == before
+
+
+def maximum_source(target, character, extra_criteria=0):
+    """Fill existing product limits; extra links model out-of-band stored data."""
+    criteria = list(target[0].criteria.all())
+    Criterion.objects.bulk_create(
+        [
+            Criterion(round=target[0], text=character * 500)
+            for _ in range(20 + extra_criteria - len(criteria))
+        ]
+    )
+    target[0].criteria.update(text=character * 500)
+    target[1].criteria.set(target[0].criteria.all())
+    Case.objects.filter(pk=target[1].pk).update(
+        title=character * 120, steps=character * 2000, expected_result=character * 1000
+    )
+    Result.objects.filter(pk=target[3].pk).update(observation=character * 2000)
+    return {
+        "observation": character * 2000,
+        "case": {
+            "title": character * 120,
+            "steps": character * 2000,
+            "expected_result": character * 1000,
+        },
+        "criteria": [character * 500] * (20 + extra_criteria),
+    }
+
+
+@pytest.mark.ac("RES-4.3")
+def test_oversize_source_is_refused_before_gateway_without_truncation(tester, target):
+    maximum_source(target, "\\", extra_criteria=1)
+    before = domain_rows()
+    quota_before = CallRecord.objects.count()
     response, complete = post(signed_in(tester), target)
     assert response.status_code == 200 and TOO_LONG in response.content.decode()
     complete.assert_not_called()
+    assert CallRecord.objects.count() == quota_before
+    assert domain_rows() == before
 
 
 @pytest.mark.ac("RES-4.3")
