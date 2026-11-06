@@ -32,3 +32,10 @@ Goal: Make result-entry server validation errors available in their fields' acce
 - Full pytest result: **1 failed, 3015 passed, 5 skipped in 1403.41s**. The sole failure was `src/relay/tests/test_database.py::test_postgresql_synthetic_roundtrip`, whose fixed-environment assertion requires `test_relay_test`; the temporary adapter instead supplied `test_relay_156`. All result and browser tests passed.
 - Coordinator removed the adapter's test-name override, retaining isolated port 55436 and restoring canonical `test_relay_test`. On that repaired environment, `pytest src/relay/tests/test_database.py --ds=slice156_settings -q --tb=short` produced **1 passed in 2.41s**. No repository code or test expectation changed for this harness repair. The local full run is not green, and its environment differs from the repaired adapter; final-head CI full verification remains required. Coordinator requested no duplicate 23-minute local full run.
 - Implementation checkpoint ready for coordinator freeze and independent verification; delivery awaits final-head CI results.
+
+## Independent review and delivery
+
+- Fixed candidate: `f8adaad43506733793df05371dce01ecdb7c55f3..cf154b73e393b8bbd9d2a55475916eb9588ac72a`, captured in private `review-candidate.json`. Verifier scope and unchanged-manifest checks passed; no code, criterion, scope or documentation defect was found. No security-specialist trigger applied to this template-only behavior change.
+- Verifier independently ran the nine new server cases, nine new browser cases and database-contract check on the repaired adapter: **19 passed in 34.05s**. Ruff and formatting passed independently. This focused result does not replace full verification.
+- At the review checkpoint, canonical full verification remained pending. Delivery requires the latest draft-PR head's `verify` and `site` jobs to succeed after the summary commit; actual hosted results belong on that PR. Merge, release and human manual/log review remain human decisions.
+- [Session log](../../logs/Whimsyturtle/042-fix-accessible-result-errors.md) records agent identities, review limits, usage and environment repairs.
