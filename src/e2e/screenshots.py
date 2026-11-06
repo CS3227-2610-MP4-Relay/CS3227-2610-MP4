@@ -1,9 +1,10 @@
 """Regenerate the User Guide screenshots in ``docs/images/`` from the real app.
 
 This drives one synthetic journey through Django's live server with the browser
-harness: create a demo workspace, prepare and publish its sample round as the
-coordinator, record a Pass and a Fail (with observation feedback) as its two
-testers, then review results, request a retest and view **My results**. The AI
+harness: create a demo workspace, add a tester and show password management,
+prepare and publish its sample round as the coordinator, record a Pass and a
+Fail (with observation feedback) as its two initial testers, then review results,
+request a retest and view **My results**. The AI
 gateway is mocked, as in ``test_drafting.py`` and ``test_feedback.py``, so no
 provider is called. The demo passwords shown are random and exist only in the
 throwaway test database.
@@ -14,6 +15,10 @@ it. To refresh the images, with the test database available, run::
     pytest src/e2e/screenshots.py
 
 then review every changed PNG before committing it.
+
+To refresh only the account-management images, select::
+
+    pytest src/e2e/screenshots.py::test_account_management_screenshots
 """
 
 import json
@@ -74,15 +79,17 @@ def new_session(page, live_server, credentials):
     return session
 
 
-def demo_workspace(page):
+def demo_workspace(page, *, capture=True):
     """Create a demo workspace from the start page and read its credentials."""
     page.goto("/")
-    shot(page, "start-page")
+    if capture:
+        shot(page, "start-page")
     page.get_by_role("button", name="Create a demo workspace", exact=True).click()
     expect(
         page.get_by_role("heading", name="Your demo workspace", exact=True)
     ).to_be_visible()
-    shot(page, "demo-workspace")
+    if capture:
+        shot(page, "demo-workspace")
     rows = page.get_by_role("row").filter(has=page.get_by_role("cell"))
     expect(rows).to_have_count(3)
     accounts = []
@@ -97,12 +104,37 @@ def demo_workspace(page):
     return accounts
 
 
-def prepare_and_publish(page):
-    """As the coordinator, show the Draft round, its forms and AI drafting."""
+def account_management(page):
+    """Capture the coordinator's tester creation and password-management pages."""
     expect(
         page.get_by_role("heading", name="Coordinator home", exact=True)
     ).to_be_visible()
+    expect(
+        page.get_by_role("button", name="Add Beta Tester", exact=True)
+    ).to_be_visible()
+    expect(
+        page.get_by_role("link", name="Beta Tester passwords", exact=True)
+    ).to_be_visible()
     shot(page, "coordinator-home")
+    page.get_by_role("button", name="Add Beta Tester", exact=True).click()
+    expect(
+        page.get_by_role("heading", name="Beta Tester added", exact=True)
+    ).to_be_visible()
+    shot(page, "beta-tester-added")
+    page.get_by_role("link", name="Coordinator home", exact=True).click()
+    page.get_by_role("link", name="Beta Tester passwords", exact=True).click()
+    expect(
+        page.get_by_role("heading", name="Beta Tester passwords", exact=True)
+    ).to_be_visible()
+    expect(page.get_by_role("button", name="Reset password", exact=True)).to_have_count(
+        3
+    )
+    shot(page, "beta-tester-passwords")
+    page.get_by_role("link", name="Coordinator home", exact=True).click()
+
+
+def prepare_and_publish(page):
+    """As the coordinator, show the Draft round, its forms and AI drafting."""
     page.get_by_role("link", name="Sample round", exact=True).click()
     expect(page.get_by_text("State: Draft", exact=True)).to_be_visible()
     round_url = page.url
@@ -205,6 +237,7 @@ def test_user_guide_screenshots(page, live_server):
     coordinator, first, second = demo_workspace(page)
     page.get_by_role("link", name="Sign in", exact=True).click()
     sign_in(page, coordinator, "username")
+    account_management(page)
     round_url = prepare_and_publish(page)
 
     sessions = [new_session(page, live_server, tester) for tester in (first, second)]
@@ -221,3 +254,12 @@ def test_user_guide_screenshots(page, live_server):
     finally:
         for session in sessions:
             session.context.close()
+
+
+def test_account_management_screenshots(page):
+    """Refresh only the guide images for adding testers and resetting passwords."""
+    IMAGES.mkdir(exist_ok=True)
+    page.set_viewport_size(VIEWPORT)
+    coordinator, _, _ = demo_workspace(page, capture=False)
+    sign_in(page, coordinator, "username")
+    account_management(page)
