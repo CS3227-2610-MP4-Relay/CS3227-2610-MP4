@@ -142,8 +142,9 @@ def leave_warning(page, action, *, stay=False):
         dialogs.append(dialog.type)
         dialog.dismiss() if stay else dialog.accept()
 
-    page.once("dialog", respond)
     with page.expect_event("dialog"):
+        # Resolve the waiter before accepting a dialog that can close the page.
+        page.once("dialog", respond)
         action()
     assert dialogs == ["beforeunload"]
 
