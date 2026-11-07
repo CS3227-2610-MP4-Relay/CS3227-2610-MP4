@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Action not available{% endblock %}
 {% block content %}
+{% if back %}{% include "page_navigation.html" %}{% endif %}
 <div class="error"><h1>{{ message }}</h1></div>
 {% endblock %}

@@ -7,6 +7,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import DatabaseError
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 
@@ -141,4 +142,8 @@ def result_entry(request, round_id, case_id, build_id):
                 request, "rounds/tester_result.html", {"entry": current, "form": form}
             )
     except results.Conflict as conflict:
-        return conflict_page(request, str(conflict))
+        return conflict_page(
+            request,
+            str(conflict),
+            back=reverse("accounts:tester-round", args=[round_id]),
+        )
