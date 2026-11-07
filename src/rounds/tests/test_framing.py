@@ -86,24 +86,26 @@ def failing_session_save():
 @pytest.mark.parametrize(
     ("action", "status"),
     [
-        ("publish", 400),
+        pytest.param("publish", 503, marks=pytest.mark.ac("RND-3.7")),
+        pytest.param("retest", 503, marks=pytest.mark.ac("RND-5.9")),
         pytest.param("close", 503, marks=pytest.mark.ac("RND-6.5")),
     ],
 )
 def test_a_failed_session_save_still_refuses_framing(
     coordinator, make_round, action, status
 ):
-    # Publish still fails in SessionMiddleware; close fails inside its view.
+    # Each action persists its notification before committing.
     round_ = (
         draft_with_case(make_round)
         if action == "publish"
         else open_with_case(make_round)
     )
     client = signed_in(coordinator, raise_request_exception=False)
+    data = {"label": "Synthetic build"}
+    if action == "retest":
+        data["cases"] = [round_.cases.get().pk]
     with failing_session_save():
-        response = client.post(
-            f"{detail(round_.pk)}{action}/", {"label": "Synthetic build"}
-        )
+        response = client.post(f"{detail(round_.pk)}{action}/", data)
         refuses_framing(response, status)
 
 
