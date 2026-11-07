@@ -271,9 +271,11 @@ With JavaScript enabled, leaving **Record result** with unsaved **Outcome** or *
 
 An empty observation appears as italic *No observation.* on submitted result entry, **My results**, observation feedback and coordinator results. If you type "No observation." yourself, it appears as ordinary observation text.
 
-Results belong to the build shown when you opened the entry page. After the coordinator requests a retest, reload the round and check the selected case's **Current build**. Test the fix outside Relay on that build, then choose **Record result**: the new build starts with empty **Outcome** and **Observation** fields. Choose **Pass** or **Fail** and **Submit** a separate result; earlier submissions remain available in [My results](#review-my-results). Cases omitted from the retest keep their existing build and result entry. If the build changes before you save or submit, the page says "This build is no longer current. Reload the round to record a result." Return to the round, reload, and choose **Record result** for the new build.
+Results belong to the build shown when you opened the entry page. After the coordinator requests a retest, reload the round and check the selected case's **Current build**. Test the fix outside Relay on that build, then choose **Record result**: the new build starts with empty **Outcome** and **Observation** fields. Choose **Pass** or **Fail** and **Submit** a separate result; earlier submissions remain available in [My results](#review-my-results). Cases omitted from the retest keep their existing build and result entry. If the build changes before you save or submit, the page says "This build is no longer current. Reload the round to record a result." Choose **Back to round**, check the current build and choose **Record result** for it.
 
 Choose **View result** to read your submitted result while its build is current and the round is Open. Once the round closes, an entry page says "This action is not available while the round is Closed." and saves nothing. The round's instructions remain available. If storage fails, the page says "Relay is temporarily unavailable. Try again later." and no part of the result change is saved.
+
+Result-entry refusals for a newer build, a Closed round or an already submitted result offer **Back to round** and **Tester home** above the message. **Back to round** opens the round's current details; a Closed round remains read-only. Rejected edits are not saved or carried to another build.
 
 ## Observation feedback
 
@@ -302,7 +304,7 @@ Only your own results appear. This page is read-only, including drafts. Reload t
 
 ## Error pages
 
-Each of these pages shows only its message:
+These pages show the messages below. Result-entry refusals also include the navigation described under [Save and submit a result](#save-and-submit-a-result).
 
 | Message | When |
 | --- | --- |

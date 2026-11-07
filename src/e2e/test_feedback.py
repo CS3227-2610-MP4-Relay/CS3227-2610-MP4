@@ -184,7 +184,7 @@ def test_unsaved_result_browser_exits_warn_without_saving(
     browser_accounts["expected"] = ("pass", ORIGINAL, False)
 
 
-@pytest.mark.ac("RES-2.9", "RES-2.11", "RES-2.12")
+@pytest.mark.ac("RES-2.9", "RES-2.11", "RES-2.12", "RES-2.13")
 @pytest.mark.parametrize("saved", [False, True])
 def test_invalid_result_keeps_persisted_baseline_and_native_validation_guard(
     page, browser_accounts, saved
@@ -204,6 +204,7 @@ def test_invalid_result_keeps_persisted_baseline_and_native_validation_guard(
     expect(
         page.get_by_text("Enter an observation for Fail.", exact=True)
     ).to_be_visible()
+    expect(observation).to_have_accessible_description("Enter an observation for Fail.")
     leave_warning(page, back.click, stay=True)
     expect(outcome).to_have_value("fail")
     expect(observation).to_have_value("")
@@ -220,6 +221,52 @@ def test_invalid_result_keeps_persisted_baseline_and_native_validation_guard(
         browser_accounts["expected"] = ("pass", ORIGINAL, False)
     else:
         browser_accounts["expect_no_results"] = True
+
+
+@pytest.mark.ac("RES-2.2", "RES-2.13", "RES-4.9")
+@pytest.mark.parametrize("action", ["Save draft", "Submit", "Observation feedback"])
+@pytest.mark.parametrize("invalid", ["outcome", "observation", "both"])
+def test_result_errors_describe_fields_and_clear_after_correction(
+    page, browser_accounts, action, invalid
+):
+    save_draft(page, browser_accounts, "pass", "", save=False)
+    outcome = page.get_by_label("Outcome", exact=True)
+    observation = page.get_by_label("Observation", exact=True)
+    for control in (outcome, observation):
+        expect(control).to_have_accessible_description("")
+        expect(control).not_to_have_attribute("aria-invalid", "true")
+    outcome.select_option("fail" if invalid == "observation" else "")
+    observation.fill(
+        "\u200b"
+        if invalid == "both"
+        else "Synthetic valid"
+        if invalid == "outcome"
+        else ""
+    )
+    # Exercise server validation even when the native required constraint would stop it.
+    page.locator("#result-form").evaluate("form => form.noValidate = true")
+    with mock.patch("ai.feedback_views.gateway.complete") as complete:
+        page.get_by_role("button", name=action, exact=True).click()
+        expect(outcome).to_have_accessible_description(
+            "Choose Pass or Fail." if invalid != "observation" else ""
+        )
+        expect(observation).to_have_accessible_description(
+            "Enter an observation for Fail."
+            if invalid == "observation"
+            else "Enter an observation with a visible character."
+            if invalid == "both"
+            else ""
+        )
+        outcome.select_option("pass")
+        observation.fill("Synthetic corrected")
+        page.get_by_role("button", name="Save draft", exact=True).click()
+        expect(page.get_by_text("Status: Draft", exact=True)).to_be_visible()
+        for control in (outcome, observation):
+            expect(control).to_have_accessible_description("")
+            expect(control).not_to_have_attribute("aria-invalid", "true")
+        expect(page.locator('[id$="_error"]')).to_have_count(0)
+        complete.assert_not_called()
+    browser_accounts["expected"] = ("pass", "Synthetic corrected", False)
 
 
 @pytest.mark.ac("RES-2.9", "RES-2.11", "RES-2.12", "RES-4.9")

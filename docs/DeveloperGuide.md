@@ -99,6 +99,8 @@ Use the [verification procedure](Runbook.md#verify) for the isolated test databa
 
 Use the [production runbook](Runbook.md#production-deployment) together with the authoritative [release gate](../workflow/specs/TECHNICAL-SPEC.md#release-verification) for operator steps and their approval boundaries.
 
+Deployment smoke checks require the public runtime database readiness probe described in the [release verification contract](../workflow/specs/TECHNICAL-SPEC.md#release-verification).
+
 ## SoC LLM
 
 The [SoC LLM runbook](Runbook.md#soc-llm) contains local configuration and operator evaluation commands; feature and gateway contracts are linked under [AI assistance](#ai-assistance).

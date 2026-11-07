@@ -268,7 +268,7 @@ def test_private_draft_validation_reload_and_immutable_submission(
         coordinator_context.close()
 
 
-@pytest.mark.ac("RES-1.5", "RES-2.1", "RES-2.4", "RES-2.5")
+@pytest.mark.ac("RES-1.5", "RES-2.1", "RES-2.4", "RES-2.5", "PLT-4.14")
 def test_selected_retest_and_close_refuse_stale_forms_preserving_results(
     browser_accounts, page, live_server
 ):
@@ -322,11 +322,17 @@ def test_selected_retest_and_close_refuse_stale_forms_preserving_results(
                 exact=True,
             )
         ).to_be_visible()
-        page.goto(untouched_url)
+        expect(page.get_by_role("link", name="Tester home", exact=True)).to_have_count(
+            1
+        )
+        page.get_by_role("link", name="Back to round", exact=True).click()
+        expect(page).to_have_url(detail_url)
+        expand_records(page)
+        result_links(page).nth(1).click()
         expect(page.get_by_label("Observation", exact=True)).to_have_value(
             "Synthetic unchanged draft"
         )
-        page.goto(detail_url)
+        page.get_by_role("link", name="Back to round", exact=True).click()
         expect(result_links(page)).to_have_text(["Record result", "Continue draft"])
         expect(result_links(page).nth(1)).to_have_attribute("href", untouched_url)
         result_links(page).first.click()
@@ -357,7 +363,18 @@ def test_selected_retest_and_close_refuse_stale_forms_preserving_results(
                 exact=True,
             )
         ).to_be_visible()
-        page.goto(detail_url)
+        expect(
+            page.get_by_role("link", name="Back to round", exact=True)
+        ).to_have_count(1)
+        expect(
+            page.get_by_role("link", name="Back to round", exact=True)
+        ).to_have_attribute("href", detail_url.removeprefix(live_server.url))
+        page.get_by_role("link", name="Tester home", exact=True).click()
+        expect(
+            page.get_by_role("heading", name="Tester home", exact=True)
+        ).to_be_visible()
+        page.get_by_role("link", name="Synthetic result round", exact=True).click()
+        expect(page).to_have_url(detail_url)
         expect(page.get_by_text("State: Closed", exact=True)).to_be_visible()
         expect(result_links(page)).to_have_count(0)
         expect(page.locator("main form, main input, main button")).to_have_count(0)

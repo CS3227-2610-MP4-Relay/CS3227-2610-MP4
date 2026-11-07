@@ -201,7 +201,7 @@ SMOKE_PAGES = (
 
 
 def _smoke(host):
-    for path, status, heading in SMOKE_PAGES:
+    for path, status, heading in (*SMOKE_PAGES, ("/health/ready/", 200, b"ready\n")):
         actual, headers, body = request(
             f"https://{host}{path}",
             timeout=10,
@@ -210,6 +210,15 @@ def _smoke(host):
         )
         if actual != status or heading not in body:
             raise ValueError("Smoke response mismatch")
+        if path == "/health/ready/" and (
+            body != heading
+            or "no-store"
+            not in {
+                directive.strip().lower()
+                for directive in headers.get("Cache-Control", "").split(",")
+            }
+        ):
+            raise ValueError("Smoke readiness mismatch")
         for name, expected in (
             ("X-Frame-Options", "DENY"),
             ("Strict-Transport-Security", "max-age=31536000"),

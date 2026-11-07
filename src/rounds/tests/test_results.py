@@ -16,6 +16,7 @@ from accounts.models import User
 from rounds import results, services
 from rounds import tester as tester_views
 from rounds.models import BuildCase, Result, Round
+from rounds.views import conflict_page
 
 from .conftest import (
     DENIED,
@@ -184,6 +185,45 @@ def test_invalid_fields_independently_leave_draft_unchanged(
     no_store(response)
 
 
+@pytest.mark.ac("RES-2.2", "RES-2.13", "RES-4.9")
+@pytest.mark.parametrize("action", ["save", "submit", "feedback"])
+@pytest.mark.parametrize(
+    "outcome,observation,invalid",
+    [
+        ("", "Synthetic valid", {"outcome"}),
+        ("fail", "", {"observation"}),
+        ("", "\u200b", {"outcome", "observation"}),
+    ],
+)
+def test_field_error_references_resolve_once_to_own_errors(
+    tester, target, action, outcome, observation, invalid
+):
+    client = signed_in(tester)
+    initial = page(client.get(url(target)))
+    assert "aria-invalid" not in initial and "aria-describedby" not in initial
+    before = domain_rows()
+    response = client.post(url(target), payload(outcome, observation, action))
+    assert response.status_code == 200
+    body = page(response)
+    form = response.context["form"]
+    for name in ("outcome", "observation"):
+        control = re.search(rf'<(?:select|textarea)\b[^>]*name="{name}"[^>]*>', body)[0]
+        error_id = f"id_{name}_error"
+        if name in invalid:
+            assert 'aria-invalid="true"' in control
+            assert f'aria-describedby="{error_id}"' in control
+            assert body.count(f'id="{error_id}"') == 1
+            group = re.search(
+                rf'<div\b[^>]*id="{error_id}"[^>]*>(.*?)</div>', body, re.DOTALL
+            )[1]
+            for error in form[name].errors:
+                assert str(escape(error)) in group
+        else:
+            assert "aria-invalid" not in control and "aria-describedby" not in control
+            assert f'id="{error_id}"' not in body
+    assert domain_rows() == before
+
+
 @pytest.mark.ac("RES-2.2")
 def test_pass_invisible_only_and_missing_fields(tester, target):
     client = signed_in(tester)
@@ -327,7 +367,7 @@ def test_missing_foreign_and_cross_round_ids_are_fixed_404(
     assert domain_rows() == before
 
 
-@pytest.mark.ac("RES-2.4", "RES-2.5", "RES-4.9")
+@pytest.mark.ac("RES-2.4", "RES-2.5", "RES-4.9", "PLT-4.14")
 @pytest.mark.parametrize("action", [None, "feedback"])
 @pytest.mark.parametrize("conflict", ["closed", "stale", "submitted"])
 def test_conflicts_precede_invalid_form_and_preserve_rows(
@@ -354,11 +394,37 @@ def test_conflicts_precede_invalid_form_and_preserve_rows(
     response = client.post(url(target), {} if action is None else {"action": action})
     assert response.status_code == 409 and message in page(response)
     no_store(response)
+    assert_conflict_navigation(response, round_)
     if conflict != "submitted":
         response = client.get(url(target))
         assert response.status_code == 409 and message in page(response)
         no_store(response)
+        assert_conflict_navigation(response, round_)
     assert domain_rows() == before
+
+
+def assert_conflict_navigation(response, round_):
+    """Entry conflicts offer each authorized destination once before the error."""
+    body = page(response)
+    for label, destination in (
+        ("Tester home", reverse("accounts:tester")),
+        ("Back to round", reverse("accounts:tester-round", args=[round_.pk])),
+    ):
+        link = f'<a class="action secondary" href="{destination}">{label}</a>'
+        assert body.count(link) == 1
+        assert body.index(link) < body.index('<div class="error">')
+    assert "<form" not in body
+
+
+@pytest.mark.ac("PLT-4.14")
+def test_shared_conflict_without_entry_context_keeps_existing_actions(tester):
+    request = RequestFactory().get("/tester/")
+    request.user = tester
+    response = conflict_page(request, results.STALE)
+    assert response.status_code == 409
+    assert results.STALE in page(response)
+    assert "Tester home" not in page(response)
+    assert "Back to round" not in page(response)
 
 
 @pytest.mark.ac("RES-2.7", "RES-2.6")
