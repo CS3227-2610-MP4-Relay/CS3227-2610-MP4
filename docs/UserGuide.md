@@ -28,11 +28,11 @@ Each account has one role, **Test Coordinator** or **Beta Tester**, in one works
 
 Each new workspace starts with one round, **Sample round**, in the **Draft** state. It has 3 acceptance criteria and 4 test cases about an example to-do app, and each test case is linked to at least one criterion. Its Test Coordinator can [publish](#publish-a-round) it straight away by entering only a build label, or change it first like any Draft round. It counts toward the workspace's [limit of 20 rounds](#titles-and-limits).
 
-Creating a workspace does not sign you in. Each workspace is separate: its accounts never see another workspace's records. Resubmitting the page, which your browser asks about first, creates another new workspace rather than showing the same passwords again, and the browser's back button may still show the earlier page. While you are signed in, choosing **Create a demo workspace** takes you to your own home page and creates nothing.
+Creating a workspace does not sign you in. Accounts access records in their own workspace. Resubmitting the creation request can create another workspace, subject to the limits below; your browser may ask for confirmation first. The browser's back button may still show an earlier credentials page. While you are signed in, choosing **Create a demo workspace** takes you to your own home page without creating a workspace.
 
-If creation fails, the page says "Relay is temporarily unavailable. Try again later." and nothing is created.
+If creation shows an error, follow the guidance under [Error pages](#error-pages).
 
-Each network address can create up to 10 workspaces an hour, and Relay up to 200 a day in total. After that, the page says "Too many demo workspaces have been created recently. Try again later." and nothing is created.
+Each network address can create up to 10 workspaces an hour, and Relay up to 200 a day in total. When either limit is reached, creation is refused with "Too many demo workspaces have been created recently. Try again later."
 
 ## Add a Beta Tester
 
@@ -42,9 +42,9 @@ Each network address can create up to 10 workspaces an hour, and Relay up to 200
 
 ![The Beta Tester added page showing the workspace, the new tester's Role, Username and Password, the save-password reminder and Coordinator home link](images/beta-tester-added.png)
 
-A workspace can have 10 Beta Testers, including its initial two. Once full, the page says "This workspace already has 10 Beta Testers." and creates nothing. Use **Beta Tester passwords** to find tester usernames and reset their passwords; account editing, removal and retrieval of earlier passwords are unavailable.
+A workspace can have 10 Beta Testers, including its initial two. Once full, another creation attempt shows "This workspace already has 10 Beta Testers." Use **Beta Tester passwords** to find tester usernames and reset their passwords; account editing, removal and retrieval of earlier passwords are unavailable.
 
-Reloading and confirming browser resubmission can create another tester until the limit is reached. Returning home does not show the password again, although your browser's back button may redisplay an earlier response. If creation fails, "Relay is temporarily unavailable. Try again later." appears and no account is created.
+Resubmitting the creation request can create another tester until the limit is reached. Returning home does not show the password again, although your browser's back button may redisplay an earlier response. If an error interrupts creation, check **Beta Tester passwords** for the account before trying again.
 
 ## Reset a Beta Tester's password
 
@@ -57,7 +57,7 @@ Reloading and confirming browser resubmission can create another tester until th
 
 The username, workspace and testing history stay the same. The old password stops working, and existing tester sessions lose access on their next request. The tester signs in with the replacement password.
 
-Returning to the list or home does not show the new password again. Reloading and confirming browser resubmission resets it again; only the latest successful reset's password works. Your browser's back button may redisplay an earlier response. If reset fails, "Relay is temporarily unavailable. Try again later." appears and the existing password and tester sessions remain usable. These controls reset only Beta Tester passwords; coordinator account recovery is unavailable.
+Returning to the list or home does not show the new password again. Resubmitting the reset request can reset it again; use the password from the latest successful reset. Your browser's back button may redisplay an earlier response. If a reset shows an error, return to **Beta Tester passwords** and try again later. These controls reset only Beta Tester passwords; coordinator account recovery is unavailable.
 
 ## Sign in
 
@@ -68,7 +68,7 @@ Choose **Back to home** above the form to return to the start page.
 
 A Test Coordinator lands on **Coordinator home** and a Beta Tester on **Tester home**. Each home page shows `Username:` and `Workspace:` with your username and workspace name.
 
-If the username or password is wrong, or a field is blank, the page shows "Username or password is incorrect." and does not say which field was wrong. You are not signed in; if you were already signed in, you stay signed in as before. If signing in fails in storage, the page says "Relay is temporarily unavailable. Try again later." and you are not signed in.
+If the username or password is wrong, or a field is blank, the page shows "Username or password is incorrect." without identifying which field was wrong. Check your credentials and try again. For other errors, see [Error pages](#error-pages).
 
 After 30 failed sign-ins from one network address within 15 minutes, the sign-in page says "Too many sign-in attempts. Try again later." and does not sign anyone in from that address, even with the right password, until 15 minutes after the first of those failures. Successful sign-ins do not add to this count and do not reset it.
 
@@ -98,7 +98,7 @@ Only a Test Coordinator can prepare, publish, review, retest and close test roun
 
 ![Coordinator home showing the username, workspace, Sign out, Add Beta Tester, Beta Tester passwords, and the Rounds section with New round and Sample round (Draft)](images/coordinator-home.png)
 
-Whenever creating, publishing, retesting or closing a round, or saving or deleting anything in it, fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
+If a round action shows an error, return to the round page and check its current details before trying again.
 
 ### Create a round
 
@@ -116,9 +116,9 @@ The round page shows the new title. Choose **Back to round** above the edit form
 
 ### Titles and limits
 
-A title has 1 to 120 characters; spaces or line breaks at either end are removed. An empty title, a title of only spaces or invisible characters, or a longer one gets "Enter 1 to 120 characters." A title containing a null character gets "Null characters are not allowed." A title containing a hidden character that changes text direction gets "Hidden text-direction characters are not allowed." Letters of any language, accents and emoji are fine.
+A title has 1 to 120 characters; spaces or line breaks at either end are removed. An empty title, a title of only spaces or invisible characters, or a longer one gets "Enter 1 to 120 characters." A title containing a null character gets "Null characters are not allowed." A title containing a hidden character that changes text direction gets "Hidden text-direction characters are not allowed." Titles support letters in different languages, accents and emoji, subject to these checks.
 
-A workspace can have up to 20 rounds, including the sample round of a new demo workspace. Creating a 21st gets "This workspace has reached its limit of 20 rounds." Nothing deletes a round.
+A workspace can have up to 20 rounds, including the sample round of a new demo workspace. Creating a 21st gets "This workspace has reached its limit of 20 rounds." Relay has no round-deletion action.
 
 If you reach the round limit and need more rounds, sign out and [create a new demo workspace](#create-a-demo-workspace).
 
@@ -158,21 +158,21 @@ A round can have up to 20 acceptance criteria and 30 test cases. Adding a 21st c
 
 Use AI to draft suggestions from selected acceptance criteria, then review each one before adding it. You can also add test cases yourself with **Add test case**.
 
-AI requests need the SoC AI service configured, as described in the [Developer Guide](DeveloperGuide.md#soc-llm), and share a per-account and Relay-wide [quota](../workflow/specs/ai/llm-gateway.md#limits-and-accounting-proposed) with [observation feedback](#observation-feedback). Without the service, over the quota or while another of your AI requests is running, each feature shows its unavailable message.
+AI requests need the SoC AI service configured, as described in the [Developer Guide](DeveloperGuide.md#soc-llm), and share a per-account and Relay-wide [quota](../workflow/specs/ai/llm-gateway.md#limits-and-accounting-proposed) with [observation feedback](#observation-feedback). AI assistance can be unavailable when the service is not configured, a quota is reached or requests are already running.
 
 While a round is Draft, its page has a **Draft test cases with AI** link directly after **Add test case**. The drafting page says "Select 1 to 5 acceptance criteria. The selected criteria are sent to the SoC AI service to suggest test cases. Suggestions are not saved; review each one before adding it." It lists the round's criteria under **Acceptance criteria to draft from**, with a **Draft test cases** button, an **Add test case** link and a **Back to round** link.
 
-Tick one to five criteria and choose **Draft test cases**. With JavaScript enabled, the button is disabled and "Drafting test cases…" appears while you wait. When suggestions are returned, **Suggested test cases** shows each title, **Steps**, **Expected result** and **Covers acceptance criteria**. Review these beside the criteria; nothing is saved by drafting.
+Tick one to five criteria and choose **Draft test cases**. With JavaScript enabled, the button is disabled and "Drafting test cases…" appears while you wait. When suggestions are returned, **Suggested test cases** shows each title, **Steps**, **Expected result** and **Covers acceptance criteria**. Review these beside the criteria; drafting does not add test cases to the round.
 
 ![The Draft test cases with AI page with two criteria ticked and two Suggested test cases, each with Steps, Expected result, Covers acceptance criteria and a Use this draft button](images/ai-suggestions.png)
 
-The suggestions page says "Opens in a new tab. Keep this suggestions tab open to review another draft." Choose **Use this draft** to open **New test case** in a separate tab with the suggested fields and covered criteria filled in. The new page says "Pre-filled from an AI draft. Review it before adding it." Edit the fields and links as needed, then choose **Add test case** to save under the normal [test case limits](#criteria-and-test-case-limits). Closing a review tab without adding saves nothing.
+The suggestions page says "Opens in a new tab. Keep this suggestions tab open to review another draft." Choose **Use this draft** to open **New test case** with the suggested fields and covered criteria filled in. The new page says "Pre-filled from an AI draft. Review it before adding it." Edit the fields and links as needed, then choose **Add test case** to save under the normal [test case limits](#criteria-and-test-case-limits). Closing a review tab without adding does not create a test case.
 
 Return to the original suggestions tab to review another draft from the same response. Each draft needs its own review and **Add test case** action; choosing another suggestion does not request new AI output. Keep the suggestions tab open until you finish reviewing the response.
 
-If the service is unavailable or its reply cannot be used, the page says "Drafting is unavailable right now. You can still add test cases yourself." If it returns no drafts, or every ticked criterion is blank once hidden characters are removed, it says "No test cases were suggested for these criteria. You can still add test cases yourself."
+The drafting page may show "Drafting is unavailable right now. You can still add test cases yourself." if the service is unavailable or its reply cannot be used. If it returns no drafts, or every ticked criterion is blank once hidden characters are removed, it says "No test cases were suggested for these criteria. You can still add test cases yourself."
 
-With no criterion ticked, or more than five, the page says "Select 1 to 5 acceptance criteria." A ticked criterion that is no longer in the round, for example because it was deleted meanwhile, gets "Choose criteria from this round." A round with 30 test cases says "This round has reached its limit of 30 test cases." In every case your ticks are kept, the round, its criteria and its cases stay unchanged, and **Add test case** still works.
+With no criterion ticked, or more than five, the page says "Select 1 to 5 acceptance criteria." A ticked criterion that is no longer in the round, for example because it was deleted meanwhile, gets "Choose criteria from this round." A round with 30 test cases says "This round has reached its limit of 30 test cases." These requests do not add test cases. **Add test case** is subject to the same round and case limits.
 
 ### Publish a round
 
@@ -183,7 +183,7 @@ While a round is Draft, its round page ends with a **Build label** field and a *
 
 The round page shows "Round published." and "State: Open". An Open round cannot return to Draft.
 
-A build label has 1 to 100 characters; spaces or line breaks at either end are removed. An empty label, a label of only spaces or invisible characters, or a longer one gets "Enter 1 to 100 characters." next to the field, a label containing a null character gets "Null characters are not allowed.", and a label containing a hidden character that changes text direction gets "Hidden text-direction characters are not allowed." A round with no test cases gets "Add at least one test case before publishing." After any of these messages the round stays Draft, with your label still in the field.
+A build label has 1 to 100 characters; spaces or line breaks at either end are removed. An empty label, a label of only spaces or invisible characters, or a longer one gets "Enter 1 to 100 characters." next to the field, a label containing a null character gets "Null characters are not allowed.", and a label containing a hidden character that changes text direction gets "Hidden text-direction characters are not allowed." A round with no test cases gets "Add at least one test case before publishing." Correct the label or add a test case before trying again.
 
 ### An Open round
 
@@ -204,7 +204,7 @@ While a round is Open or Closed, its round page has a **Review results** link di
 
 ![The Results: Sample round page with the first case expanded, showing a Fail with an observation and a Pass with No observation. under Results for this build, and No results for this build yet. on the other cases](images/review-results.png)
 
-Only submitted results appear; a Beta Tester's saved draft stays private to them. After a [retest](#request-a-retest), a retested case's earlier results move under **Earlier builds**, newest build first, each starting with "Build:" and its build label, while its new build starts with "No results for this build yet." until someone submits. Results stay listed after the round is [closed](#close-a-round). The page is read-only: it cannot record, change or delete a result. Reload it to see results submitted since you opened it. If reading results fails, the page says "Relay is temporarily unavailable. Try again later."
+Only submitted results appear; a Beta Tester's saved draft stays private to them. After a [retest](#request-a-retest), a retested case's earlier results move under **Earlier builds**, newest build first, each starting with "Build:" and its build label, while its new build starts with "No results for this build yet." until someone submits. Results stay listed after the round is [closed](#close-a-round). The page is read-only: it cannot record, change or delete a result. Reload it to see results submitted since you opened it. If the page cannot load, try again later; see [Error pages](#error-pages).
 
 ### Request a retest
 
@@ -218,7 +218,7 @@ A retest asks for some of an Open round's cases to be tested again on a new buil
 
 The round page shows, for example, "Retest requested for 2 test cases on build 1.4.1-beta.", or "Retest requested for 1 test case on build 1.4.1-beta." for one case. The cases you ticked now show the new build as their **Current build**, and the other cases keep theirs. The new build is added to the end of the **Builds** list with the cases it covers; earlier builds stay listed with theirs, and the round's criteria and cases do not change. A case can be retested again later on another build. The **Request a retest** page also has a **Back to round** link.
 
-If something is wrong, the page shows again with your ticks and label kept:
+The form reports these input errors and limits:
 
 - With no case ticked: "Select at least one test case." next to **Test cases to retest**.
 - The build label follows the same rules as when publishing: "Enter 1 to 100 characters.", "Null characters are not allowed." or "Hidden text-direction characters are not allowed." next to **Build label**.
@@ -238,7 +238,7 @@ If testers have saved drafts still eligible for submission on current builds, th
 
 The round page shows "Round closed." once and "State: Closed". A Closed round cannot be reopened or returned to Draft.
 
-If saving the close fails, the page says "Relay is temporarily unavailable. Try again later." The round remains Open and no close notification is saved. Return to the round page to try again later.
+If closing shows an error, return to the round page and check its state before trying again.
 
 A Closed round's page still shows its criteria, its cases with their linked criteria and **Current build**, and the **Builds** list. It has no links or buttons for changing the round, no **Request a retest** link and no **Close round** button, but you can still [review results](#review-results).
 
@@ -253,29 +253,29 @@ A Closed round's page still shows its criteria, its cases with their linked crit
 
 ![The tester's Sample round page showing State: Open, My results, and the first test case expanded with its steps, expected result, linked criterion and Record result](images/tester-round.png)
 
-Both Beta Testers in a workspace see the same rounds. Draft rounds stay hidden. Each expanded case in an Open round shows **Record result** if you have no result for its current build, **Continue draft** for your saved draft, or **View result** for your submitted result. These actions reflect your own results. A Closed round remains available as read-only reference; after the coordinator closes it, reload to see "State: Closed" and "(Closed)" in the list, with the result-entry links removed.
+Beta Testers in the same workspace see the same rounds. Draft rounds stay hidden. Each expanded case in an Open round shows **Record result** if you have no result for its current build, **Continue draft** for your saved draft, or **View result** for your submitted result. These actions reflect your own results. A Closed round remains available as read-only reference; after the coordinator closes it, reload to see "State: Closed" and "(Closed)" in the list, with the result-entry links removed.
 
-If reading tests fails, the page says "Relay is temporarily unavailable. Try again later." Opening a Draft, missing or another workspace's round shows "Page not found."
+If the tests cannot load, try again later; see [Error pages](#error-pages). Opening a Draft, missing or another workspace's round shows "Page not found."
 
 ## Save and submit a result
 
 1. In an Open round, expand the case you tested and choose **Record result**, or **Continue draft** to resume your saved fields. The **Record result** page shows **Test case** and **Current build**.
 2. Choose **Pass** or **Fail** under **Outcome** and enter your **Observation**. Fail requires an observation; Pass allows it to be empty.
-3. Choose **Save draft** to keep working later. The page shows "Status: Draft" and your saved fields; they remain when you reload or sign in again. Each tester has a separate private draft for each case and build.
-4. Choose **Submit** when ready. You may submit directly or after saving a draft. The page shows "Status: Submitted", your outcome and your observation as read-only text. Submission is final; another attempt to save or submit it says "This result has already been submitted."
+3. Choose **Save draft** to keep working later. After saving, check that the page shows "Status: Draft" and the fields you intended to save. Each tester has a separate private draft for each case and build; later saves replace that draft.
+4. Choose **Submit** when ready. You may submit directly or after saving a draft. The page shows "Status: Submitted", your outcome and your observation as read-only text. Submission is final. Further attempts to save or submit can show "This result has already been submitted." or a round/build conflict described below.
 5. Choose **Back to round** to return to the case instructions.
 
-With JavaScript enabled, leaving **Record result** with unsaved **Outcome** or **Observation** changes asks for confirmation, including **Back to round**, **Tester home**, browser Back, reload and closing the tab. Stay to keep editing, or leave to discard the edits; the browser supplies the warning text and button labels. Reverting both fields to their saved values clears the warning. **Save draft**, **Submit** and **Observation feedback** proceed without it; invalid input keeps unsaved edits protected. The warning does not save your edits. Browsers can suppress it, especially on mobile or when the browser is terminated, and it is unavailable without JavaScript.
+With JavaScript enabled, leaving **Record result** with unsaved **Outcome** or **Observation** changes can show a browser confirmation, including when using **Back to round**, **Tester home**, browser Back, reload or closing the tab. Stay to keep editing, or leave to discard the edits; the browser supplies the warning text and button labels. Reverting both fields to their saved values clears the warning. **Save draft**, **Submit** and **Observation feedback** proceed without it; invalid input leaves the warning enabled for unsaved changes. The warning does not save your edits. Browsers can suppress it, especially on mobile or when the browser is terminated, and it is unavailable without JavaScript.
 
 ![The Record result page for Add a task on build 1.4.0-beta showing Status: Draft, Outcome Fail, an observation, and the Save draft, Submit and Observation feedback buttons](images/record-result.png)
 
-**Save draft**, **Submit** and [**Observation feedback**](#observation-feedback) apply the same checks. A missing outcome says "Choose Pass or Fail." An empty or invisible-only Fail observation says "Enter an observation for Fail." Observations allow at most 2000 characters after surrounding spaces and line breaks are removed; a line break counts as one character. A longer observation says "Enter at most 2000 characters." A nonempty invisible-only Pass observation says "Enter an observation with a visible character." Null characters and hidden text-direction characters get the same messages as [round text fields](#criteria-and-test-case-limits). Invalid input leaves your previously saved result unchanged.
+**Save draft**, **Submit** and [**Observation feedback**](#observation-feedback) apply the same checks. A missing outcome says "Choose Pass or Fail." An empty or invisible-only Fail observation says "Enter an observation for Fail." Observations allow at most 2000 characters after surrounding spaces and line breaks are removed; a line break counts as one character. A longer observation says "Enter at most 2000 characters." A nonempty invisible-only Pass observation says "Enter an observation with a visible character." Null characters and hidden text-direction characters get the same messages as [round text fields](#criteria-and-test-case-limits). Invalid input is not saved.
 
 An empty observation appears as italic *No observation.* on submitted result entry, **My results**, observation feedback and coordinator results. If you type "No observation." yourself, it appears as ordinary observation text.
 
 Results belong to the build shown when you opened the entry page. After the coordinator requests a retest, reload the round and check the selected case's **Current build**. Test the fix outside Relay on that build, then choose **Record result**: the new build starts with empty **Outcome** and **Observation** fields. Choose **Pass** or **Fail** and **Submit** a separate result; earlier submissions remain available in [My results](#review-my-results). Cases omitted from the retest keep their existing build and result entry. If the build changes before you save or submit, the page says "This build is no longer current. Reload the round to record a result." Choose **Back to round**, check the current build and choose **Record result** for it.
 
-Choose **View result** to read your submitted result while its build is current and the round is Open. Once the round closes, an entry page says "This action is not available while the round is Closed." and saves nothing. The round's instructions remain available. If storage fails, the page says "Relay is temporarily unavailable. Try again later." and no part of the result change is saved.
+Choose **View result** to read your submitted result while its build is current and the round is Open. Once the round closes, an entry page says "This action is not available while the round is Closed." and refuses the edit. The round's instructions remain available. If saving or submitting shows an error, check [My results](#review-my-results) before trying again.
 
 Result-entry refusals for a newer build, a Closed round or an already submitted result offer **Back to round** and **Tester home** above the message. **Back to round** opens the round's current details; a Closed round remains read-only. Rejected edits are not saved or carried to another build.
 
@@ -290,9 +290,9 @@ Result-entry refusals for a newer build, a Closed round or an already submitted 
 
 With JavaScript enabled, the request disables **Suggest missing details** and shows "Suggesting missing details…" while you wait.
 
-An empty reply says "No missing details were suggested. You can still edit your result yourself." If the source is too long, the page says "This observation and test case are too long for feedback. You can still edit your result yourself." If feedback is unavailable, including when the AI service is not configured or the [AI quota](#draft-test-cases-with-ai) is used up, it says "Feedback is unavailable right now. You can still edit your result yourself." You can still choose **Back to result** and continue manually.
+An empty reply says "No missing details were suggested. You can still edit your result yourself." If the source is too long, the page says "This observation and test case are too long for feedback. You can still edit your result yourself." You may see "Feedback is unavailable right now. You can still edit your result yourself." when the AI service is not configured, the [AI quota](#draft-test-cases-with-ai) is used up or another AI-service problem occurs. Choose **Back to result** to return to your result; editing follows the [same round, build and submission rules](#save-and-submit-a-result).
 
-Questions are not saved. Opening the feedback page again clears them; resubmitting its request asks for new feedback. If your saved source changes during a request, the page says "Your saved draft or test case changed. Reload before requesting feedback." Opening the feedback address directly without a saved draft says "Save a draft before requesting feedback." Submission, a newer build or a closed round prevents feedback with the same messages described under [Save and submit a result](#save-and-submit-a-result).
+Questions are not saved. Opening the feedback page again clears them; resubmitting its request asks for new feedback. If Relay detects a change to the saved source during a request, the page says "Your saved draft or test case changed. Reload before requesting feedback." Opening the feedback address directly without a saved draft says "Save a draft before requesting feedback." Submission, a newer build or a closed round prevents feedback with the same messages described under [Save and submit a result](#save-and-submit-a-result).
 
 ## Review my results
 
@@ -306,12 +306,12 @@ Only your own results appear. This page is read-only, including drafts. Reload t
 
 ## Error pages
 
-These pages show the messages below. Result-entry refusals also include the navigation described under [Save and submit a result](#save-and-submit-a-result).
+Common error pages include the messages below. Result-entry refusals also include the navigation described under [Save and submit a result](#save-and-submit-a-result).
 
 | Message | When |
 | --- | --- |
 | "You do not have access to this page." | You open a page for the other role, and stay signed in, or you send a form Relay cannot verify, such as one left open from before you signed in again. |
 | "Page not found." | The address does not exist, or names a record in another workspace, or a Draft round for a Beta Tester. |
-| A refusal, on a page titled **Action not available** | The action is no longer allowed, so nothing changes. The page shows the reason, such as "This action is not available while the round is Open." (also Draft or Closed) for a coordinator page left open after the round changed state, or the result-entry and feedback messages under [Save and submit a result](#save-and-submit-a-result) and [Observation feedback](#observation-feedback). |
+| A refusal, on a page titled **Action not available** | The requested action is no longer allowed. The page shows the reason, such as "This action is not available while the round is Open." (also Draft or Closed) for a coordinator page left open after the round changed state, or the result-entry and feedback messages under [Save and submit a result](#save-and-submit-a-result) and [Observation feedback](#observation-feedback). |
 | "Too many demo workspaces have been created recently. Try again later." | The [demo workspace limit](#create-a-demo-workspace) is reached. The sign-in limit shows its message on the sign-in page instead. |
-| "Relay is temporarily unavailable. Try again later." | Relay could not read or save. Nothing is changed. |
+| "Relay is temporarily unavailable. Try again later." | Relay had trouble reading or saving data. For a round action, follow the [round error guidance](#test-rounds) before trying again. |
