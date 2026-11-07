@@ -150,6 +150,7 @@ class Result(models.Model):
     outcome = models.CharField(max_length=4, choices=Outcome.choices)
     observation = models.CharField(max_length=2000, blank=True, default="")
     submitted_at = models.DateTimeField(null=True, blank=True)
+    revision = models.PositiveBigIntegerField(default=1, db_default=1)
 
     class Meta:
         constraints = [

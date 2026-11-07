@@ -100,6 +100,8 @@ Only a Test Coordinator can prepare, publish, review, retest and close test roun
 
 If a round action shows an error, return to the round page and check its current details before trying again.
 
+For a failed publish or retest, no new build or success notification is saved. Use your browser's Back button to return to the round page or retest form and try again later. If your session has ended, [sign in](#sign-in) again and open the round from **Coordinator home**.
+
 ### Create a round
 
 1. On **Coordinator home**, choose **New round**.
@@ -271,13 +273,15 @@ With JavaScript enabled, leaving **Record result** with unsaved **Outcome** or *
 
 **Save draft**, **Submit** and [**Observation feedback**](#observation-feedback) apply the same checks. A missing outcome says "Choose Pass or Fail." An empty or invisible-only Fail observation says "Enter an observation for Fail." Observations allow at most 2000 characters after surrounding spaces and line breaks are removed; a line break counts as one character. A longer observation says "Enter at most 2000 characters." A nonempty invisible-only Pass observation says "Enter an observation with a visible character." Null characters and hidden text-direction characters get the same messages as [round text fields](#criteria-and-test-case-limits). Invalid input is not saved.
 
+If another tab saves your draft after you opened the form, **Save draft**, **Submit** and **Observation feedback** say "Your saved draft changed. Reload the result before saving or submitting." The newer draft is kept. Choose **Back to round**, then **Continue draft** for that case to read its current saved fields before editing again. This also applies when both tabs were opened before the first save. Refreshing the refusal page may resend the stale form; reopen it through **Continue draft** instead.
+
 An empty observation appears as italic *No observation.* on submitted result entry, **My results**, observation feedback and coordinator results. If you type "No observation." yourself, it appears as ordinary observation text.
 
 Results belong to the build shown when you opened the entry page. After the coordinator requests a retest, reload the round and check the selected case's **Current build**. Test the fix outside Relay on that build, then choose **Record result**: the new build starts with empty **Outcome** and **Observation** fields. Choose **Pass** or **Fail** and **Submit** a separate result; earlier submissions remain available in [My results](#review-my-results). Cases omitted from the retest keep their existing build and result entry. If the build changes before you save or submit, the page says "This build is no longer current. Reload the round to record a result." Choose **Back to round**, check the current build and choose **Record result** for it.
 
 Choose **View result** to read your submitted result while its build is current and the round is Open. Once the round closes, an entry page says "This action is not available while the round is Closed." and refuses the edit. The round's instructions remain available. If saving or submitting shows an error, check [My results](#review-my-results) before trying again.
 
-Result-entry refusals for a newer build, a Closed round or an already submitted result offer **Back to round** and **Tester home** above the message. **Back to round** opens the round's current details; a Closed round remains read-only. Rejected edits are not saved or carried to another build.
+Result-entry refusals for a newer saved draft, a newer build, a Closed round or an already submitted result offer **Back to round** and **Tester home** above the message. **Back to round** opens the round's current details; a Closed round remains read-only. Rejected edits are not saved or carried to another build.
 
 ## Observation feedback
 

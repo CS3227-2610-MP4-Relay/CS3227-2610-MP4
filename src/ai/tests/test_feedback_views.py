@@ -133,6 +133,7 @@ def test_feedback_action_saves_current_fields_before_opening_without_ai(
             entry_url(target),
             {
                 "action": "feedback",
+                "revision": 1 if existing else 0,
                 "outcome": "pass",
                 "observation": " Synthetic current \r\nedit ",
             },
@@ -170,7 +171,12 @@ def test_feedback_action_invalid_fields_stay_on_entry_without_save(
     with mock.patch("ai.feedback_views.gateway.complete") as complete:
         response = signed_in(tester).post(
             entry_url(target),
-            {"action": "feedback", "outcome": outcome, "observation": observation},
+            {
+                "action": "feedback",
+                "outcome": outcome,
+                "observation": observation,
+                "revision": 1,
+            },
         )
         complete.assert_not_called()
     assert response.status_code == 200 and message in response.content.decode()

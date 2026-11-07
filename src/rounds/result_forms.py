@@ -35,6 +35,7 @@ class ResultForm(forms.Form):
         },
     )
     observation = ObservationField()
+    revision = forms.CharField(widget=forms.HiddenInput)
 
     def clean(self):
         """Apply outcome-dependent visibility, direction and button checks."""

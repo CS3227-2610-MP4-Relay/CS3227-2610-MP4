@@ -49,9 +49,14 @@ def url(target):
     return f"/tester/rounds/{round_.pk}/cases/{case.pk}/builds/{build.pk}/result/"
 
 
-def payload(outcome="pass", observation="", action="save"):
+def payload(outcome="pass", observation="", action="save", *, revision=0):
     """One independently valid request unless a test overrides a field."""
-    return {"outcome": outcome, "observation": observation, "action": action}
+    return {
+        "outcome": outcome,
+        "observation": observation,
+        "action": action,
+        "revision": revision,
+    }
 
 
 @pytest.mark.ac("RES-1.5", "RES-2.1", "RES-2.4")
@@ -105,7 +110,9 @@ def test_save_reload_new_session_submit_and_read_only(tester, target):
     reloaded = signed_in(tester).get(location)
     assert "Status: Draft" in page(reloaded)
     assert reloaded.context["form"]["observation"].value() == saved.observation
-    response = client.post(location, payload("fail", "Synthetic final", "submit"))
+    response = client.post(
+        location, payload("fail", "Synthetic final", "submit", revision=1)
+    )
     assert response.status_code == 302 and response.url == location
     saved.refresh_from_db()
     assert saved.outcome == "fail" and saved.observation == "Synthetic final"
@@ -176,7 +183,7 @@ def test_invalid_fields_independently_leave_draft_unchanged(
         == 302
     )
     before = domain_rows()
-    data = payload("fail", "Synthetic valid", action) | changes
+    data = payload("fail", "Synthetic valid", action, revision=1) | changes
     response = client.post(url(target), data)
     assert response.status_code == 200 and message in page(response)
     assert list(response.context["form"].errors) == [field]

@@ -20,6 +20,7 @@ from .models import Build, Case, Criterion, Result, Round
 
 STALE = "This build is no longer current. Reload the round to record a result."
 SUBMITTED = "This result has already been submitted."
+CHANGED = "Your saved draft changed. Reload the result before saving or submitting."
 
 
 class Conflict(Exception):
@@ -113,13 +114,23 @@ def entry(tester, round_id, case_id, build_id, *, write=False):
         yield Entry(tester, round_, case, build, result)
 
 
-def save(current, outcome, observation, *, submit=False):
+def check_revision(current, revision):
+    """Reject stale or malformed form revisions after entry's domain denials."""
+    expected = str(current.result.revision if current.result else 0)
+    if str(revision) != expected:
+        raise Conflict(CHANGED)
+
+
+def save(current, outcome, observation, *, revision, submit=False):
     """Persist validated fields inside `entry(..., write=True)`; never delete."""
     result = current.result or Result(
         tester=current.tester, case=current.case, build=current.build
     )
     if result.submitted_at is not None:
         raise Conflict(SUBMITTED)
+    check_revision(current, revision)
+    if current.result is not None:
+        result.revision += 1
     result.outcome = outcome
     result.observation = observation
     if submit:
