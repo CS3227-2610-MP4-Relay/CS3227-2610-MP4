@@ -248,22 +248,23 @@ def publish_round(request, round_id):
             if round_.state != Round.State.DRAFT:
                 return state_conflict(request, round_)
             services.publish(round_, form.cleaned_data["label"])
+            response = redirect(round_)
+            save_action_message(request, response, "Round published.")
     except services.Refused as refused:
         form.add_error(refused.field, str(refused))
         return show_round(request, round_, publish_form=form)
-    messages.success(request, "Round published.")
-    return redirect(round_)
+    return response
 
 
-def save_close_message(request, response):
-    """Persist close notification in its transaction, with no middleware retry."""
+def save_action_message(request, response, text, *, extra_tags=""):
+    """Persist an action notification in its transaction, with no middleware retry."""
     storage = messages.get_messages(request)
-    messages.success(request, "Round closed.")
+    messages.success(request, text, extra_tags=extra_tags)
     try:
         storage.update(response)
         request.session.save()
     except UpdateError as error:
-        raise DatabaseError("The close session could not be saved.") from error
+        raise DatabaseError("The round action session could not be saved.") from error
     finally:
         # MessageMiddleware would otherwise store the queue again and make the
         # session dirty after the transaction. Also discard it on rollback.
@@ -281,7 +282,7 @@ def close_round(request, round_id):
             return state_conflict(request, round_)
         services.close(round_)
         response = redirect(round_)
-        save_close_message(request, response)
+        save_action_message(request, response, "Round closed.")
     return response
 
 
@@ -302,16 +303,16 @@ def retest_round(request, round_id):
                 if round_.state != Round.State.OPEN:
                     return state_conflict(request, round_)
                 build = services.request_retest(round_, form.cleaned_data["label"], ids)
+                text = retest_message(len(set(ids)), build.label)
+                response = redirect(round_)
+                save_action_message(request, response, text, extra_tags="retest")
         except services.RoundNotOpen:
             round_.refresh_from_db(fields=["state"])
             return state_conflict(request, round_)
         except services.Refused as refused:
             form.add_error(refused.field, str(refused))
         else:
-            # Counted from the request, so nothing reads storage after the commit.
-            text = retest_message(len(set(ids)), build.label)
-            messages.success(request, text, extra_tags="retest")
-            return redirect(round_)
+            return response
     return form_page(request, form, "Request a retest", "Request retest", round_)
 
 

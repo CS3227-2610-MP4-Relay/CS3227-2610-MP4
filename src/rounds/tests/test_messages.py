@@ -15,11 +15,8 @@ from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.utils.html import escape
 
-from rounds.models import Round
-
 from .conftest import (
     MARKUP,
-    ROUND_RECORDS,
     SCRIPT_TAG,
     close,
     detail,
@@ -69,7 +66,7 @@ ACTIONS = [
         "Round published.",
         "Round published.",
         id="publish",
-        marks=pytest.mark.ac("RND-3.1"),
+        marks=pytest.mark.ac("RND-3.1", "RND-3.7"),
     ),
     pytest.param(
         open_with_case,
@@ -77,7 +74,7 @@ ACTIONS = [
         "Round closed.",
         "Round closed.",
         id="close",
-        marks=pytest.mark.ac("RND-6.1"),
+        marks=pytest.mark.ac("RND-6.1", "RND-6.5"),
     ),
     pytest.param(
         open_with_case,
@@ -86,7 +83,7 @@ ACTIONS = [
         'Retest requested for 1 test case on build <span dir="auto">Synthetic 1.1'
         "</span>.",
         id="retest",
-        marks=pytest.mark.ac("RND-5.1"),
+        marks=pytest.mark.ac("RND-5.1", "RND-5.9"),
     ),
 ]
 
@@ -155,37 +152,47 @@ def test_sign_out_discards_an_unread_round_message(coord_client, make_round, act
     assert text not in html
 
 
-@pytest.mark.ac("RND-6.5")
-def test_a_failed_session_save_rolls_back_close_with_503(coordinator, make_round):
-    round_ = open_with_case(make_round)
+@pytest.mark.parametrize(("setup", "act", "text", "html"), ACTIONS)
+def test_a_failed_session_save_rolls_back_action_with_503(
+    coordinator, make_round, setup, act, text, html
+):
+    round_ = setup(make_round)
     client = signed_in(coordinator, raise_request_exception=False)
-    before = domain_rows(*ROUND_RECORDS)
+    before = domain_rows()
     failing = mock.patch.object(
         Session, "save", side_effect=OperationalError("synthetic")
     )
     with failing as save:
-        response = close(client, round_)
-    round_.refresh_from_db()
+        response = act(client, round_)
     assert response.status_code == 503
     assert "Relay is temporarily unavailable. Try again later." in page(response)
     assert "no-store" in response["Cache-Control"]
-    assert (round_.state, round_.closed_at) == (Round.State.OPEN, None)
-    assert "Round closed." not in stored_messages(client)
+    assert text not in stored_messages(client)
     assert save.call_count == 1
-    assert domain_rows(*ROUND_RECORDS) == before
+    assert domain_rows() == before
+    assert act(client, round_).status_code == 302
+    assert page(client.get(detail(round_.pk))).count(html) == 1
+    assert html not in page(client.get(detail(round_.pk)))
 
 
-@pytest.mark.ac("RND-6.1", "RND-6.5")
+@pytest.mark.parametrize(("setup", "act", "text", "html"), ACTIONS)
 @pytest.mark.django_db(transaction=True)
-def test_close_keeps_unread_messages_and_saves_session_before_commit(
-    coord_client, make_round
+def test_action_keeps_unread_messages_and_saves_session_before_commit(
+    coord_client, make_round, setup, act, text, html
 ):
-    round_ = open_with_case(make_round)
+    round_ = setup(make_round)
+    before = domain_rows()
     session = coord_client.session
     request = HttpRequest()
     request.session = session
     session["_messages"] = SessionStorage(request).serialize_messages(
-        [Message(constants.SUCCESS, "Synthetic earlier notification.")]
+        [
+            Message(
+                constants.SUCCESS,
+                "Retest requested for 1 test case on build Synthetic earlier.",
+                extra_tags="retest",
+            )
+        ]
     )
     session.save()
     key = session.session_key
@@ -194,45 +201,47 @@ def test_close_keeps_unread_messages_and_saves_session_before_commit(
 
     def save_in_transaction(store, *args, **kwargs):
         calls.append(connection.in_atomic_block)
-        assert Round.objects.get(pk=round_.pk).state == Round.State.CLOSED
+        assert domain_rows() != before
         return original_save(store, *args, **kwargs)
 
     with mock.patch.object(SessionStore, "save", save_in_transaction):
-        response = close(coord_client, round_)
+        response = act(coord_client, round_)
     assert response.status_code == 302
     assert calls == [True]
     assert coord_client.cookies["sessionid"].value == key
     assert COOKIE not in response.cookies
-    html = page(coord_client.get(detail(round_.pk)))
-    assert html.count("Synthetic earlier notification.") == 1
-    assert html.count("Round closed.") == 1
-    html = page(coord_client.get(detail(round_.pk)))
-    assert "Synthetic earlier notification." not in html
-    assert "Round closed." not in html
+    shown = page(coord_client.get(detail(round_.pk)))
+    assert shown.count('build <span dir="auto">Synthetic earlier</span>.') == 1
+    assert shown.count(html) == 1
+    shown = page(coord_client.get(detail(round_.pk)))
+    assert "Synthetic earlier" not in shown
+    assert html not in shown
 
 
-@pytest.mark.ac("RND-6.5")
+@pytest.mark.parametrize(("setup", "act", "text", "html"), ACTIONS)
 @pytest.mark.django_db(transaction=True)
-@pytest.mark.parametrize("failure", ["close-write", "commit"])
-def test_close_transaction_failure_keeps_session_and_round_unchanged(
-    coordinator, make_round, failure
+@pytest.mark.parametrize("failure", ["domain-write", "commit"])
+def test_action_transaction_failure_keeps_session_and_domain_unchanged(
+    coordinator, make_round, failure, setup, act, text, html
 ):
-    round_ = open_with_case(make_round)
+    round_ = setup(make_round)
     client = signed_in(coordinator, raise_request_exception=False)
-    before = domain_rows(*ROUND_RECORDS)
+    before = domain_rows()
     key = client.cookies["sessionid"].value
     session_before = Session.objects.get(session_key=key).session_data
     target = connection if failure == "commit" else QuerySet
-    method = "commit" if failure == "commit" else "update"
+    method = (
+        "commit"
+        if failure == "commit"
+        else ("update" if act == close else "bulk_create")
+    )
     with mock.patch.object(target, method, side_effect=OperationalError("synthetic")):
-        response = close(client, round_)
+        response = act(client, round_)
     assert response.status_code == 503
     assert "no-store" in response["Cache-Control"]
-    round_.refresh_from_db()
-    assert (round_.state, round_.closed_at) == (Round.State.OPEN, None)
-    assert domain_rows(*ROUND_RECORDS) == before
+    assert domain_rows() == before
     assert Session.objects.get(session_key=key).session_data == session_before
-    assert "Round closed." not in page(client.get(detail(round_.pk)))
+    assert html not in page(client.get(detail(round_.pk)))
 
 
 def delete_session_elsewhere(key):
@@ -243,12 +252,13 @@ def delete_session_elsewhere(key):
         connections.close_all()
 
 
-@pytest.mark.ac("RND-6.5")
+@pytest.mark.parametrize(("setup", "act", "text", "html"), ACTIONS)
 @pytest.mark.django_db(transaction=True)
-def test_close_does_not_resurrect_a_concurrently_deleted_session(
-    coordinator, make_round
+def test_action_does_not_resurrect_a_concurrently_deleted_session(
+    coordinator, make_round, setup, act, text, html
 ):
-    round_ = open_with_case(make_round)
+    round_ = setup(make_round)
+    before = domain_rows()
     client = signed_in(coordinator, raise_request_exception=False)
     key = client.cookies["sessionid"].value
     original_save = SessionStore.save
@@ -261,11 +271,10 @@ def test_close_does_not_resurrect_a_concurrently_deleted_session(
         return original_save(store, *args, **kwargs)
 
     with mock.patch.object(SessionStore, "save", save_after_sign_out):
-        response = close(client, round_)
+        response = act(client, round_)
     assert response.status_code == 503
     assert calls == [key]
-    round_.refresh_from_db()
-    assert (round_.state, round_.closed_at) == (Round.State.OPEN, None)
+    assert domain_rows() == before
     assert not Session.objects.exists()
 
 
