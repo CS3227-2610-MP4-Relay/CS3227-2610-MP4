@@ -100,6 +100,8 @@ Only a Test Coordinator can prepare, publish, review, retest and close test roun
 
 Whenever creating, publishing, retesting or closing a round, or saving or deleting anything in it, fails, the page says "Relay is temporarily unavailable. Try again later." and nothing changes.
 
+For a failed publish or retest, no new build or success notification is saved. Use your browser's Back button to return to the round page or retest form and try again later. If your session has ended, [sign in](#sign-in) again and open the round from **Coordinator home**.
+
 ### Create a round
 
 1. On **Coordinator home**, choose **New round**.
