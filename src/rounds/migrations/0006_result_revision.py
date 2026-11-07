@@ -10,6 +10,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="result",
             name="revision",
-            field=models.PositiveBigIntegerField(default=1),
+            field=models.PositiveBigIntegerField(default=1, db_default=1),
         ),
     ]

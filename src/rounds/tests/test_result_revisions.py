@@ -3,6 +3,7 @@
 from unittest.mock import patch
 
 import pytest
+from django.db import connection
 
 from accounts.models import User
 from rounds.models import Result
@@ -31,6 +32,28 @@ def fields(revision, *, action="save", outcome="pass", observation=""):
         "outcome": outcome,
         "observation": observation,
     }
+
+
+@pytest.mark.ac("PLT-1.11", "RES-2.1", "RES-2.5")
+def test_previous_runtime_can_insert_without_revision_after_migration(
+    make_round, tester
+):
+    """Use the pre-revision INSERT columns against the fully migrated database."""
+    round_ = open_with_case(make_round)
+    case, build = round_.cases.get(), round_.builds.get()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "INSERT INTO rounds_result "
+            "(tester_id, case_id, build_id, outcome, observation, submitted_at) "
+            "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
+            [tester.pk, case.pk, build.pk, "pass", "Synthetic old-runtime draft", None],
+        )
+        result_id = cursor.fetchone()[0]
+    saved = Result.objects.get(pk=result_id)
+    assert saved.revision == 1
+    assert saved.tester_id == tester.pk and saved.case_id == case.pk
+    assert saved.build_id == build.pk and saved.submitted_at is None
+    assert (saved.outcome, saved.observation) == ("pass", "Synthetic old-runtime draft")
 
 
 @pytest.mark.ac("RES-2.1", "RES-2.5", "RES-4.9")
