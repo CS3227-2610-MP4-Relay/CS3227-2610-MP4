@@ -101,6 +101,7 @@ def success(replies):
             Response(b"<h1>Relay</h1>"),
             Response(b"<h1>Sign in</h1>"),
             Response(b"<h1>Page not found.</h1>", 404),
+            Response(b"ready\n", headers={**HEADERS, "Cache-Control": "no-store"}),
         ]
     )
 
@@ -131,6 +132,7 @@ def test_cli_upload_and_bounded_anonymous_smoke(setup, capsys, cli_calls):
         "https://relay.example.com/",
         "https://relay.example.com/sign-in/",
         "https://relay.example.com/relay-release-check-not-found/",
+        "https://relay.example.com/health/ready/",
     ]
     assert all(timeout <= 30 for _, timeout in calls)
     assert all(timeout <= 10 for _, timeout in calls[4:])
@@ -139,6 +141,53 @@ def test_cli_upload_and_bounded_anonymous_smoke(setup, capsys, cli_calls):
     assert SHA in output.out and "dpl_synthetic" in output.out
     assert "synthetic-token" not in output.out
     assert output.err == ""
+
+
+@pytest.mark.ac("PLT-1.12", "PLT-1.13")
+@pytest.mark.parametrize(
+    "failure", ["unavailable", "extra", "cache", "redirect", "timeout", "header"]
+)
+def test_runtime_readiness_is_required_for_delivery(setup, capsys, failure):
+    calls, replies = setup
+    success(replies)
+    headers = {**HEADERS, "Cache-Control": "no-store"}
+    if failure == "cache":
+        headers["Cache-Control"] = "public, max-age=60"
+    if failure == "header":
+        headers.pop("X-Frame-Options")
+    replies[-1] = {
+        "unavailable": Response(b"unavailable\n", 503, headers),
+        "extra": Response(b"private-prefix-ready\n", headers=headers),
+        "cache": Response(b"ready\n", headers=headers),
+        "header": Response(b"ready\n", headers=headers),
+        "redirect": HTTPError(
+            "https://relay.example.com/health/ready/", 302, "", {}, None
+        ),
+        "timeout": TimeoutError("synthetic-private-database-password"),
+    }[failure]
+    assert release.main(["deploy"]) == 1
+    assert calls[-1][0].full_url == "https://relay.example.com/health/ready/"
+    output = capsys.readouterr()
+    assert "stage=smoke" in output.err
+    assert "synthetic-private" not in str(output)
+
+
+@pytest.mark.ac("PLT-1.13")
+@pytest.mark.parametrize(
+    "cache,valid",
+    [
+        ("max-age=0,no-store", True),
+        ("private,\tNO-STORE\t, max-age=0", True),
+        ("no-store-extra", False),
+        ('private, extension="no-store"', False),
+        ("", False),
+    ],
+)
+def test_readiness_cache_directive_tokens(setup, cache, valid):
+    _, replies = setup
+    success(replies)
+    replies[-1] = Response(b"ready\n", headers={**HEADERS, "Cache-Control": cache})
+    assert release.main(["deploy"]) == (0 if valid else 1)
 
 
 @pytest.mark.ac("PLT-1.11", "PLT-1.12")

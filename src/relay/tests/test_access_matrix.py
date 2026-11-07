@@ -665,6 +665,15 @@ POST_ONLY_REFUSALS = {
 
 # The TECHNICAL-SPEC accounts routes table, with the criteria each row checks.
 ACCOUNTS = {
+    "readiness": AccountsRoute(
+        "/health/ready/",
+        frozenset({"GET", "HEAD"}),
+        ("PLT-1.15",),
+        {
+            kind: everyone(OK if kind.method in {"GET", "HEAD"} else NOT_ALLOWED)
+            for kind in KINDS
+        },
+    ),
     "home": AccountsRoute(
         "/",
         frozenset({"GET", "HEAD"}),
