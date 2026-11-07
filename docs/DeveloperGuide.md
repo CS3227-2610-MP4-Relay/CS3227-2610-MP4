@@ -105,6 +105,10 @@ Deployment smoke checks require the public runtime database readiness probe desc
 
 The [SoC LLM runbook](Runbook.md#soc-llm) contains local configuration and operator evaluation commands; feature and gateway contracts are linked under [AI assistance](#ai-assistance).
 
+On the public deployment, all workspaces share a deployment-wide AI allowance alongside each user's allowance. Other users can exhaust the shared allowance even when you have personal allowance left. The deployment cap bounds Relay's call volume against the deployer's provider account; it does not guarantee availability or prevent that account's total provider budget from being exceeded. Exact limits and accounting stay in the [gateway contract](../workflow/specs/ai/llm-gateway.md#limits-and-accounting).
+
+Teams that need control over their AI allowance can host their own Relay deployment using their own authorized provider account and credentials. Follow the [setup](Runbook.md#setup), [production deployment](Runbook.md#production-deployment) and [SoC LLM configuration](Runbook.md#soc-llm) instructions. This brings responsibility for hosting and provider usage; a separate deployment that reuses the public deployer's provider account still shares that account's provider allowance.
+
 ## Product website
 
 The [product-site architecture](../workflow/specs/TECHNICAL-SPEC.md#product-website) describes the static documentation site, and its [runbook section](Runbook.md#product-website) contains the build-artifact check.

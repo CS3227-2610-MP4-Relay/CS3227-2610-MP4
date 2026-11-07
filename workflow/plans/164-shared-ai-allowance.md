@@ -22,5 +22,8 @@ Goal: Explain the public deployment's shared AI allowance and the existing optio
 - Source inspection confirms deployment-wide reservation/accounting and per-user quotas in `src/ai/gateway.py`; provider configuration is process-wide. The existing guide and runbook already contain the setup/production links needed. No conflicting requirement found.
 - An AGENTS.md write is outside the builder's scope and is refused without attempting a mutation. This establishes role refusal only, not native-hook enforcement in this worktree.
 - Open issues: none. Human diff review remains required for Fast lane; no human approval or independent review is inferred.
-- Next: coordinator checks and commits the plan, captures a fresh scope snapshot, then resumes the builder for the guide edit. No guide edit has been made at this checkpoint.
+- Plan checkpoint committed by the coordinator at `01f88ca4dd974eed6a3e0b530a3b564e345e9c48`; guide work resumed against a fresh scope snapshot.
+- Guide checkpoint: added two paragraphs under SoC LLM covering shared allowance, the operating tradeoff and existing hosting/configuration links. Read back the complete section with adjacent headings; no duplicated headings, orphaned fragments or lost text found. Verified all four added relative link destinations and their matching Markdown heading anchors.
+- Targeted checks after the guide edit: `git diff --check` passed; `check_scope.py builder --since <relay-164-builder-docs.json>` passed. No acceptance criteria, source or tests changed, so no application tests were run.
+- Next: coordinator checks and commits the guide/plan candidate, records session evidence, obtains the required human diff review and completes authorized draft-PR delivery with hosted checks on the current head. Human review remains pending.
 - Builder telemetry is unavailable in this delegated session; the coordinator measures usage with `workflow/scripts/resource_usage.py`.
