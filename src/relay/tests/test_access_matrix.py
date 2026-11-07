@@ -822,7 +822,12 @@ STALE_SUBMITTED = Situation(
 
 
 def result_data(world):
-    return {"outcome": "pass", "observation": "Synthetic observation", "action": "save"}
+    return {
+        "outcome": "pass",
+        "observation": "Synthetic observation",
+        "action": "save",
+        "revision": 0,
+    }
 
 
 def stored_build(round_, label, cases):

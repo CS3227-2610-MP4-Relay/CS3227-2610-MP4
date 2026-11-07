@@ -119,17 +119,22 @@ def result_entry(request, round_id, case_id, build_id):
             request.user, round_id, case_id, build_id, write=request.method == "POST"
         ) as current:
             saved = current.result
+            if request.method == "POST":
+                results.check_revision(current, request.POST.get("revision"))
             form = ResultForm(
                 request.POST if request.method == "POST" else None,
-                initial={"outcome": saved.outcome, "observation": saved.observation}
-                if saved
-                else None,
+                initial={
+                    "outcome": saved.outcome if saved else "",
+                    "observation": saved.observation if saved else "",
+                    "revision": saved.revision if saved else 0,
+                },
             )
             if request.method == "POST" and form.is_valid():
                 results.save(
                     current,
                     form.cleaned_data["outcome"],
                     form.cleaned_data["observation"],
+                    revision=form.cleaned_data["revision"],
                     submit=form.cleaned_data["action"] == "submit",
                 )
                 destination = (

@@ -39,7 +39,13 @@ def entry(user, target, **kwargs):
 def save(user, target, *, submit=False, outcome="pass", observation=""):
     """Use the service's locked operation, as a validated form will."""
     with entry(user, target, write=True) as current:
-        return results.save(current, outcome, observation, submit=submit)
+        return results.save(
+            current,
+            outcome,
+            observation,
+            submit=submit,
+            revision=current.result.revision if current.result else 0,
+        )
 
 
 @pytest.mark.ac("RES-2.1", "RES-2.5")
@@ -289,7 +295,9 @@ def test_real_races_serialize_results_and_round_actions(
     def result_action(held, release, pause=False):
         try:
             with entry(tester, target, write=True) as current:
-                row = results.save(current, "pass", "Synthetic final", submit=True)
+                row = results.save(
+                    current, "pass", "Synthetic final", submit=True, revision=0
+                )
                 if pause:
                     held.set()
                     assert release.wait(10)
@@ -305,6 +313,7 @@ def test_real_races_serialize_results_and_round_actions(
                         current,
                         "fail",
                         "Synthetic competing",
+                        revision=0,
                         submit=action == "submit",
                     )
                     if pause:
@@ -327,45 +336,55 @@ def test_real_races_serialize_results_and_round_actions(
     first = result_action if result_first else competing_action
     second = competing_action if result_first else result_action
     outcomes = race(lambda *args: first(*args, pause=True), second)
-    if action == "save" and not result_first:
-        assert outcomes["second"] != "conflict"
-    elif not result_first or action in ("submit", "save"):
+    if not result_first or action in ("submit", "save"):
         assert outcomes["second"] == "conflict"
     rows = list(Result.objects.all())
     assert len(rows) == (0 if not result_first and action in ("close", "retest") else 1)
     for row in rows:
         assert row.build_id == target[2].pk
-        assert row.submitted_at is not None
+        assert (row.submitted_at is not None) == (result_first or action != "save")
         assert row.observation == (
             "Synthetic competing"
-            if not result_first and action == "submit"
+            if not result_first and action in ("submit", "save")
             else "Synthetic final"
         )
 
 
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.ac("RES-2.5")
-def test_two_concurrent_draft_saves_keep_last_serialized_values(tester, target):
+@pytest.mark.parametrize("existing", [False, True])
+@pytest.mark.parametrize("submit", [False, True])
+def test_concurrent_writes_reject_shared_stale_revision(
+    tester, target, existing, submit
+):
+    if existing:
+        save(tester, target)
+    revision = 1 if existing else 0
     before = domain_rows()
 
     def first(held, release):
         with entry(tester, target, write=True) as current:
-            saved = results.save(current, "pass", "Synthetic first")
+            saved = results.save(current, "pass", "Synthetic first", revision=revision)
             held.set()
             assert release.wait(10)
             return saved.pk
 
-    outcomes = race(
-        first,
-        lambda *_: (
-            save(tester, target, outcome="fail", observation="Synthetic last").pk
-        ),
-    )
-    assert outcomes["first"] == outcomes["second"]
+    def second(*_):
+        with (
+            pytest.raises(results.Conflict, match="Your saved draft changed"),
+            entry(tester, target, write=True) as current,
+        ):
+            results.save(
+                current, "fail", "Synthetic last", revision=revision, submit=submit
+            )
+        return "conflict"
+
+    outcomes = race(first, second)
+    assert outcomes["second"] == "conflict"
     saved = Result.objects.get()
     assert (saved.outcome, saved.observation, saved.submitted_at) == (
-        "fail",
-        "Synthetic last",
+        "pass",
+        "Synthetic first",
         None,
     )
     after = domain_rows()

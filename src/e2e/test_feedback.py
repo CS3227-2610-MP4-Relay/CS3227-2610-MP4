@@ -85,6 +85,55 @@ def save_draft(page, accounts, outcome, observation, *, save=True):
         expect(page.get_by_text("Status: Draft", exact=True)).to_be_visible()
 
 
+@pytest.mark.ac("RES-2.1", "RES-2.5", "RES-4.9")
+@pytest.mark.parametrize("action", ["Save draft", "Submit", "Observation feedback"])
+@pytest.mark.parametrize("existing", [False, True])
+def test_two_tabs_cannot_overwrite_a_newer_draft(
+    page, browser_accounts, action, existing
+):
+    save_draft(page, browser_accounts, "pass", "Synthetic older pass", save=existing)
+    other = page.context.new_page()
+    try:
+        other.goto(browser_accounts["entry"])
+        other.get_by_label("Outcome", exact=True).select_option("pass")
+        other.get_by_label("Observation", exact=True).fill("Synthetic older pass")
+        page.get_by_label("Outcome", exact=True).select_option("fail")
+        page.get_by_label("Observation", exact=True).fill("Synthetic newer failure")
+        page.get_by_role("button", name="Save draft", exact=True).click()
+        expect(page.get_by_label("Observation", exact=True)).to_have_value(
+            "Synthetic newer failure"
+        )
+        with mock.patch("ai.feedback_views.gateway.complete") as complete:
+            with other.expect_response(
+                lambda response: response.request.method == "POST"
+            ) as response:
+                other.get_by_role("button", name=action, exact=True).click()
+            assert response.value.status == 409
+            expect(
+                other.get_by_text(
+                    "Your saved draft changed. "
+                    "Reload the result before saving or submitting.",
+                    exact=True,
+                )
+            ).to_be_visible()
+            complete.assert_not_called()
+        other.goto(browser_accounts["entry"])
+        expect(other.get_by_label("Outcome", exact=True)).to_have_value("fail")
+        expect(other.get_by_label("Observation", exact=True)).to_have_value(
+            "Synthetic newer failure"
+        )
+        expect(other.get_by_text("Status: Draft", exact=True)).to_be_visible()
+        other.get_by_label("Observation", exact=True).fill("Synthetic deliberate final")
+        other.get_by_role("button", name="Submit", exact=True).click()
+        expect(other.get_by_text("Status: Submitted", exact=True)).to_be_visible()
+        expect(
+            other.get_by_text("Synthetic deliberate final", exact=True)
+        ).to_be_visible()
+        browser_accounts["expected"] = ("fail", "Synthetic deliberate final", True)
+    finally:
+        other.close()
+
+
 def leave_warning(page, action, *, stay=False):
     """Require one real native dialog and respond without matching browser text."""
     dialogs = []
