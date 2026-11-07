@@ -53,3 +53,7 @@ Goal: enforce [RES-2.5](../specs/product/results.md#res-2-save-and-submit-an-out
 | RES-2.2/.5/.11 | Invalid form retains posted revision and corrected stale retry refuses in `test_result_revisions.py`; existing validation and unsaved-change browser coverage |
 | RES-2.3–.8, RES-4.9 | Existing result/access-matrix/feedback-view denial, CSRF, state precedence, storage/no-store and privacy checks; explicit posted-peer-identity revision test |
 | PLT-1.11 | `test_result_revisions.py::test_previous_runtime_can_insert_without_revision_after_migration` performs a real old-column INSERT against the migrated database; migration SQL retains the database default |
+
+## Final review and delivery handoff
+
+The verifier and security reviewer rechecked repair commit `8ffc65e1d721309d27be983ee4573174852c41dc`; the Medium migration finding is resolved and neither reports remaining findings. The candidate stayed unchanged through review. The [session log](../../logs/Whimsyturtle/045-prevent-stale-result-overwrites.md) records exact ranges, limits, role metadata and usage. Only summary evidence follows this code candidate; final branch-head CI and draft-PR status are recorded in GitHub. Human log review, merge and release remain pending.
