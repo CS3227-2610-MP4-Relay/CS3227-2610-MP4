@@ -80,7 +80,7 @@ def test_ci_installs_chromium_and_retains_only_browser_failure_files():
     assert "continue-on-error" not in verify
 
 
-@pytest.mark.ac("PLT-1.9", "PLT-1.10", "PLT-1.11")
+@pytest.mark.ac("PLT-1.9", "PLT-1.10", "PLT-1.11", "PLT-1.16")
 def test_production_job_is_opt_in_verified_main_only_and_secret_scoped():
     workflow = (
         Path(__file__).resolve().parents[3] / ".github/workflows/ci.yml"
@@ -118,5 +118,9 @@ def test_production_job_is_opt_in_verified_main_only_and_secret_scoped():
     )
     assert "python src/release.py migrate" in migration
     assert "python src/release.py deploy" in deploy
+    for guarded in (migration, deploy):
+        assert "GITHUB_REPOSITORY:" not in guarded
+        assert "GITHUB_SHA:" not in guarded
+        assert "GITHUB_TOKEN" not in guarded
     assert "secrets.VERCEL_TOKEN" in deploy
     assert "DATABASE_URL" not in deploy and "DJANGO_SECRET_KEY" not in deploy

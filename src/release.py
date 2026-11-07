@@ -27,6 +27,10 @@ class NoRedirect(HTTPRedirectHandler):
 OPENER = build_opener(ProxyHandler({}), NoRedirect())
 
 
+class Superseded(RuntimeError):
+    """The tested commit no longer matches the current main head."""
+
+
 def request(url, *, token=None, timeout=30, limit=1048576, expected_404=False):
     """Read one bounded HTTPS response, with no redirects or application retries."""
     headers = {"Authorization": f"Bearer {token}"} if token else {}
@@ -49,6 +53,29 @@ def _required(name, pattern=None):
     if not value or (pattern and re.fullmatch(pattern, value) is None):
         raise ValueError("Invalid configuration")
     return value
+
+
+def _freshness(sha, repository):
+    """Refuse stale or uncheckable public main refs before production writes."""
+    status, _, body = request(
+        f"https://api.github.com/repos/{repository}/git/ref/heads/main",
+        timeout=30,
+        limit=65536,
+    )
+    ref = json.loads(body)
+    if (
+        status != 200
+        or not isinstance(ref, dict)
+        or ref.get("ref") != "refs/heads/main"
+        or not isinstance(ref.get("object"), dict)
+        or ref["object"].get("type") != "commit"
+    ):
+        raise ValueError("Invalid main ref")
+    head = ref["object"].get("sha")
+    if not isinstance(head, str) or not re.fullmatch(r"[0-9a-f]{40}", head):
+        raise ValueError("Invalid main SHA")
+    if head != sha:
+        raise Superseded()
 
 
 def _git(*arguments):
@@ -213,6 +240,11 @@ def main(arguments=None):
     try:
         sha = _required("GITHUB_SHA", r"[0-9a-f]{40}")
         arguments = sys.argv[1:] if arguments is None else arguments
+        if arguments in (["migrate"], ["deploy"]):
+            repository = _required(
+                "GITHUB_REPOSITORY",
+                r"[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_][A-Za-z0-9_.-]*",
+            )
         if arguments == ["migrate"]:
             database = urlsplit(_required("DATABASE_URL"))
             if (
@@ -221,6 +253,8 @@ def main(arguments=None):
                 or os.environ.get("DJANGO_TRUST_PROXY_SSL_HEADER") != "true"
             ):
                 raise ValueError("Migration configuration refused")
+            stage = "freshness"
+            _freshness(sha, repository)
             for stage, command in (
                 ("checks", ["check", "--deploy", "--fail-level", "WARNING"]),
                 ("migrations", ["migrate", "--noinput"]),
@@ -251,6 +285,8 @@ def main(arguments=None):
                 source = Path(temporary) / "source"
                 stage = "preparation"
                 prepare(sha, source)
+                stage = "freshness"
+                _freshness(sha, repository)
                 stage = "creation"
                 result = subprocess.run(
                     [
@@ -304,9 +340,10 @@ def main(arguments=None):
         print(f"stage={stage} commit={sha} deployment={deployment} result=success")
         return 0
     # The process boundary must suppress even unexpected credential-bearing errors.
-    except Exception:  # noqa: BLE001
+    except Exception as error:  # noqa: BLE001
+        result = "superseded" if isinstance(error, Superseded) else "failure"
         print(
-            f"stage={stage} commit={sha} deployment={deployment} result=failure",
+            f"stage={stage} commit={sha} deployment={deployment} result={result}",
             file=sys.stderr,
         )
         return 1
