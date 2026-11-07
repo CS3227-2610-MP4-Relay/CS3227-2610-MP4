@@ -120,6 +120,8 @@ A title has 1 to 120 characters; spaces or line breaks at either end are removed
 
 A workspace can have up to 20 rounds, including the sample round of a new demo workspace. Creating a 21st gets "This workspace has reached its limit of 20 rounds." Nothing deletes a round.
 
+If you reach the round limit and need more rounds, sign out and [create a new demo workspace](#create-a-demo-workspace).
+
 ### Acceptance criteria and test cases
 
 The round page has an **Acceptance criteria** heading, listing each criterion's text, and a **Test cases** heading, where you can expand each case to read **Steps**, **Expected result** and **Linked acceptance criteria** with that text. Both are listed in the order they were added. With none, they say "No acceptance criteria yet." and "No test cases yet."
