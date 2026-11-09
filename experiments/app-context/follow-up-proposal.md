@@ -36,6 +36,8 @@ Give Sol the target scenario, expected behaviours and validated candidate answer
 
 A preliminary [D1/F2/F3 grader rehearsal](grader-rehearsal/README.md) is available for inspection; its same-session, reference-visible judgments do not complete the full calibration.
 
+A separately authorized [nine-call relevant-only pilot](grader-rehearsal/live-results.md) now provides model-generated D1/F2/F3 assessments for inspection; it does not run this proposal's context comparison.
+
 Within each scenario/model/condition group, grade each distinct validated answer once and reuse that judgment for exact duplicates, retaining their observed frequencies. Compare exact parser results for this deduplication, preserving array order; do not merge answers merely because they seem similar. Keep every call's schema outcome, token counts and latency. Different answers can receive the same quality judgment.
 
 ## Results to report

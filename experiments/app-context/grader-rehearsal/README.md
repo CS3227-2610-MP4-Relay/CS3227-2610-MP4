@@ -5,6 +5,10 @@ by the human before expanding the proposed comparison. It makes no SoC calls and
 does not run the [full experiment](../follow-up-proposal.md). The proposed
 500-word backgrounds are not part of this target-only grading exercise.
 
+After separate human authorization, a [nine-call live pilot](live-results.md)
+used these targets; its [method](live-method.md) and evidence are separate from
+the constructed rehearsal below.
+
 ## Inputs and method
 
 - [Fixtures](fixtures.json) contain the exact target inputs, scenario-specific
@@ -52,5 +56,6 @@ assessment and reference agreement remain unavailable; do not count it as an
 ordinary semantic failure or silently omit it. Criterion agreement is a record
 audit, not a quality score for comparing scenarios with different check counts.
 
-Inspect this rehearsal before choosing changes or further evaluation. The full
-24-example calibration and model-generated answers remain unassessed.
+Inspect these results before choosing changes or further evaluation. The full
+24-example calibration remains incomplete; live-answer assessments are in the
+separate pilot report linked above.
