@@ -34,6 +34,8 @@ Code checks JSON structure, required fields and output limits. Sol assesses scen
 
 Give Sol the target scenario, expected behaviours and validated candidate answer, with model/condition labels hidden. Require criterion-level binary `met`/`unmet` judgments with brief evidence; reserve `unavailable` for assessments that cannot be completed and report them separately. Check the grader against **24 constructed good/flawed examples**, then freeze its rubric before grading experiment outputs. This adds Codex usage, not SoC generation calls.
 
+A preliminary [D1/F2/F3 grader rehearsal](grader-rehearsal/README.md) is available for inspection; its same-session, reference-visible judgments do not complete the full calibration.
+
 Within each scenario/model/condition group, grade each distinct validated answer once and reuse that judgment for exact duplicates, retaining their observed frequencies. Compare exact parser results for this deduplication, preserving array order; do not merge answers merely because they seem similar. Keep every call's schema outcome, token counts and latency. Different answers can receive the same quality judgment.
 
 ## Results to report

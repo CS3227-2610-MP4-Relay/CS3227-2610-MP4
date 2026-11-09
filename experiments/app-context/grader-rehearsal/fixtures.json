@@ -1,0 +1,109 @@
+{
+  "version": "grader-rehearsal-1",
+  "scenarios": [
+    {
+      "id": "D1",
+      "feature": "drafting",
+      "data": {
+        "criteria": [
+          {
+            "label": "C1",
+            "text": "For each test, begin with a fresh Add item form with all other required fields already valid. An item name of 1 to 40 characters is saved when Save is selected and appears unchanged in Items. An empty name or a 41-character name shows \"Enter 1 to 40 characters.\" and no item is saved. Use the empty string, \"A\", forty \"A\" characters and forty-one \"A\" characters as the supplied boundary values."
+          }
+        ]
+      },
+      "checks": [
+        {"id": "D1.zero", "met_if": "An empty-name test selects Save and expects the specified error and no saved item."},
+        {"id": "D1.one", "met_if": "A one-character-name test selects Save and expects the unchanged name in Items."},
+        {"id": "D1.forty", "met_if": "A forty-character-name test selects Save and expects the unchanged name in Items."},
+        {"id": "D1.forty_one", "met_if": "A forty-one-character-name test selects Save and expects the specified error and no saved item."},
+        {"id": "D1.usable", "met_if": "Every returned draft has followable numbered steps with adequate supplied setup and observable results consistent with those steps. Missing boundary coverage is assessed only by its boundary check."},
+        {"id": "D1.grounded", "met_if": "Every claimed behaviour, test value and criterion association is supported by the supplied criterion; no extra product features or unrelated requirements are introduced."}
+      ]
+    },
+    {
+      "id": "F2",
+      "feature": "feedback",
+      "data": {
+        "observation": "Using Chrome 126 on desktop, I opened Items and selected Export CSV. The CSV contained Sample-2, whose status in Items was Unavailable. I expected only Available rows. Repeating those reported actions twice produced the same row.",
+        "case": {
+          "title": "Export Available items",
+          "steps": "1. Open Items.\n2. Apply Available.\n3. Select Export CSV.",
+          "expected_result": "The CSV contains only Available rows."
+        },
+        "criteria": ["When Available is the active filter, CSV export contains only Available rows."]
+      },
+      "checks": [
+        {"id": "F2.active_filter", "met_if": "At least one specific question establishes which filter, if any, was actually active at export time. The intended case steps are not evidence that the tester applied that filter."},
+        {"id": "F2.only_missing", "met_if": "Every question seeks useful missing information. No question repeats the supplied browser/version, platform class, export actions, unexpected row/status, expected result or repeatability."},
+        {"id": "F2.distinct", "met_if": "Returned questions seek distinct information rather than asking the same thing in different words."},
+        {"id": "F2.grounded", "met_if": "Questions introduce no unsupported product feature, diagnosis or assertion that Available was actually active."},
+        {"id": "F2.boundaries", "met_if": "The answer contains clarifying questions only, with no requests for secrets, outcome decisions, observation rewrite or submission/state changes."}
+      ]
+    },
+    {
+      "id": "F3",
+      "feature": "feedback",
+      "data": {
+        "observation": "Using Chrome 126 on desktop, I opened Items, applied Available, confirmed Available was active, and selected Export CSV. Sample-2, marked Unavailable in Items, appeared in the CSV. I expected only Available rows. I repeated these exact actions twice with the same result.",
+        "case": {
+          "title": "Export Available items",
+          "steps": "1. Open Items.\n2. Apply Available.\n3. Select Export CSV.",
+          "expected_result": "The CSV contains only Available rows."
+        },
+        "criteria": ["When Available is the active filter, CSV export contains only Available rows."]
+      },
+      "checks": [
+        {"id": "F3.empty", "met_if": "Return an empty questions array. This frozen scenario supplies the useful reproduction details; do not invent a requirement for more environment or file metadata."},
+        {"id": "F3.only_missing", "met_if": "No question asks for information already supplied or for an unrelated detail. An empty questions array meets this check."},
+        {"id": "F3.grounded", "met_if": "No unsupported feature, factual assertion or diagnosis is introduced. An empty questions array meets this check."},
+        {"id": "F3.boundaries", "met_if": "No secrets request, outcome decision, observation rewrite or submission/state change is made. An empty questions array meets this check."}
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "id": "sample-01",
+      "scenario": "D1",
+      "reply": {
+        "drafts": [
+          {"title": "Reject an empty name", "steps": "1. Open a fresh Add item form with all other required fields valid.\n2. Leave the name empty.\n3. Select Save.", "expected_result": "The form shows \"Enter 1 to 40 characters.\" and no item is saved.", "criteria": ["C1"]},
+          {"title": "Save a one-character name", "steps": "1. Open a fresh Add item form with all other required fields valid.\n2. Enter A as the name.\n3. Select Save.", "expected_result": "The item is saved and Items shows its name as A.", "criteria": ["C1"]},
+          {"title": "Save a forty-character name", "steps": "1. Open a fresh Add item form with all other required fields valid.\n2. Enter a name consisting of exactly forty uppercase A characters.\n3. Select Save.", "expected_result": "The item is saved and Items shows the same forty uppercase A characters as its name.", "criteria": ["C1"]},
+          {"title": "Reject a forty-one-character name", "steps": "1. Open a fresh Add item form with all other required fields valid.\n2. Enter a name consisting of exactly forty-one uppercase A characters.\n3. Select Save.", "expected_result": "The form shows \"Enter 1 to 40 characters.\" and no item is saved.", "criteria": ["C1"]}
+        ]
+      }
+    },
+    {
+      "id": "sample-02",
+      "scenario": "F2",
+      "reply": {"questions": ["Which filter, if any, was active in Items when you exported the CSV?", "Which browser and version were you using?"]}
+    },
+    {
+      "id": "sample-03",
+      "scenario": "F3",
+      "reply": {"questions": []}
+    },
+    {
+      "id": "sample-04",
+      "scenario": "D1",
+      "reply": {
+        "drafts": [
+          {"title": "Reject an empty name", "steps": "1. Open a fresh Add item form with all other required fields valid.\n2. Leave the name empty.\n3. Select Save.", "expected_result": "The form shows \"Enter 1 to 40 characters.\" and no item is saved.", "criteria": ["C1"]},
+          {"title": "Save a one-character name", "steps": "1. Open a fresh Add item form with all other required fields valid.\n2. Enter A as the name.\n3. Select Save.", "expected_result": "The item is saved and Items shows its name as A.", "criteria": ["C1"]},
+          {"title": "Reject a forty-one-character name", "steps": "1. Open a fresh Add item form with all other required fields valid.\n2. Enter a name consisting of exactly forty-one uppercase A characters.\n3. Select Save.", "expected_result": "The form shows \"Enter 1 to 40 characters.\" and no item is saved.", "criteria": ["C1"]}
+        ]
+      }
+    },
+    {
+      "id": "sample-05",
+      "scenario": "F2",
+      "reply": {"questions": ["Which filter, if any, was active in Items when you exported the CSV?"]}
+    },
+    {
+      "id": "sample-06",
+      "scenario": "F3",
+      "reply": {"questions": ["Which filter was active when you exported the CSV?"]}
+    }
+  ]
+}

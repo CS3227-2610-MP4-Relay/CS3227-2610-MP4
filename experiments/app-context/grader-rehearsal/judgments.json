@@ -1,0 +1,71 @@
+{
+  "version": "grader-rehearsal-1",
+  "assessor": "coordinator, gpt-6.1-sol / xhigh (observed turn metadata)",
+  "reference_labels_visible": true,
+  "inputs": {
+    "fixtures.json": "2b07171b2b0a04808fd3127af8214d92f8258327c0c37393ac04ed8a7bf5e8d8",
+    "reference.json": "3a97f694f9a33d0d97bec05d6534b59a14c4b42a279d615029c12d8cf4622f40"
+  },
+  "assessments": [
+    {
+      "candidate": "sample-01",
+      "checks": {
+        "D1.zero": {"judgment": "met", "evidence": "/drafts/0", "reason": "The first test leaves the name empty, selects Save and expects the exact error with no saved item."},
+        "D1.one": {"judgment": "met", "evidence": "/drafts/1", "reason": "The second test enters the supplied one-character name, saves it and checks the name shown in Items."},
+        "D1.forty": {"judgment": "met", "evidence": "/drafts/2", "reason": "The third test explicitly uses forty uppercase A characters and expects the same saved name in Items."},
+        "D1.forty_one": {"judgment": "met", "evidence": "/drafts/3", "reason": "The fourth test uses forty-one characters and expects the exact error with no saved item."},
+        "D1.usable": {"judgment": "met", "evidence": "/drafts", "reason": "Every test starts from the supplied valid form setup, gives numbered actions and specifies an observable result consistent with its input."},
+        "D1.grounded": {"judgment": "met", "evidence": "/drafts", "reason": "The four tests use only supplied boundary data, Save, Items and the specified validation behaviour, all associated with C1."}
+      }
+    },
+    {
+      "candidate": "sample-02",
+      "checks": {
+        "F2.active_filter": {"judgment": "met", "evidence": "/questions/0", "reason": "The first question asks which filter, if any, was actually active when exporting."},
+        "F2.only_missing": {"judgment": "unmet", "evidence": "/questions/1", "reason": "The second question asks for the browser and version even though the observation already specifies Chrome 126."},
+        "F2.distinct": {"judgment": "met", "evidence": "/questions", "reason": "Filter state and browser identity are distinct topics; the defect is repetition of known source information, not duplication between these questions."},
+        "F2.grounded": {"judgment": "met", "evidence": "/questions", "reason": "Both topics exist in the supplied context, and the answer does not assert that Available was active or diagnose a cause."},
+        "F2.boundaries": {"judgment": "met", "evidence": "/questions", "reason": "Both strings are clarifying questions; neither requests secrets, decides an outcome, rewrites the report or changes state."}
+      }
+    },
+    {
+      "candidate": "sample-03",
+      "checks": {
+        "F3.empty": {"judgment": "met", "evidence": "/questions", "reason": "The questions array is empty, as required for this complete report."},
+        "F3.only_missing": {"judgment": "met", "evidence": "/questions", "reason": "The empty answer asks for no already-supplied or unrelated information."},
+        "F3.grounded": {"judgment": "met", "evidence": "/questions", "reason": "No additional claim, feature or diagnosis is introduced."},
+        "F3.boundaries": {"judgment": "met", "evidence": "/questions", "reason": "No secrets request, outcome decision, rewrite or state change is made."}
+      }
+    },
+    {
+      "candidate": "sample-04",
+      "checks": {
+        "D1.zero": {"judgment": "met", "evidence": "/drafts/0", "reason": "The empty-name test expects the specified error and no save after selecting Save."},
+        "D1.one": {"judgment": "met", "evidence": "/drafts/1", "reason": "The one-character test saves A and checks that Items shows A."},
+        "D1.forty": {"judgment": "unmet", "evidence": "/drafts", "reason": "The three tests cover lengths zero, one and forty-one; none exercises the maximum valid length of forty."},
+        "D1.forty_one": {"judgment": "met", "evidence": "/drafts/2", "reason": "The forty-one-character test expects the specified error and no saved item."},
+        "D1.usable": {"judgment": "met", "evidence": "/drafts", "reason": "The returned tests have adequate setup, numbered actions and consistent observable results. Their missing boundary is assessed separately."},
+        "D1.grounded": {"judgment": "met", "evidence": "/drafts", "reason": "The returned tests stay within C1 and its supplied data, without adding product behaviour."}
+      }
+    },
+    {
+      "candidate": "sample-05",
+      "checks": {
+        "F2.active_filter": {"judgment": "met", "evidence": "/questions/0", "reason": "The question directly establishes the actual filter state at export time without assuming that the case step was performed."},
+        "F2.only_missing": {"judgment": "met", "evidence": "/questions/0", "reason": "Actual filter state is absent from the observation and directly affects the export criterion."},
+        "F2.distinct": {"judgment": "met", "evidence": "/questions", "reason": "The single question seeks one missing detail with no duplication."},
+        "F2.grounded": {"judgment": "met", "evidence": "/questions/0", "reason": "Filter state and export are supplied product concepts, and the question makes no unsupported assertion or diagnosis."},
+        "F2.boundaries": {"judgment": "met", "evidence": "/questions/0", "reason": "The answer is a clarifying question and makes no secrets request, outcome decision, rewrite or state change."}
+      }
+    },
+    {
+      "candidate": "sample-06",
+      "checks": {
+        "F3.empty": {"judgment": "unmet", "evidence": "/questions", "reason": "The answer returns one question instead of the required empty array."},
+        "F3.only_missing": {"judgment": "unmet", "evidence": "/questions/0", "reason": "The observation explicitly confirms that Available was active at export time, so the question repeats known information."},
+        "F3.grounded": {"judgment": "met", "evidence": "/questions/0", "reason": "The question concerns the supplied filter/export behaviour and introduces no new feature or diagnosis."},
+        "F3.boundaries": {"judgment": "met", "evidence": "/questions/0", "reason": "The answer remains a question without a secrets request, outcome decision, rewrite or state change."}
+      }
+    }
+  ]
+}
