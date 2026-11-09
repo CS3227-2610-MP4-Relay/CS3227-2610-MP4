@@ -34,7 +34,7 @@ Code checks JSON structure, required fields and output limits. Sol assesses scen
 
 Give Sol the target scenario, expected behaviours and validated candidate answer, with model/condition labels hidden. Require criterion-level binary `met`/`unmet` judgments with brief evidence; reserve `unavailable` for assessments that cannot be completed and report them separately. Check the grader against **24 constructed good/flawed examples**, then freeze its rubric before grading experiment outputs. This adds Codex usage, not SoC generation calls.
 
-A preliminary [D1/F2/F3 grader rehearsal](grader-rehearsal/README.md) is available for inspection; its same-session, reference-visible judgments do not complete the full calibration.
+A [24-answer calibration](calibration/results.md) now uses a fresh GPT-6.1 Sol grader with reference labels withheld; its [boundary/grounding clarification](calibration/clarification.md) was accepted for subsequent grading. The earlier [D1/F2/F3 rehearsal](grader-rehearsal/README.md) remains separate.
 
 A separately authorized [nine-call relevant-only pilot](grader-rehearsal/live-results.md) now provides model-generated D1/F2/F3 assessments for inspection; it does not run this proposal's context comparison.
 

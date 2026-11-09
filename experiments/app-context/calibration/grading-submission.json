@@ -1,0 +1,9 @@
+{
+    "received_at":  "2026-11-09T16:50:58.6375134+00:00",
+    "judgments_sha256":  "049fad06c6845743e0255651f2997c4f39629fa86bc475bd3a358c7755a26535",
+    "grader_model":  "gpt-6.1-sol",
+    "grader_effort":  "low",
+    "model_source":  "Observed grader turn_context metadata",
+    "reference_exposure":  "None reported by grader",
+    "conversation_inheritance":  "none"
+}

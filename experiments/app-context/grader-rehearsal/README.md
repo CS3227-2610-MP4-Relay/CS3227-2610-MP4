@@ -56,6 +56,6 @@ assessment and reference agreement remain unavailable; do not count it as an
 ordinary semantic failure or silently omit it. Criterion agreement is a record
 audit, not a quality score for comparing scenarios with different check counts.
 
-Inspect these results before choosing changes or further evaluation. The full
-24-example calibration remains incomplete; live-answer assessments are in the
-separate pilot report linked above.
+The later [24-answer calibration](../calibration/results.md) uses a fresh grader
+with reference labels withheld. Live-answer assessments remain in the separate
+pilot report linked above.
