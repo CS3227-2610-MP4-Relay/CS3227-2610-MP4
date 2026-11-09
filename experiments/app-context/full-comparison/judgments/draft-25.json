@@ -1,0 +1,161 @@
+{
+  "version": "full-comparison-judgments-1",
+  "assessor": "GPT-6.1 Sol via Codex; comparison_draft_grader",
+  "inputs": {
+    "fixtures.json": "f39c53a3568f284d62db8f58428c5dcbc74b5b8b9a682c65aa010a92e40206b1",
+    "rubric.md": "e499008ef3ec0952a175173c66c96a8bb891f6bfcbadc687a1c4b0a471bb9bb3"
+  },
+  "assessments": [
+    {
+      "candidate": "g-0215",
+      "scenario": "D2",
+      "checks": {
+        "D2.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Archiving and restoration are both exercised with their specified resulting statuses."
+        },
+        "D2.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps provide the detail-page context, archived restoration precondition and status observations with consistent results."
+        },
+        "D2.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "All actions, item values, statuses and criterion associations are supported."
+        }
+      }
+    },
+    {
+      "candidate": "g-0218",
+      "scenario": "D6",
+      "checks": {
+        "D6.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Both filters are exercised with their corresponding exclusive item results."
+        },
+        "D6.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps establish the stated item statuses before each filter selection and give consistent observable results."
+        },
+        "D6.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "All setup, actions, item results and criterion associations follow the supplied criteria."
+        }
+      }
+    },
+    {
+      "candidate": "g-0220",
+      "scenario": "D1",
+      "checks": {
+        "D1.zero": {
+          "judgment": "met",
+          "evidence": "/drafts/0",
+          "reason": "The empty-value submission expects the specified validation message and no saved item."
+        },
+        "D1.one": {
+          "judgment": "met",
+          "evidence": "/drafts/1",
+          "reason": "The supplied minimum-length value is submitted and expected unchanged in the list."
+        },
+        "D1.forty": {
+          "judgment": "met",
+          "evidence": "/drafts/2",
+          "reason": "The supplied maximum-length repeated-character value is submitted and expected unchanged in the list."
+        },
+        "D1.forty_one": {
+          "judgment": "met",
+          "evidence": "/drafts/3",
+          "reason": "The supplied over-limit value is submitted and expects the specified validation message without saving."
+        },
+        "D1.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps establish a fresh form with remaining required fields valid for every submission and give consistent observable results."
+        },
+        "D1.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "All boundary values, expected behaviours and criterion associations follow the supplied criterion."
+        }
+      }
+    },
+    {
+      "candidate": "g-0222",
+      "scenario": "D3",
+      "checks": {
+        "D3.empty": {
+          "judgment": "unmet",
+          "evidence": "/drafts",
+          "reason": "A draft is returned despite the absence of an observable action and result."
+        },
+        "D3.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The subjective experience assessment introduces no measurable behaviour, concrete product feature or test value."
+        }
+      }
+    },
+    {
+      "candidate": "g-0223",
+      "scenario": "D4",
+      "checks": {
+        "D4.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Complete cases exercise the required item-opening and deletion-cancellation sequence with the retained-item result."
+        },
+        "D4.usable": {
+          "judgment": "unmet",
+          "evidence": "/drafts/1",
+          "reason": "An additional case presents a post-attempt retention check without performing the attempt or supplying it as setup."
+        },
+        "D4.grounded": {
+          "judgment": "unmet",
+          "evidence": "/drafts/2",
+          "reason": "The added confirmed-deletion action and resulting item removal are unsupported by the cancellation-only criterion."
+        }
+      }
+    },
+    {
+      "candidate": "g-0225",
+      "scenario": "D1",
+      "checks": {
+        "D1.zero": {
+          "judgment": "met",
+          "evidence": "/drafts/0",
+          "reason": "The empty-value submission expects the specified validation message and no saved item."
+        },
+        "D1.one": {
+          "judgment": "met",
+          "evidence": "/drafts/0",
+          "reason": "The supplied minimum-length value is submitted and expected unchanged in the list."
+        },
+        "D1.forty": {
+          "judgment": "met",
+          "evidence": "/drafts/0",
+          "reason": "The supplied maximum-length repeated-character value is submitted and expected unchanged in the list."
+        },
+        "D1.forty_one": {
+          "judgment": "met",
+          "evidence": "/drafts/0",
+          "reason": "The supplied over-limit value is submitted and expects the specified validation message without saving."
+        },
+        "D1.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps establish a fresh form with remaining required fields valid for every submission and give consistent observable results."
+        },
+        "D1.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "All boundary values, expected behaviours and criterion associations follow the supplied criterion."
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,187 @@
+{
+  "version": "full-comparison-judgments-1",
+  "assessor": "GPT-6.1 Sol via Codex; comparison_draft_grader",
+  "inputs": {
+    "fixtures.json": "f39c53a3568f284d62db8f58428c5dcbc74b5b8b9a682c65aa010a92e40206b1",
+    "rubric.md": "e499008ef3ec0952a175173c66c96a8bb891f6bfcbadc687a1c4b0a471bb9bb3"
+  },
+  "assessments": [
+    {
+      "candidate": "g-0053",
+      "scenario": "D4",
+      "checks": {
+        "D4.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The required item-opening and deletion-cancellation sequence is covered with the retained-item result."
+        },
+        "D4.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps establish item presence and the complete action sequence with an observable consistent result."
+        },
+        "D4.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The setup, actions, item, result and criterion association follow the supplied criterion."
+        }
+      }
+    },
+    {
+      "candidate": "g-0054",
+      "scenario": "D2",
+      "checks": {
+        "D2.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Both status-changing actions are exercised with their specified resulting statuses."
+        },
+        "D2.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps provide the detail-page context, restoration precondition and consistent observable results."
+        },
+        "D2.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Actions, item values, statuses and criterion associations are supported."
+        }
+      }
+    },
+    {
+      "candidate": "g-0055",
+      "scenario": "D1",
+      "checks": {
+        "D1.zero": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The empty-value submission expects the specified validation message without saving."
+        },
+        "D1.one": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The supplied minimum-length value is submitted and expected unchanged in the list."
+        },
+        "D1.forty": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The supplied maximum-length repeated-character value is submitted and expected unchanged in the list."
+        },
+        "D1.forty_one": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The supplied over-limit value is submitted and expects the specified validation message without saving."
+        },
+        "D1.usable": {
+          "judgment": "unmet",
+          "evidence": "/drafts/0/steps",
+          "reason": "Only the initial submission establishes a fresh valid form; later submissions lack the required reset, including after successful saves."
+        },
+        "D1.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The values, expected boundary behaviours and criterion association are supported."
+        }
+      }
+    },
+    {
+      "candidate": "g-0056",
+      "scenario": "D2",
+      "checks": {
+        "D2.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Both status-changing actions are exercised with their specified resulting statuses."
+        },
+        "D2.usable": {
+          "judgment": "unmet",
+          "evidence": "/drafts/2/expected_result",
+          "reason": "Additional cases leave the status outcomes unspecified, so the tester lacks concrete expected results for those drafts."
+        },
+        "D2.grounded": {
+          "judgment": "unmet",
+          "evidence": "/drafts/3/expected_result",
+          "reason": "The added assertion that archived item details remain visible is not a stated outcome of the associated archive criterion."
+        }
+      }
+    },
+    {
+      "candidate": "g-0059",
+      "scenario": "D4",
+      "checks": {
+        "D4.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The required item-opening and deletion-cancellation sequence is covered with the retained-item result."
+        },
+        "D4.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps establish item presence and the complete action sequence with an observable consistent result."
+        },
+        "D4.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The setup, actions, item, result and criterion association follow the supplied criterion."
+        }
+      }
+    },
+    {
+      "candidate": "g-0061",
+      "scenario": "D2",
+      "checks": {
+        "D2.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Both status-changing actions are exercised with their specified resulting statuses."
+        },
+        "D2.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps provide the detail-page context, restoration precondition and consistent observable results."
+        },
+        "D2.grounded": {
+          "judgment": "unmet",
+          "evidence": "/drafts/2/expected_result",
+          "reason": "Additional drafts require a particular button presentation and enabled state, whereas the criteria specify selectable actions and status results."
+        }
+      }
+    },
+    {
+      "candidate": "g-0062",
+      "scenario": "D1",
+      "checks": {
+        "D1.zero": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The empty-value submission expects the specified validation message without saving."
+        },
+        "D1.one": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The supplied minimum-length value is submitted and expected unchanged in the list."
+        },
+        "D1.forty": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The supplied maximum-length repeated-character value is submitted and expected unchanged in the list."
+        },
+        "D1.forty_one": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The supplied over-limit value is submitted and expects the specified validation message without saving."
+        },
+        "D1.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The numbered grouped sequence establishes a fresh form with valid remaining fields for every boundary submission and states concrete consistent results."
+        },
+        "D1.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "All boundary values, expected behaviours and criterion associations are supported."
+        }
+      }
+    }
+  ]
+}

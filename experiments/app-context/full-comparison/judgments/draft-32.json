@@ -1,0 +1,88 @@
+{
+  "version": "full-comparison-judgments-1",
+  "assessor": "GPT-6.1 Sol via Codex; comparison_draft_grader",
+  "inputs": {
+    "fixtures.json": "f39c53a3568f284d62db8f58428c5dcbc74b5b8b9a682c65aa010a92e40206b1",
+    "rubric.md": "e499008ef3ec0952a175173c66c96a8bb891f6bfcbadc687a1c4b0a471bb9bb3"
+  },
+  "assessments": [
+    {
+      "candidate": "g-0292",
+      "scenario": "D4",
+      "checks": {
+        "D4.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The complete item-opening and deletion-cancellation sequence is covered with the retained-item result."
+        },
+        "D4.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps establish item presence and supply the cancellation sequence with a consistent observable result."
+        },
+        "D4.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The setup, actions, item result and criterion association are supported."
+        }
+      }
+    },
+    {
+      "candidate": "g-0294",
+      "scenario": "D1",
+      "checks": {
+        "D1.zero": {
+          "judgment": "met",
+          "evidence": "/drafts/0",
+          "reason": "The empty-value submission expects the specified validation message and no saved item."
+        },
+        "D1.one": {
+          "judgment": "met",
+          "evidence": "/drafts/0",
+          "reason": "The supplied minimum-length value is submitted and expected unchanged in the list."
+        },
+        "D1.forty": {
+          "judgment": "met",
+          "evidence": "/drafts/0",
+          "reason": "The supplied maximum-length repeated-character value is submitted and expected unchanged in the list."
+        },
+        "D1.forty_one": {
+          "judgment": "met",
+          "evidence": "/drafts/0",
+          "reason": "The supplied over-limit value is submitted and expects the specified validation message without saving."
+        },
+        "D1.usable": {
+          "judgment": "unmet",
+          "evidence": "/drafts/0/steps",
+          "reason": "The grouped sequence does not establish a fresh valid form for every submission, including submissions after successful saves."
+        },
+        "D1.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The boundary values, expected behaviours and criterion association follow the supplied criterion."
+        }
+      }
+    },
+    {
+      "candidate": "g-0296",
+      "scenario": "D4",
+      "checks": {
+        "D4.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts/0",
+          "reason": "A complete case exercises the required cancellation sequence with the retained-item result."
+        },
+        "D4.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The numbered cases establish item presence, provide followable action sequences and give concrete observable results consistent with those actions."
+        },
+        "D4.grounded": {
+          "judgment": "unmet",
+          "evidence": "/drafts/2",
+          "reason": "Additional cases introduce a specific confirmation action and item-removal outcome, plus list visibility while confirmation is pending, beyond the supplied cancellation criterion."
+        }
+      }
+    }
+  ]
+}

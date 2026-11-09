@@ -1,0 +1,52 @@
+{
+  "version": "full-comparison-judgments-1",
+  "assessor": "GPT-6.1 Sol via Codex; comparison_draft_grader",
+  "inputs": {
+    "fixtures.json": "f39c53a3568f284d62db8f58428c5dcbc74b5b8b9a682c65aa010a92e40206b1",
+    "rubric.md": "e499008ef3ec0952a175173c66c96a8bb891f6bfcbadc687a1c4b0a471bb9bb3"
+  },
+  "assessments": [
+    {
+      "candidate": "g-0309",
+      "scenario": "D2",
+      "checks": {
+        "D2.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Both archiving and restoration are exercised with their specified resulting statuses."
+        },
+        "D2.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps provide the detail-page context and archived restoration precondition with consistent observable results."
+        },
+        "D2.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "All actions, item values, statuses and criterion associations follow the supplied criteria."
+        }
+      }
+    },
+    {
+      "candidate": "g-0312",
+      "scenario": "D4",
+      "checks": {
+        "D4.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The complete item-opening and deletion-cancellation sequence is covered with the required retained-item result."
+        },
+        "D4.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps locate the supplied item and provide the cancellation sequence with a consistent observable result."
+        },
+        "D4.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The setup, actions, item result and criterion association are supported."
+        }
+      }
+    }
+  ]
+}

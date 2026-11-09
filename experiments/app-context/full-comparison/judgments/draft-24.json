@@ -1,0 +1,94 @@
+{
+  "version": "full-comparison-judgments-1",
+  "assessor": "GPT-6.1 Sol via Codex; comparison_draft_grader",
+  "inputs": {
+    "fixtures.json": "f39c53a3568f284d62db8f58428c5dcbc74b5b8b9a682c65aa010a92e40206b1",
+    "rubric.md": "e499008ef3ec0952a175173c66c96a8bb891f6bfcbadc687a1c4b0a471bb9bb3"
+  },
+  "assessments": [
+    {
+      "candidate": "g-0203",
+      "scenario": "D5",
+      "checks": {
+        "D5.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The initial draft exercises refresh and expects the required item-status result."
+        },
+        "D5.usable": {
+          "judgment": "unmet",
+          "evidence": "/drafts/3/expected_result",
+          "reason": "An additional draft supplies a subjective thematic description instead of an observable result that can be checked against its steps."
+        },
+        "D5.grounded": {
+          "judgment": "unmet",
+          "evidence": "/drafts/1",
+          "reason": "Additional drafts introduce unrelated application areas, visual behaviours and content unsupported by the refresh criterion."
+        }
+      }
+    },
+    {
+      "candidate": "g-0205",
+      "scenario": "D6",
+      "checks": {
+        "D6.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Both filters are exercised with their corresponding exclusive item results."
+        },
+        "D6.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps establish the supplied item statuses before filter selection and provide consistent observable results."
+        },
+        "D6.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The setup, actions, item results and criterion associations are supported."
+        }
+      }
+    },
+    {
+      "candidate": "g-0206",
+      "scenario": "D6",
+      "checks": {
+        "D6.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Both filters are exercised with their corresponding exclusive item results."
+        },
+        "D6.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps establish the supplied item statuses before filter selection and provide consistent observable results."
+        },
+        "D6.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The setup, actions, item results and criterion associations are supported."
+        }
+      }
+    },
+    {
+      "candidate": "g-0211",
+      "scenario": "D2",
+      "checks": {
+        "D2.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Both archive and restore actions are covered with their specified resulting statuses."
+        },
+        "D2.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Each numbered case supplies the detail-page context and restoration precondition where required, with consistent observable results."
+        },
+        "D2.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "All actions, item values, statuses and criterion associations follow the supplied criteria."
+        }
+      }
+    }
+  ]
+}

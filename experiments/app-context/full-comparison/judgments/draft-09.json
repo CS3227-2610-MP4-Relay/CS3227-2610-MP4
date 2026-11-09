@@ -1,0 +1,110 @@
+{
+  "version": "full-comparison-judgments-1",
+  "assessor": "GPT-6.1 Sol via Codex; comparison_draft_grader",
+  "inputs": {
+    "fixtures.json": "f39c53a3568f284d62db8f58428c5dcbc74b5b8b9a682c65aa010a92e40206b1",
+    "rubric.md": "e499008ef3ec0952a175173c66c96a8bb891f6bfcbadc687a1c4b0a471bb9bb3"
+  },
+  "assessments": [
+    {
+      "candidate": "g-0084",
+      "scenario": "D4",
+      "checks": {
+        "D4.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Complete cases exercise the required opening, deletion initiation and cancellation sequence with the retained-item result."
+        },
+        "D4.usable": {
+          "judgment": "unmet",
+          "evidence": "/drafts/4",
+          "reason": "The additional post-cancellation case neither supplies the prior cancellation as setup nor performs it, leaving its retention check without adequate context."
+        },
+        "D4.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The item-presence checks and confirmation cancellation affordance are supported by the stated setup and actions."
+        }
+      }
+    },
+    {
+      "candidate": "g-0085",
+      "scenario": "D5",
+      "checks": {
+        "D5.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The refresh action is exercised with the required item and status result."
+        },
+        "D5.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps supply the list context and action with a consistent observable result."
+        },
+        "D5.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The action, item, status and criterion association are supported."
+        }
+      }
+    },
+    {
+      "candidate": "g-0087",
+      "scenario": "D3",
+      "checks": {
+        "D3.empty": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The array is empty as required for a criterion without an observable action and result."
+        },
+        "D3.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "No unsupported measurable behaviour, feature or value is introduced."
+        }
+      }
+    },
+    {
+      "candidate": "g-0088",
+      "scenario": "D5",
+      "checks": {
+        "D5.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The refresh action is exercised with the required item and status result."
+        },
+        "D5.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps supply the list context and action with a consistent observable result."
+        },
+        "D5.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The action, item, status and criterion association are supported."
+        }
+      }
+    },
+    {
+      "candidate": "g-0089",
+      "scenario": "D6",
+      "checks": {
+        "D6.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Both filters are exercised with their respective exclusive item results."
+        },
+        "D6.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps establish the intended item statuses before each filter selection and provide consistent observable results."
+        },
+        "D6.grounded": {
+          "judgment": "unmet",
+          "evidence": "/drafts/0/steps",
+          "reason": "The setup introduces an action for selecting item availability on the list page, whereas the criteria supply statuses as preconditions without such a control."
+        }
+      }
+    }
+  ]
+}

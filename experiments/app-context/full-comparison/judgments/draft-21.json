@@ -1,0 +1,130 @@
+{
+  "version": "full-comparison-judgments-1",
+  "assessor": "GPT-6.1 Sol via Codex; comparison_draft_grader",
+  "inputs": {
+    "fixtures.json": "f39c53a3568f284d62db8f58428c5dcbc74b5b8b9a682c65aa010a92e40206b1",
+    "rubric.md": "e499008ef3ec0952a175173c66c96a8bb891f6bfcbadc687a1c4b0a471bb9bb3"
+  },
+  "assessments": [
+    {
+      "candidate": "g-0175",
+      "scenario": "D6",
+      "checks": {
+        "D6.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Both filters are exercised with their corresponding exclusive item results."
+        },
+        "D6.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps establish the required item-status setup before each filter selection and give consistent observable results."
+        },
+        "D6.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The setup, actions, item results and criterion associations are supported."
+        }
+      }
+    },
+    {
+      "candidate": "g-0179",
+      "scenario": "D2",
+      "checks": {
+        "D2.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Both archiving and restoration are exercised with their specified resulting statuses."
+        },
+        "D2.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps provide the detail-page context and archived restoration precondition with consistent observable results."
+        },
+        "D2.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "All actions, item values, statuses and criterion associations follow the supplied criteria."
+        }
+      }
+    },
+    {
+      "candidate": "g-0180",
+      "scenario": "D1",
+      "checks": {
+        "D1.zero": {
+          "judgment": "met",
+          "evidence": "/drafts/0",
+          "reason": "The empty-value submission expects the required validation message and no saved item."
+        },
+        "D1.one": {
+          "judgment": "met",
+          "evidence": "/drafts/1",
+          "reason": "The supplied minimum-length value is submitted and expected unchanged in the list."
+        },
+        "D1.forty": {
+          "judgment": "met",
+          "evidence": "/drafts/2",
+          "reason": "The supplied maximum-length repeated-character value is submitted and expected unchanged in the list."
+        },
+        "D1.forty_one": {
+          "judgment": "met",
+          "evidence": "/drafts/3",
+          "reason": "The supplied over-limit value is submitted and expects the required validation message without saving."
+        },
+        "D1.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Each numbered case establishes a fresh form with remaining required fields valid and gives a consistent observable result."
+        },
+        "D1.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "All boundary values, expected behaviours and criterion associations are supported."
+        }
+      }
+    },
+    {
+      "candidate": "g-0182",
+      "scenario": "D5",
+      "checks": {
+        "D5.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The required refresh action and specified item-status result are covered."
+        },
+        "D5.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps provide the list context and refresh action with a consistent observable result."
+        },
+        "D5.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The action, item, status and criterion association are supported."
+        }
+      }
+    },
+    {
+      "candidate": "g-0183",
+      "scenario": "D5",
+      "checks": {
+        "D5.coverage": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The required refresh action and specified item-status result are covered."
+        },
+        "D5.usable": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "Numbered steps provide the list context and refresh action with a consistent observable result."
+        },
+        "D5.grounded": {
+          "judgment": "met",
+          "evidence": "/drafts",
+          "reason": "The action, item, status and criterion association are supported."
+        }
+      }
+    }
+  ]
+}
