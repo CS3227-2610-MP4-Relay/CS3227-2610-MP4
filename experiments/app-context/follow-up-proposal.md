@@ -26,13 +26,13 @@ Each scenario has three input variants:
 | App clutter | Same target input plus unrelated app-feature descriptions |
 | Off-topic text | Same target input plus benign encyclopedia passages, e.g. geology/history |
 
-Match the two background additions at approximately 1,000 words to reduce length differences when comparing background types; 1,000 is a practical starting length. Record actual token counts because equal word counts need not mean equal tokens. Freeze passages and exact requests before running. Keep task instructions, input structure, context placement and generation settings fixed. Within each repetition block, interleave all scenarios, models and conditions in randomized order; record the execution-order seed separately from provider settings. Use the existing [drafting](../../src/ai/drafting.py) and [feedback](../../src/ai/feedback.py) prompts and output validators.
+Match the two background additions at approximately 500 words each to reduce length differences when comparing background types, with no length-tuning step. Record actual token counts because equal word counts need not mean equal tokens. Freeze passages and exact requests before running. Keep task instructions, input structure, context placement and generation settings fixed. Within each repetition block, interleave all scenarios, models and conditions in randomized order; record the execution-order seed separately from provider settings. Use the existing [drafting](../../src/ai/drafting.py) and [feedback](../../src/ai/feedback.py) prompts and output validators.
 
 ## Automatic grading
 
 Code checks JSON structure, required fields and output limits. Sol assesses scenario-specific requirements: drafting coverage and usable steps/results; feedback questions that address missing information without redundancy; unsupported claims in either feature.
 
-Give Sol the target scenario, expected behaviours and validated candidate answer, with model/condition labels hidden. Require criterion-level judgments with brief evidence. Check the grader against **24 constructed good/flawed examples**, then freeze its rubric before grading experiment outputs. This adds Codex usage, not SoC generation calls.
+Give Sol the target scenario, expected behaviours and validated candidate answer, with model/condition labels hidden. Require criterion-level binary `met`/`unmet` judgments with brief evidence; reserve `unavailable` for assessments that cannot be completed and report them separately. Check the grader against **24 constructed good/flawed examples**, then freeze its rubric before grading experiment outputs. This adds Codex usage, not SoC generation calls.
 
 Within each scenario/model/condition group, grade each distinct validated answer once and reuse that judgment for exact duplicates, retaining their observed frequencies. Compare exact parser results for this deduplication, preserving array order; do not merge answers merely because they seem similar. Keep every call's schema outcome, token counts and latency. Different answers can receive the same quality judgment.
 
