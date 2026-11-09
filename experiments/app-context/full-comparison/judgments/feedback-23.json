@@ -1,0 +1,191 @@
+{
+  "version": "full-comparison-judgments-1",
+  "assessor": "GPT-6.1 Sol via Codex; comparison_feedback_grader",
+  "inputs": {
+    "fixtures.json": "f39c53a3568f284d62db8f58428c5dcbc74b5b8b9a682c65aa010a92e40206b1",
+    "rubric.md": "e499008ef3ec0952a175173c66c96a8bb891f6bfcbadc687a1c4b0a471bb9bb3"
+  },
+  "assessments": [
+    {
+      "candidate": "g-0196",
+      "scenario": "F3",
+      "checks": {
+        "F3.empty": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Questions are returned despite the complete report."
+        },
+        "F3.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Extra list, export and file metadata are unnecessary for the complete scenario."
+        },
+        "F3.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "No unsupported product feature, factual result or diagnosis is asserted."
+        },
+        "F3.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0197",
+      "scenario": "F5",
+      "checks": {
+        "F5.coverage": {
+          "judgment": "unmet",
+          "evidence": "/questions/0",
+          "reason": "The actual confirmation action is assumed rather than requested."
+        },
+        "F5.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions/0",
+          "reason": "The report already identifies the item as visible in Items."
+        },
+        "F5.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "A single question has no duplication."
+        },
+        "F5.grounded": {
+          "judgment": "unmet",
+          "evidence": "/questions/0",
+          "reason": "The question incorrectly attributes confirmation selection to the observation."
+        },
+        "F5.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0198",
+      "scenario": "F6",
+      "checks": {
+        "F6.coverage": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Actual name and performed actions are not established despite questions about form setup and results."
+        },
+        "F6.only_missing": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Visible results, form setup and feedback are unknown."
+        },
+        "F6.distinct": {
+          "judgment": "unmet",
+          "evidence": "/questions/1",
+          "reason": "The item appearance request substantially repeats the preceding general result request."
+        },
+        "F6.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "The explicit form-freshness question makes the initial setup a possibility under clarification."
+        },
+        "F6.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0199",
+      "scenario": "F6",
+      "checks": {
+        "F6.coverage": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Actual fresh-form setup and saving actions are assumed rather than established."
+        },
+        "F6.only_missing": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Actual results, field values, feedback and environment are missing."
+        },
+        "F6.distinct": {
+          "judgment": "unmet",
+          "evidence": "/questions/1",
+          "reason": "The item appearance request substantially repeats the preceding actual-result question."
+        },
+        "F6.grounded": {
+          "judgment": "unmet",
+          "evidence": "/questions/0",
+          "reason": "The opening question presupposes a fresh form was used despite an empty observation."
+        },
+        "F6.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0200",
+      "scenario": "F6",
+      "checks": {
+        "F6.coverage": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Actual entered name, performed actions and fresh-form setup are omitted."
+        },
+        "F6.only_missing": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Visible results and field validity remain missing."
+        },
+        "F6.distinct": {
+          "judgment": "unmet",
+          "evidence": "/questions/1",
+          "reason": "The item appearance and behavior request substantially repeats the preceding actual-result question."
+        },
+        "F6.grounded": {
+          "judgment": "unmet",
+          "evidence": "/questions/0",
+          "reason": "The intended name is assumed to have been used despite the empty observation."
+        },
+        "F6.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0201",
+      "scenario": "F1",
+      "checks": {
+        "F1.coverage": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Actual quantity, fresh valid form setup and rejection details are requested."
+        },
+        "F1.only_missing": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "The requests concern useful unknown details of the reported attempt."
+        },
+        "F1.distinct": {
+          "judgment": "unmet",
+          "evidence": "/questions/3",
+          "reason": "The actual quantity and rejection request repeats information sought earlier."
+        },
+        "F1.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "No unsupported product feature, factual result or diagnosis is asserted."
+        },
+        "F1.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested."
+        }
+      }
+    }
+  ]
+}

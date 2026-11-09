@@ -1,0 +1,227 @@
+{
+  "version": "full-comparison-judgments-1",
+  "assessor": "GPT-6.1 Sol via Codex; comparison_feedback_grader",
+  "inputs": {
+    "fixtures.json": "f39c53a3568f284d62db8f58428c5dcbc74b5b8b9a682c65aa010a92e40206b1",
+    "rubric.md": "e499008ef3ec0952a175173c66c96a8bb891f6bfcbadc687a1c4b0a471bb9bb3"
+  },
+  "assessments": [
+    {
+      "candidate": "g-0081",
+      "scenario": "F2",
+      "checks": {
+        "F2.active_filter": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Filter application and the active state at export are explicitly requested."
+        },
+        "F2.only_missing": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Filter state and filtered list contents remain useful unknown details."
+        },
+        "F2.distinct": {
+          "judgment": "unmet",
+          "evidence": "/questions/1",
+          "reason": "The active filter request repeats the filter-state information sought in the first question."
+        },
+        "F2.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "No unsupported product feature, factual assertion or diagnosis is introduced."
+        },
+        "F2.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested without outcome decisions or state changes."
+        }
+      }
+    },
+    {
+      "candidate": "g-0082",
+      "scenario": "F2",
+      "checks": {
+        "F2.active_filter": {
+          "judgment": "met",
+          "evidence": "/questions/3",
+          "reason": "The question establishes whether the required filter was active during export."
+        },
+        "F2.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions/2",
+          "reason": "The row status is already supplied; general row metadata is unnecessary."
+        },
+        "F2.distinct": {
+          "judgment": "unmet",
+          "evidence": "/questions/1",
+          "reason": "The existence of additional rows substantially repeats the preceding row-count request."
+        },
+        "F2.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "No unsupported product feature, factual assertion or diagnosis is introduced."
+        },
+        "F2.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested without outcome decisions or state changes."
+        }
+      }
+    },
+    {
+      "candidate": "g-0083",
+      "scenario": "F5",
+      "checks": {
+        "F5.coverage": {
+          "judgment": "met",
+          "evidence": "/questions/0",
+          "reason": "The actual confirmation action is directly requested."
+        },
+        "F5.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions/1",
+          "reason": "The item's subsequent presence in the list is already reported."
+        },
+        "F5.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "The requests seek separate information without repetition."
+        },
+        "F5.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "No unsupported product feature, factual assertion or diagnosis is introduced."
+        },
+        "F5.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested without outcome decisions or state changes."
+        }
+      }
+    },
+    {
+      "candidate": "g-0086",
+      "scenario": "F2",
+      "checks": {
+        "F2.active_filter": {
+          "judgment": "met",
+          "evidence": "/questions/0",
+          "reason": "Actual filter application and active state are explicitly requested."
+        },
+        "F2.only_missing": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Filter application and filtered row visibility remain unknown."
+        },
+        "F2.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "The requests seek separate information without repetition."
+        },
+        "F2.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "No unsupported product feature, factual assertion or diagnosis is introduced."
+        },
+        "F2.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested without outcome decisions or state changes."
+        }
+      }
+    },
+    {
+      "candidate": "g-0090",
+      "scenario": "F4",
+      "checks": {
+        "F4.empty": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Questions are returned despite the complete report."
+        },
+        "F4.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Additional route, prior state, session and failure details are unnecessary for this complete scenario."
+        },
+        "F4.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "The requests seek separate information without repetition."
+        },
+        "F4.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "No unsupported product feature, factual assertion or diagnosis is introduced."
+        },
+        "F4.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested without outcome decisions or state changes."
+        }
+      }
+    },
+    {
+      "candidate": "g-0091",
+      "scenario": "F5",
+      "checks": {
+        "F5.coverage": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "The actual confirmation choice is assumed rather than established."
+        },
+        "F5.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions/4",
+          "reason": "The location or input method of the already performed deletion action adds no useful missing detail."
+        },
+        "F5.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "The requests seek separate information without repetition."
+        },
+        "F5.grounded": {
+          "judgment": "unmet",
+          "evidence": "/questions/0",
+          "reason": "The question attributes a confirmation selection to the observation although it was not reported."
+        },
+        "F5.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested without outcome decisions or state changes."
+        }
+      }
+    },
+    {
+      "candidate": "g-0092",
+      "scenario": "F1",
+      "checks": {
+        "F1.coverage": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Actual quantity, rejection details and fresh valid form setup are requested."
+        },
+        "F1.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions/3",
+          "reason": "Separate attempts with other values exceed missing information about the reported attempt."
+        },
+        "F1.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "The requests seek separate information without repetition."
+        },
+        "F1.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "No unsupported product feature, factual assertion or diagnosis is introduced."
+        },
+        "F1.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested without outcome decisions or state changes."
+        }
+      }
+    }
+  ]
+}

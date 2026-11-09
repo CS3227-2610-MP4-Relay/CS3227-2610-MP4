@@ -1,0 +1,129 @@
+{
+  "version": "full-comparison-judgments-1",
+  "assessor": "GPT-6.1 Sol via Codex; comparison_feedback_grader",
+  "inputs": {
+    "fixtures.json": "f39c53a3568f284d62db8f58428c5dcbc74b5b8b9a682c65aa010a92e40206b1",
+    "rubric.md": "e499008ef3ec0952a175173c66c96a8bb891f6bfcbadc687a1c4b0a471bb9bb3"
+  },
+  "assessments": [
+    {
+      "candidate": "g-0253",
+      "scenario": "F5",
+      "checks": {
+        "F5.coverage": {
+          "judgment": "met",
+          "evidence": "/questions/0",
+          "reason": "The actual selection of the removal confirmation is explicitly requested."
+        },
+        "F5.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions/3",
+          "reason": "A separate cancellation test exceeds missing information about this attempt."
+        },
+        "F5.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Each request addresses separate information."
+        },
+        "F5.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "The initial confirmation-choice question frames subsequent details as follow-up possibilities."
+        },
+        "F5.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0256",
+      "scenario": "F3",
+      "checks": {
+        "F3.empty": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Questions are returned despite the complete report."
+        },
+        "F3.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Extra filter, row and control metadata are unnecessary; status and filtered export are already supplied."
+        },
+        "F3.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "No unsupported feature, factual result or diagnosis is asserted."
+        },
+        "F3.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0259",
+      "scenario": "F4",
+      "checks": {
+        "F4.empty": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Questions are returned despite the complete report."
+        },
+        "F4.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Additional route, prior-state, control and environment details are unnecessary for this complete report."
+        },
+        "F4.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Each request addresses separate information."
+        },
+        "F4.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "No unsupported feature, factual result or diagnosis is asserted."
+        },
+        "F4.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0260",
+      "scenario": "F4",
+      "checks": {
+        "F4.empty": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Questions are returned despite the complete report."
+        },
+        "F4.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Additional route, prior-state, control and environment details are unnecessary for this complete report."
+        },
+        "F4.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Each request addresses separate information."
+        },
+        "F4.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "No unsupported feature, factual result or diagnosis is asserted."
+        },
+        "F4.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested."
+        }
+      }
+    }
+  ]
+}

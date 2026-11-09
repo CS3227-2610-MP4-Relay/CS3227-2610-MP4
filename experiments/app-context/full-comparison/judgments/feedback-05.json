@@ -1,0 +1,248 @@
+{
+  "version": "full-comparison-judgments-1",
+  "assessor": "GPT-6.1 Sol via Codex; comparison_feedback_grader",
+  "inputs": {
+    "fixtures.json": "f39c53a3568f284d62db8f58428c5dcbc74b5b8b9a682c65aa010a92e40206b1",
+    "rubric.md": "e499008ef3ec0952a175173c66c96a8bb891f6bfcbadc687a1c4b0a471bb9bb3"
+  },
+  "assessments": [
+    {
+      "candidate": "g-0045",
+      "scenario": "F4",
+      "checks": {
+        "F4.empty": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Questions are returned despite the complete report."
+        },
+        "F4.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Extra control wording and timing are unnecessary for this complete scenario."
+        },
+        "F4.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "The requests concern control wording and timing separately."
+        },
+        "F4.grounded": {
+          "judgment": "unmet",
+          "evidence": "/questions/0",
+          "reason": "The question presupposes a dropdown location for the action without supporting data."
+        },
+        "F4.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarification is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0046",
+      "scenario": "F4",
+      "checks": {
+        "F4.empty": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Questions are returned despite the complete report."
+        },
+        "F4.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Additional prior state, repeat setup and operating system details are unnecessary."
+        },
+        "F4.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "The questions seek separate details without repetition."
+        },
+        "F4.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "No unsupported behavior, feature or cause is asserted."
+        },
+        "F4.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0047",
+      "scenario": "F1",
+      "checks": {
+        "F1.coverage": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "The actual quantity and other required field validity are not requested."
+        },
+        "F1.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions/1",
+          "reason": "The observation already establishes selecting Save; button enablement does not usefully fill the report."
+        },
+        "F1.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "The questions seek separate details without repetition."
+        },
+        "F1.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "No unsupported behavior, feature or cause is asserted."
+        },
+        "F1.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0048",
+      "scenario": "F3",
+      "checks": {
+        "F3.empty": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Questions are returned despite the complete report."
+        },
+        "F3.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Additional list state, filtering and CSV metadata are unnecessary for the complete report."
+        },
+        "F3.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Potential details are queried without asserting unsupported features or causes."
+        },
+        "F3.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarification is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0049",
+      "scenario": "F2",
+      "checks": {
+        "F2.active_filter": {
+          "judgment": "met",
+          "evidence": "/questions/0",
+          "reason": "The question explicitly establishes the filter active during export."
+        },
+        "F2.only_missing": {
+          "judgment": "met",
+          "evidence": "/questions/0",
+          "reason": "Actual filter application and active state are missing."
+        },
+        "F2.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "One grouped request establishes a single filter-state detail."
+        },
+        "F2.grounded": {
+          "judgment": "met",
+          "evidence": "/questions/0",
+          "reason": "No actual filter state or unsupported behavior is asserted."
+        },
+        "F2.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions/0",
+          "reason": "Only clarification is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0050",
+      "scenario": "F3",
+      "checks": {
+        "F3.empty": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Questions are returned despite the complete report."
+        },
+        "F3.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "The requests revisit supplied export and status facts and seek unnecessary extra metadata."
+        },
+        "F3.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Possible details are questioned without asserting an unsupported product feature or cause."
+        },
+        "F3.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarification is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0051",
+      "scenario": "F6",
+      "checks": {
+        "F6.coverage": {
+          "judgment": "unmet",
+          "evidence": "/questions/0",
+          "reason": "The question asks only for the result and does not establish actual actions or form setup."
+        },
+        "F6.only_missing": {
+          "judgment": "met",
+          "evidence": "/questions/0",
+          "reason": "The actual visible result is absent."
+        },
+        "F6.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "A single question has no duplication."
+        },
+        "F6.grounded": {
+          "judgment": "unmet",
+          "evidence": "/questions/0",
+          "reason": "The question assumes the intended item name was actually saved despite an empty observation."
+        },
+        "F6.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions/0",
+          "reason": "Only clarification is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0052",
+      "scenario": "F1",
+      "checks": {
+        "F1.coverage": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Other field validity and error feedback are sought, but actual quantity is assumed rather than established."
+        },
+        "F1.only_missing": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Error details and other field validity are missing."
+        },
+        "F1.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "The two questions seek different information."
+        },
+        "F1.grounded": {
+          "judgment": "unmet",
+          "evidence": "/questions/0",
+          "reason": "The question assumes the entered quantity was the intended value despite no actual quantity report."
+        },
+        "F1.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarification is requested."
+        }
+      }
+    }
+  ]
+}

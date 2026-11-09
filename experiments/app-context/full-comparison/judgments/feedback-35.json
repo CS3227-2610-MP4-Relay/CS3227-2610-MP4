@@ -1,0 +1,134 @@
+{
+  "version": "full-comparison-judgments-1",
+  "assessor": "GPT-6.1 Sol via Codex; comparison_feedback_grader",
+  "inputs": {
+    "fixtures.json": "f39c53a3568f284d62db8f58428c5dcbc74b5b8b9a682c65aa010a92e40206b1",
+    "rubric.md": "e499008ef3ec0952a175173c66c96a8bb891f6bfcbadc687a1c4b0a471bb9bb3"
+  },
+  "assessments": [
+    {
+      "candidate": "g-0316",
+      "scenario": "F4",
+      "checks": {
+        "F4.empty": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Questions are returned despite the complete report."
+        },
+        "F4.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Additional prior-state and interface details are unnecessary."
+        },
+        "F4.distinct": {
+          "judgment": "unmet",
+          "evidence": "/questions/4",
+          "reason": "Update-versus-reload timing repeats the second question."
+        },
+        "F4.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "No unsupported feature, factual result or diagnosis is asserted."
+        },
+        "F4.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0318",
+      "scenario": "F5",
+      "checks": {
+        "F5.coverage": {
+          "judgment": "met",
+          "evidence": "/questions/0",
+          "reason": "The question establishes the confirmation action actually selected in each attempt."
+        },
+        "F5.only_missing": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Confirmation action and subsequent timing remain useful missing details."
+        },
+        "F5.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "The requests address actual action and result timing separately."
+        },
+        "F5.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "No unsupported feature, factual result or diagnosis is asserted."
+        },
+        "F5.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0319",
+      "scenario": "F4",
+      "checks": {
+        "F4.empty": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Questions are returned despite the complete report."
+        },
+        "F4.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Additional prior-state, repeat-setup and interface details are unnecessary."
+        },
+        "F4.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "The questions address separate details."
+        },
+        "F4.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "No unsupported feature, factual result or diagnosis is asserted."
+        },
+        "F4.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0320",
+      "scenario": "F5",
+      "checks": {
+        "F5.coverage": {
+          "judgment": "met",
+          "evidence": "/questions/1",
+          "reason": "The actual confirmation selection is explicitly requested."
+        },
+        "F5.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions/0",
+          "reason": "The observation already identifies the item in Items; alternative product locations are unrelated."
+        },
+        "F5.distinct": {
+          "judgment": "unmet",
+          "evidence": "/questions/3",
+          "reason": "The item location and presence request repeats the first question."
+        },
+        "F5.grounded": {
+          "judgment": "unmet",
+          "evidence": "/questions/0",
+          "reason": "The question introduces unsupported alternate product locations for the item."
+        },
+        "F5.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested."
+        }
+      }
+    }
+  ]
+}

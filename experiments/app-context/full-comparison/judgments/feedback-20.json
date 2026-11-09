@@ -1,0 +1,103 @@
+{
+  "version": "full-comparison-judgments-1",
+  "assessor": "GPT-6.1 Sol via Codex; comparison_feedback_grader",
+  "inputs": {
+    "fixtures.json": "f39c53a3568f284d62db8f58428c5dcbc74b5b8b9a682c65aa010a92e40206b1",
+    "rubric.md": "e499008ef3ec0952a175173c66c96a8bb891f6bfcbadc687a1c4b0a471bb9bb3"
+  },
+  "assessments": [
+    {
+      "candidate": "g-0167",
+      "scenario": "F5",
+      "checks": {
+        "F5.coverage": {
+          "judgment": "met",
+          "evidence": "/questions/0",
+          "reason": "The question establishes whether the removal confirmation was actually selected."
+        },
+        "F5.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions/2",
+          "reason": "A separate cancellation test exceeds missing information about the reported attempt."
+        },
+        "F5.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Confirmation and feedback, result timing and a separate path are distinct requests."
+        },
+        "F5.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Conditional confirmation details introduce no unsupported outcome or cause."
+        },
+        "F5.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0168",
+      "scenario": "F4",
+      "checks": {
+        "F4.empty": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Questions are returned despite the complete report."
+        },
+        "F4.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Additional prior state, display location and persistence details are unnecessary."
+        },
+        "F4.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "The requests concern separate details."
+        },
+        "F4.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "No unsupported feature, result or diagnosis is asserted."
+        },
+        "F4.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarification is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0170",
+      "scenario": "F6",
+      "checks": {
+        "F6.coverage": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Result details are sought, but actual name, performed actions and form setup are omitted."
+        },
+        "F6.only_missing": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Actual results and feedback are absent from the observation."
+        },
+        "F6.distinct": {
+          "judgment": "unmet",
+          "evidence": "/questions/1",
+          "reason": "The item appearance request substantially repeats the preceding broad actual-result question."
+        },
+        "F6.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "No particular actual name, setup or diagnosis is asserted."
+        },
+        "F6.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarification is requested."
+        }
+      }
+    }
+  ]
+}

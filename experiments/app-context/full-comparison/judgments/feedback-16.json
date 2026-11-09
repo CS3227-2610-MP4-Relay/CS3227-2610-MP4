@@ -1,0 +1,72 @@
+{
+  "version": "full-comparison-judgments-1",
+  "assessor": "GPT-6.1 Sol via Codex; comparison_feedback_grader",
+  "inputs": {
+    "fixtures.json": "f39c53a3568f284d62db8f58428c5dcbc74b5b8b9a682c65aa010a92e40206b1",
+    "rubric.md": "e499008ef3ec0952a175173c66c96a8bb891f6bfcbadc687a1c4b0a471bb9bb3"
+  },
+  "assessments": [
+    {
+      "candidate": "g-0142",
+      "scenario": "F4",
+      "checks": {
+        "F4.empty": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Questions are returned despite the complete report."
+        },
+        "F4.only_missing": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "The repeat result is already supplied and extra prior-state details are unnecessary."
+        },
+        "F4.distinct": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Prior state, repeat action and repeat result are separate requests."
+        },
+        "F4.grounded": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "No unsupported feature, outcome or diagnosis is asserted."
+        },
+        "F4.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarification is requested."
+        }
+      }
+    },
+    {
+      "candidate": "g-0144",
+      "scenario": "F6",
+      "checks": {
+        "F6.coverage": {
+          "judgment": "unmet",
+          "evidence": "/questions",
+          "reason": "Actual name, performed actions and fresh-form setup are assumed rather than established."
+        },
+        "F6.only_missing": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Visible results, field validity and feedback remain missing."
+        },
+        "F6.distinct": {
+          "judgment": "unmet",
+          "evidence": "/questions/3",
+          "reason": "The exact resulting name repeats the preceding questions about the visible name and result."
+        },
+        "F6.grounded": {
+          "judgment": "unmet",
+          "evidence": "/questions/0",
+          "reason": "The question presupposes the intended fresh form and name were actually used despite the empty observation."
+        },
+        "F6.boundaries": {
+          "judgment": "met",
+          "evidence": "/questions",
+          "reason": "Only clarifying information is requested."
+        }
+      }
+    }
+  ]
+}
