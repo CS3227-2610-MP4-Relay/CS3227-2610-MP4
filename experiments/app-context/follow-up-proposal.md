@@ -1,6 +1,6 @@
 # Relay AI: context relevance and model comparison
 
-**Status:** Full comparison implementation and execution authorized on 2026-11-10. The [execution method](full-comparison/method.md) defines the frozen run; results will be reported separately. Follow-up to the [eight-call pilot](README.md) and [temperature-zero repeatability pilot](repeatability-results.md).
+**Status:** The authorized full comparison completed on 2026-11-10; see [results, examples and next steps](full-comparison/results.md). The [execution method](full-comparison/method.md) defines the frozen run. Follow-up to the [eight-call pilot](README.md) and [temperature-zero repeatability pilot](repeatability-results.md).
 
 **Question:** How does irrelevant context affect answer quality, token use and latency across three models?
 
