@@ -1,0 +1,13 @@
+{
+  "frozen_at": "2026-11-09T16:48:20.203326+00:00",
+  "sha256": {
+    "experiments/app-context/calibration/fixtures.json": "f39c53a3568f284d62db8f58428c5dcbc74b5b8b9a682c65aa010a92e40206b1",
+    "experiments/app-context/calibration/reference.json": "d3978a2b9a819db768116109ff5fc10b16f98540a1e87b4fe4dcb28c4bee193c",
+    "experiments/app-context/calibration/rubric.md": "fe1d601c61ce8ae8550600d9a97aecfaac4760c2f87f9d957c9786901db024a7",
+    "experiments/app-context/calibration/README.md": "5edbd67abe1a697aa0c3246de51c0dc4b88a28b6c31962255a0ac53985ddffdd",
+    "experiments/app-context/calibration/check.py": "e751c88a6baf6c0eb000ecfdf051cf48d262a0ec90e32c88b41fc66f5c3b2cd7",
+    "src/ai/drafting.py": "efe298bada63d06d6bc1a8f576670f62ba5b5732ab4887aa6b2489d974703fec",
+    "src/ai/feedback.py": "73bfce3675d10704715a29756c92db477c7c22f91f00e8ecb17867e0d6b2da5d",
+    "src/ai/gateway.py": "cb5c6dcf993bf9b4cad81e0f07e4b3b6337be563df820a0396ed093c6b22e1c5"
+  }
+}
