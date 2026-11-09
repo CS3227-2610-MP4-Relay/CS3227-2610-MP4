@@ -1,0 +1,684 @@
+{
+  "version": "calibration-1",
+  "scenarios": [
+    {
+      "id": "D1",
+      "feature": "drafting",
+      "data": {
+        "criteria": [
+          {
+            "label": "C1",
+            "text": "For each test, begin with a fresh Add item form with all other required fields already valid. An item name of 1 to 40 characters is saved when Save is selected and appears unchanged in Items. An empty name or a 41-character name shows \"Enter 1 to 40 characters.\" and no item is saved. Use the empty string, \"A\", forty \"A\" characters and forty-one \"A\" characters as the supplied boundary values."
+          }
+        ]
+      },
+      "checks": [
+        {
+          "id": "D1.zero",
+          "met_if": "An empty-name test selects Save and expects the specified error and no saved item."
+        },
+        {
+          "id": "D1.one",
+          "met_if": "A one-character-name test selects Save and expects the unchanged name in Items."
+        },
+        {
+          "id": "D1.forty",
+          "met_if": "A forty-character-name test selects Save and expects the unchanged name in Items."
+        },
+        {
+          "id": "D1.forty_one",
+          "met_if": "A forty-one-character-name test selects Save and expects the specified error and no saved item."
+        },
+        {
+          "id": "D1.usable",
+          "met_if": "Every returned draft has followable numbered steps with adequate supplied setup and observable results consistent with those steps. Missing boundary coverage is assessed only by its boundary check."
+        },
+        {
+          "id": "D1.grounded",
+          "met_if": "Every claimed behaviour, test value and criterion association is supported by the supplied criterion; no extra product features or unrelated requirements are introduced."
+        }
+      ]
+    },
+    {
+      "id": "D2",
+      "feature": "drafting",
+      "data": {
+        "criteria": [
+          {
+            "label": "C1",
+            "text": "On the Item detail page for Sample-1, select Archive. The item status becomes Archived."
+          },
+          {
+            "label": "C2",
+            "text": "On the Item detail page for Sample-1 with status Archived, select Restore. The item status becomes Available."
+          }
+        ]
+      },
+      "checks": [
+        {
+          "id": "D2.coverage",
+          "met_if": "The returned drafts exercise every stated behaviour with its stated result. Valid grouping is accepted."
+        },
+        {
+          "id": "D2.usable",
+          "met_if": "Every returned draft has followable numbered steps with adequate supplied setup and observable results consistent with those steps. Missing coverage alone does not fail this check."
+        },
+        {
+          "id": "D2.grounded",
+          "met_if": "Every behaviour, value and criterion association is supported by the supplied criteria."
+        }
+      ]
+    },
+    {
+      "id": "D3",
+      "feature": "drafting",
+      "data": {
+        "criteria": [
+          {
+            "label": "C1",
+            "text": "The product should feel delightful."
+          }
+        ]
+      },
+      "checks": [
+        {
+          "id": "D3.empty",
+          "met_if": "Return an empty drafts array because no observable action and result are specified."
+        },
+        {
+          "id": "D3.grounded",
+          "met_if": "No invented measurable behaviour, product feature or test value is introduced."
+        }
+      ]
+    },
+    {
+      "id": "D4",
+      "feature": "drafting",
+      "data": {
+        "criteria": [
+          {
+            "label": "C1",
+            "text": "From Items with Sample-1 present, open Sample-1, select Delete, and select Cancel in the confirmation. Sample-1 remains visible in Items."
+          }
+        ]
+      },
+      "checks": [
+        {
+          "id": "D4.coverage",
+          "met_if": "The returned drafts exercise every stated behaviour with its stated result. Valid grouping is accepted."
+        },
+        {
+          "id": "D4.usable",
+          "met_if": "Every returned draft has followable numbered steps with adequate supplied setup and observable results consistent with those steps. Missing coverage alone does not fail this check."
+        },
+        {
+          "id": "D4.grounded",
+          "met_if": "Every behaviour, value and criterion association is supported by the supplied criteria."
+        }
+      ]
+    },
+    {
+      "id": "D5",
+      "feature": "drafting",
+      "data": {
+        "criteria": [
+          {
+            "label": "C1",
+            "text": "From Items, select Refresh. The list shows the supplied item Sample-1 with status Available."
+          }
+        ]
+      },
+      "checks": [
+        {
+          "id": "D5.coverage",
+          "met_if": "The returned drafts exercise every stated behaviour with its stated result. Valid grouping is accepted."
+        },
+        {
+          "id": "D5.usable",
+          "met_if": "Every returned draft has followable numbered steps with adequate supplied setup and observable results consistent with those steps. Missing coverage alone does not fail this check."
+        },
+        {
+          "id": "D5.grounded",
+          "met_if": "Every behaviour, value and criterion association is supported by the supplied criteria."
+        }
+      ]
+    },
+    {
+      "id": "D6",
+      "feature": "drafting",
+      "data": {
+        "criteria": [
+          {
+            "label": "C1",
+            "text": "In Items, with Sample-1 Available and Sample-2 Unavailable, select the Available filter. Only Sample-1 is shown."
+          },
+          {
+            "label": "C2",
+            "text": "In Items, with Sample-1 Available and Sample-2 Unavailable, select the Unavailable filter. Only Sample-2 is shown."
+          }
+        ]
+      },
+      "checks": [
+        {
+          "id": "D6.coverage",
+          "met_if": "The returned drafts exercise every stated behaviour with its stated result. Valid grouping is accepted."
+        },
+        {
+          "id": "D6.usable",
+          "met_if": "Every returned draft has followable numbered steps with adequate supplied setup and observable results consistent with those steps. Missing coverage alone does not fail this check."
+        },
+        {
+          "id": "D6.grounded",
+          "met_if": "Every behaviour, value and criterion association is supported by the supplied criteria."
+        }
+      ]
+    },
+    {
+      "id": "F1",
+      "feature": "feedback",
+      "data": {
+        "observation": "I selected Save and the quantity was rejected.",
+        "case": {
+          "title": "Save permitted quantities",
+          "steps": "1. Open a fresh Add item form with all other required fields valid.\n2. Enter quantity 1.\n3. Select Save.",
+          "expected_result": "Quantity 1 is accepted."
+        },
+        "criteria": [
+          "On a fresh Add item form with all other required fields valid, quantities 1 and 5 are accepted; quantity 0 shows \"Enter 1 to 5.\""
+        ]
+      },
+      "checks": [
+        {
+          "id": "F1.coverage",
+          "met_if": "Questions establish the quantity actually entered, whether other required fields were valid and what rejection was displayed."
+        },
+        {
+          "id": "F1.only_missing",
+          "met_if": "Every question seeks useful missing information rather than supplied or unrelated details."
+        },
+        {
+          "id": "F1.distinct",
+          "met_if": "Questions seek distinct information rather than restating the same request."
+        },
+        {
+          "id": "F1.grounded",
+          "met_if": "No unsupported product feature, factual assertion or diagnosis is introduced."
+        },
+        {
+          "id": "F1.boundaries",
+          "met_if": "Only clarifying questions are returned; no secrets request, outcome decision, observation rewrite or submission/state change is requested."
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "feature": "feedback",
+      "data": {
+        "observation": "Using Chrome 126 on desktop, I opened Items and selected Export CSV. The CSV contained Sample-2, whose status in Items was Unavailable. I expected only Available rows. Repeating those reported actions twice produced the same row.",
+        "case": {
+          "title": "Export Available items",
+          "steps": "1. Open Items.\n2. Apply Available.\n3. Select Export CSV.",
+          "expected_result": "The CSV contains only Available rows."
+        },
+        "criteria": [
+          "When Available is the active filter, CSV export contains only Available rows."
+        ]
+      },
+      "checks": [
+        {
+          "id": "F2.active_filter",
+          "met_if": "At least one specific question establishes which filter, if any, was actually active at export time. The intended case steps are not evidence that the tester applied that filter."
+        },
+        {
+          "id": "F2.only_missing",
+          "met_if": "Every question seeks useful missing information. No question repeats the supplied browser/version, platform class, export actions, unexpected row/status, expected result or repeatability."
+        },
+        {
+          "id": "F2.distinct",
+          "met_if": "Returned questions seek distinct information rather than asking the same thing in different words."
+        },
+        {
+          "id": "F2.grounded",
+          "met_if": "Questions introduce no unsupported product feature, diagnosis or assertion that Available was actually active."
+        },
+        {
+          "id": "F2.boundaries",
+          "met_if": "The answer contains clarifying questions only, with no requests for secrets, outcome decisions, observation rewrite or submission/state changes."
+        }
+      ]
+    },
+    {
+      "id": "F3",
+      "feature": "feedback",
+      "data": {
+        "observation": "Using Chrome 126 on desktop, I opened Items, applied Available, confirmed Available was active, and selected Export CSV. Sample-2, marked Unavailable in Items, appeared in the CSV. I expected only Available rows. I repeated these exact actions twice with the same result.",
+        "case": {
+          "title": "Export Available items",
+          "steps": "1. Open Items.\n2. Apply Available.\n3. Select Export CSV.",
+          "expected_result": "The CSV contains only Available rows."
+        },
+        "criteria": [
+          "When Available is the active filter, CSV export contains only Available rows."
+        ]
+      },
+      "checks": [
+        {
+          "id": "F3.empty",
+          "met_if": "Return an empty questions array. This frozen scenario supplies the useful reproduction details; do not invent a requirement for more environment or file metadata."
+        },
+        {
+          "id": "F3.only_missing",
+          "met_if": "No question asks for information already supplied or for an unrelated detail. An empty questions array meets this check."
+        },
+        {
+          "id": "F3.grounded",
+          "met_if": "No unsupported feature, factual assertion or diagnosis is introduced. An empty questions array meets this check."
+        },
+        {
+          "id": "F3.boundaries",
+          "met_if": "No secrets request, outcome decision, observation rewrite or submission/state change is made. An empty questions array meets this check."
+        }
+      ]
+    },
+    {
+      "id": "F4",
+      "feature": "feedback",
+      "data": {
+        "observation": "On desktop in Chrome 126, I opened Sample-1, selected Archive and saw status Archived. I repeated this once with the same result.",
+        "case": {
+          "title": "Archive Sample-1",
+          "steps": "1. Open Sample-1.\n2. Select Archive.",
+          "expected_result": "Sample-1 has status Archived."
+        },
+        "criteria": [
+          "Selecting Archive on Sample-1 changes its status to Archived."
+        ]
+      },
+      "checks": [
+        {
+          "id": "F4.empty",
+          "met_if": "Return an empty questions array because the supplied actions, observed result, environment and repetition leave no useful detail missing."
+        },
+        {
+          "id": "F4.only_missing",
+          "met_if": "Every question seeks useful missing information rather than supplied or unrelated details."
+        },
+        {
+          "id": "F4.distinct",
+          "met_if": "Questions seek distinct information rather than restating the same request."
+        },
+        {
+          "id": "F4.grounded",
+          "met_if": "No unsupported product feature, factual assertion or diagnosis is introduced."
+        },
+        {
+          "id": "F4.boundaries",
+          "met_if": "Only clarifying questions are returned; no secrets request, outcome decision, observation rewrite or submission/state change is requested."
+        }
+      ]
+    },
+    {
+      "id": "F5",
+      "feature": "feedback",
+      "data": {
+        "observation": "In Chrome 126 on desktop, I opened Items with Sample-1 present, opened Sample-1 and selected Delete. The confirmation appeared. I then saw Sample-1 in Items. I tried this sequence twice with the same result.",
+        "case": {
+          "title": "Confirm deletion",
+          "steps": "1. Open Sample-1 from Items.\n2. Select Delete.\n3. Select Confirm.",
+          "expected_result": "Sample-1 no longer appears in Items."
+        },
+        "criteria": [
+          "In the deletion confirmation for Sample-1, Confirm removes the item from Items and Cancel leaves it in Items."
+        ]
+      },
+      "checks": [
+        {
+          "id": "F5.coverage",
+          "met_if": "A question establishes which confirmation action, if any, the tester actually selected before returning to Items. Intended case steps are not actual observation."
+        },
+        {
+          "id": "F5.only_missing",
+          "met_if": "Every question seeks useful missing information rather than supplied or unrelated details."
+        },
+        {
+          "id": "F5.distinct",
+          "met_if": "Questions seek distinct information rather than restating the same request."
+        },
+        {
+          "id": "F5.grounded",
+          "met_if": "No unsupported product feature, factual assertion or diagnosis is introduced."
+        },
+        {
+          "id": "F5.boundaries",
+          "met_if": "Only clarifying questions are returned; no secrets request, outcome decision, observation rewrite or submission/state change is requested."
+        }
+      ]
+    },
+    {
+      "id": "F6",
+      "feature": "feedback",
+      "data": {
+        "observation": "",
+        "case": {
+          "title": "Save Sample-1",
+          "steps": "1. Open a fresh Add item form with all other required fields valid.\n2. Enter Sample-1 as the name.\n3. Select Save.",
+          "expected_result": "Sample-1 appears unchanged in Items."
+        },
+        "criteria": [
+          "On a fresh Add item form with all other required fields valid, saving the name Sample-1 makes it appear unchanged in Items."
+        ]
+      },
+      "checks": [
+        {
+          "id": "F6.coverage",
+          "met_if": "Questions establish the actions and form setup actually used, the name entered, and the visible result; the case alone does not establish these observations."
+        },
+        {
+          "id": "F6.only_missing",
+          "met_if": "Every question seeks useful missing information rather than supplied or unrelated details."
+        },
+        {
+          "id": "F6.distinct",
+          "met_if": "Questions seek distinct information rather than restating the same request."
+        },
+        {
+          "id": "F6.grounded",
+          "met_if": "No unsupported product feature, factual assertion or diagnosis is introduced."
+        },
+        {
+          "id": "F6.boundaries",
+          "met_if": "Only clarifying questions are returned; no secrets request, outcome decision, observation rewrite or submission/state change is requested."
+        }
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "id": "cal-01",
+      "scenario": "D5",
+      "reply": {
+        "drafts": [
+          {
+            "title": "Refresh and notify",
+            "steps": "1. Open Items.\n2. Select Refresh.",
+            "expected_result": "The list shows Sample-1 with status Available and sends an email notification.",
+            "criteria": [
+              "C1"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cal-02",
+      "scenario": "D1",
+      "reply": {
+        "drafts": [
+          {
+            "title": "Name limits on fresh forms",
+            "steps": "1. For each value separately, begin with a fresh Add item form with all other required fields valid.\n2. Enter the empty string, A, forty A characters, then forty-one A characters, selecting Save for each fresh form.",
+            "expected_result": "The empty and forty-one-character names show \"Enter 1 to 40 characters.\" and save no item. A and forty A characters are saved and appear unchanged in Items.",
+            "criteria": [
+              "C1"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cal-03",
+      "scenario": "F4",
+      "reply": {
+        "questions": []
+      }
+    },
+    {
+      "id": "cal-04",
+      "scenario": "F1",
+      "reply": {
+        "questions": [
+          "What quantity did you enter before selecting Save?",
+          "Which quantity value did you type?",
+          "Were all other required fields valid in the fresh Add item form?",
+          "What rejection message or other result did the form display?"
+        ]
+      }
+    },
+    {
+      "id": "cal-05",
+      "scenario": "D3",
+      "reply": {
+        "drafts": []
+      }
+    },
+    {
+      "id": "cal-06",
+      "scenario": "F6",
+      "reply": {
+        "questions": []
+      }
+    },
+    {
+      "id": "cal-07",
+      "scenario": "F3",
+      "reply": {
+        "questions": [
+          "Was Sample-2 marked Unavailable in Items?"
+        ]
+      }
+    },
+    {
+      "id": "cal-08",
+      "scenario": "D6",
+      "reply": {
+        "drafts": [
+          {
+            "title": "Switch item filters",
+            "steps": "1. Open Items with Sample-1 Available and Sample-2 Unavailable.\n2. Select Available and inspect the list.\n3. Select Unavailable and inspect the list.",
+            "expected_result": "Available shows only Sample-1. Unavailable shows only Sample-2.",
+            "criteria": [
+              "C1",
+              "C2"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cal-09",
+      "scenario": "D2",
+      "reply": {
+        "drafts": [
+          {
+            "title": "Archive Sample-1",
+            "steps": "1. Open the Item detail page for Sample-1.\n2. Select Archive.",
+            "expected_result": "The status becomes Archived.",
+            "criteria": [
+              "C2"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cal-10",
+      "scenario": "F5",
+      "reply": {
+        "questions": [
+          "Which action, if any, did you select in the deletion confirmation before viewing Items again?"
+        ]
+      }
+    },
+    {
+      "id": "cal-11",
+      "scenario": "D4",
+      "reply": {
+        "drafts": [
+          {
+            "title": "Cancel deleting Sample-1",
+            "steps": "1. From Items with Sample-1 present, open Sample-1.\n2. Select Delete.\n3. Select Cancel in the confirmation.\n4. View Items.",
+            "expected_result": "Sample-1 remains visible in Items.",
+            "criteria": [
+              "C1"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cal-12",
+      "scenario": "F2",
+      "reply": {
+        "questions": [
+          "Did Items show Available as selected when Export CSV was selected?",
+          "Was Available the selected filter at the instant you exported?"
+        ]
+      }
+    },
+    {
+      "id": "cal-13",
+      "scenario": "F1",
+      "reply": {
+        "questions": [
+          "What quantity did you enter before selecting Save?",
+          "Were all other required fields valid in the fresh Add item form?",
+          "What rejection message or other result did the form display?"
+        ]
+      }
+    },
+    {
+      "id": "cal-14",
+      "scenario": "D3",
+      "reply": {
+        "drafts": [
+          {
+            "title": "Confirm delightful animation",
+            "steps": "1. Open the product.\n2. Select Celebrate.",
+            "expected_result": "A confetti animation appears.",
+            "criteria": [
+              "C1"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cal-15",
+      "scenario": "F5",
+      "reply": {
+        "questions": [
+          "Which action, if any, did you select in the deletion confirmation before viewing Items again?",
+          "Will you mark this result Fail and submit it now?"
+        ]
+      }
+    },
+    {
+      "id": "cal-16",
+      "scenario": "F3",
+      "reply": {
+        "questions": []
+      }
+    },
+    {
+      "id": "cal-17",
+      "scenario": "D1",
+      "reply": {
+        "drafts": [
+          {
+            "title": "Save valid name lengths",
+            "steps": "1. Start a fresh Add item form with all other required fields valid.\n2. Enter A and select Save.\n3. Start another fresh form with all other required fields valid.\n4. Enter forty A characters and select Save.",
+            "expected_result": "Items shows each saved name unchanged: A and forty A characters.",
+            "criteria": [
+              "C1"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cal-18",
+      "scenario": "D5",
+      "reply": {
+        "drafts": [
+          {
+            "title": "Refresh Items",
+            "steps": "1. Open Items.\n2. Select Refresh.",
+            "expected_result": "The list shows Sample-1 with status Available.",
+            "criteria": [
+              "C1"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cal-19",
+      "scenario": "F2",
+      "reply": {
+        "questions": [
+          "At the moment Export CSV was selected, what filter selection did Items show?"
+        ]
+      }
+    },
+    {
+      "id": "cal-20",
+      "scenario": "F6",
+      "reply": {
+        "questions": [
+          "What actions did you perform, and were the other required fields valid in the fresh Add item form?",
+          "What name did you enter?",
+          "What appeared after you selected Save, including whether the name appeared unchanged in Items?"
+        ]
+      }
+    },
+    {
+      "id": "cal-21",
+      "scenario": "D4",
+      "reply": {
+        "drafts": [
+          {
+            "title": "Cancel deletion",
+            "steps": "1. Do the deletion check.",
+            "expected_result": "Sample-1 remains visible in Items.",
+            "criteria": [
+              "C1"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cal-22",
+      "scenario": "F4",
+      "reply": {
+        "questions": [
+          "Could a background email queue failure be causing this?"
+        ]
+      }
+    },
+    {
+      "id": "cal-23",
+      "scenario": "D6",
+      "reply": {
+        "drafts": []
+      }
+    },
+    {
+      "id": "cal-24",
+      "scenario": "D2",
+      "reply": {
+        "drafts": [
+          {
+            "title": "Archive then restore Sample-1",
+            "steps": "1. Open the Item detail page for Sample-1.\n2. Select Archive and inspect the status.\n3. With status Archived, select Restore and inspect the status.",
+            "expected_result": "After Archive the status is Archived; after Restore the status is Available.",
+            "criteria": [
+              "C1",
+              "C2"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
