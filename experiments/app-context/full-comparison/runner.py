@@ -294,7 +294,7 @@ def main(argv=None):
         frozen = manifest(ordered)
         path = HERE / "frozen.json"
         if args.freeze:
-            with path.open("x", encoding="utf-8") as target:
+            with path.open("x", encoding="utf-8", newline="\n") as target:
                 json.dump(frozen, target, indent=2)
             print(json.dumps({"status": "frozen", "calls_if_live": 540}))
             return 0
@@ -323,7 +323,7 @@ def main(argv=None):
             config = gateway._configuration()
             if config is None or config[1] != model:
                 raise ValueError("invalid-configuration")
-        with args.output.open("x", encoding="utf-8") as output:
+        with args.output.open("x", encoding="utf-8", newline="\n") as output:
             return run(schedule(ordered), output, digest(frozen_raw), True)
     except (Exception, KeyboardInterrupt):  # noqa: BLE001 - private text suppressed
         print("comparison-stopped", file=sys.stderr)

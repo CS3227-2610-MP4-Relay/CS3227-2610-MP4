@@ -691,7 +691,7 @@ def main(argv=None):
         digest(HERE / "frozen.json"),
         args.partial,
     )
-    with args.output.open("x", encoding="utf-8") as output:
+    with args.output.open("x", encoding="utf-8", newline="\n") as output:
         json.dump(summary, output, indent=2, allow_nan=False)
         output.write("\n")
     return 0

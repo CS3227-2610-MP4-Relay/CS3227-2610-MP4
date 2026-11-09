@@ -141,6 +141,7 @@ def test_default_offline_and_freeze_no_overwrite(runner, monkeypatch, tmp_path, 
     assert json.loads(capsys.readouterr().out)["calls_if_live"] == 540
     assert runner.main(["--freeze"]) == 0
     raw = (tmp_path / "frozen.json").read_bytes()
+    assert b"\n" in raw and b"\r\n" not in raw
     assert runner.main(["--freeze"]) == 1
     assert (tmp_path / "frozen.json").read_bytes() == raw
 
@@ -191,6 +192,7 @@ def test_full_budget_dedup_cell_isolation_and_stdout_privacy(
     output = folder / "rows.jsonl"
     assert runner.main(["--live", "--show-candidates", "--output", str(output)]) == 0
     rows = [json.loads(line) for line in output.read_text().splitlines()]
+    assert b"\n" in output.read_bytes() and b"\r\n" not in output.read_bytes()
     views = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
     assert len(attempts) == len(rows) == len(views) == 540
     assert sleeps == [1] * 539
