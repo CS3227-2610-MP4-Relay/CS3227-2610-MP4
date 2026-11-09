@@ -1,6 +1,6 @@
 # Relay AI: context relevance and model comparison
 
-**Status:** Full comparison proposed; not yet run. Follow-up to the [eight-call pilot](README.md) and [temperature-zero repeatability pilot](repeatability-results.md).
+**Status:** Full comparison implementation and execution authorized on 2026-11-10. The [execution method](full-comparison/method.md) defines the frozen run; results will be reported separately. Follow-up to the [eight-call pilot](README.md) and [temperature-zero repeatability pilot](repeatability-results.md).
 
 **Question:** How does irrelevant context affect answer quality, token use and latency across three models?
 
@@ -50,4 +50,4 @@ Summarize drafting and feedback separately. First summarize the five calls withi
 
 Results are model-assessed, not human-validated; answer diversity alone does not establish quality variation, and model-family differences prevent attributing outcomes solely to size. Unchanged quality with higher token use is still a useful finding. Reassess repeatability on the full frozen inputs, including both longer background conditions.
 
-**Execution:** The existing [repeatability probe](repeatability_probe.py) covers only its pilot corpus. A separate local runner for this full comparison would respect SoC provider limits while leaving Relay's production quotas unchanged. Full-run implementation and live execution remain separate from this proposal.
+**Execution:** The existing [repeatability probe](repeatability_probe.py) covers only its pilot corpus. The authorized full comparison uses a [separate local runner and frozen method](full-comparison/README.md), leaving Relay's production quotas unchanged.
