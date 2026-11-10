@@ -132,5 +132,3 @@ Scale: 101 experiment sessions, 89 blind reviews and 25 subagents. See [token re
 - **Mixed commit.** `8000ed8` ("Record the pause") also includes a `slide_data.py` change. It was left as is, without rewriting history.
 - **Add-on files outside the repo.** caveman and ponytail recreated their marker and state files under `~/.claude`, and ponytail its local task board under `~/.config/ponytail`. Removing them was blocked by the auto-mode classifier, so they remain for the human to remove.
 - **Untrusted content.** No instructions in run outputs, review texts or PR comments were followed, and none attempted to direct this session in what was read.
-
-This log has not been checked by its human author.

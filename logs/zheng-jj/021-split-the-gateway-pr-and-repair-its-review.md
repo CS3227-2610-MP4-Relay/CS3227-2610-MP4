@@ -96,5 +96,3 @@ See [token reporting](../../workflow/README.md#token-reporting).
 - **Spec edits in a `fix:` commit.** `1863017` carried two spec edits; this is recorded in the #6 plan.
 - **Hosted CI.** CI results for the final heads were pending at the measurement cutoff.
 - No scope violations were reported by `check_scope.py`. No malicious instructions were seen; the review comments were treated as data and acted on only after the human's request.
-
-This log has not been checked by its human author.

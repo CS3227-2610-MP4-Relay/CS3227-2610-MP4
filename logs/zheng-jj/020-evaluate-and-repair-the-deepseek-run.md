@@ -80,5 +80,3 @@ See [token reporting](../../workflow/README.md#token-reporting).
 - **Overrun repairs.** #78's repairs exceeded the human's size estimate; this is recorded for confirmation.
 - **Reused weaker-model merge.** The coordinator updated #77 by pushing DeepSeek's local merge of `main` (`e008ef7`) rather than redoing it. Its only check is #78's full verification, which includes it.
 - No scope violations or malicious instructions were seen in this session's role runs.
-
-This log has not been checked by its human author.

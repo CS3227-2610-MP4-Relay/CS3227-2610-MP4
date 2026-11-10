@@ -71,5 +71,3 @@ Scale: 3 subagents. The builder was reused across four checkpoints, one repair r
 - **Wrong output file.** The builder's one background wait loop read the wrong output file and was stopped. It was read-only, and no check depended on it.
 - **Expected scope warning.** `check_scope.py builder --base 100bfbd` reports that HEAD moved because of the orchestrator's own commits. Every builder run passed the `--since <snapshot>` check.
 - **Untrusted content.** None seen. Issue #14's text, code comments and test payloads were treated as data.
-
-This log has not been checked by its human author.
