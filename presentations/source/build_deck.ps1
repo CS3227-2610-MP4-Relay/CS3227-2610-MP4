@@ -67,6 +67,55 @@ function Line($s,[double]$x1,[double]$y1,[double]$x2,[double]$y2,[string]$color=
 function Label($s,[string]$value,[double]$x,[double]$y,[double]$w=850,[double]$size=17,[string]$color='626A73') {
     return Text $s $value $x $y $w 40 $size $color
 }
+function Screenshot($s,[string]$name,[double]$cropX,[double]$cropY,[double]$cropW,[double]$cropH,[double]$x,[double]$y,[double]$w) {
+    Add-Type -AssemblyName System.Drawing
+    $path=Join-Path $repoRoot ('docs\images\'+$name)
+    $image=[Drawing.Image]::FromFile($path)
+    $pixelW=$image.Width; $pixelH=$image.Height; $image.Dispose()
+    $picture=$s.Shapes.AddPicture($path,0,-1,0,0,-1,-1)
+    $picture.LockAspectRatio=0
+    $scale=$w/$cropW
+    $crop=$picture.PictureFormat.Crop
+    $crop.ShapeWidth=$w; $crop.ShapeHeight=$cropH*$scale
+    $crop.PictureWidth=$pixelW*$scale; $crop.PictureHeight=$pixelH*$scale
+    $crop.ShapeLeft=$x; $crop.ShapeTop=$y
+    $crop.PictureOffsetX=($pixelW/2-$cropX-$cropW/2)*$scale
+    $crop.PictureOffsetY=($pixelH/2-$cropY-$cropH/2)*$scale
+    $picture.Name='Screenshot-'+$name
+    $picture.AlternativeText='Actual Relay screen from docs/images/'+$name+'; focused excerpt.'
+    return $picture
+}
+function Walkthrough($s,$labels,[string]$accent,[string]$fill) {
+    $count=$labels.Count; $gap=28; $width=(864-($count-1)*$gap)/$count
+    for($j=0;$j -lt $count;$j++){
+        $x=48+$j*($width+$gap)
+        $null=Box $s $labels[$j] $x 114 $width 34 $fill $accent 18 $true
+        if($j -lt $count-1){$null=Line $s ($x+$width+5) 131 ($x+$width+$gap-5) 131 $C.muted $true}
+    }
+}
+function RoleScreens($s,[int]$number) {
+    switch($number){
+        3 {
+            Walkthrough $s @('Draft','Open','Closed') $C.blue $C.blueLight
+            $null=Screenshot $s 'draft-round.png' 205 412 880 380 100 155 760
+        }
+        4 {
+            Walkthrough $s @('Select criteria','Review draft','Add test case') $C.blue $C.blueLight
+            $null=Screenshot $s 'ai-suggestions.png' 205 1220 880 470 170 155 620
+        }
+        5 {
+            Walkthrough $s @('Read case','Try the build','Save draft','Submit') $C.purple $C.purpleLight
+            $null=Screenshot $s 'record-result.png' 205 554 880 190 90 160 780
+            $null=Screenshot $s 'record-result.png' 205 965 880 175 90 330 780
+        }
+        6 {
+            Walkthrough $s @('Saved observation','Questions','Edit yourself') $C.purple $C.purpleLight
+            $null=Screenshot $s 'observation-feedback.png' 205 339 880 110 100 164 760
+            $null=Screenshot $s 'observation-feedback.png' 205 1207 880 170 100 300 760
+            $null=Label $s 'Quotas     Deadline     Manual fallback' 100 458 760 16
+        }
+    }
+}
 function NativeTable($s,$rows,[double]$x,[double]$y,[double]$w,[double]$h,$widths,[double]$size=21) {
     $sh=$s.Shapes.AddTable($rows.Count,$rows[0].Count,$x,$y,$w,$h)
     $tb=$sh.Table
@@ -142,62 +191,16 @@ try {
     $null=Text $s 'Clarify observations' 535 378 350 40 21 $C.ink
     $null=Label $s 'AI supports each role. People review and save.' 48 449 864 18
 
-    # 3: coordinator state diagram
+    # 3-6: actual app screens, with a compact walkthrough above each
     $s=Base 3
-    $null=Box $s 'Draft' 48 153 240 70 $C.blueLight $C.blue 26 $true
-    $null=Box $s 'Open' 360 153 240 70 $C.blueLight $C.blue 26 $true
-    $null=Box $s 'Closed' 672 153 240 70 $C.grey $C.muted 26 $true
-    $null=Line $s 301 188 345 188 $C.muted $true
-    $null=Line $s 613 188 657 188 $C.muted $true
-    $null=Text $s "Criteria + cases" 48 246 240 45 22 $C.ink $false 2
-    $null=Text $s "Results + retests" 360 246 240 45 22 $C.ink $false 2
-    $null=Text $s 'Read-only' 672 246 240 45 22 $C.ink $false 2
-    $null=Label $s 'Each result keeps its build context' 48 332 864 20
-    $null=Box $s "Build 1.4.0`nFail" 48 382 300 80 $C.redLight $C.red 23
-    $null=Line $s 365 422 590 422 $C.muted $true
-    $null=Text $s 'Retest selected cases' 372 371 218 35 16 $C.muted $false 2
-    $null=Box $s "Build 1.4.1`nPass" 612 382 300 80 $C.greenLight $C.green 23
-
-    # 4: drafting boundary
+    RoleScreens $s 3
     $s=Base 4
-    $null=Label $s 'Selected criteria' 48 130 395 20 $C.blue
-    $null=Text $s 'A task title allows 1 to 80 characters.' 48 174 370 105 26 $C.ink $true
-    $null=Line $s 429 220 490 220 $C.muted $true
-    $null=Label $s 'Example draft' 520 130 392 20 $C.blue
-    $null=Text $s "Enter an 81-character title.`n`nExpect an error and no added task." 520 174 385 142 24 $C.ink
-    $null=Box $s 'AI suggestion' 48 365 230 72 $C.grey $C.ink 22
-    $null=Line $s 291 401 340 401 $C.muted $true
-    $null=Box $s 'Human review' 360 365 230 72 $C.blueLight $C.blue 22 $true
-    $null=Line $s 603 401 652 401 $C.muted $true
-    $null=Box $s 'Add test case' 672 365 240 72 $C.blueLight $C.blue 22 $true
+    RoleScreens $s 4
     Write-Output 'Created slides 1-4'
-
-    # 5: tester flow
     $s=Base 5
-    $titles=@('Read case','Try the build','Save draft','Submit')
-    for($j=0;$j -lt 4;$j++) {
-        $x=48+224*$j
-        $null=Box $s $titles[$j] $x 160 192 74 $C.purpleLight $C.purple 22 $true
-        if($j -lt 3){$null=Line $s ($x+198) 197 ($x+217) 197 $C.muted $true}
-    }
-    $null=Text $s 'Observation' 48 287 400 35 20 $C.purple $true
-    $null=Text $s '“The task was added, but it appeared at the bottom of the list.”' 48 335 840 82 30 $C.ink
-    $null=Label $s 'Own drafts stay private. Earlier builds stay in history.' 48 450 864 19
-
-    # 6: app AI boundary
+    RoleScreens $s 5
     $s=Base 6
-    $null=Box $s "Saved observation`nCase + linked criteria" 48 150 270 110 $C.purpleLight $C.purple 22
-    $null=Line $s 332 205 375 205 $C.muted $true
-    $null=Box $s 'SoC LLM' 395 150 170 110 $C.grey $C.ink 25 $true
-    $null=Line $s 580 205 623 205 $C.muted $true
-    $null=Box $s "Questions`nTester edits + submits" 643 150 269 110 $C.purpleLight $C.purple 22
-    $null=Label $s 'Selected source' 48 284 270 18
-    $null=Label $s 'Strict JSON' 395 284 200 18
-    $null=Label $s 'Human oversight' 643 284 269 18
-    $null=Line $s 48 357 912 357 $C.line
-    $null=Text $s 'Quotas' 48 393 250 42 24 $C.ink $true
-    $null=Text $s 'Deadline' 357 393 250 42 24 $C.ink $true
-    $null=Text $s 'Manual fallback' 666 393 250 42 24 $C.ink $true
+    RoleScreens $s 6
 
     # 7: multi-agent workflow
     $s=Base 7
