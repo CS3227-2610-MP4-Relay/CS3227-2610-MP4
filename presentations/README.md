@@ -2,7 +2,7 @@
 
 [Open the deck](Relay-MP4.pptx). Its 17 slides include speaker notes targeting 30 minutes: 15 minutes each for zheng-jj (blue) and Whimsyturtle (purple).
 
-Slides 3–6 show focused excerpts of the actual app screenshots in [`docs/images/`](../docs/images/), alongside compact walkthrough diagrams.
+Slides 3–6 show fuller views of the actual app screenshots in [`docs/images/`](../docs/images/), with editable red boxes and labels highlighting the relevant controls.
 
 The deck is editable in PowerPoint. [`source/content.json`](source/content.json) holds the notes, timings and source references; [`source/build_deck.ps1`](source/build_deck.ps1) builds the layouts using installed Microsoft PowerPoint on Windows.
 

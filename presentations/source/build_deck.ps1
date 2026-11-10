@@ -82,7 +82,7 @@ function Screenshot($s,[string]$name,[double]$cropX,[double]$cropY,[double]$crop
     $crop.PictureOffsetX=($pixelW/2-$cropX-$cropW/2)*$scale
     $crop.PictureOffsetY=($pixelH/2-$cropY-$cropH/2)*$scale
     $picture.Name='Screenshot-'+$name
-    $picture.AlternativeText='Actual Relay screen from docs/images/'+$name+'; focused excerpt.'
+    $picture.AlternativeText='Actual Relay screen from docs/images/'+$name+'; surrounding page context retained.'
     return $picture
 }
 function Walkthrough($s,$labels,[string]$accent,[string]$fill) {
@@ -93,26 +93,52 @@ function Walkthrough($s,$labels,[string]$accent,[string]$fill) {
         if($j -lt $count-1){$null=Line $s ($x+$width+5) 131 ($x+$width+$gap-5) 131 $C.muted $true}
     }
 }
+function ScreenView($s,[string]$name,[double]$cropX,[double]$cropY,[double]$cropW,[double]$cropH) {
+    $scale=[Math]::Min(590/$cropW,350/$cropH)
+    $x=48+(590-$cropW*$scale)/2
+    $y=129+(350-$cropH*$scale)/2
+    $null=Screenshot $s $name $cropX $cropY $cropW $cropH $x $y ($cropW*$scale)
+    return [pscustomobject]@{x=$x;y=$y;right=$x+$cropW*$scale;scale=$scale;cropX=$cropX;cropY=$cropY}
+}
+function Highlight($s,$view,[double]$px,[double]$py,[double]$pw,[double]$ph,[string]$title,[string]$detail,[double]$labelY) {
+    $x=$view.x+($px-$view.cropX)*$view.scale
+    $y=$view.y+($py-$view.cropY)*$view.scale
+    $w=$pw*$view.scale; $h=$ph*$view.scale
+    $outline=Rect $s $x $y $w $h $C.white
+    $outline.Fill.Visible=0; $outline.Line.Visible=-1
+    $outline.Line.ForeColor.RGB=RGB 'D13636'; $outline.Line.Weight=2
+    $outline.Name='Highlight-'+$title
+    $center=$y+$h/2; $anchor=$labelY+20
+    $bend=$view.right+16
+    $null=Line $s ($x+$w) $center $bend $center 'D13636' $false 1
+    $null=Line $s $bend $center 687 $anchor 'D13636' $false 1
+    $null=Text $s $title 704 $labelY 208 54 22 $C.ink $true
+    $null=Text $s $detail 704 ($labelY+57) 208 47 18 $C.muted
+}
 function RoleScreens($s,[int]$number) {
     switch($number){
         3 {
-            Walkthrough $s @('Draft','Open','Closed') $C.blue $C.blueLight
-            $null=Screenshot $s 'draft-round.png' 205 412 880 380 100 155 760
+            $view=ScreenView $s 'draft-round.png' 160 60 960 760
+            Highlight $s $view 208 239 862 56 'Draft state' 'Edit the round before publishing' 151
+            Highlight $s $view 421 410 651 375 'Acceptance criteria' 'Define what the tests should cover' 333
         }
         4 {
-            Walkthrough $s @('Select criteria','Review draft','Add test case') $C.blue $C.blueLight
-            $null=Screenshot $s 'ai-suggestions.png' 205 1220 880 470 170 155 620
+            $view=ScreenView $s 'ai-suggestions.png' 160 60 960 1160
+            Highlight $s $view 208 321 864 215 'Select criteria' 'Choose the source for drafting' 138
+            Highlight $s $view 208 810 864 333 'Review the draft' 'Check steps, results and criterion links' 264
+            Highlight $s $view 208 1155 166 46 'Use this draft' 'Review it in the normal form' 390
         }
         5 {
-            Walkthrough $s @('Read case','Try the build','Save draft','Submit') $C.purple $C.purpleLight
-            $null=Screenshot $s 'record-result.png' 205 554 880 190 90 160 780
-            $null=Screenshot $s 'record-result.png' 205 965 880 175 90 330 780
+            $view=ScreenView $s 'record-result.png' 160 60 960 1100
+            Highlight $s $view 208 555 864 395 'Outcome + observation' 'Record what happened' 138
+            Highlight $s $view 208 966 211 44 'Save or submit' 'Keep a draft, then submit when ready' 264
+            Highlight $s $view 208 1084 206 45 'Observation feedback' 'Review the report before submission' 390
         }
         6 {
-            Walkthrough $s @('Saved observation','Questions','Edit yourself') $C.purple $C.purpleLight
-            $null=Screenshot $s 'observation-feedback.png' 205 339 880 110 100 164 760
-            $null=Screenshot $s 'observation-feedback.png' 205 1207 880 170 100 300 760
-            $null=Label $s 'Quotas     Deadline     Manual fallback' 100 458 760 16
+            $view=ScreenView $s 'observation-feedback.png' 160 60 960 1340
+            Highlight $s $view 208 341 864 105 'Saved observation' 'The original report stays visible' 138
+            Highlight $s $view 208 1120 201 46 'Request feedback' 'AI runs after an explicit action' 264
+            Highlight $s $view 208 1210 864 167 'Questions to consider' 'Decide what to edit yourself' 390
         }
     }
 }
@@ -191,7 +217,7 @@ try {
     $null=Text $s 'Clarify observations' 535 378 350 40 21 $C.ink
     $null=Label $s 'AI supports each role. People review and save.' 48 449 864 18
 
-    # 3-6: actual app screens, with a compact walkthrough above each
+    # 3-6: fuller app pages with editable red highlight boxes and labels
     $s=Base 3
     RoleScreens $s 3
     $s=Base 4
