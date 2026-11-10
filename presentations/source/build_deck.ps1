@@ -1,12 +1,12 @@
-﻿param([string]$OutputName = 'Relay-MP4.pptx')
+﻿param([string]$OutputName = 'Relay-MP4.pptx', [string]$OutputPath = '')
 
 $ErrorActionPreference = 'Stop'
 $buildDir = $PSScriptRoot
 $taskDir = Split-Path $buildDir -Parent
 $repoRoot = Split-Path $taskDir -Parent
-$outPath = Join-Path $taskDir $OutputName
+$outPath = if($OutputPath){[IO.Path]::GetFullPath($OutputPath)}else{Join-Path $taskDir $OutputName}
 $qaDir = Join-Path $repoRoot 'tmp\relay-mp4-presentation'
-$renderDir = Join-Path $qaDir ('renders\' + [IO.Path]::GetFileNameWithoutExtension($OutputName))
+$renderDir = Join-Path $qaDir ('renders\' + [IO.Path]::GetFileNameWithoutExtension($outPath))
 if (Test-Path -LiteralPath $outPath) { throw 'Output already exists. Choose a new -OutputName.' }
 $content = Get-Content -LiteralPath (Join-Path $buildDir 'content.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 New-Item -ItemType Directory -Path $renderDir -Force | Out-Null
@@ -142,7 +142,7 @@ function RoleScreens($s,[int]$number) {
         }
     }
 }
-function NativeTable($s,$rows,[double]$x,[double]$y,[double]$w,[double]$h,$widths,[double]$size=21) {
+function NativeTable($s,$rows,[double]$x,[double]$y,[double]$w,[double]$h,$widths,[double]$size=21,[double]$padding=8) {
     $sh=$s.Shapes.AddTable($rows.Count,$rows[0].Count,$x,$y,$w,$h)
     $tb=$sh.Table
     for($col=1;$col -le $rows[0].Count;$col++) {$tb.Columns.Item($col).Width=[double]$widths[$col-1]}
@@ -151,7 +151,7 @@ function NativeTable($s,$rows,[double]$x,[double]$y,[double]$w,[double]$h,$width
             $cell=$tb.Cell($r,$col)
             $cell.Shape.Fill.ForeColor.RGB=RGB $(if($r -eq 1){$C.ink}else{$C.white})
             $tf=$cell.Shape.TextFrame
-            $tf.MarginLeft=14; $tf.MarginRight=10; $tf.MarginTop=8; $tf.MarginBottom=8
+            $tf.MarginLeft=14; $tf.MarginRight=10; $tf.MarginTop=$padding; $tf.MarginBottom=$padding
             $tf.VerticalAnchor=3
             $tf.TextRange.Text=[string]$rows[$r-1][$col-1]
             $tf.TextRange.Font.Name='Calibri'; $tf.TextRange.Font.Size=$size
@@ -170,6 +170,131 @@ function CellColor($tb,[int]$r,[int]$col,[string]$fill,[string]$font) {
     $cell.Shape.Fill.ForeColor.RGB=RGB $fill
     $cell.Shape.TextFrame.TextRange.Font.Color.RGB=RGB $font
 }
+function ExperimentSlide($s,$item) {
+    $accent=if($item.speaker -eq 'zheng-jj'){$C.blue}else{$C.purple}
+    switch($item.layout) {
+        'task_map' {
+            $null=Label $s '135 counted runs. Claude Code, Codex and Hermes.' 48 114 864 21 $accent
+            $null=NativeTable $s $item.rows 48 173 864 264 @(95,624,145) 21
+        }
+        'prompt' {
+            $font=if($item.font){$item.font}else{'Calibri'}
+            $null=Text $s $item.body 48 129 864 344 $item.size $C.ink $false 1 $font
+        }
+        'sample_run' {
+            $null=NativeTable $s $item.rows 48 124 864 274 @(454,410) 20
+            $null=Label $s 'Actual candidate line retained in the mutation fixture' 48 408 864 17 $accent
+            $null=Text $s $item.code 48 440 864 29 18 $C.ink $false 1 'Consolas'
+        }
+        'setup_cost' {
+            $null=Label $s 'Task 1 on Opus. Median cost and elapsed time.' 48 113 864 20
+            $tb=NativeTable $s $item.rows 48 169 864 280 @(330,105,143,143,143) 20
+            for($col=1;$col -le 5;$col++){CellColor $tb 2 $col $C.grey $C.ink}
+            for($r=3;$r -le 7;$r++){foreach($col in 3..4){CellColor $tb $r $col $C.greenLight $C.green}}
+        }
+        'quality' {
+            $steps=@('Hidden suite','Planted bugs','Blind review')
+            for($j=0;$j -lt 3;$j++) {
+                $x=48+304*$j
+                $null=Box $s $steps[$j] $x 129 256 54 $C.blueLight $accent 23 $true
+                if($j -lt 2){$null=Line $s ($x+268) 156 ($x+292) 156 $C.muted $true}
+            }
+            $tb=NativeTable $s $item.rows 48 220 864 208 @(430,434) 21
+            CellColor $tb 2 2 $C.greenLight $C.green
+            CellColor $tb 3 2 $C.greenLight $C.green
+            CellColor $tb 4 2 $C.amberLight $C.amber
+        }
+        'hermes' {
+            $null=Label $s 'Same model and tool. Compare within each task pair.' 48 113 864 20
+            $tb=NativeTable $s $item.rows 48 168 864 282 @(256,105,118,143,120,122) 18
+            foreach($col in 2..3){CellColor $tb 3 $col $C.greenLight $C.green; CellColor $tb 6 $col $C.redLight $C.red}
+            foreach($col in 5..6){CellColor $tb 6 $col $C.greenLight $C.green}
+            for($col=1;$col -le 6;$col++){CellColor $tb 4 $col $C.grey $C.muted}
+        }
+        'ideal' {
+            $steps=@('One session builds','Consistency check','Independent review')
+            for($j=0;$j -lt 3;$j++) {
+                $x=48+304*$j
+                $null=Box $s $steps[$j] $x 173 256 98 $(if($j -eq 1){$C.grey}else{$C.blueLight}) $C.ink 25 $true
+                if($j -lt 2){$null=Line $s ($x+267) 222 ($x+292) 222 $C.muted $true}
+            }
+            $null=Text $s 'Requirements, decisions, tests and implementation' 247 312 530 63 24 $accent $true
+            $null=Line $s 800 287 800 390 $C.muted
+            $null=Line $s 800 390 176 390 $C.muted
+            $null=Line $s 176 390 176 287 $C.muted $true
+            $null=Label $s 'Limited repairs' 350 409 310 26 $accent
+        }
+        'v7_v8' {
+            $null=Label $s 'V8 added four rules. Review findings did not consistently fall.' 48 113 864 20
+            $tb=NativeTable $s $item.rows 48 177 864 256 @(510,177,177) 22
+            for($r=2;$r -le 5;$r++){CellColor $tb $r 3 $C.redLight $C.red}
+        }
+        'dev_takeaways' {$null=NativeTable $s $item.rows 48 162 864 265 @(410,454) 22}
+        'stages' {$null=NativeTable $s $item.rows 48 130 864 303 @(330,534) 21}
+        'app_design' {
+            $null=Text $s '12 scenarios' 48 137 864 50 36 $C.ink $true 2
+            $null=Text $s '3 models × 3 conditions × 5 repeats' 48 204 864 50 30 $accent $true 2
+            $null=Text $s '540 attempts' 48 272 864 60 44 $C.ink $true 2
+            $labels=@('Relevant only','App clutter','Off-topic text')
+            for($j=0;$j -lt 3;$j++){$null=Box $s $labels[$j] (48+300*$j) 370 264 60 $C.purpleLight $accent 22}
+        }
+        'sample_answer' {
+            $null=Text $s $item.body 48 135 864 112 19 $C.ink $false 1 'Consolas'
+            $tb=NativeTable $s $item.rows 48 258 864 201 @(600,264) 18 3
+            for($r=2;$r -le 6;$r++){CellColor $tb $r 2 $C.greenLight $C.green}
+        }
+        'calibration' {
+            $null=Box $s 'Parser: structure' 48 130 390 65 $C.grey $C.ink 25 $true
+            $null=Line $s 449 163 502 163 $C.muted $true
+            $null=Box $s 'Rubric: usefulness' 522 130 390 65 $C.purpleLight $accent 25 $true
+            $null=NativeTable $s $item.rows 48 238 864 199 @(580,284) 22
+        }
+        'draft_results' {
+            $null=Label $s 'All checks met, out of 30 attempts per cell' 48 113 864 21
+            $tb=NativeTable $s $item.rows 48 170 864 218 @(294,190,190,190) 23
+            for($r=2;$r -le 4;$r++){CellColor $tb $r 2 $C.grey $C.ink}
+            foreach($r in 2..3){foreach($col in 3..4){CellColor $tb $r $col $C.redLight $C.red}}
+            CellColor $tb 4 3 $C.grey $C.muted; CellColor $tb 4 4 $C.redLight $C.red
+            $null=Text $s 'One clutter answer added tests about astronomy, textiles, gardening and audio.' 48 417 864 48 20 $C.ink
+        }
+        'feedback_results' {
+            $null=Label $s 'All checks met, out of 30 attempts per cell' 48 113 864 21
+            $tb=NativeTable $s $item.rows 48 170 864 218 @(294,190,190,190) 23
+            for($r=2;$r -le 4;$r++){CellColor $tb $r 2 $C.grey $C.ink}
+            foreach($col in 3..4){CellColor $tb 2 $col $C.grey $C.muted; CellColor $tb 3 $col $C.redLight $C.red}
+            CellColor $tb 4 3 $C.greenLight $C.green; CellColor $tb 4 4 $C.grey $C.muted
+            $null=Text $s 'Complete reports F3 and F4: 43/43 accepted answers each still asked unnecessary questions.' 48 417 864 48 20 $C.ink
+        }
+        'app_resources' {
+            $null=Label $s 'Drafting: app clutter compared with relevant-only' 48 113 864 21
+            $tb=NativeTable $s $item.rows 48 180 864 238 @(216,216,244,188) 21
+            foreach($r in 2..3){CellColor $tb $r 2 $C.redLight $C.red}
+            CellColor $tb 4 2 $C.grey $C.muted
+            for($r=2;$r -le 4;$r++){CellColor $tb $r 3 $C.amberLight $C.amber}
+            CellColor $tb 2 4 $C.redLight $C.red; CellColor $tb 3 4 $C.greenLight $C.green; CellColor $tb 4 4 $C.redLight $C.red
+        }
+        'next' {
+            $steps=@('Human sample review','Narrow prompt change','Frozen comparison')
+            for($j=0;$j -lt 3;$j++) {
+                $x=48+304*$j
+                $null=Box $s $steps[$j] $x 174 256 102 $C.purpleLight $accent 25 $true
+                if($j -lt 2){$null=Line $s ($x+268) 225 ($x+292) 225 $C.muted $true}
+            }
+            $null=Text $s 'Empty answers, actual actions and background boundaries' 80 333 800 78 28 $C.ink $true 2
+        }
+        'close' {
+            $null=Text $s 'In development' 48 153 395 42 24 $C.blue $true
+            $null=Text $s "Focused building context`nIndependent review" 48 221 396 130 30 $C.ink $true
+            $null=Text $s 'In the app' 522 153 390 42 24 $C.purple $true
+            $null=Text $s "Relevant evidence`nHuman decisions" 522 221 390 130 32 $C.ink $true
+            $null=Line $s 480 148 480 359 $C.line
+            $null=Text $s 'Evaluate quality against the resources spent' 48 414 864 50 28 $C.ink $true 2
+        }
+        'record' {$null=NativeTable $s $item.rows 48 124 864 338 @(460,404) 17 2}
+        default {throw ('Unknown layout: '+$item.layout)}
+    }
+    if($item.footer){$null=Text $s $item.footer 48 470 864 20 12.5 $C.muted}
+}
 function Base([int]$i) {
     $item=$content.slides[$i-1]
     $s=$script:deck.Slides.Add($i,12)
@@ -179,11 +304,14 @@ function Base([int]$i) {
     $null=Line $s 48 494 912 494 $C.line $false 0.7
     $null=Rect $s 48 510 9 9 $accent
     $null=Text $s $item.speaker 66 505 400 22 12 $accent $true
-    $null=Text $s ([string]$i + ' / ' + $content.slides.Count) 842 505 70 22 11 $C.muted $false 3
+    $mainCount=@($content.slides | Where-Object {-not $_.backup}).Count
+    $page=if($item.backup){'Backup '+($i-$mainCount)}else{[string]$i+' / '+$mainCount}
+    $null=Text $s $page 806 505 106 22 11 $C.muted $false 3
     $start=0; for($j=0;$j -lt $i-1;$j++){$start += $content.slides[$j].seconds}
     $end=$start+$item.seconds
     function Stamp([int]$v){return ('{0}:{1:00}' -f [math]::Floor($v/60),($v%60))}
-    $note='Speaker: '+$item.speaker+"`r`n"+'Target: '+(Stamp $item.seconds)+' | Running time: '+(Stamp $start)+'-'+(Stamp $end)+"`r`n`r`n"+$item.notes+"`r`n`r`nSources:`r`n"+($item.sources -join "`r`n")
+    $timing=if($item.backup){'Backup: outside the 40-minute presentation'}else{'Target: '+(Stamp $item.seconds)+' | Running time: '+(Stamp $start)+'-'+(Stamp $end)}
+    $note='Speaker: '+$item.speaker+"`r`n"+$timing+"`r`n`r`n"+$item.notes+"`r`n`r`nSources:`r`n"+($item.sources -join "`r`n")
     $s.NotesPage.Shapes.Placeholders.Item(2).TextFrame.TextRange.Text=$note
     return $s
 }
@@ -261,129 +389,12 @@ try {
     $null=Label $s 'Risk-based roles     Focused checks     Tokens + elapsed + repairs' 48 450 864 18
     Write-Output 'Created slides 5-8'
 
-    # 9: development setup and actual prompt/output
-    $s=Base 9
-    $null=Label $s '14 setups across four Relay tasks' 48 112 864 23 $C.blue
-    $null=Box $s 'Same task' 48 171 230 58 $C.grey $C.ink 22
-    $null=Line $s 292 200 339 200 $C.muted $true
-    $null=Box $s 'Changed setup' 360 171 230 58 $C.blueLight $C.blue 22 $true
-    $null=Line $s 604 200 651 200 $C.muted $true
-    $null=Box $s 'Tests + review' 672 171 240 58 $C.grey $C.ink 22
-    $null=Label $s 'Task 1 prompt excerpt' 48 271 392 18 $C.blue
-    $null=Text $s '“Refuse only the text-direction embedding, override and isolate characters: U+202A to U+202E and U+2066 to U+2069.”' 48 314 392 145 21 $C.ink
-    $null=Label $s 'Actual candidate code, r1-mp4' 500 271 412 18 $C.blue
-    $null=Rect $s 500 316 412 102 $C.grey
-    $null=Text $s "if any(ord(char) in`n       BIDI_CONTROLS`n       for char in text):" 516 332 383 80 18 $C.ink $false 1 'Consolas'
-    $null=Label $s 'Retained in the mutation fixture' 500 436 412 15
-
-    # 10: native results table
-    $s=Base 10
-    $null=Label $s 'Task 1 on Opus. Median cost and elapsed time.' 48 112 864 20
-    $rows=@(
-        @('Setup','Cost, US$','Time, min'),
-        @('MP4 baseline','8.97','30'),
-        @('MP3 six roles','5.77','22'),
-        @('Solo','3.35','13'),
-        @('superpowers','4.14','12')
-    )
-    $tb=NativeTable $s $rows 48 180 864 250 @(430,217,217) 22
-    for($r=3;$r -le 5;$r++){for($col=2;$col -le 3;$col++){CellColor $tb $r $col $C.greenLight $C.green}}
-    for($col=1;$col -le 3;$col++){CellColor $tb 2 $col $C.grey $C.ink}
-    $null=Label $s 'Green: lower than MP4. All passed full verification. API list prices.' 48 454 864 16
-
-    # 11: quality and mutation
-    $s=Base 11
-    $rows=@(
-        @('Measure','Observed result'),
-        @('Hidden tests','Every counted run passed'),
-        @('Planted bugs','Almost all caught all five'),
-        @('Independent review','58 Medium+ findings, including 5 High')
-    )
-    $tb=NativeTable $s $rows 48 137 864 213 @(275,589) 22
-    CellColor $tb 2 2 $C.greenLight $C.green; CellColor $tb 3 2 $C.greenLight $C.green
-    CellColor $tb 4 2 $C.amberLight $C.amber
-    $null=Label $s 'Original candidate' 48 374 390 17
-    $null=Label $s 'Deliberately broken variant' 580 374 332 17
-    $null=Text $s 'if any(...):' 48 418 330 44 25 $C.ink $false 1 'Consolas'
-    $null=Line $s 421 434 546 434 $C.muted $true
-    $null=Text $s 'if False:' 580 418 332 44 25 $C.red $false 1 'Consolas'
-
-    # 12: experimental recommendation
-    $s=Base 12
-    $null=Label $s 'Experimental recommendation: ideal v7' 48 112 864 22 $C.blue
-    $null=Box $s "One building`nsession" 48 206 248 104 $C.blueLight $C.blue 25 $true
-    $null=Line $s 309 258 342 258 $C.muted $true
-    $null=Box $s "Consistency`ncheck" 356 206 248 104 $C.grey $C.ink 25
-    $null=Line $s 617 258 650 258 $C.muted $true
-    $null=Box $s "Independent`nreview" 664 206 248 104 $C.blueLight $C.blue 25 $true
-    $null=Label $s 'Requirements     Decisions     Tests     Code' 269 343 643 18
-    $null=Text $s 'Extra process needs evidence of value' 48 411 864 52 28 $C.ink $true
-    Write-Output 'Created slides 9-12'
-
-    # 13: app experiment design
-    $s=Base 13
-    $null=Text $s '12 scenarios' 48 147 864 50 37 $C.ink $true 2
-    $null=Text $s '3 models × 3 conditions × 5 repeats' 48 216 864 50 31 $C.purple $true 2
-    $null=Text $s '540 attempts' 48 288 864 60 44 $C.ink $true 2
-    $null=Box $s 'Relevant only' 48 397 264 60 $C.grey $C.ink 21
-    $null=Box $s 'App clutter' 348 397 264 60 $C.purpleLight $C.purple 21
-    $null=Box $s 'Off-topic text' 648 397 264 60 $C.purpleLight $C.purple 21
-    $null=Label $s 'Six drafting + six feedback scenarios. Same production prompts and parsers.' 48 466 864 14
-
-    # 14: app prompt and constructed output
-    $s=Base 14
-    $null=Label $s 'Production prompt excerpt' 48 113 864 17 $C.purple
-    $null=Text $s '“If no useful detail is missing, return no questions.”' 48 152 864 50 26 $C.ink $true
-    $null=Line $s 48 219 912 219 $C.line
-    $null=Label $s 'Synthetic F2 input, shortened' 48 242 395 18 $C.purple
-    $null=Text $s "Case: Apply Available, then export CSV.`n`nReport: Opened Items and exported. An Unavailable row appeared." 48 286 383 154 22 $C.ink
-    $null=Line $s 443 345 484 345 $C.muted $true
-    $null=Label $s 'Constructed calibration answer' 508 242 404 18 $C.purple
-    $sampleAnswer = "{`"questions`": [`n  `"At the moment Export CSV was selected, what filter selection did Items show?`"`n]}"
-    $null=Text $s $sampleAnswer 508 289 404 142 19 $C.ink $false 1 'Consolas'
-    $null=Label $s 'Input summarized from F2. Answer quoted from cal-19.' 48 459 864 15
-
-    # 15: all-check quality tables, native and editable
-    $s=Base 15
-    $null=Label $s 'All checks met, out of 30 attempts per cell' 48 112 864 21
-    $null=Text $s 'Drafting' 48 165 390 35 23 $C.ink $true
-    $null=Text $s 'Feedback' 494 165 418 35 23 $C.ink $true
-    $d=@(@('Model','Relevant','Clutter','Off-topic'),@('Llama 8B','12','2','0'),@('Qwen 35B','29','20','25'),@('x-test-2','30','30','29'))
-    $f=@(@('Model','Relevant','Clutter','Off-topic'),@('Llama 8B','0','0','0'),@('Qwen 35B','9','2','5'),@('x-test-2','5','9','5'))
-    $dt=NativeTable $s $d 48 212 418 207 @(130,96,96,96) 17
-    $ft=NativeTable $s $f 494 212 418 207 @(130,96,96,96) 17
-    foreach($t in @($dt,$ft)){for($r=2;$r -le 4;$r++){CellColor $t $r 2 $C.grey $C.ink}}
-    for($r=2;$r -le 3;$r++){for($col=3;$col -le 4;$col++){CellColor $dt $r $col $C.redLight $C.red}}
-    CellColor $dt 4 3 $C.grey $C.muted; CellColor $dt 4 4 $C.redLight $C.red
-    for($col=3;$col -le 4;$col++){CellColor $ft 2 $col $C.grey $C.muted; CellColor $ft 3 $col $C.redLight $C.red}
-    CellColor $ft 4 3 $C.greenLight $C.green; CellColor $ft 4 4 $C.grey $C.muted
-    $null=Label $s 'Against relevant-only: red lower, green higher, grey unchanged. Model-assessed quality.' 48 447 864 15
-
-    # 16: resource deltas native table
-    $s=Base 16
-    $null=Label $s 'Drafting: app clutter compared with relevant-only' 48 112 864 21
-    $rows=@(
-        @('Model','Success change','Input tokens / call','Mean latency'),
-        @('Llama 8B','−33.3 pp','+582','+5.66 s'),
-        @('Qwen 35B','−30.0 pp','+580','−0.30 s'),
-        @('x-test-2','0.0 pp','+574','+0.08 s')
-    )
-    $tb=NativeTable $s $rows 48 181 864 230 @(216,216,244,188) 21
-    CellColor $tb 2 2 $C.redLight $C.red; CellColor $tb 3 2 $C.redLight $C.red; CellColor $tb 4 2 $C.grey $C.muted
-    for($r=2;$r -le 4;$r++){CellColor $tb $r 3 $C.amberLight $C.amber}
-    CellColor $tb 2 4 $C.redLight $C.red; CellColor $tb 3 4 $C.greenLight $C.green; CellColor $tb 4 4 $C.redLight $C.red
-    $null=Label $s 'pp = percentage points. Paired scenario averages; measured token counters.' 48 444 864 16
-
-    # 17: concise close
-    $s=Base 17
-    $null=Text $s 'In development' 48 153 395 42 24 $C.blue $true
-    $null=Text $s "Fewer handoffs`nIndependent review" 48 221 396 130 32 $C.ink $true
-    $null=Text $s 'In the app' 522 153 390 42 24 $C.purple $true
-    $null=Text $s "Relevant context`nHuman decisions" 522 221 390 130 32 $C.ink $true
-    $null=Line $s 480 148 480 359 $C.line
-    $null=Text $s 'Evaluate quality against the resources spent' 48 414 864 50 28 $C.ink $true 2
-
-    Write-Output 'Created slides 13-17; saving and rendering'
+    # Expanded experiments and complete sample evidence, followed by backups.
+    for($number=9;$number -le $content.slides.Count;$number++) {
+        $s=Base $number
+        ExperimentSlide $s $content.slides[$number-1]
+    }
+    Write-Output 'Created expanded experiment slides; saving and rendering'
     $deck.SaveAs($outPath,24)
     foreach($slide in $deck.Slides){$slide.Export((Join-Path $renderDir ('slide-{0:00}.png' -f $slide.SlideIndex)),'PNG',1600,900)}
 
