@@ -64,5 +64,3 @@ Scale: 3 subagents. The builder was reused for two checkpoints, a plan update an
 - **Builder telemetry.** The builder and reviewers could not see their own usage; their rows come from the orchestrator's snapshots of their transcripts.
 - **Mutation helpers.** The builder wrote its mutation helpers to the session scratchpad, outside the repository. Each mutation was restored from a copy and confirmed with `git diff --exit-code`.
 - **Untrusted content.** None seen. Issue #25's text, code comments and test payloads were treated as data.
-
-This log has not been checked by its human author.

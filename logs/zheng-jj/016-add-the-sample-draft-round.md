@@ -63,4 +63,4 @@ See [token reporting](../../workflow/README.md#token-reporting).
 
 - **Status lines marked too early.** Checkpoint 1 marked RND-7 "implemented" in the specs before the code commit. The plan records this; history was not rewritten.
 - **Missed in round 0.** The verifier missed the lock-hold cost; the security reviewer caught it.
-- No scope violations or malicious instructions were seen. This log has not been checked by its human author.
+- No scope violations or malicious instructions were seen.

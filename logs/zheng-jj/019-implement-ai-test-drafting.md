@@ -64,4 +64,3 @@ Two subagents ran. No builder agent ran: the orchestrator wrote the specs and co
 
   The repairs are recorded in the [#22 plan](../../workflow/plans/22-test-drafting-spec.md).
 - Independent reviews found real defects that the focused tests missed, including the deep-nesting crash and over-cap response escape; both were repaired and re-reviewed.
-- This log has not been checked by its human author.

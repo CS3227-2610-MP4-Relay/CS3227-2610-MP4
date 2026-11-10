@@ -70,4 +70,4 @@ See [token reporting](../../workflow/README.md#token-reporting).
 
 - **Old leak marker.** The first marker was matched case-insensitively against random tokens, which risked about a 1% false-failure rate per run. Both reviewers caught it.
 - **Spec edit in a merge commit.** The SECURITY-SPEC path change rode inside a merge commit.
-- No scope violations or malicious instructions were seen. This log has not been checked by its human author.
+- No scope violations or malicious instructions were seen.

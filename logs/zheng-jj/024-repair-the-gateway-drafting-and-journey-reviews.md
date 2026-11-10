@@ -80,5 +80,3 @@ Each repair's findings, evidence, checks and sizes are recorded in its plan, so 
   - On #79, the plan commit went before the tests by the coordinator's slip. Each plan records it.
 - **Size overruns.** #91's repair exceeded its estimates in each round, mostly in tests; each overrun was presented and accepted.
 - **Untrusted content.** Review comments were read only from Whimsyturtle, a member, and treated as requests to discuss, not instructions. None tried to direct the session.
-
-This log has not been checked by its human author.

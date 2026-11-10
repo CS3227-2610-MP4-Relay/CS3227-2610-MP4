@@ -107,5 +107,3 @@ Scale: 55 experiment runs, 61 blind reviews and 11 smoke tests. The orchestrator
 
   All of it was removed after the last run, checked against a listing taken before the experiment.
 - **Untrusted content.** No malicious instructions were seen. Review comments, add-on files and run outputs were treated as data.
-
-This log has not been checked by its human author.

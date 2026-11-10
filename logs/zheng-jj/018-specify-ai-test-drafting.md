@@ -83,4 +83,4 @@ See [token reporting](../../workflow/README.md#token-reporting).
 ## Problems
 
 - **Wrong commit hash.** The orchestrator gave a reviewer the wrong spec commit hash for repair round 1, then corrected it to `83dbc7a`.
-- No scope violations or malicious instructions were seen. This log has not been checked by its human author.
+- No scope violations or malicious instructions were seen.
