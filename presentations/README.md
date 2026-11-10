@@ -15,7 +15,8 @@ The deck has 31 slides for about 30 minutes, then 8 backup slides holding the re
 
 - Next: `→`, `Space` or `Page Down`. Back: `←` or `Page Up`. `Home` and `End` jump to the ends.
 - `F` toggles full screen. Adding `#12` to the address opens slide 12.
-- The deck needs no network. It loads the app screenshots from [`../docs/images/`](../docs/images/), so keep it in this folder.
+- The deck is one self-contained file: it needs no network and no other files, so it can be downloaded or sent on its own. The app screenshots from [`../docs/images/`](../docs/images/) are embedded in it.
+- GitHub shows an `.html` file as source. To see the slides, download the file and open it in a browser.
 
 ## Exporting to PDF
 
