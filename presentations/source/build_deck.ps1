@@ -22,7 +22,7 @@ $C = @{
     amber = '906313'; amberLight = 'FBF2DD'; grey = 'EDF0F2'
 }
 
-function Text($s,[string]$value,[double]$x,[double]$y,[double]$w,[double]$h,[double]$size=22,[string]$color='20262B',[bool]$bold=$false,[int]$align=1,[string]$font='Arial') {
+function Text($s,[string]$value,[double]$x,[double]$y,[double]$w,[double]$h,[double]$size=22,[string]$color='20262B',[bool]$bold=$false,[int]$align=1,[string]$font='Calibri') {
     $sh = $s.Shapes.AddTextbox(1,$x,$y,$w,$h)
     $sh.Name = 'Text-' + $s.Shapes.Count
     $sh.TextFrame.MarginLeft = 0; $sh.TextFrame.MarginRight = 0
@@ -51,7 +51,7 @@ function Box($s,[string]$value,[double]$x,[double]$y,[double]$w,[double]$h,[stri
     $sh.TextFrame.MarginTop=8; $sh.TextFrame.MarginBottom=8
     $sh.TextFrame.WordWrap=-1; $sh.TextFrame.AutoSize=0; $sh.TextFrame.VerticalAnchor=3
     $sh.TextFrame.TextRange.Text=$value
-    $sh.TextFrame.TextRange.Font.Name='Arial'; $sh.TextFrame.TextRange.Font.Size=$size
+    $sh.TextFrame.TextRange.Font.Name='Calibri'; $sh.TextFrame.TextRange.Font.Size=$size
     $sh.TextFrame.TextRange.Font.Bold=$(if($bold){-1}else{0})
     $sh.TextFrame.TextRange.Font.Color.RGB=RGB $color
     $sh.TextFrame.TextRange.ParagraphFormat.Alignment=2
@@ -79,7 +79,7 @@ function NativeTable($s,$rows,[double]$x,[double]$y,[double]$w,[double]$h,$width
             $tf.MarginLeft=14; $tf.MarginRight=10; $tf.MarginTop=8; $tf.MarginBottom=8
             $tf.VerticalAnchor=3
             $tf.TextRange.Text=[string]$rows[$r-1][$col-1]
-            $tf.TextRange.Font.Name='Arial'; $tf.TextRange.Font.Size=$size
+            $tf.TextRange.Font.Name='Calibri'; $tf.TextRange.Font.Size=$size
             $tf.TextRange.Font.Bold=$(if($r -eq 1 -or $col -eq 1){-1}else{0})
             $tf.TextRange.Font.Color.RGB=RGB $(if($r -eq 1){$C.white}else{$C.ink})
             $tf.TextRange.ParagraphFormat.SpaceAfter=0
