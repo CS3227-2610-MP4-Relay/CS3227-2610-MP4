@@ -6,23 +6,19 @@ import os
 import random
 import sys
 from collections import Counter
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 from ai import gateway
 
-PATH = (
-    Path(__file__).resolve().parents[3]
-    / "experiments/app-context/full-comparison/runner.py"
-)
-
 
 @pytest.fixture
-def runner():
+def runner(app_context_tree):
     previous = os.environ.get("DJANGO_SETTINGS_MODULE")
-    spec = importlib.util.spec_from_file_location("full_comparison_runner", PATH)
+    spec = importlib.util.spec_from_file_location(
+        "full_comparison_runner", app_context_tree / "runner.py"
+    )
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
@@ -34,7 +30,7 @@ def runner():
     "inherited", ["relay.settings.local", "relay.settings.production"]
 )
 def test_uninitialized_startup_selects_safe_settings_before_setup(
-    monkeypatch, inherited
+    monkeypatch, inherited, app_context_tree
 ):
     monkeypatch.setenv("DJANGO_SETTINGS_MODULE", inherited)
     monkeypatch.setattr(
@@ -46,7 +42,9 @@ def test_uninitialized_startup_selects_safe_settings_before_setup(
         "setup",
         lambda: selected.append(os.environ["DJANGO_SETTINGS_MODULE"]),
     )
-    spec = importlib.util.spec_from_file_location("full_comparison_startup", PATH)
+    spec = importlib.util.spec_from_file_location(
+        "full_comparison_startup", app_context_tree / "runner.py"
+    )
     module = importlib.util.module_from_spec(spec)
     monkeypatch.setitem(sys.modules, spec.name, module)
     spec.loader.exec_module(module)

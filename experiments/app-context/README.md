@@ -1,20 +1,59 @@
-# App-context comparison
+# App-context experiments
 
-We compared selected relevant context with broader role-visible synthetic context under [CTX-1](../../workflow/specs/ai/context-comparison.md). Method/rubric froze in `d802b54`, exact [inputs](../../src/ai/context_comparison.py) in `103a5ff`, before the 2026-11-02 live pass. Evaluated revision: `a9f701c65c7cf10af97749f573419626efdfc4bc`; corpus `context-1`; configured model `qwen3.6:35b`; instructions `drafting-2` / `observation-feedback-3`. The gateway requested temperature 0; effective provider sampling and seed settings were unavailable.
+These experiments examine how supplied context affects test drafting and
+observation feedback in Relay. The 540-call comparison found that irrelevant
+background usually hurt drafting, while feedback often asked unnecessary
+questions even when the report was complete; effects varied by model and task.
 
-Execution used the existing local configuration loader and gateway, a disposable loopback database and synthetic operator, with alternating arm order and no retries. Command: `python src/manage.py compare_context --settings=relay.settings.local --live --show-responses --user-id ID --revision a9f701c65c7cf10af97749f573419626efdfc4bc`. All eight gateway invocations returned successful, schema-accepted replies; all numeric measurements were available. Raw replies were viewed transiently and not retained. Command milliseconds include gateway accounting overhead, rather than provider-only inference time.
+Detailed results, methods and evidence are in [app-context.zip](app-context.zip),
+following the [agent-setups archive layout](../agent-setups/README.md#the-archive).
+The archive preserves all 114 original experiment files byte for byte, including
+the earlier eight-call comparison, repeatability study, rehearsal, calibration
+and full comparison. It also includes the five production source snapshots named
+by the frozen manifest, preserving their original line endings for offline hash
+checks. Original paths cited by historical logs are inside the ZIP.
 
-| Fixed scenario/arm | Accepted items | Prompt/completion/total tokens | Command ms | Provisional rubric assessment |
-| --- | ---: | --- | ---: | --- |
-| drafting-boundary-selected | 1 | 463 / 171 / 634 | 2563 | All checks met: all four boundaries, observable results, followable steps and supported scope. |
-| drafting-boundary-broader | 1 | 512 / 128 / 640 | 1727 | Coverage unmet: omitted the 1-character boundary. Steps/results and supported scope met. |
-| drafting-state-broader | 1 | 494 / 77 / 571 | 1433 | All checks met: edit/cancel, restored saved name, unchanged item, executable steps and supported scope. |
-| drafting-state-selected | 1 | 445 / 78 / 523 | 1134 | All checks met: edit/cancel, restored saved name, unchanged item, executable steps and supported scope. |
-| feedback-incomplete-selected | 5 | 427 / 105 / 532 | 1443 | Unexpected-row evidence met; active-filter and reproduction-action checks unmet. No secrets/outcome decisions or unrelated background questions. |
-| feedback-incomplete-broader | 4 | 477 / 86 / 563 | 1220 | Unexpected-row evidence met; active-filter and reproduction-action checks unmet. No secrets/outcome decisions or unrelated background questions. |
-| feedback-complete-broader | 4 | 511 / 110 / 621 | 1732 | Empty-question check unmet: redundant filter/status questions and unsupported column-name assumptions. No secrets/outcome decisions. |
-| feedback-complete-selected | 5 | 461 / 119 / 580 | 1583 | Empty-question check unmet: redundant filter/status questions and unsupported column-name assumptions. No secrets/outcome decisions. |
+## Read the results
 
-Per-arm totals each cover 4/4 available measurements: selected 1,796 prompt + 473 completion = 2,269 reported total tokens, 6,723 command ms; broader 1,994 + 401 = 2,395, 6,112 ms. Selected used 9.9% fewer prompt tokens and 5.3% fewer reported total tokens, but took longer overall. Only the state pair met every rubric check in both arms; selected used fewer tokens and less measured time within that pair. Other pairs do not establish an improvement preserving all required quality checks. Eight deployment-scope accounting rows were inspected once; workspace/user/domain counts were unchanged.
+Extract the ZIP outside the checkout, then open these paths:
 
-Assessments are the unblinded coordinator model's provisional qualitative judgments (`gpt-6.1-sol`, xhigh); human review remains pending. This four-pair single pass changes context and JSON shape together, has no repetition or seed control, and supports no statistical/general quality, causal latency, injection-resistance or production-readiness claim. Feedback weaknesses occurred in both arms; schema validity did not establish usefulness. Broader evaluation remains separate.
+| Report | Path inside the archive |
+| --- | --- |
+| Full comparison, examples and limits | `experiments/app-context/full-comparison/results.md` |
+| Full comparison method | `experiments/app-context/full-comparison/method.md` |
+| Temperature-zero repeatability | `experiments/app-context/repeatability-results.md` |
+| Constructed-answer calibration | `experiments/app-context/calibration/results.md` |
+| Nine-call live pilot | `experiments/app-context/grader-rehearsal/live-results.md` |
+| Original eight-call comparison | `experiments/app-context/README.md` |
+
+The full comparison used 12 synthetic scenarios with five repeats per
+model/context combination. Its model-authored grades are not human-validated
+ground truth; provider-effective settings and backend versions were unverified.
+The detailed report records the remaining grading ambiguity and limitations.
+
+## Reproduce the analysis offline
+
+The helpers use production parsers and frozen source hashes, so run them in a
+disposable copy of this repository. From the repository root in Git Bash, with
+the existing virtual environment active, choose a new extraction directory:
+
+```bash
+mkdir -p /tmp/relay-app-context
+git archive HEAD | tar -x -C /tmp/relay-app-context
+unzip -o experiments/app-context/app-context.zip -d /tmp/relay-app-context
+cd /tmp/relay-app-context
+python experiments/app-context/full-comparison/analyze.py \
+  --measurements experiments/app-context/full-comparison/measurements.jsonl \
+  --judgments experiments/app-context/full-comparison/judgments \
+  --output full-comparison-summary-check.json
+```
+
+Compare the output with `experiments/app-context/full-comparison/summary.json`;
+the original SHA-256 is
+`6cc52e39e8d765edccbf0dd1a8d9161d94d78cb76feedd795f5c5c31bc4e4694`.
+The extracted READMEs document other offline checks and historical execution.
+
+The two regression test modules remain in `src/ai/tests/` and extract the bundled
+tooling into pytest's temporary directory. CI still runs all 34 runner/analyzer
+checks without live provider calls. The [run log](../../logs/Whimsyturtle/050-run-full-context-comparison.md)
+records the original execution and review.

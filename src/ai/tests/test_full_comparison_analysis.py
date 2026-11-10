@@ -11,22 +11,24 @@ import pytest
 
 from ai import drafting, gateway
 
-PATH = (
-    Path(__file__).resolve().parents[3]
-    / "experiments/app-context/full-comparison/analyze.py"
-)
-SPEC = importlib.util.spec_from_file_location("comparison_analysis", PATH)
-analysis = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(analysis)
+
+@pytest.fixture(scope="module")
+def analysis(app_context_tree):
+    spec = importlib.util.spec_from_file_location(
+        "comparison_analysis", app_context_tree / "analyze.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 @pytest.fixture
-def experiment():
+def experiment(analysis, app_context_tree):
     scenarios = {
         s["id"]: s
-        for s in analysis.load_json(PATH.parent.parent / "calibration/fixtures.json")[
-            "scenarios"
-        ]
+        for s in analysis.load_json(
+            app_context_tree.parent / "calibration/fixtures.json"
+        )["scenarios"]
     }
     schedule = [
         {
@@ -101,16 +103,16 @@ def experiment():
     return rows, schedule, scenarios, documents, hashes
 
 
-def run(experiment, partial=False):
+def run(analysis, experiment, partial=False):
     return analysis.summarize(*experiment, "b" * 64, partial=partial)
 
 
-def test_duplicate_weighting_and_paired_means(experiment):
+def test_duplicate_weighting_and_paired_means(analysis, experiment):
     rows, _, _, documents, _ = experiment
     target = next(a for a in documents[0]["assessments"] if a["scenario"] == "D1")
     for check in target["checks"].values():
         check["judgment"] = "unmet"
-    result = run(experiment)
+    result = run(analysis, experiment)
     cell = result["cells"][0]
     assert cell["attempts"] == 5
     assert cell["unique_parsed"] == 1
@@ -128,11 +130,11 @@ def test_duplicate_weighting_and_paired_means(experiment):
     assert len(rows) == 540
 
 
-def test_missing_judgment_default_rejected_partial_visible(experiment):
+def test_missing_judgment_default_rejected_partial_visible(analysis, experiment):
     experiment[3][0]["assessments"].pop()
     with pytest.raises(ValueError, match="missing accepted"):
-        run(experiment)
-    result = run(experiment, partial=True)
+        run(analysis, experiment)
+    result = run(analysis, experiment, partial=True)
     assert result["assessed_unique"] == 107
     assert result["cells"][-1]["fully_assessed"] == 0
     assert next(iter(result["cells"][-1]["criteria"].values()))["ungraded"] == 5
@@ -158,13 +160,13 @@ def test_missing_judgment_default_rejected_partial_visible(experiment):
         (lambda e: e[0][108].update(grading_id="g-9999"), "duplicate did not reuse"),
     ],
 )
-def test_audit_rejects_mismatches(experiment, mutation, error):
+def test_audit_rejects_mismatches(analysis, experiment, mutation, error):
     mutation(experiment)
     with pytest.raises(ValueError, match=error):
-        run(experiment)
+        run(analysis, experiment)
 
 
-def test_failure_unavailable_and_unattempted_denominators(experiment):
+def test_failure_unavailable_and_unattempted_denominators(analysis, experiment):
     rows = experiment[0]
     rows[0].update(
         status="failed",
@@ -184,7 +186,7 @@ def test_failure_unavailable_and_unattempted_denominators(experiment):
     )
     check = next(iter(experiment[3][0]["assessments"][0]["checks"].values()))
     check["judgment"] = "unavailable"
-    cell = run(experiment)["cells"][0]
+    cell = run(analysis, experiment)["cells"][0]
     assert (
         cell["attempts"],
         cell["provider_failures"],
@@ -201,14 +203,14 @@ def test_failure_unavailable_and_unattempted_denominators(experiment):
     }
     del rows[108:]
     with pytest.raises(ValueError, match="incomplete"):
-        run(experiment)
+        run(analysis, experiment)
     # Only judgments relevant to attempted accepted answers may be supplied.
     experiment[3][0]["assessments"] = [
         a
         for a in experiment[3][0]["assessments"]
         if a["candidate"] in {row["grading_id"] for row in rows}
     ]
-    partial = run(experiment, partial=True)
+    partial = run(analysis, experiment, partial=True)
     assert partial["cells"][0]["unattempted"] == 4
 
 
@@ -223,11 +225,11 @@ def test_failure_unavailable_and_unattempted_denominators(experiment):
         ("/questions/0/title", "feedback", 1, False),
     ],
 )
-def test_structural_evidence_pointers(pointer, feature, count, expected):
+def test_structural_evidence_pointers(analysis, pointer, feature, count, expected):
     assert analysis.pointer_valid(pointer, feature, count) is expected
 
 
-def test_frozen_order_hash_and_requests():
+def test_frozen_order_hash_and_requests(analysis):
     requests = [
         {
             "scenario": f"{prefix}{index}",
@@ -277,16 +279,18 @@ def test_frozen_order_hash_and_requests():
         analysis.frozen_schedule(manifest)
 
 
-def test_unexpected_source_rejected_before_any_read(monkeypatch):
+def test_unexpected_source_rejected_before_any_read(analysis, monkeypatch):
     def forbidden(path):
         pytest.fail("unexpected file read")
 
     monkeypatch.setattr(analysis, "digest", forbidden)
     with pytest.raises(ValueError, match="source paths"):
-        analysis.audit_sources({".env.local": "a" * 64}, PATH.parents[3])
+        analysis.audit_sources(
+            {".env.local": "a" * 64}, Path(analysis.__file__).parents[3]
+        )
 
 
-def test_interrupted_invocation_retained_and_stops(experiment):
+def test_interrupted_invocation_retained_and_stops(analysis, experiment):
     rows = experiment[0]
     del rows[1:]
     rows[0].update(
@@ -301,13 +305,13 @@ def test_interrupted_invocation_retained_and_stops(experiment):
         interrupted=True,
     )
     experiment[3][0]["assessments"] = []
-    result = run(experiment, partial=True)
+    result = run(analysis, experiment, partial=True)
     assert result["attempts"] == 1
     assert result["interrupted_invocations"] == 1
     assert result["cells"][0]["provider_failures"] == 1
     rows[0]["code"] = "timeout"
     with pytest.raises(ValueError, match="interrupted"):
-        run(experiment, partial=True)
+        run(analysis, experiment, partial=True)
 
 
 @pytest.mark.parametrize(
@@ -315,10 +319,10 @@ def test_interrupted_invocation_retained_and_stops(experiment):
     [("title", "title"), ("steps", "steps"), ("expected_result", "expected")],
 )
 def test_production_parser_errors_survive_runner_and_analysis(
-    experiment, field, code, monkeypatch
+    analysis, experiment, field, code, monkeypatch, app_context_tree
 ):
     spec = importlib.util.spec_from_file_location(
-        "analysis_runner_regression", PATH.parent / "runner.py"
+        "analysis_runner_regression", app_context_tree / "runner.py"
     )
     runner = importlib.util.module_from_spec(spec)
     monkeypatch.setitem(sys.modules, spec.name, runner)
@@ -340,10 +344,10 @@ def test_production_parser_errors_survive_runner_and_analysis(
     assert candidate is None
     assert observed["schema_error"] == code
     row.update(observed)
-    result = run(experiment)
+    result = run(analysis, experiment)
     assert result["cells"][0]["schema_failures"] == 1
     assert result["cells"][0]["schema_accepted"] == 4
     if field == "expected_result":
         row["schema_error"] = "expected_result"
         with pytest.raises(ValueError, match="schema error"):
-            run(experiment)
+            run(analysis, experiment)

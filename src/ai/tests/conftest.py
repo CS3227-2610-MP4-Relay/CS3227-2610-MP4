@@ -1,6 +1,8 @@
-"""Fixtures for the AI app's DB-backed tests."""
+"""Fixtures for AI application tests and archived experiment regressions."""
 
 from datetime import timedelta
+from pathlib import Path
+from zipfile import ZipFile
 
 import pytest
 from django.utils import timezone
@@ -20,6 +22,16 @@ __all__ = [
     "tester",
     "workspace",
 ]
+
+
+@pytest.fixture(scope="session")
+def app_context_tree(tmp_path_factory):
+    """Restore the bundled experiment without unpacking it into the checkout."""
+    repository = Path(__file__).resolve().parents[3]
+    extracted = tmp_path_factory.mktemp("app-context")
+    with ZipFile(repository / "experiments/app-context/app-context.zip") as archive:
+        archive.extractall(extracted)
+    return extracted / "experiments/app-context/full-comparison"
 
 
 @pytest.fixture
