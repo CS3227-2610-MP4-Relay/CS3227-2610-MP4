@@ -1,13 +1,13 @@
 # Relay MP4: speaker notes
 
-Notes for [Relay-MP4.html](Relay-MP4.html): 21 slides in 15 minutes. The time beside each slide is a budget, not a script length to hit exactly. Everything else is in the appendix, for questions.
+Notes for [Relay-MP4.html](Relay-MP4.html): 22 slides in 15 minutes. The time beside each slide is a budget, not a script length to hit exactly. Everything else is in the appendix, for questions.
 
 | Slides | Speaker | Focus | Time |
 | --- | --- | --- | --- |
 | 1–4 | zheng-jj | Product and the Test Coordinator role | 3 min |
 | 5–8 | Whimsyturtle | Beta Tester role; multi-agent workflow, SWE and CI/CD | 3 min |
-| 9–14 | zheng-jj | Agent-setup and Hermes experiments | 4.5 min |
-| 15–21 | Whimsyturtle | App-context experiment and conclusion | 4.5 min |
+| 9–15 | zheng-jj | Agent-setup and Hermes experiments | 4.5 min |
+| 16–22 | Whimsyturtle | App-context experiment and conclusion | 4.5 min |
 
 ---
 
@@ -65,7 +65,7 @@ That workflow works, but it is heavy. zheng-jj wanted to know what it costs.
 
 ---
 
-## zheng-jj · slides 9–14 · 4.5 min
+## zheng-jj · slides 9–15 · 4.5 min
 
 ### 9 · Experiment 1: what does a workflow cost, and what does it buy? (0:45)
 
@@ -77,65 +77,69 @@ Each run was then scored the way the lecture recommends, with several kinds of g
 
 First result: the tests could not rank the setups. All 135 runs passed the hidden suite, and 133 caught every planted bug. But the blind reviews still found 58 issues, five of them High. Most are not logic bugs. They are records drifting apart: a requirement quietly dropped, a spec claiming more than the code does, an old test weakened so it still passes. So green checks hit a ceiling, and the review found what they could not. With quality level, the real differences are in cost.
 
-### 11 · Result 2: building in one session cost about half (0:55)
+### 11 · Result 2: building in one session cost about half (0:50)
 
 This is cost on Opus against our multi-agent baseline in the first row. Green is cheaper, red is dearer. The setups that build in one session, solo, superpowers, spec-kit and OpenSpec, cost 43 to 65 percent less and finish in about half the time, with the same quality.
 
 Adding things did not help. MP3's six roles cost the same and found nothing extra. The add-ons looked good on task one, but follow them across to task four: two of them cost more than the baseline. The last row is the setup I built from these findings, about a quarter cheaper on average. So the pattern is: fewer hand-offs, lower cost.
 
-### 12 · Why: the money goes on hand-offs (0:45)
+### 12 · Why: the money goes on hand-offs (0:40)
 
-Why? Each bar is where an Opus run's money goes. In our baseline, more than half goes on subagent context, the orange part. The reason is prompt caching. A session that keeps running reads its context from cache cheaply. But every subagent starts empty, reads the rules, the specs and the code again, and writes a fresh cache, and a cache write costs about twenty times a cache read. Our baseline started nine to twelve subagents per task. So the coordination cost of specialized agents is mostly re-reading. The ideal setup keeps one builder, plus a reviewer whose fresh context buys an independent opinion.
+Why? Each bar is where an Opus run's money goes. In our baseline, more than half goes on subagent context, the orange part. The reason is prompt caching. A session that keeps running reads its context from cache cheaply. But every subagent starts empty, reads the rules, the specs and the code again, and writes a fresh cache, and a cache write costs about twenty times a cache read. So the coordination cost of specialized agents is mostly re-reading. The ideal setup keeps one builder, plus a reviewer whose fresh context buys an independent opinion.
 
-### 13 · Hermes results (0:50)
+### 13 · Hermes results (0:45)
 
-A setup should survive outside the tool it was tuned in. So I packaged mine as one folder of Markdown and ran it in a third tool, Hermes, with a cheap open model, DeepSeek.
+A setup should survive outside the tool it was tuned in, so I packaged mine as one folder of Markdown and ran it in a third tool, Hermes, with a cheap open model, DeepSeek.
 
-The top table compares the baseline and the ideal setup there. On task one, the ideal setup cost 13 cents against 33, and took ten minutes against 68. On task four, the hardest, it cost slightly more, but its tests caught all five planted bugs where the baseline caught three. The bottom table holds the setup fixed and changes the model. Every model passed the hidden suite, from thirteen dollars on Opus to thirty cents on DeepSeek. Model choice moved the cost more than forty times, and not the test results.
+In the top table, on task one the ideal setup cost 13 cents against the baseline's 33, and took ten minutes against 68. On task four, the hardest, it cost slightly more, but its tests caught all five planted bugs where the baseline caught three. The bottom table changes only the model. Every model passed the hidden suite, from thirteen dollars on Opus to thirty cents on DeepSeek: model choice moved the cost more than forty times, and not the test results.
 
-### 14 · The setup we recommend (0:35)
+### 14 · The setup we recommend (0:25)
 
-So this is the setup I recommend. One session does everything in blue: specify, build test-first, then a consistency check, because most findings were records drifting apart. Then one independent, read-only reviewer, with at most two repair rounds. I also tried a version with four more rules. It cost more on every model and found no less, so I dropped it. A rule has to earn its place.
+So this is the setup I recommend. One session does everything in blue: specify, build test-first, then a consistency check. Then one independent, read-only reviewer, with at most two repair rounds. I also tried a version with four more rules. It cost more on every model and found no less, so I dropped it.
+
+### 15 · What I take from experiment 1 (0:25)
+
+To sum up my part. Keep one building session, exactly one independent reviewer, a consistency check, and the cheaper model first. Drop, or measure first, builder subagents, extra roles and add-ons. This is one project and four tasks, so treat it as a strong hint.
 
 Whimsyturtle asked the same question inside the product: does more context help?
 
 ---
 
-## Whimsyturtle · slides 15–21 · 4.5 min
+## Whimsyturtle · slides 16–22 · 4.5 min
 
-### 15 · Experiment 2: does extra context help the app's AI? (0:40)
+### 16 · Experiment 2: does extra context help the app's AI? (0:40)
 
 My experiment moves into the app. Both AI features send the model a small, selected context. Why not send more? The lecture names the risk, the Context Paradox: the more context we provide, the less effectively it is used. So I measured it. I kept the production prompt and task data fixed and changed one field, a background passage. It is empty, or 500 words about unrelated parts of an app, or 500 words about rivers and rocks. That roughly doubles the prompt. Same question, clean desk or cluttered desk.
 
-### 16 · Design: 540 calls, frozen before the first one (0:50)
+### 17 · Design: 540 calls, frozen before the first one (0:50)
 
 Twelve scenarios, three models, three contexts, five repeats: 540 calls, all frozen by hash before the first one. Five repeats because, when I checked, temperature zero did not give the same answer twice.
 
 Each call goes to the SoC LLM with the production deadline and no retries. The reply first meets the production parser, a deterministic grader: 465 of 540 were accepted, and every timeout was the small Llama model. Accepted answers then go to a rubric grader, a separate model that sees neither the model name nor the context, and which was first checked on 24 answers written for the purpose. A call succeeds only if it passes the parser and every check.
 
-### 17 · Result: drafting (0:45)
+### 18 · Result: drafting (0:45)
 
 Drafting first. Each cell is successes out of thirty. Qwen falls from 29 with relevant context only to 20 with app clutter. The small Llama model collapses from 12 to 2, mostly timeouts and broken JSON. Only x-test-2 holds. So unrelated background made two of three models worse, and none better.
 
 The example shows how. Asked for one test of a Refresh button, a Llama answer returned that test plus four more, about astronomy, textiles, gardening and audio, which exist only in the background. The background leaked into the answer. That is context pollution.
 
-### 18 · Result: feedback (0:45)
+### 19 · Result: feedback (0:45)
 
 Feedback is different. The numbers are low everywhere, even with relevant context only, and background does not push one way: Qwen drops, x-test-2 improves. So context was not the main problem.
 
 The main problem is the small table. Two scenarios are complete reports, where the right answer is no questions. Not one answer did that: zero of 43, on both, all in perfectly valid JSON. In the lecture's terms it is a negative control, and our no-change accuracy is zero. The parser cannot see that. Only the rubric did. The fix is in the prompt, and it is our next step.
 
-### 19 · Resource cost (0:35)
+### 20 · Resource cost (0:35)
 
 And what did the extra context cost? About 580 more input tokens on every call, which more than doubles the prompt. Success went down or stayed flat in five rows of six, and latency moved both ways, so response time will not warn you. That is tokenmaxxing: more tokens, no outcome. The SoC LLM is shared and rate-limited, so Relay keeps sending only the selected context, and now there is a measurement behind that choice.
 
-### 20 · Conclusion (0:45)
+### 21 · Conclusion (0:45)
 
 Side by side, the two experiments say the same four things. More is not better: extra agents doubled development cost, and extra context doubled input tokens, with no gain. Green checks are not quality: 135 passing runs still had 58 review findings, and every feedback answer was valid JSON while none handled a complete report. Independent judgment is worth paying for: one read-only reviewer in development, and a person's decision on every AI suggestion in the product. And measure before believing: in both experiments the first small result was misleading.
 
 So: choose context and checks for the outcome they buy.
 
-### 21 · Thank you (0:10)
+### 22 · Thank you (0:10)
 
 That is Relay. The full prompts, sample outputs and extra results are in the appendix. Thank you, and we are happy to take questions.
 
@@ -149,16 +153,15 @@ zheng-jj:
 - **Appendix 2 · The full task prompt (task 1).** Sent unchanged to every setup. It points at the repository's own workflow, gives the human's decisions up front, and keeps the run local.
 - **Appendix 3 · Sample output: one Hermes run, as scored.** Every field we record for a run, and the five bugs planted in its code; its own tests caught all five.
 - **Appendix 4 · Hermes: the same workflow in a third tool.** One folder of Markdown plus a one-line adapter per tool, and the exact Hermes launch command. The read-only reviewer is enforced by the tool only in Claude Code.
-- **Appendix 5 · What I take from experiment 1.** Keep one building session, one independent reviewer, a consistency check and the cheaper model first; drop builder subagents, extra roles and add-ons.
-- **Appendix 6–8 · Task prompts 2, 3 and 4.** Task 3 gives only the interface, so each run wrote the requirements. Task 4 gives almost no decisions: build to the existing spec.
-- **Appendix 9–10 · The ideal setup's full workflow.** The one file every tool reads. The highlights are the rules that came from findings.
+- **Appendix 5–7 · Task prompts 2, 3 and 4.** Task 3 gives only the interface, so each run wrote the requirements. Task 4 gives almost no decisions: build to the existing spec.
+- **Appendix 8–9 · The ideal setup's full workflow.** The one file every tool reads. The highlights are the rules that came from findings.
 
 Whimsyturtle:
 
-- **Appendix 11 · The full system prompt (observation feedback).** As production sends it. Note "if no useful detail is missing, return no questions", which slide 18 shows the models did not follow.
-- **Appendix 12 · The full user message (scenario F2).** The case says to apply the Available filter; the observation never says the tester did. That gap is what a good answer asks about.
-- **Appendix 13 · Sample output, and how it is scored.** A good answer, the record kept for a live call (hashes, not text), and the grader's five judgments with reasons.
-- **Appendix 14 · Can we trust the numbers?** Identical requests at temperature 0 changed in 10 of 12 groups, hence five repeats. The grader matched 97 of 98 reference judgments on 12 good and 12 flawed answers.
-- **Appendix 15 · Next: fix the prompt, then measure again.** Three clarifications to the system prompt, then a frozen rerun of the failing scenarios. Proposed, not run yet.
-- **Appendix 16 · The full system prompt (test drafting).** Same structure as the feedback prompt: criteria are data, and an empty list when nothing is testable.
-- **Appendix 17–18 · The two background passages.** The highlighted phrases in the app-clutter passage are where the astronomy, textiles, gardening and audio tests on slide 17 came from.
+- **Appendix 10 · The full system prompt (observation feedback).** As production sends it. Note "if no useful detail is missing, return no questions", which slide 19 shows the models did not follow.
+- **Appendix 11 · The full user message (scenario F2).** The case says to apply the Available filter; the observation never says the tester did. That gap is what a good answer asks about.
+- **Appendix 12 · Sample output, and how it is scored.** A good answer, the record kept for a live call (hashes, not text), and the grader's five judgments with reasons.
+- **Appendix 13 · Can we trust the numbers?** Identical requests at temperature 0 changed in 10 of 12 groups, hence five repeats. The grader matched 97 of 98 reference judgments on 12 good and 12 flawed answers.
+- **Appendix 14 · Next: fix the prompt, then measure again.** Three clarifications to the system prompt, then a frozen rerun of the failing scenarios. Proposed, not run yet.
+- **Appendix 15 · The full system prompt (test drafting).** Same structure as the feedback prompt: criteria are data, and an empty list when nothing is testable.
+- **Appendix 16–17 · The two background passages.** The highlighted phrases in the app-clutter passage are where the astronomy, textiles, gardening and audio tests on slide 18 came from.

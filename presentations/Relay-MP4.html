@@ -655,6 +655,35 @@ td.warn,span.warn{background:var(--warn-bg);color:var(--warn);font-weight:700}
 </section>
 
 <!-- 15 -->
+<section class="slide" data-speaker="z">
+  <h2>What I take from experiment 1</h2>
+  <div class="body" style="--z:1.334">
+    <div class="row" style="gap:28px">
+      <div class="col grow">
+        <table class="t big">
+          <tr><th>Keep</th><th>Because</th></tr>
+          <tr><td class="good">One building session</td><td>43–65% cheaper on Opus, same quality</td></tr>
+          <tr><td class="good">Exactly one independent reviewer</td><td>A session cannot review its own work</td></tr>
+          <tr><td class="good">A consistency check before review</td><td>Most findings were records drifting apart</td></tr>
+          <tr><td class="good">The cheaper model first</td><td>Every model passed every hidden suite</td></tr>
+        </table>
+      </div>
+      <div class="col grow">
+        <table class="t big">
+          <tr><th>Drop, or measure first</th><th>Because</th></tr>
+          <tr><td class="bad">Builder subagents</td><td>They re-read the repository; 3 of 18 runs were cut off mid-change</td></tr>
+          <tr><td class="bad">More roles</td><td>MP3's six roles: same cost, nothing extra found</td></tr>
+          <tr><td class="bad">Token-saving add-ons</td><td>Savings on task 1 did not hold on later tasks</td></tr>
+          <tr><td class="bad">A model picking its own reviewer</td><td>Haiku chose Opus and tripled its cost</td></tr>
+        </table>
+      </div>
+    </div>
+    <p class="small" style="margin-top:14px">Scope: one Django project, four tasks, 1 to 3 runs per setup and task.</p>
+  </div>
+  <footer><span class="who"></span><span class="tags"><b>CS3227</b>Choosing a Pattern · Valuemaxxing, not Tokenmaxxing</span><span class="num"></span></footer>
+</section>
+
+<!-- 16 -->
 <section class="slide" data-speaker="w">
   <h2>Experiment 2: does extra context help the app's AI?</h2>
   <p class="lead">Same system prompt, same task data. Only one field changes: <code>background</code>.</p>
@@ -681,7 +710,7 @@ td.warn,span.warn{background:var(--warn-bg);color:var(--warn);font-weight:700}
   <footer><span class="who"></span><span class="tags"><b>CS3227</b>Context Engineering · The Context Paradox · Context pollution · Minimal Set</span><span class="num"></span></footer>
 </section>
 
-<!-- 16 -->
+<!-- 17 -->
 <section class="slide" data-speaker="w">
   <h2>Design: 540 calls, frozen before the first one</h2>
   <div class="body" style="--z:1.358">
@@ -711,7 +740,7 @@ td.warn,span.warn{background:var(--warn-bg);color:var(--warn);font-weight:700}
   <footer><span class="who"></span><span class="tags"><b>CS3227</b>Testing an AI Agent · Deterministic graders · Model-Assisted Testing</span><span class="num"></span></footer>
 </section>
 
-<!-- 17 -->
+<!-- 18 -->
 <section class="slide" data-speaker="w">
   <h2>Result: for drafting, extra background usually hurt</h2>
   <p class="lead">Attempts out of 30 that passed the parser and every check.</p>
@@ -738,7 +767,7 @@ td.warn,span.warn{background:var(--warn-bg);color:var(--warn);font-weight:700}
   <footer><span class="who"></span><span class="tags"><b>CS3227</b>The Context Paradox · Context pollution</span><span class="num"></span></footer>
 </section>
 
-<!-- 18 -->
+<!-- 19 -->
 <section class="slide" data-speaker="w">
   <h2>Result: for feedback, the hard part was knowing when to ask nothing</h2>
   <p class="lead">Attempts out of 30 that passed the parser and every check.</p>
@@ -765,7 +794,7 @@ td.warn,span.warn{background:var(--warn-bg);color:var(--warn);font-weight:700}
   <footer><span class="who"></span><span class="tags"><b>CS3227</b>Negative Control · No-change accuracy · Schema validity ≠ usefulness</span><span class="num"></span></footer>
 </section>
 
-<!-- 19 -->
+<!-- 20 -->
 <section class="slide" data-speaker="w">
   <h2>Resource cost: twice the input tokens, no quality gain</h2>
   <p class="lead">App clutter against relevant-only, paired on the same scenario and model.</p>
@@ -789,7 +818,7 @@ td.warn,span.warn{background:var(--warn-bg);color:var(--warn);font-weight:700}
   <footer><span class="who"></span><span class="tags"><b>CS3227</b>Valuemaxxing: is it worth spending X tokens on task Y? · Tokenmaxxing · Token Budget</span><span class="num"></span></footer>
 </section>
 
-<!-- 20 -->
+<!-- 21 -->
 <section class="slide" data-speaker="w">
   <h2>Conclusion: both experiments say the same four things</h2>
   <div class="body" style="--z:1.4">
@@ -805,7 +834,7 @@ td.warn,span.warn{background:var(--warn-bg);color:var(--warn);font-weight:700}
   <footer><span class="who"></span><span class="tags"><b>CS3227</b>Valuemaxxing · Context Engineering · Generator-Verifier · Several kinds of graders</span><span class="num"></span></footer>
 </section>
 
-<!-- 21 -->
+<!-- 22 -->
 <section class="slide" data-speaker="w">
   <div class="row grow mid" style="gap:56px">
     <div class="col" style="flex:1">
@@ -958,35 +987,6 @@ When the work is finished, <mark>end with a short report</mark>: what changed, t
 
 <!-- A5 -->
 <section class="slide backup" data-speaker="z">
-  <h2>What I take from experiment 1</h2>
-  <div class="body" style="--z:1.334">
-    <div class="row" style="gap:28px">
-      <div class="col grow">
-        <table class="t big">
-          <tr><th>Keep</th><th>Because</th></tr>
-          <tr><td class="good">One building session</td><td>43–65% cheaper on Opus, same quality</td></tr>
-          <tr><td class="good">Exactly one independent reviewer</td><td>A session cannot review its own work</td></tr>
-          <tr><td class="good">A consistency check before review</td><td>Most findings were records drifting apart</td></tr>
-          <tr><td class="good">The cheaper model first</td><td>Every model passed every hidden suite</td></tr>
-        </table>
-      </div>
-      <div class="col grow">
-        <table class="t big">
-          <tr><th>Drop, or measure first</th><th>Because</th></tr>
-          <tr><td class="bad">Builder subagents</td><td>They re-read the repository; 3 of 18 runs were cut off mid-change</td></tr>
-          <tr><td class="bad">More roles</td><td>MP3's six roles: same cost, nothing extra found</td></tr>
-          <tr><td class="bad">Token-saving add-ons</td><td>Savings on task 1 did not hold on later tasks</td></tr>
-          <tr><td class="bad">A model picking its own reviewer</td><td>Haiku chose Opus and tripled its cost</td></tr>
-        </table>
-      </div>
-    </div>
-    <p class="small" style="margin-top:14px">Scope: one Django project, four tasks, 1 to 3 runs per setup and task.</p>
-  </div>
-  <footer><span class="who"></span><span class="tags"><b>CS3227</b>Choosing a Pattern · Valuemaxxing, not Tokenmaxxing</span><span class="num"></span></footer>
-</section>
-
-<!-- A6 -->
-<section class="slide backup" data-speaker="z">
   <h2>The full task prompt (task 2)</h2>
   <div class="body" style="--z:1.067">
 <pre class="prompt cols s">Deliver issue #16 in this repository, <mark>using the development workflow that this repository's AGENTS.md describes</mark>.
@@ -1024,7 +1024,7 @@ When the work is finished, end with a short report: what changed, the checks you
   <footer><span class="who"></span><span class="tags">Experiment 1 · inputs/task-prompt-2.md</span><span class="num"></span></footer>
 </section>
 
-<!-- A7 -->
+<!-- A6 -->
 <section class="slide backup" data-speaker="z">
   <h2>The full task prompt (task 3)</h2>
   <div class="body">
@@ -1077,7 +1077,7 @@ When the work is finished, end with a short report: what changed, the checks you
   <footer><span class="who"></span><span class="tags">Experiment 1 · inputs/task-prompt-3.md</span><span class="num"></span></footer>
 </section>
 
-<!-- A8 -->
+<!-- A7 -->
 <section class="slide backup" data-speaker="z">
   <h2>The full task prompt (task 4)</h2>
   <div class="body" style="--z:1.279">
@@ -1111,7 +1111,7 @@ When the work is finished, end with a short report: what changed, the checks you
   <footer><span class="who"></span><span class="tags">Experiment 1 · inputs/task-prompt-4.md</span><span class="num"></span></footer>
 </section>
 
-<!-- A9 -->
+<!-- A8 -->
 <section class="slide backup" data-speaker="z">
   <h2>The ideal setup's full workflow, part 1 of 2</h2>
   <div class="body" style="--z:1.054">
@@ -1151,7 +1151,7 @@ Takes one coherent change from request to an independently reviewed candidate. <
   <footer><span class="who"></span><span class="tags">Experiment 1 · ideal/v7/agent-workflow/slice.md</span><span class="num"></span></footer>
 </section>
 
-<!-- A10 -->
+<!-- A9 -->
 <section class="slide backup" data-speaker="z">
   <h2>The ideal setup's full workflow, part 2 of 2</h2>
   <div class="body" style="--z:1.227">
@@ -1181,7 +1181,7 @@ Pushing, opening a pull request and waiting for CI happen only within the person
   <footer><span class="who"></span><span class="tags">Experiment 1 · ideal/v7/agent-workflow/slice.md</span><span class="num"></span></footer>
 </section>
 
-<!-- A11 -->
+<!-- A10 -->
 <section class="slide backup" data-speaker="w">
   <h2>Setup: the full system prompt (observation feedback)</h2>
   <p class="lead">Production instructions, version <code>observation-feedback-3</code>, sent as the system message in every feedback call.</p>
@@ -1191,7 +1191,7 @@ Pushing, opening a pull request and waiting for CI happen only within the person
   <footer><span class="who"></span><span class="tags"><b>CS3227</b>System Prompt · Strong Prompt Design · Prompt Injection</span><span class="num"></span></footer>
 </section>
 
-<!-- A12 -->
+<!-- A11 -->
 <section class="slide backup" data-speaker="w">
   <h2>Setup: the full user message (scenario F2)</h2>
   <div class="body" style="--z:1.394">
@@ -1234,7 +1234,7 @@ Pushing, opening a pull request and waiting for CI happen only within the person
   <footer><span class="who"></span><span class="tags"><b>CS3227</b>User Prompt · Context Engineering: curate what enters the window</span><span class="num"></span></footer>
 </section>
 
-<!-- A13 -->
+<!-- A12 -->
 <section class="slide backup" data-speaker="w">
   <h2>Sample output, and how it is scored</h2>
   <div class="body" style="--z:1.093">
@@ -1290,7 +1290,7 @@ Pushing, opening a pull request and waiting for CI happen only within the person
   <footer><span class="who"></span><span class="tags"><b>CS3227</b>Model-Assisted Testing · Rubric · Structured response</span><span class="num"></span></footer>
 </section>
 
-<!-- A14 -->
+<!-- A13 -->
 <section class="slide backup" data-speaker="w">
   <h2>Can we trust the numbers? Repeats, and a calibrated grader</h2>
   <div class="body" style="--z:1.4">
@@ -1322,7 +1322,7 @@ Pushing, opening a pull request and waiting for CI happen only within the person
   <footer><span class="who"></span><span class="tags"><b>CS3227</b>Non-Determinism: one passing run proves little · Model-Assisted Testing</span><span class="num"></span></footer>
 </section>
 
-<!-- A15 -->
+<!-- A14 -->
 <section class="slide backup" data-speaker="w">
   <h2>Next: fix the prompt, then measure again</h2>
   <p class="lead">Proposed, not run yet. The failures point at the instructions, not at the amount of context.</p>
@@ -1343,7 +1343,7 @@ Pushing, opening a pull request and waiting for CI happen only within the person
   <footer><span class="who"></span><span class="tags"><b>CS3227</b>System Prompt: iterate from observed failures · Let real failures drive coverage</span><span class="num"></span></footer>
 </section>
 
-<!-- A16 -->
+<!-- A15 -->
 <section class="slide backup" data-speaker="w">
   <h2>The full system prompt (test drafting)</h2>
   <p class="lead">Production instructions, version <code>drafting-2</code>.</p>
@@ -1353,7 +1353,7 @@ Pushing, opening a pull request and waiting for CI happen only within the person
   <footer><span class="who"></span><span class="tags">Experiment 2 · src/ai/drafting.py</span><span class="num"></span></footer>
 </section>
 
-<!-- A17 -->
+<!-- A16 -->
 <section class="slide backup" data-speaker="w">
   <h2>The full app-clutter background (486 words)</h2>
   <div class="body" style="--z:1.067">
@@ -1370,7 +1370,7 @@ A final area is a small visual journal about <mark>imaginary public gardens</mar
   <footer><span class="who"></span><span class="tags">Experiment 2 · full-comparison/backgrounds.json</span><span class="num"></span></footer>
 </section>
 
-<!-- A18 -->
+<!-- A17 -->
 <section class="slide backup" data-speaker="w">
   <h2>The full off-topic background (491 words)</h2>
   <div class="body" style="--z:1.002">
