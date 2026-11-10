@@ -2,14 +2,14 @@
 
 Open [Relay-MP4.html](Relay-MP4.html) in Chrome or Edge. The speaker notes are in [speaker-notes.md](speaker-notes.md).
 
-The deck has 31 slides for about 30 minutes, then 8 backup slides holding the remaining full prompts. The bar at the bottom of every slide shows who is speaking: blue for zheng-jj, purple for Whimsyturtle. Next to it are the CS3227 lecture concepts the slide uses.
+The deck has 21 slides for a 15-minute talk, then 18 appendix slides kept for questions: the tasks and setups, every full prompt, sample outputs, the Hermes setup, the grader checks and the next steps. The bar at the bottom of every slide shows who is speaking: blue for zheng-jj, purple for Whimsyturtle. Next to it are the CS3227 lecture concepts the slide uses.
 
 | Slides | Speaker | Focus | Time |
 | --- | --- | --- | --- |
-| 1–4 | zheng-jj | Product and the Test Coordinator role | 6 min |
-| 5–8 | Whimsyturtle | Beta Tester role; multi-agent workflow, SWE and CI/CD | 6 min |
-| 9–19 | zheng-jj | Agent-setup and Hermes experiments | 9 min |
-| 20–31 | Whimsyturtle | App-context experiments and conclusion | 9 min |
+| 1–4 | zheng-jj | Product and the Test Coordinator role | 3 min |
+| 5–8 | Whimsyturtle | Beta Tester role; multi-agent workflow, SWE and CI/CD | 3 min |
+| 9–14 | zheng-jj | Agent-setup and Hermes experiments | 4.5 min |
+| 15–21 | Whimsyturtle | App-context experiment and conclusion | 4.5 min |
 
 ## Presenting
 
