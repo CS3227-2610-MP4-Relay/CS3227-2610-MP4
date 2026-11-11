@@ -149,13 +149,19 @@ In scenario D5, the model was asked to draft a test for a Refresh button. The Ll
 
 ### 19 · Result: feedback (0:45)
 
-Feedback is different. The numbers are low everywhere, even with relevant context only, and background does not push one way: Qwen drops, x-test-2 improves. So context was not the main problem.
+For observation feedback, adding unrelated app background reduced Qwen's success count from nine to two out of thirty, but increased x-test-2's from five to nine. The extra background helped one model and hurt another, while success rates were low even with relevant inputs only.
 
-The main problem is the small table. Two scenarios are complete reports, where the right answer is no questions. Not one answer did that: zero of 43, on both, all in perfectly valid JSON. In the lecture's terms it is a negative control, and our no-change accuracy is zero. The parser cannot see that. Only the rubric did. The fix is in the prompt, and it is our next step.
+The clearest failure was in scenario F3, exporting filtered items to CSV, and F4, archiving an item. Both reports already contained the useful details needed to reproduce what happened. The feedback feature can return zero to five questions, so zero questions was the correct response here. Asking for more details creates unnecessary work for the tester when the report is already complete.
+
+None of the 43 accepted replies for each scenario returned zero questions. All 86 passed the parser, but failed the rubric's check for unnecessary questions. These complete reports act as negative controls: they test whether the model recognizes when no further questions are needed.
 
 ### 20 · Resource cost (0:35)
 
-And what did the extra context cost? About 580 more input tokens on every call, which more than doubles the prompt. Success went down or stayed flat in five rows of six, and latency moved both ways, so response time will not warn you. That is tokenmaxxing: more tokens, no outcome. The SoC LLM is shared and rate-limited, so Relay keeps sending only the selected context, and now there is a measurement behind that choice.
+And what did the extra context cost? Adding unrelated app background used about 580 more input tokens per call, more than doubling the prompt length. Success rates decreased or stayed the same in five of the six combinations of feature and model.
+
+For drafting, Llama's average response time increased by about six seconds, while Qwen's decreased slightly. Both models' success rates fell, so a faster response did not necessarily mean a better answer.
+
+That is tokenmaxxing: spending more tokens without consistently improving results. The SoC LLM is shared and rate-limited, so Relay keeps sending only the information needed for each request.
 
 ### 21 · Conclusion (0:45)
 
