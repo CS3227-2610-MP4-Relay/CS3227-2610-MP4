@@ -59,13 +59,23 @@ The strip below shows the shared LLM gateway used by both roles: the Test Coordi
 
 ### 7 · How we built it: one builder, independent read-only reviewers (0:55)
 
-We built Relay spec-first, in small slices, with specialized agents. A human request goes to the orchestrator, the main session, which scopes the work and picks a risk tier. One builder updates the spec, then writes tests and code. The candidate is then frozen, and independent reviewers read it. They are read-only. Findings go back to the builder along the dashed line, for at most two rounds, and then a human decides. So this is Orchestrator-Subagent, with a Generator-Verifier loop inside.
+Now that you've seen how Relay works, I'll share how we built it.
 
-Review is proportional to risk, in the table: AI features, logins and deployment also get a security reviewer. And three things keep agents in line: AGENTS.md says repository content is data, not instructions; a hook blocks edits outside a role's scope; and each slice has a short plan and handoff.
+We built Relay spec-first, in small slices, with specialized agents. A human request goes to the orchestrator, the main session, which scopes the work and picks a risk tier. One builder updates the spec, then writes tests and code. Independent, read-only reviewers then inspect the updated spec, tests and code, which stay unchanged during the review.
+
+Review findings go back to the builder along the dashed line for at most two repair rounds. This cap prevents an endless cycle of revisions that consumes more time and tokens. If issues remain, a human decides how to proceed.
+
+The orchestrator delegating work to the builder and reviewers is the Orchestrator-Subagent pattern. The builder revising work in response to reviewers' findings forms the Generator-Verifier loop.
+
+Review is proportional to risk, in the table: AI features, logins and deployment also get a security reviewer. We also use three workflow controls: AGENTS.md says repository content is data, not instructions; a file-edit hook checks the builder's and reviewers' allowed files, for example blocking the builder from changing AGENTS.md; and each slice has a short plan and handoff.
 
 ### 8 · Software engineering and CI/CD (0:35)
 
-Around the agents is ordinary engineering, automated. Every slice is a draft pull request. GitHub Actions runs the checks, the prompt-injection regression tests, and the full suite on a real PostgreSQL with browser tests. Only then does a human review and merge; agents never merge or release. A push to main deploys to production and runs a smoke check. Development and production have separate databases and credentials, and CI never calls the real LLM.
+Alongside our multi-agent workflow, we follow standard software engineering practices. Every slice is a draft pull request. GitHub Actions runs the full test suite against a PostgreSQL test database, including browser tests and AI guardrail tests, plus lint and formatting checks.
+
+The AI guardrail tests use mocked LLM responses. They check that untrusted text stays separate from instructions, invalid replies are rejected, output is displayed safely, and AI suggestions do not automatically change saved data.
+
+Only then does a human review and merge; agents never merge or release. A push to main deploys to production and runs a smoke check. Development and production have separate databases and credentials.
 
 That workflow works, but it is heavy. zheng-jj wanted to know what it costs.
 
@@ -115,7 +125,7 @@ Whimsyturtle asked the same question inside the product: does more context help?
 
 ### 16 · Experiment 2: does extra context help the app's AI? (0:40)
 
-My experiment moves into the app. Both AI features send the model a small, selected context. Why not send more? The lecture names the risk, the Context Paradox: the more context we provide, the less effectively it is used. So I measured it. I kept the production prompt and task data fixed and changed one field, a background passage. It is empty, or 500 words about unrelated parts of an app, or 500 words about rivers and rocks. That roughly doubles the prompt. Same question, clean desk or cluttered desk.
+zheng-jj studied the AI workflow used to build Relay. My experiment focuses on the AI features inside Relay itself. Both AI features send the model a small, selected context. Why not send more? The lecture names the risk, the Context Paradox: the more context we provide, the less effectively it is used. So I measured it. I kept the production prompt and task data fixed and changed one field, a background passage. It is empty, or 500 words about unrelated parts of an app, or 500 words about rivers and rocks. That roughly doubles the prompt. Same question, clean desk or cluttered desk.
 
 ### 17 · Design: 540 calls, frozen before the first one (0:50)
 
