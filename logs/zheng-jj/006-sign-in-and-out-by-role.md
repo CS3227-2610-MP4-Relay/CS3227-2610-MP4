@@ -95,4 +95,4 @@ See [token reporting](../../workflow/README.md#token-reporting).
 - **Test-database collision.** One of the orchestrator's pytest runs for #40 collided with the builder's run on the shared test database: the orchestrator's run gave 98 errors, and the builder re-ran its affected tests. The lock script was added afterwards.
 - **Builder retry.** A Ruff stop on literal NUL characters in a test file, caused by heredoc escaping, was fixed to `\x00`.
 - **Missing evidence.** The stronger ACC-1.2 failure-message assertion from repair round 1 passed before and after the fix, so it has no red-first result. The NUL-password and over-long-username cases also passed before the fix, because `authenticate` already returned no user. The NUL-username case failed first with the reported 500.
-- No scope violations or malicious instructions were seen. This log has not been checked by its human author.
+- The builder staging violation is recorded above; no malicious instructions were seen. This log has not been checked by its human author.

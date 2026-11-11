@@ -2,20 +2,22 @@
 
 Slice: #36 · Tier: Fast lane · Tool: Codex · Orchestrator model: gpt-6.1-sol / xhigh (observed turn metadata) · Date: 2026-11-11
 
-Tokens: 13,921,082 input, 31,159 output, 13,952,241 total across coordinator, builder and automatic approval review; cutoff 2026-11-11 21:43:13 SGT.
+Tokens: 14,090,184 input, 31,468 output, 14,121,652 total across disjoint initial-audit and approved-correction measurement windows; latest cutoff 2026-11-11 22:25:50 SGT.
 
 | Agent/source | Input | Cached input | Output | Reasoning output | Total | Recorded elapsed span |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | Orchestrator — gpt-6.1-sol / xhigh, `codex:9de9854ffb938110d85ad86c` | 5,202,399 | 5,120,512 | 19,927 | 6,058 | 5,222,326 | Shared 820.881 s interval |
 | Builder — gpt-6.1-sol / medium, `codex:a56bf341e3465840eb2ed6dc` | 7,994,378 | 7,758,848 | 9,589 | 1,499 | 8,003,967 | Within shared interval |
 | Automatic approval review — codex-auto-review / low, `codex:f21ed5f0c5ab1e8f5a1915c4` | 724,305 | 652,416 | 1,643 | 711 | 725,948 | Within shared interval |
+| Orchestrator, approved correction — gpt-6.1-sol / xhigh, `codex:9de9854ffb938110d85ad86c` | 169,102 | 168,704 | 309 | 0 | 169,411 | Separate 45.312 s interval |
 
-One delegated builder session ran twice. Requested role settings matched observed execution; the coordinator and automatic reviewer settings were also observed selectively. `resource_usage.py` measured all three related sources without warnings, with zero cache-write input. The baseline followed initial workflow/issue discovery at 21:29:32 SGT; earlier reads, these final summary edits, later CI waiting and final reporting are excluded. The shared elapsed span includes waiting and is not additive active time. No independent-review repair round occurred. See [token reporting](../../workflow/README.md#token-reporting).
+One delegated builder session ran twice during the initial audit. Requested role settings matched observed execution; the coordinator and automatic reviewer settings were also observed selectively. `resource_usage.py` measured all three related sources without warnings, with zero cache-write input. The initial baseline followed workflow/issue discovery at 21:29:32 SGT and ended at 21:43:13 SGT. The approved-correction interval was 22:25:05–22:25:50 SGT; its builder and approval-review sources had zero activity and are omitted from the additional rows. No new delegate ran. Earlier reads, the gap between windows, final summary edits, later CI waiting and final reporting are excluded. Spans include waiting and are not additive active time. No independent-review repair round occurred. See [token reporting](../../workflow/README.md#token-reporting).
 
 ## Requests
 
 - Run `/slice 36`, whose collaborator-authored issue identifies checking every session log. Interpret this as the existing log-standard audit and evidenced mechanical corrections, preserving historical claims and their limitations.
 - Preserve unrelated untracked notes. Normal slice authorization covers the feature branch, coherent commits, push, draft PR and final-head configured checks; human merge/release decisions remain separate.
+- Follow-up: explicitly approve the proposed scope-violation sentence correction in both zheng-jj logs 006 and 014.
 
 ## Agent runs
 
@@ -26,13 +28,14 @@ One delegated builder session ran twice. Requested role settings matched observe
 - Committed numbering/incoming-reference repairs as `83576d8`: eight content-identical renames, filling 043 and 051–057 while retaining every previously unique path, with eight incoming-reference updates. Git reports 100% similarity and temporary SHA-256 checks match original checkout bytes. Reference-only updates include one reflection citation and seven merged-plan links; no reflection prose or `docs/Reflections.md` changed. Committed 18 historical experiment permalinks and one current heading-link correction as `50cc9f7`. The pre-archive Git objects and historical heading were checked locally without archive extraction or network retrieval.
 - **Targeted results:** after repairs, `python workflow/scripts/check_logs.py` returned zero findings. Temporary link/heading validation across the historical corpus and nine affected documents checked 363 local references and 18 immutable historical references, with zero findings. Including this new log and summary links, final checks passed for all 86 logs and 367 local references plus the same 18 historical references; numeric-row checks and all eight payload comparisons also passed. Staged and working whitespace checks passed. Every staged checkpoint had diff/stat/numstat inspection. Full local application verification was not run for these documentation-only changes; configured hosted verification remains required on the final PR head.
 - **Candidate and review limits:** mechanical candidate `50cc9f7307d5c26305a31eba4213c47459b1f1aa` plus the plan's numeric-check attribution clarification was frozen in an external manifest, SHA-256 `c5a0b4517a05c1b688890ef3c0aea45adc78513d3caea19782980acf3e9fae28`; unchanged comparison passed before summary additions. This is coordinator/builder inspection, not independent verifier/security review. Fast lane human diff/log review remains pending. No verifier or security-reviewer agent ran.
-- **Delivery:** pushed the branch and opened [draft PR #179](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/pull/179). Required-check readback confirmed GitHub Actions `verify`; `site` also runs. Both were in progress on `50cc9f7` at the cutoff. Push the summary checkpoint and inspect its latest head; final hosted outcomes belong in the PR, not an older-head success claim.
+- **Delivery:** pushed the branch and opened [draft PR #179](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/pull/179). Required-check readback confirmed GitHub Actions `verify`; `site` also runs. Initial delivery passed both on `02c81cce8b309de55c041422dcd5524810591e3a`. The later approved wording correction requires new-head CI; final hosted outcomes belong in the PR, not an older-head success claim.
+- **Approved correction, coordinator:** following the human's two explicit replies, replaced exactly the contradictory concluding sentence in each of zheng-jj logs 006/014 with the approved acknowledgment of the recorded staging violation. Preserved both author-review caveats and all other historical content. Updated this record and the plan; no new role agent, product change or independent-review claim. Log validation returned zero findings; all 367 local references and 18 historical references still resolve. Read back both changed Problems sections and the audit-record updates; whitespace inspection passed. Push this coherent follow-up and verify its new CI head.
 
 ## Decisions and corrections
 
 - Keep the audit Fast lane and use existing standards. No product specification change is needed. Renumber only collisions; preserve historical payloads, original cutoffs, failed-check records and explicit evidence gaps. Repair archived references using immutable pre-archive paths rather than restoring experiment artifacts.
-- zheng-jj logs 006 and 014 record prohibited builder staging but later say no scope violations were seen. Raised exact proposed sentence corrections with the human under the conflicting-facts rule; neither correction was approved at this cutoff, so both remain unchanged and explicitly open. Historical accounting conflicts in 006/017 also remain unresolved in their existing audit home.
-- The author has not approved this log, historical logs, diff or manual checks through this agent run. Human review, the two wording decisions, merge and release remain pending. The draft PR leaves the human checkboxes unticked.
+- zheng-jj logs 006 and 014 originally recorded prohibited builder staging but later said no scope violations were seen. Raised exact proposed sentence corrections with the human under the conflicting-facts rule; the human subsequently approved both and they are applied. These two narrative contradictions are resolved. Historical accounting conflicts in 006/017 remain unresolved in their existing audit home.
+- The human's approval covers the two exact sentence corrections. It does not establish approval of this entire log, the historical logs, PR diff or manual checks. Human diff/log review, merge and release remain pending. The draft PR leaves the human checkboxes unticked.
 
 ## Problems
 
