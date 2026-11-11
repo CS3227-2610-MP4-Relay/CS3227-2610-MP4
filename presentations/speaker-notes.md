@@ -165,9 +165,9 @@ That is tokenmaxxing: spending more tokens without consistently improving result
 
 ### 21 · Conclusion (0:45)
 
-Side by side, the two experiments say the same four things. More is not better: extra agents doubled development cost, and extra context doubled input tokens, with no gain. Green checks are not quality: 135 passing runs still had 58 review findings, and every feedback answer was valid JSON while none handled a complete report. Independent judgment is worth paying for: one read-only reviewer in development, and a person's decision on every AI suggestion in the product. And measure before believing: in both experiments the first small result was misleading.
+Both experiments lead to the same four takeaways. More is not better: extra agents doubled development cost, and extra context doubled input tokens, with no gain. Green checks are not quality: 135 passing runs still had 58 review findings, and for the complete reports in scenarios F3 and F4, all 86 accepted replies were valid JSON but still asked unnecessary questions. Independent judgment is worth paying for: one read-only reviewer in development, and a person's decision on every AI suggestion in the product. And measure before believing: in both experiments the first small result was misleading.
 
-So: choose context and checks for the outcome they buy.
+Keep the context relevant to the task, and use independent review to catch problems that automated checks miss.
 
 ### 22 · Thank you (0:10)
 
