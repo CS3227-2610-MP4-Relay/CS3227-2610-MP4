@@ -125,19 +125,27 @@ Whimsyturtle asked the same question inside the product: does more context help?
 
 ### 16 · Experiment 2: does extra context help the app's AI? (0:40)
 
-zheng-jj studied the AI workflow used to build Relay. My experiment focuses on the AI features inside Relay itself. Both AI features send the model a small, selected context. Why not send more? The lecture names the risk, the Context Paradox: the more context we provide, the less effectively it is used. So I measured it. I kept the production prompt and task data fixed and changed one field, a background passage. It is empty, or 500 words about unrelated parts of an app, or 500 words about rivers and rocks. That roughly doubles the prompt. Same question, clean desk or cluttered desk.
+zheng-jj studied the AI workflow used to build Relay. My experiment focuses on Relay's two AI features: test-case drafting and observation feedback. Both normally receive only the information needed for the current request. Would adding more context help? The lecture names the risk, the Context Paradox: the more context we provide, the less effectively it is used.
+
+I kept the existing prompts for both features unchanged. I used synthetic test scenarios, with acceptance criteria as the input for drafting, and an observation, its test case and linked criteria as the inputs for feedback.
+
+For each scenario, I compared three context conditions while keeping those inputs fixed. First, the relevant inputs only. Second, the same inputs plus about 500 words about unrelated app features. Third, the same inputs plus about 500 words about rivers and rocks. Adding either passage roughly doubled the prompt length.
 
 ### 17 · Design: 540 calls, frozen before the first one (0:50)
 
-Twelve scenarios, three models, three contexts, five repeats: 540 calls, all frozen by hash before the first one. Five repeats because, when I checked, temperature zero did not give the same answer twice.
+Twelve scenarios, three models, three contexts, five repeats: 540 calls. Five repeats because, when I checked, temperature zero did not give the same answer twice.
 
-Each call goes to the SoC LLM with the production deadline and no retries. The reply first meets the production parser, a deterministic grader: 465 of 540 were accepted, and every timeout was the small Llama model. Accepted answers then go to a rubric grader, a separate model that sees neither the model name nor the context, and which was first checked on 24 answers written for the purpose. A call succeeds only if it passes the parser and every check.
+Each call goes to the SoC LLM with a 30-second deadline and no retries. Afterwards, Relay's existing parser checks the reply's format and limits. This is the deterministic grader: 465 of 540 calls produced a reply that passed it. All timeouts occurred with the small Llama model.
+
+Accepted replies then go to a separate LLM grader, which checks them against each scenario's rubric without knowing the model or context condition. Before using this grader, we checked its judgments against reference grades for 24 constructed answers: one intended good answer and one deliberately flawed answer for each of the twelve scenarios.
+
+A call counts as successful only if its reply passes the parser and meets every criterion in that scenario's grading rubric.
 
 ### 18 · Result: drafting (0:45)
 
 Drafting first. Each cell is successes out of thirty. Qwen falls from 29 with relevant context only to 20 with app clutter. The small Llama model collapses from 12 to 2, mostly timeouts and broken JSON. Only x-test-2 holds. So unrelated background made two of three models worse, and none better.
 
-The example shows how. Asked for one test of a Refresh button, a Llama answer returned that test plus four more, about astronomy, textiles, gardening and audio, which exist only in the background. The background leaked into the answer. That is context pollution.
+In scenario D5, the model was asked to draft a test for a Refresh button. The Llama model returned that test plus four unrelated tests about astronomy, textiles, gardening and audio. Those four topics appeared only in the added background. This is context pollution: unrelated background information leaking into the answer.
 
 ### 19 · Result: feedback (0:45)
 
