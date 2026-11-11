@@ -39,7 +39,7 @@ final reporting. One packaging repair resolved CRLF whitespace interpretation.
 
 ## Requests
 
-- Read the [follow-up proposal](../../experiments/app-context/follow-up-proposal.md)
+- Read the [follow-up proposal](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/661a5f7b0cfbc28aa7787c87bc59df817b76c2b8/experiments/app-context/follow-up-proposal.md)
   and help brainstorm scenarios, JSON structure checks, grader rubric and related
   design details without running the experiment.
 - Follow-up: use 500 words per background passage without tuning its length.
@@ -77,8 +77,8 @@ final reporting. One packaging repair resolved CRLF whitespace interpretation.
   was made. The earlier log-check findings concern unchanged log numbering.
 - **Three-scenario rehearsal — done; human inspection pending.** Authored exact
   targets, rubric checks, six constructed answers and reference labels in
-  [fixtures](../../experiments/app-context/grader-rehearsal/fixtures.json) and
-  [references](../../experiments/app-context/grader-rehearsal/reference.json).
+  [fixtures](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/661a5f7b0cfbc28aa7787c87bc59df817b76c2b8/experiments/app-context/grader-rehearsal/fixtures.json) and
+  [references](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/661a5f7b0cfbc28aa7787c87bc59df817b76c2b8/experiments/app-context/grader-rehearsal/reference.json).
   Captured both input SHA-256 values before semantic grading. All six answers
   passed existing production parsers using target-only labels. The coordinator
   assessed thirty checks with evidence; the recorded labels matched all thirty
@@ -86,7 +86,7 @@ final reporting. One packaging repair resolved CRLF whitespace interpretation.
   same session authored and saw the references, so this is not independent or
   blinded calibration. No separate semantic model call or delegated agent ran.
 - Added an offline parser/judgment audit helper and an inspection
-  [report](../../experiments/app-context/grader-rehearsal/results.md) containing
+  [report](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/661a5f7b0cfbc28aa7787c87bc59df817b76c2b8/experiments/app-context/grader-rehearsal/results.md) containing
   the constructed answers, decisions and evidence. The helper audits saved
   semantic judgments; it does not generate them. Its report mode checked exact
   candidate/check coverage and verified unchanged input hashes. Linked the
@@ -117,8 +117,8 @@ final reporting. One packaging repair resolved CRLF whitespace interpretation.
   causes were not established, and full verification did not pass. It was not
   rerun during the nine-call pilot.
 - **Live pilot — done; human inspection pending.** Wrote and froze the
-  [method](../../experiments/app-context/grader-rehearsal/live-method.md) and
-  [runner](../../experiments/app-context/grader-rehearsal/live_probe.py) before
+  [method](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/661a5f7b0cfbc28aa7787c87bc59df817b76c2b8/experiments/app-context/grader-rehearsal/live-method.md) and
+  [runner](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/661a5f7b0cfbc28aa7787c87bc59df817b76c2b8/experiments/app-context/grader-rehearsal/live_probe.py) before
   execution. The offline preflight confirmed exactly nine planned cells. Reused
   current feature instructions/parsers and gateway transport with the existing
   loader under the human's explicit API-key authorization. Configuration and
@@ -133,7 +133,7 @@ final reporting. One packaging repair resolved CRLF whitespace interpretation.
   The coordinator authored the rubric and could access that mapping, so this
   was label-hidden presentation, not independent blinded grading. No separate
   grader invocation or delegated agent ran.
-- The [live report](../../experiments/app-context/grader-rehearsal/live-results.md)
+- The [live report](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/661a5f7b0cfbc28aa7787c87bc59df817b76c2b8/experiments/app-context/grader-rehearsal/live-results.md)
   contains outcomes, resources, review points and artifact hashes. Retained only
   numeric/hash metadata and assessments, with no raw or validated reply text in
   repository artifacts or this log. All three complete-report answers returned
@@ -178,7 +178,7 @@ final reporting. One packaging repair resolved CRLF whitespace interpretation.
   That nine-call pilot is complete. Expansion to all twelve scenarios or the
   full context comparison remains pending discussion.
 - The human confirmed the background length; its current home is the
-  [proposal's setup](../../experiments/app-context/follow-up-proposal.md#setup).
+  [proposal's setup](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/661a5f7b0cfbc28aa7787c87bc59df817b76c2b8/experiments/app-context/follow-up-proposal.md#setup).
 - Proposed keeping the evaluation background field present in every condition,
   deriving permitted drafting labels exclusively from target criteria, rewarding
   appropriate empty outputs and grading missing-information coverage separately

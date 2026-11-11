@@ -33,7 +33,7 @@ corrections. See [token reporting](../../workflow/README.md#token-reporting).
 - **Coordinator — done.** Began on `docs/temperature-zero-repeatability` at
   `9604263b1a971963397d89bca4a60dac9166aa60`. Read relevant experiment methods,
   parsers, proposal and repository instructions. Established the
-  [calibration method](../../experiments/app-context/calibration/README.md)
+  [calibration method](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/661a5f7b0cfbc28aa7787c87bc59df817b76c2b8/experiments/app-context/calibration/README.md)
   and grading procedure before grading. Added the offline artifact checker,
   froze inputs and sources, captured the grader submission before comparing
   labels, audited results, and linked the completed calibration from the proposal
@@ -53,7 +53,7 @@ corrections. See [token reporting](../../workflow/README.md#token-reporting).
   only `judgments.json`; metadata-only usage access was permitted. Input hashes,
   complete candidate/check coverage and evidence pointers passed its readback.
   Reported no reference exposure. Candidate identity and immutable submission
-  hash are in the [receipt](../../experiments/app-context/calibration/grading-submission.json).
+  hash are in the [receipt](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/661a5f7b0cfbc28aa7787c87bc59df817b76c2b8/experiments/app-context/calibration/grading-submission.json).
   Reference separation was instructed on a shared filesystem, not enforced by
   separate access permissions.
 - **Adjudicator — done.** Trigger: the sole first-pass criterion disagreement.
@@ -66,7 +66,7 @@ corrections. See [token reporting](../../workflow/README.md#token-reporting).
 - These were scoped research tasks, with no workflow builder/verifier/security
   role adapter, product implementation, dependency change or Git mutation.
   All substantive assessments and their limits are in the
-  [results](../../experiments/app-context/calibration/results.md).
+  [results](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/661a5f7b0cfbc28aa7787c87bc59df817b76c2b8/experiments/app-context/calibration/results.md).
 - **Checks:** the new helper accepted every candidate without parser changes,
   verified preserved scenarios, reference coverage, frozen hashes and complete
   grade/evidence coverage. A separate PowerShell aggregation reproduced the

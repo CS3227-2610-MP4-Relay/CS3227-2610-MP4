@@ -22,7 +22,7 @@ resources are separate in the results. See
 
 ## Requests
 
-- Read the [follow-up proposal](../../experiments/app-context/follow-up-proposal.md)
+- Read the [follow-up proposal](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/661a5f7b0cfbc28aa7787c87bc59df817b76c2b8/experiments/app-context/follow-up-proposal.md)
   and test whether repeated calls add information at temperature zero.
 - The human explicitly authorized live SoC calls using the existing `.env` key.
 - Follow-up: update the proposal to incorporate the pilot findings and recommendations.
@@ -36,7 +36,7 @@ resources are separate in the results. See
   prior pilot, corpus, current feature prompts/parsers, gateway transport and local
   configuration loader at base `46317632dcc0df8f2bb2b2ffc3391e93e497fb9c`.
   Wrote a bounded standalone operator probe and froze its
-  [method](../../experiments/app-context/repeatability-method.md) before execution.
+  [method](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/661a5f7b0cfbc28aa7787c87bc59df817b76c2b8/experiments/app-context/repeatability-method.md) before execution.
   Used the existing loader without displaying configuration, and the existing
   transport without application database accounting. Saved only equality hashes,
   structural outcomes and numeric metrics. During the pilot, no product code,
@@ -51,7 +51,7 @@ resources are separate in the results. See
   broad-exception justification; all three were corrected before live execution.
   No full application/database suite was run for this research-only change.
 - Live command and final observations belong in the
-  [results](../../experiments/app-context/repeatability-results.md). Source text
+  [results](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/661a5f7b0cfbc28aa7787c87bc59df817b76c2b8/experiments/app-context/repeatability-results.md). Source text
   and replies were not retained.
 - **Final evidence:** the runner and frozen method hashes matched their pre-run
   values. All 60 rows passed ordinal, repetition and identical-request checks;

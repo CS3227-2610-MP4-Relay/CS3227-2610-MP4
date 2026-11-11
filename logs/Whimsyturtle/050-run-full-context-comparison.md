@@ -31,7 +31,7 @@ this final log update/commit and final response, are excluded.
 Primary grading alone used 9,810,679 input and 61,069 output tokens
 (9,871,748 total, including 9,652,736 cached input); supplementary review used
 149,372 total. These Codex measurements are separate from the provider-generation
-usage in the [results report](../../experiments/app-context/full-comparison/results.md).
+usage in the [results report](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/661a5f7b0cfbc28aa7787c87bc59df817b76c2b8/experiments/app-context/full-comparison/results.md).
 Cached input is included in input, and reasoning output in output; see
 [token accounting](../../workflow/README.md#token-reporting). Generation made
 540 attempts with zero retries. Runner/analysis repairs and review rounds are
@@ -133,7 +133,7 @@ recorded below; no system-wide retry total is inferred from unavailable telemetr
   retries: 465 schema-accepted, 54 provider/gateway failures and 21 schema
   failures. The strict full-run analysis passed. All 1,388 primary evidence
   pointers and ten supplementary pointers resolved against transient candidates.
-  The [audit receipt](../../experiments/app-context/full-comparison/grading-audit.json)
+  The [audit receipt](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/661a5f7b0cfbc28aa7787c87bc59df817b76c2b8/experiments/app-context/full-comparison/grading-audit.json)
   preserves artifact hashes and audit coverage. Across 300 distinct exact-text
   groups, including 14 shared across cells, no identical-answer criterion vector
   conflicted. A limited twelve-word overlap scan found no copied answer passage
@@ -141,7 +141,7 @@ recorded below; no system-wide retry total is inferred from unavailable telemetr
 - **Results author.** Reused the analysis worker after all primary grading
   finished and model/context mappings were released for analysis. Supplied the
   retained measurements, summary, judgments, audits and coordinator's safe
-  example paraphrases. Wrote the [results report](../../experiments/app-context/full-comparison/results.md),
+  example paraphrases. Wrote the [results report](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/661a5f7b0cfbc28aa7787c87bc59df817b76c2b8/experiments/app-context/full-comparison/results.md),
   recalculated tables and supplementary frequencies, checked example mappings
   and read the report back. Coordinator corrected the source attribution to
   include attempt measurements alongside the summary. No frozen input changed.
@@ -169,7 +169,7 @@ recorded below; no system-wide retry total is inferred from unavailable telemetr
 
 ## Decisions and corrections
 
-- The [method](../../experiments/app-context/full-comparison/method.md) is the
+- The [method](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/blob/661a5f7b0cfbc28aa7787c87bc59df817b76c2b8/experiments/app-context/full-comparison/method.md) is the
   run's home for schedule, settings, retention, grading and aggregation. It was
   frozen before execution and remained unchanged throughout the run.
 - Kept all existing production gateway quotas, parsers and prompts unchanged.
