@@ -20,4 +20,35 @@ Goal: Audit all saved session logs and correct evidenced mechanical documentatio
 - Coordinator supplied starting HEAD `ea02420df1b651f76c9abb546961989640a5d7a1`, branch `docs/36-check-session-logs` and a private before-run scope snapshot. Coordinator owns usage measurement and final reporting, including this builder run (configured `gpt-6.1-sol`, medium effort).
 - Coordinator's pre-audit checker result is supplied evidence, not a builder rerun: 57 Whimsyturtle logs and 28 zheng-jj logs; duplicate Whimsyturtle numbers 039, 040, 041, 042, 044 and 046, with missing 043. Confirm these findings during the audit before selecting repairs.
 - The required prohibited-edit assessment refuses an `AGENTS.md` mutation because it is outside builder writes. No mutation is attempted; this does not prove native hook enforcement.
-- Next: yield this plan for the coordinator's checkpoint and fresh snapshot before reading/auditing the log corpus. No audit repairs have been made and no historical claims have been verified at this checkpoint.
+- Plan checkpoint committed by the coordinator as `d1f1c83fa740f91773b1e6b8513adaa8776bd20e`; audit resumed against a fresh private scope snapshot. No log repairs were made by the builder.
+
+## Audit checkpoint
+
+- Coverage: read all 85 saved logs, 5,860 lines: all 57 files in `logs/Whimsyturtle/` (001–050, including every duplicated prefix) and all 28 in `logs/zheng-jj/` (001–028). Bounded UTF-8 `Get-Content` batches covered headers, usage tables and every narrative section; truncated ranges were reread. Inspected structure, evidence/cutoff consistency, approval wording and references. This is document inspection, not historical execution, telemetry replay or human verification.
+- Builder reran `.venv/Scripts/python.exe workflow/scripts/check_logs.py`: seven numbering findings, matching the starting evidence; no structural findings. Existing logs explicitly preserve missing baselines, overlapping intervals, failed local checks, supplied review evidence and pending approvals. Do not rewrite historical pending-CI statements as current delivery claims.
+- Coordinator-supplied independent numeric checks found no invalid all-numeric usage row; directly comparable summaries reconcile, with separate intervals/subtotals kept separate. The known unresolved zheng-jj 006/017 measurement conflicts and absent historical source evidence remain in [the earlier audit](../../logs/Whimsyturtle/018-audit-historical-token-counts.md#zheng-jj-logs); no new figures or whole-project total are inferred.
+
+### Mechanical repairs recommended to the coordinator
+
+- Resolve numbering with eight byte-identical renames, retaining the earliest first-added file at each duplicate prefix. Coordinator's Git-history allocation preserves every already-unique path; it is a collision repair, not reconstructed chronology:
+
+| Existing Whimsyturtle filename | New prefix |
+| --- | --- |
+| `039-verify-native-workflow-hooks.md` | 043 |
+| `039-warn-before-leaving-unsaved-results.md` | 051 |
+| `040-add-workspace-beta-testers.md` | 052 |
+| `041-make-round-close-confirmation-atomic.md` | 053 |
+| `042-reject-superseded-production-runs.md` | 054 |
+| `044-add-runtime-database-readiness.md` | 055 |
+| `046-document-shared-ai-allowance.md` | 056 |
+| `046-prepare-round-action-notification-fix.md` | 057 |
+
+- Update incoming Markdown references to those eight names, preserving historical filename mentions that describe their original context. Validate exact payload parity and all affected targets after renaming. The current session's next log is 058.
+- Repair 18 archived-experiment Markdown targets in Whimsyturtle 047 (lines 25, 39, 54), 048 (42, 80–81, 89, 120–121, 136, 181), 049 (36, 56, 69) and 050 (34, 136, 144, 172). The [archive README](../../experiments/app-context/README.md) explicitly preserves original paths in the ZIP; this is relocation, not lost evidence. Prefer immutable blob links at pre-archive commit `661a5f7b0cfbc28aa7787c87bc59df817b76c2b8`, retaining original relative paths as link labels or explanatory text. Coordinator must verify each Git object/anchor; no archive extraction is needed.
+- Whimsyturtle `027-fix-live-drafting-reply-schema.md:50` links obsolete `#transport-contract-proposed`; the current gateway heading is `Transport contract` (line 29). Change only that anchor to `#transport-contract`.
+
+### Findings awaiting a human decision
+
+- `logs/zheng-jj/006-sign-in-and-out-by-role.md:94` records prohibited builder staging and reversal; line 98 then says no scope violations were seen. `logs/zheng-jj/014-close-the-open-review-gaps.md:98` records the same prohibited Git-state change; line 100 repeats the no-violations claim. Raised both contradictions to the coordinator; leave both logs unchanged pending confirmation. Smallest proposed correction replaces each final no-violations sentence with an explicit reference to the staging violation already recorded above, retaining the no-malicious-instructions and author-review caveats. No historical fact is chosen by this audit.
+- No other new material narrative contradiction or unsupported human-verification assertion was identified by this inspection. Original claims remain historical reports with their stated evidence limits. The two older token conflicts remain unresolved as linked above.
+- Next: coordinator checks this scope/diff checkpoint, commits the audit record, applies authorized mechanical repairs, carries unresolved decisions explicitly, writes the current session log and completes targeted final-candidate checks/delivery. Human author approval and Fast lane diff review remain pending.
