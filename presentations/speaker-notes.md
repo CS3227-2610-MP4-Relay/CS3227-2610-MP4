@@ -41,15 +41,21 @@ Whimsyturtle now takes the same round from the tester's side.
 
 ### 5 · Beta Tester: record what happened on this build (0:40)
 
-Thanks. I built the Beta Tester side. A tester reads a case, tries the software, and records the result here. Box one is the build the result belongs to. Boxes two and three are the outcome and the observation; a Fail needs one. Box four saves a private draft or submits. Box five opens the AI feedback page.
+Thanks. I built the Beta Tester side. A tester reads a case, tries the software, and records the result here. Box one shows the build version they tested. Box two is the outcome: Pass or Fail. Box three is the observation, which is required for a Fail. Box four saves a private draft or submits. Box five opens the AI feedback page.
 
-On the right is why the build matters: after a retest the tester gets a new entry, and the earlier result stays as it was. Testers see only their own results, and a stale form is refused.
+The example on the right shows why we record the build version in box one. When the coordinator requests a retest on a newer version, the tester records a separate result for that version. The earlier result is kept.
+
+Testers see and edit only their own results. If a retest starts or the round closes while a tester has this form open, Relay blocks saving from that old form.
 
 ### 6 · AI feedback asks for the missing details (0:50)
 
-Testers often write observations like this one: the task appeared at the bottom of the list. True, but hard to reproduce. Box one says exactly what the AI receives: the saved observation, its test case and the linked criteria, nothing else. Box three is an explicit button, so opening the page costs no call. Box four is the answer: up to five short questions, never saved, and they never change the outcome.
+Testers can write vague observations that leave out details needed to reproduce a bug. Box one explains what the AI receives: the saved observation, its test case and linked acceptance criteria. Box two shows an example observation: "The task was added, but it appeared at the bottom of the list." It does not say which browser was used.
 
-The strip underneath is the gateway both AI features share. Input guardrails on the way in, a deadline and hourly quotas around the call because the SoC LLM is shared, and a strict parser on the way out. The last box is dashed because it is a person: the tester decides.
+Box three is the Suggest missing details button. The tester must manually click this button to request feedback, so opening the page makes no LLM call. Box four shows up to five LLM-suggested questions, such as "Which browser and version did you use?"
+
+These questions help the tester identify what to add. The tester returns to the result, adds the relevant details to their observation, then saves or submits it themselves. The LLM-suggested questions are not saved, and the AI cannot edit the observation or change Pass or Fail.
+
+The strip below shows the shared LLM gateway used by both roles: the Test Coordinator for drafting test cases, and the Beta Tester for observation feedback. It applies input guardrails, a deadline, hourly quotas and a strict output parser. The dashed final box is the tester, who decides what to save.
 
 ### 7 · How we built it: one builder, independent read-only reviewers (0:55)
 
