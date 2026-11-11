@@ -15,7 +15,7 @@ Notes for [Relay-MP4.html](Relay-MP4.html): 22 slides in 15 minutes. The time be
 
 ### 1 · Relay (0:20)
 
-Hi, we are zheng-jj and Whimsyturtle, and this is Relay: a beta-testing portal for small software teams. The colour bar at the bottom shows who is speaking: blue is me, purple is Whimsyturtle. We will show the product, how we built it, and one experiment each.
+Hi, we are zheng-jj and Whimsyturtle, and this is Relay: a beta-testing portal for small software teams. We will show the product, how we built it, and the experiment that each of us ran.
 
 ### 2 · One testing loop, two roles, one AI feature each (0:55)
 
