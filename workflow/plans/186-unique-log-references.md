@@ -44,4 +44,10 @@ Builder re-grepped the worktree at `a93430a` outside `logs/` for `log(s)`, `sess
 
 - Coordinator supplied worktree `tmp/worktrees/issue-186`, branch `docs/186-unique-log-references`, HEAD `a93430a3879e3a0af85eaa251b428a1d791d83e5`, clean tree.
 - Hook check: a builder Edit appending a blank line to `AGENTS.md` was refused by the PreToolUse `check_scope.py --hook` ("builder may not write agents.md"); the file was not changed.
-- Next: coordinator commits this plan, then checkpoint 2.
+- Plan committed as `2a60dea`; log-skill rule committed as `d9ae866`. Coordinator decisions: include 36:46; leave the author-named references and the `src/` comment unchanged; leave the README's "five" count for the human as an observation.
+
+## Checkpoint 3: merged-plan corrections
+
+- From snapshot `d9ae8662ba83c81d93c3a2080640d5cfeff9f848`, builder wrapped the bare text in links at plan 22 lines 83 (018, 019), 100, 101 and 120; plan 36 line 46; plan 67-spec-consistency lines 14 and 24; and plan 67-unit-test-helpers line 13. Diff: 8 lines changed across four files, wording unchanged.
+- Checks run: `git diff --word-diff=plain` showed only link markup added; `test -f` on all six resolved targets (Whimsyturtle 009, 036, 037, 058; zheng-jj 018, 019) passed; `python workflow/scripts/check_scope.py builder --base d9ae866` reported "All changes are within the builder scope." (exit 0).
+- Next: coordinator commits checkpoint 3, then checkpoint 4.

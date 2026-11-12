@@ -10,7 +10,7 @@ Tier: Standard (test-only; verifier review). Base: `ebd890c`. Paths: `src/**/tes
 - **T3** About 13 near-identical "rows unchanged" helpers (`everything`, per-round `snapshot`/`stored`, `test_result_services.snapshot`, `test_tester.snapshot`). Most compare `CaseCriterion`/`BuildCase` `.values()` without `order_by`; neither model has `Meta.ordering`.
 - **T4** Duplicates: `no_store` (7), `locked` (4), `workspace` fixture overrides (4, differing only in the name), `title_tag` and `assert_no_raw_markup` (2 each), and helpers imported from test modules (`test_result_services.snapshot` by 7 modules, `test_configuration.probe` by 2, `test_results.no_store` by `test_history`).
 - **T2** `rounds/tests/conftest.py` `race()` gives the second request a fixed 0.3 s head start; a slow second request arrives after the commit and the test still passes. `test_result_services.race` already waits on `pg_stat_activity.wait_event_type = 'Lock'`.
-- **A13** `accounts/tests/test_limit_views.py` ACC-3.7 idle case asserts the server text `idle-in-transaction timeout`. Windows psycopg reports `server closed the connection unexpectedly` (logs 036/037), while the 503 assertions pass.
+- **A13** `accounts/tests/test_limit_views.py` ACC-3.7 idle case asserts the server text `idle-in-transaction timeout`. Windows psycopg reports `server closed the connection unexpectedly` (logs [036](../../logs/Whimsyturtle/036-repair-ui-journeys.md)/[037](../../logs/Whimsyturtle/037-fix-tester-results-and-feedback.md)), while the 503 assertions pass.
 
 ## Decisions
 
