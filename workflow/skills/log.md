@@ -4,7 +4,7 @@ Summarises a working session in `logs/` so its author can check it and the team 
 
 **Input:** Session requests, the orchestrator's and every subagent's model/run metadata, agent triggers, supplied context, commands/results, decisions, changed files and observed usage.
 
-1. Create `logs/<github-user>/<NNN>-<log-name>.md`, asking for the username only if not known from session context. NNN is the highest number in that folder plus one, padded to three digits. The name comes from a title of at most eight words in lowercase kebab case. Write one summary per session.
+1. Create `logs/<github-user>/<NNN>-<log-name>.md`, asking for the username only if not known from session context. NNN is the highest number in that folder plus one, padded to three digits. Numbers repeat across author folders, so a log's identifier is `<github-user>/<NNN>`; wherever a log is cited, link its full path rather than giving a bare number. The name comes from a title of at most eight words in lowercase kebab case. Write one summary per session.
 2. Use this structure:
 
    ```markdown
