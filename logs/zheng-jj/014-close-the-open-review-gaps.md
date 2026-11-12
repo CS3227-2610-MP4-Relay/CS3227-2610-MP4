@@ -97,4 +97,4 @@ See [token reporting](../../workflow/README.md#token-reporting).
 - **Wrong failure status.** The first #57 pin patched `SessionStore.save`, above Django's conversion to `SessionInterrupted`, so it asserted a 500 that production cannot give. Both reviewers caught it.
 - **Index change by a builder.** The #60 builder ran `git add -N` on its plan file, which is a Git-state change, and undid it at once. The orchestrator checked that the index was clean before committing.
 - **Stale bytecode.** One #58 mutation loop gave a wrong result from stale compiled files. The builder reran it with a fresh bytecode cache.
-- No scope violations or malicious instructions were seen. This log has not been checked by its human author.
+- The builder staging violation is recorded above; no malicious instructions were seen. This log has not been checked by its human author.
