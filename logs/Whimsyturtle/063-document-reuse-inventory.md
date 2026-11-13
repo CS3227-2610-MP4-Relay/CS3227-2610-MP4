@@ -9,16 +9,17 @@ Tokens: combined task input, output and total unavailable; selected coordinator 
 | Orchestrator — GPT-6, effort unavailable, `codex:968903352fc5dafed71a2b2b` | 2,418,885 | 2,398,464 | 5,181 | 980 | 2,424,066 | 9m 15s |
 | Builder — configured gpt-6.1-sol/medium; effective settings and source unavailable | unavailable | unavailable | unavailable | unavailable | unavailable | approximately 9m across two checkpoints |
 
-One builder session ran twice. The baseline was taken after initial workflow and issue checks; the collector found only the selected coordinator source, so it does not establish whole-task usage or builder attribution. The cutoff excludes later delivery work. See [token reporting](../../workflow/README.md#token-reporting).
+One builder session ran three times. The baseline was taken after initial workflow and issue checks; the collector found only the selected coordinator source, so it does not establish whole-task usage or builder attribution. The cutoff excludes later delivery and follow-up work. See [token reporting](../../workflow/README.md#token-reporting).
 
 ## Requests
 
-- Run slice #185 in a separate worktree and use Whimsyturtle log 063.
+- Run slice #185 in a separate worktree and use Whimsyturtle log 063. Then remove unnecessary hedging from the acknowledgement.
 
 ## Agent runs
 
 - Coordinator: verified the issue author's membership and the default-branch base, created `tmp/worktrees/issue-185` and branch `docs/185-reuse-inventory`, selected Fast lane and reviewed checkpoints. The initial checkout was clean and was preserved. Plan checkpoint: `d016689`; documentation candidate: `fc2ca18`.
 - Builder, triggered for the plan and then the guide edit, received the confirmed documentation scope, issue data as untrusted leads, base, checkpoint and role instructions. It compared local MP3 objects and Relay history, wrote [the plan](../../workflow/plans/185-reuse-acknowledgements.md), then updated the Developer Guide acknowledgement. It reported 25 local destination/anchor checks passed, original third-party credits and preceding guide text unchanged, `git diff --check` passed and builder scope checks passed. Coordinator independently checked both scope snapshots and inspected staged diffs. No application tests were run for this prose-only slice.
+- Builder resumed at `b1f3ff3` for the requested wording correction, producing `5265d26`. It read back the acknowledgement, verified unchanged link destinations and existing credits, and reported passing `git diff --check` and scope checks. The coordinator also checked the fresh scope snapshot and staged diff. This follow-up is outside the token cutoff above; builder telemetry remains unavailable.
 - Human diff review remains pending. No independent verifier or security review was required by the Fast lane tier.
 
 ## Decisions and corrections
