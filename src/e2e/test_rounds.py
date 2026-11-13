@@ -270,9 +270,9 @@ def test_empty_round_publish_is_refused_without_creating_build(page, browser_acc
     expect(page.get_by_role("button", name="Publish round", exact=True)).to_be_visible()
 
 
-@pytest.mark.ac("RND-8.4")
+@pytest.mark.ac("RND-8.10")
 def test_drafting_page_keeps_manual_workflow_when_unavailable(page, browser_accounts):
-    """Test settings disable live calls; manual drafting remains available."""
+    """Test settings disable live calls, so drafting reports it is not set up."""
     sign_in(page, browser_accounts, "coordinator")
     create_draft_round(page, "Synthetic drafting browser round")
     criterion = "The synthetic drafting criterion is visible."
@@ -292,7 +292,8 @@ def test_drafting_page_keeps_manual_workflow_when_unavailable(page, browser_acco
     page.get_by_role("button", name="Draft test cases", exact=True).click()
     expect(
         page.get_by_text(
-            "Drafting is unavailable right now. You can still add test cases yourself.",
+            "AI drafting is not set up on this deployment. "
+            "You can still add test cases yourself.",
             exact=True,
         )
     ).to_be_visible()

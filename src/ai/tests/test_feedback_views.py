@@ -1,6 +1,7 @@
 """Authorized saved-draft feedback requests and stale source rejection."""
 
 import json
+import logging
 from pathlib import Path
 from unittest import mock
 
@@ -35,6 +36,22 @@ UNAVAILABLE = (
 EMPTY = "No missing details were suggested. You can still edit your result yourself."
 TOO_LONG = (
     "This observation and test case are too long for feedback. "
+    "You can still edit your result yourself."
+)
+BUSY = (
+    "The AI service is busy. Try again in a minute. "
+    "You can still edit your result yourself."
+)
+OWN_QUOTA = (
+    "You have used your AI allowance for this hour. Try again later. "
+    "You can still edit your result yourself."
+)
+SHARED_QUOTA = (
+    "The shared AI allowance is used up for now. Try again later. "
+    "You can still edit your result yourself."
+)
+NOT_SET_UP = (
+    "AI feedback is not set up on this deployment. "
     "You can still edit your result yourself."
 )
 
@@ -238,15 +255,24 @@ def test_post_uses_only_own_saved_source_and_never_changes_it(
     assert domain_rows() == before
 
 
-@pytest.mark.ac("RES-4.3", "RES-4.4")
+@pytest.mark.ac("RES-4.3", "RES-4.4", "RES-4.10")
 @pytest.mark.parametrize(
     "result,message",
     [
         (gateway.Success('{"questions": []}'), EMPTY),
         (gateway.Success("Synthetic invalid private reply"), UNAVAILABLE),
         (gateway.Refused("provider-refused"), UNAVAILABLE),
-        (gateway.Refused("busy-or-quota"), UNAVAILABLE),
+        (gateway.Refused("slots-missing"), UNAVAILABLE),
+        (gateway.Refused("input-too-large"), UNAVAILABLE),
         (gateway.Failed("timeout"), UNAVAILABLE),
+        (gateway.Failed("transport"), UNAVAILABLE),
+        (gateway.Failed("provider-error"), UNAVAILABLE),
+        (gateway.Refused("busy"), BUSY),
+        (gateway.Refused("user-quota"), OWN_QUOTA),
+        (gateway.Refused("deployment-quota"), SHARED_QUOTA),
+        (gateway.Refused("quota"), SHARED_QUOTA),
+        (gateway.Refused("live-off"), NOT_SET_UP),
+        (gateway.Refused("not-configured"), NOT_SET_UP),
     ],
 )
 def test_empty_or_unavailable_keeps_source_and_manual_navigation(
@@ -254,14 +280,71 @@ def test_empty_or_unavailable_keeps_source_and_manual_navigation(
 ):
     before = domain_rows()
     response, complete = post(signed_in(tester), target, result)
-    assert response.status_code == 200 and message in response.content.decode()
-    assert target[3].observation in response.content.decode()
-    assert "Back to result" in response.content.decode()
-    assert "Suggest missing details" in response.content.decode()
+    body = response.content.decode()
+    assert response.status_code == 200 and message in body
+    for other in {EMPTY, UNAVAILABLE, BUSY, OWN_QUOTA, SHARED_QUOTA, NOT_SET_UP}:
+        assert other == message or other not in body
+    assert target[3].observation in body
+    assert "Back to result" in body
+    assert "Suggest missing details" in body
     assert "Synthetic invalid private reply" not in caplog.text
     complete.assert_called_once()
     no_store(response)
     assert domain_rows() == before
+
+
+@pytest.mark.ac("RES-4.4", "RES-4.10")
+@pytest.mark.parametrize(
+    "result",
+    [
+        gateway.Refused("busy"),
+        gateway.Refused("slots-missing"),
+        gateway.Failed("timeout"),
+    ],
+)
+def test_gateway_refusal_or_failure_logs_one_fixed_warning(
+    tester, target, result, caplog
+):
+    caplog.set_level(logging.DEBUG, logger="ai")
+    post(signed_in(tester), target, result)
+    records = [record for record in caplog.records if record.name.startswith("ai")]
+    assert [(record.levelno, record.getMessage()) for record in records] == [
+        (logging.WARNING, f"Feedback gateway {type(result).__name__}: {result.code}")
+    ]
+    assert target[3].observation not in caplog.text
+
+
+@pytest.mark.ac("RES-4.4")
+def test_an_unexpected_gateway_exception_logs_two_fixed_warnings(
+    tester, target, caplog
+):
+    caplog.set_level(logging.DEBUG, logger="ai")
+    with mock.patch(
+        "ai.feedback_views.gateway.complete",
+        side_effect=RuntimeError("Synthetic private error"),
+    ):
+        response = signed_in(tester).post(url(target))
+    assert response.status_code == 200 and UNAVAILABLE in response.content.decode()
+    records = [
+        record
+        for record in caplog.records
+        if record.name == "ai" or record.name.startswith("ai.")
+    ]
+    assert [(record.levelno, record.getMessage()) for record in records] == [
+        (logging.WARNING, "Feedback gateway failed"),
+        (logging.WARNING, "Feedback gateway Failed: provider-error"),
+    ]
+    assert "Synthetic private error" not in caplog.text
+    assert target[3].observation not in caplog.text
+
+
+@pytest.mark.ac("RES-4.10")
+def test_live_calls_off_show_not_set_up_through_the_gateway(tester, target, settings):
+    settings.SOC_LLM_LIVE = False
+    response = signed_in(tester).post(url(target))
+    assert response.status_code == 200
+    assert NOT_SET_UP in response.content.decode()
+    assert not CallRecord.objects.exists()
 
 
 @pytest.mark.ac("RES-4.3")
@@ -435,11 +518,11 @@ def test_roles_peer_ownership_methods_and_csrf(tester, coordinator, target):
     complete.assert_not_called()
 
 
-@pytest.mark.ac("RES-4.6", "PLT-4.16")
+@pytest.mark.ac("RES-4.6", "RES-4.10", "PLT-4.16")
 @pytest.mark.parametrize(
     "change", ["draft", "outcome", "case", "criterion", "submit", "close", "retest"]
 )
-@pytest.mark.parametrize("answer", ["success", "failure"])
+@pytest.mark.parametrize("answer", ["success", "failure", "busy"])
 def test_changes_during_call_discard_success_and_failure(
     tester, target, change, answer
 ):
@@ -467,11 +550,11 @@ def test_changes_during_call_discard_success_and_failure(
                     "Synthetic next",
                     [target[1].pk],
                 )
-        return (
-            gateway.Success('{"questions": ["Synthetic stale question?"]}')
-            if answer == "success"
-            else gateway.Failed("timeout")
-        )
+        return {
+            "success": gateway.Success('{"questions": ["Synthetic stale question?"]}'),
+            "failure": gateway.Failed("timeout"),
+            "busy": gateway.Refused("busy"),
+        }[answer]
 
     with mock.patch(
         "ai.feedback_views.gateway.complete", side_effect=during
@@ -481,6 +564,7 @@ def test_changes_during_call_discard_success_and_failure(
     complete.assert_called_once()
     body = response.content.decode()
     assert "Synthetic stale question?" not in body and UNAVAILABLE not in body
+    assert BUSY not in body
     no_store(response)
     assert_round_navigation(response, target)
     if change in ("draft", "outcome", "case", "criterion"):

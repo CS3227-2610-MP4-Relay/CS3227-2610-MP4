@@ -12,7 +12,7 @@ from rounds.models import Round
 from rounds.services import CASE_LIMIT
 from rounds.views import coordinator_view, own_round, state_conflict
 
-from . import drafting, gateway
+from . import drafting, failures, gateway
 from .forms import DraftSelectForm
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ def _posted_text(request, name, limit, *, title=False):
 
 @sensitive_variables()
 def _suggest(user, selected):
-    """Return transient drafts and an error message for `selected` (RND-8.4-8.8)."""
+    """Return transient drafts and an error message for `selected` (RND-8.4-8.10)."""
     labels = drafting.labels(len(selected))
     data = drafting.encode([item.text for item in selected])
     if data is None:
@@ -42,7 +42,12 @@ def _suggest(user, selected):
         result = gateway.Failed("provider-error")
     if not isinstance(result, gateway.Success):
         logger.warning("Drafting gateway %s: %s", type(result).__name__, result.code)
-        return [], drafting.UNAVAILABLE
+        return [], failures.message(
+            result,
+            unavailable=drafting.UNAVAILABLE,
+            not_set_up=drafting.NOT_SET_UP,
+            manual=drafting.MANUAL,
+        )
     try:
         parsed = drafting.parse(result.text, labels)
     except drafting.InvalidReply as invalid:

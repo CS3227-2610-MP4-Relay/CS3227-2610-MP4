@@ -16,7 +16,7 @@ from django.views.debug import ExceptionReporter
 from ai import drafting, gateway
 from ai.fakes import FakeProvider
 from ai.gateway import Failed, Refused, Success
-from ai.models import CallSlot
+from ai.models import CallRecord, CallSlot
 from rounds.models import Case, Criterion, Round
 from rounds.tests.conftest import csrf_token, domain_rows, signed_in
 
@@ -183,8 +183,12 @@ def test_case_cap_is_checked_before_ai(coord_client, round_, criteria):
     "result",
     [
         Refused("provider-refused"),
+        Refused("slots-missing"),
+        Refused("input-too-large"),
         Failed("timeout"),
+        Failed("transport"),
         Failed("invalid-response"),
+        Failed("provider-error"),
     ],
 )
 @pytest.mark.ac("RND-8.4")
@@ -393,14 +397,83 @@ def test_html_and_line_breaks_in_draft_text_are_escaped(coord_client, round_, cr
     assert "&lt;script&gt;" in page
 
 
-@pytest.mark.ac("RND-8.4")
-def test_quota_refusal_shows_fixed_message(coord_client, round_, criteria):
-    with mock.patch("ai.views.gateway.complete", return_value=Refused("busy-or-quota")):
+BUSY = (
+    "The AI service is busy. Try again in a minute. "
+    "You can still add test cases yourself."
+)
+OWN_QUOTA = (
+    "You have used your AI allowance for this hour. Try again later. "
+    "You can still add test cases yourself."
+)
+SHARED_QUOTA = (
+    "The shared AI allowance is used up for now. Try again later. "
+    "You can still add test cases yourself."
+)
+NOT_SET_UP = (
+    "AI drafting is not set up on this deployment. "
+    "You can still add test cases yourself."
+)
+
+
+@pytest.mark.ac("RND-8.10")
+@pytest.mark.parametrize(
+    ("code", "message"),
+    [
+        ("busy", BUSY),
+        ("user-quota", OWN_QUOTA),
+        ("deployment-quota", SHARED_QUOTA),
+        ("quota", SHARED_QUOTA),
+        ("live-off", NOT_SET_UP),
+        ("not-configured", NOT_SET_UP),
+    ],
+)
+def test_specific_refusals_show_their_message(
+    coord_client, round_, criteria, code, message
+):
+    with mock.patch("ai.views.gateway.complete", return_value=Refused(code)):
         response = coord_client.post(
             reverse("ai:draft", args=[round_.pk]), {"criteria": [criteria[0].pk]}
         )
+    page = response.content.decode()
     assert response.status_code == 200
-    assert "Drafting is unavailable right now." in response.content.decode()
+    assert message in page
+    assert "Drafting is unavailable right now." not in page
+    assert checked(page) == [str(criteria[0].pk)]
+    assert "Use this draft" not in page
+    assert reverse("rounds:case-new", args=[round_.pk]) in page
+    assert not Case.objects.exists()
+
+
+@pytest.mark.ac("RND-8.10")
+def test_live_calls_off_show_not_set_up_through_the_gateway(
+    coord_client, round_, criteria, settings
+):
+    settings.SOC_LLM_LIVE = False
+    response = coord_client.post(
+        reverse("ai:draft", args=[round_.pk]), {"criteria": [criteria[0].pk]}
+    )
+    assert response.status_code == 200
+    assert NOT_SET_UP in response.content.decode()
+
+
+@pytest.mark.ac("RND-8.10")
+def test_both_quotas_used_show_the_own_allowance_message(
+    coord_client, coordinator, round_, criteria, settings, monkeypatch
+):
+    settings.SOC_LLM_LIVE = True
+    now = gateway.timezone.now()
+    for scope, key, count in [
+        (gateway.USER_CALLS_SCOPE, str(coordinator.pk), gateway.USER_CALLS),
+        (gateway.DEPLOYMENT_CALLS_SCOPE, "all", gateway.DEPLOYMENT_CALLS),
+    ]:
+        CallRecord.objects.bulk_create(
+            CallRecord(scope=scope, key=key, created_at=now) for _ in range(count)
+        )
+    monkeypatch.setattr(gateway, "_transport", lambda *args: pytest.fail("network"))
+    response = coord_client.post(
+        reverse("ai:draft", args=[round_.pk]), {"criteria": [criteria[0].pk]}
+    )
+    assert OWN_QUOTA in response.content.decode()
 
 
 @pytest.mark.prompt_injection
@@ -735,9 +808,38 @@ def test_the_view_logs_only_fixed_codes(coord_client, round_, criteria, caplog):
     invalid = Success(reply(one(title="Secret reply words", extra="Secret")))
     post_draft(coord_client, round_, [criteria[0].pk], invalid)
     post_draft(coord_client, round_, [criteria[0].pk], Failed("timeout"))
-    assert [
-        record.getMessage() for record in caplog.records if record.name.startswith("ai")
-    ] == ["Drafting reply rejected: draft-keys", "Drafting gateway Failed: timeout"]
+    post_draft(coord_client, round_, [criteria[0].pk], Refused("user-quota"))
+    records = [record for record in caplog.records if record.name.startswith("ai")]
+    assert [record.getMessage() for record in records] == [
+        "Drafting reply rejected: draft-keys",
+        "Drafting gateway Failed: timeout",
+        "Drafting gateway Refused: user-quota",
+    ]
+    assert {record.levelno for record in records} == {logging.WARNING}
+    assert "Secret" not in caplog.text
+
+
+@pytest.mark.ac("RND-8.4")
+def test_an_unexpected_gateway_exception_logs_two_fixed_warnings(
+    coord_client, round_, criteria, caplog
+):
+    caplog.set_level(logging.DEBUG, logger="ai")
+    with mock.patch(
+        "ai.views.gateway.complete", side_effect=RuntimeError("Secret error text")
+    ):
+        response = coord_client.post(
+            reverse("ai:draft", args=[round_.pk]), {"criteria": [criteria[0].pk]}
+        )
+    assert "Drafting is unavailable right now." in response.content.decode()
+    records = [
+        record
+        for record in caplog.records
+        if record.name == "ai" or record.name.startswith("ai.")
+    ]
+    assert [(record.levelno, record.getMessage()) for record in records] == [
+        (logging.WARNING, "Drafting gateway raised"),
+        (logging.WARNING, "Drafting gateway Failed: provider-error"),
+    ]
     assert "Secret" not in caplog.text
 
 

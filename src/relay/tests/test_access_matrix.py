@@ -546,8 +546,9 @@ RND1, RND2, RND8 = ("RND-1.6", "RND-1.7"), ("RND-2.8",), ("RND-8.7",)
 DRAFTING_DISCLOSURE = (
     "The selected criteria are sent to the SoC AI service to suggest test cases."
 )
-UNAVAILABLE = (
-    "Drafting is unavailable right now. You can still add test cases yourself."
+NOT_SET_UP = (
+    "AI drafting is not set up on this deployment. "
+    "You can still add test cases yourself."
 )
 
 # The TECHNICAL-SPEC rounds routes table: methods and the states each allows.
@@ -567,7 +568,7 @@ ROUNDS = {
     ),
     "rounds:retest": RoundsRoute(BOTH, OPEN_ONLY, R, ("RND-5.8",), retest),
     "rounds:close": RoundsRoute(POST_ONLY, OPEN_ONLY, R, ("RND-6.3", "RND-6.5")),
-    # Fixed test settings disable live calls, so valid drafting is unavailable.
+    # Fixed test settings disable live calls, so valid drafting is not set up.
     "ai:draft": RoundsRoute(
         BOTH,
         DRAFT_ONLY,
@@ -575,7 +576,7 @@ ROUNDS = {
         RND8,
         selection,
         RENDERED,
-        {"GET": (DRAFTING_DISCLOSURE,), "POST": (DRAFTING_DISCLOSURE, UNAVAILABLE)},
+        {"GET": (DRAFTING_DISCLOSURE,), "POST": (DRAFTING_DISCLOSURE, NOT_SET_UP)},
         calls_gateway=True,
     ),
     "ai:use-draft": RoundsRoute(
@@ -1499,5 +1500,5 @@ def test_forged_body_ids_get_the_field_message(name, variant, with_own):
     response = send(world.clients[COORD_A], POST, target, data)
     check(world, COORD_A, response, Expect(OK, scoped=True), before)
     assert body.message in response.content.decode()
-    # Refused before the gateway: no unavailable message.
-    assert UNAVAILABLE not in response.content.decode()
+    # Refused before the gateway: no gateway outcome message.
+    assert NOT_SET_UP not in response.content.decode()

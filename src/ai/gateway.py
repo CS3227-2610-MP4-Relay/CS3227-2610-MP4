@@ -117,7 +117,10 @@ def _checked_result(result):
         codes = {
             "live-off",
             "input-too-large",
-            "busy-or-quota",
+            "busy",
+            "slots-missing",
+            "user-quota",
+            "deployment-quota",
             "not-configured",
             "provider-refused",
             "quota",
@@ -146,53 +149,69 @@ def _quota(scope, key, limit, window, now):
 
 
 def _reserve(user):
-    """Atomically reserve quota and both in-flight slots, or return None.
+    """Atomically reserve quota and both in-flight slots, or return a Refused.
+
+    A refusal rolls back the whole transaction, so it leaves no user slot row,
+    quota cleanup or tentative call record behind.
+    """
+    with transaction.atomic():
+        reserved = _try_reserve(user)
+        if isinstance(reserved, Refused):
+            transaction.set_rollback(True)
+        return reserved
+
+
+def _try_reserve(user):
+    """Make the reservation inside `_reserve`'s transaction, or return a Refused.
+
+    Checks run in a fixed order and the first that fails gives the refusal:
+    the user's slot (`busy`), the deployment slot rows (`slots-missing`), the
+    user and deployment quotas (`user-quota`, `deployment-quota`), then a free
+    deployment slot (`busy`). Checking quotas first keeps a user at a quota
+    from observing deployment-wide in-flight state.
 
     The reservation moment is taken once the slot locks are held. Returns the
     user slot, the deployment slot and the expiry they now hold, and the
     monotonic time of that moment, where the call's deadline starts, and both
     quota record IDs for completing metrics after the provider returns.
     """
-    with transaction.atomic():
-        user_slot, _ = CallSlot.objects.select_for_update().get_or_create(
-            scope=USER_SCOPE,
-            key=_user_key(user),
-            defaults={"expires_at": timezone.now()},
-        )
-        deployment = list(
-            CallSlot.objects.select_for_update()
-            .filter(scope=DEPLOYMENT_SCOPE)
-            .order_by("pk")
-        )
-        now, started = timezone.now(), time.monotonic()
-        if user_slot.expires_at > now:
-            return None
-        if len(deployment) != DEPLOYMENT_IN_FLIGHT:
-            return None
-        free = [slot for slot in deployment if slot.expires_at <= now]
-        if not free:
-            return None
-        user_record = _quota(
-            USER_CALLS_SCOPE, _user_key(user), USER_CALLS, USER_WINDOW, now
-        )
-        if not user_record:
-            transaction.set_rollback(True)
-            return None
-        deployment_record = _quota(
-            DEPLOYMENT_CALLS_SCOPE, "all", DEPLOYMENT_CALLS, DEPLOYMENT_WINDOW, now
-        )
-        if not deployment_record:
-            transaction.set_rollback(True)
-            return None
-        expires = now + timedelta(seconds=TOTAL_TIMEOUT + RELEASE_MARGIN)
-        CallSlot.objects.filter(pk__in=[user_slot.pk, free[0].pk]).update(
-            expires_at=expires
-        )
-        return (
-            (user_slot, free[0], expires),
-            started,
-            (user_record.pk, deployment_record.pk),
-        )
+    user_slot, _ = CallSlot.objects.select_for_update().get_or_create(
+        scope=USER_SCOPE,
+        key=_user_key(user),
+        defaults={"expires_at": timezone.now()},
+    )
+    deployment = list(
+        CallSlot.objects.select_for_update()
+        .filter(scope=DEPLOYMENT_SCOPE)
+        .order_by("pk")
+    )
+    now, started = timezone.now(), time.monotonic()
+    if user_slot.expires_at > now:
+        return Refused("busy")
+    if len(deployment) != DEPLOYMENT_IN_FLIGHT:
+        return Refused("slots-missing")
+    user_record = _quota(
+        USER_CALLS_SCOPE, _user_key(user), USER_CALLS, USER_WINDOW, now
+    )
+    if not user_record:
+        return Refused("user-quota")
+    deployment_record = _quota(
+        DEPLOYMENT_CALLS_SCOPE, "all", DEPLOYMENT_CALLS, DEPLOYMENT_WINDOW, now
+    )
+    if not deployment_record:
+        return Refused("deployment-quota")
+    free = [slot for slot in deployment if slot.expires_at <= now]
+    if not free:
+        return Refused("busy")
+    expires = now + timedelta(seconds=TOTAL_TIMEOUT + RELEASE_MARGIN)
+    CallSlot.objects.filter(pk__in=[user_slot.pk, free[0].pk]).update(
+        expires_at=expires
+    )
+    return (
+        (user_slot, free[0], expires),
+        started,
+        (user_record.pk, deployment_record.pk),
+    )
 
 
 @sensitive_variables("result")
@@ -540,8 +559,8 @@ def complete(user, instructions, data, provider=None):
     if len(instructions) + len(data) > INPUT_LIMIT:
         return Refused("input-too-large")
     reserved = _reserve(user)
-    if reserved is None:
-        return Refused("busy-or-quota")
+    if isinstance(reserved, Refused):
+        return reserved
     slots, started, record_ids = reserved
     deadline = started + TOTAL_TIMEOUT
     try:
