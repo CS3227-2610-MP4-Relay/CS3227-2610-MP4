@@ -27,4 +27,20 @@ Goal: Tell users when AI drafting or feedback is busy, over their own or the sha
 - Committed: specs `e9ba5d8`, plan `2c79077`, gateway split `16d2256`, drafting messages `37ef0dc`, feedback messages and logging `ef1ce09`.
 - The shared mapping is `src/ai/failures.py`, used by both features. Checkpoints 3 and 4 were implemented as one assigned batch with disjoint files and separate red/green runs: drafting red with `views.py` temporarily at HEAD (10 failed), then one run with drafting green and feedback red (11 failed), then feedback green.
 - An unchanged race test failed intermittently while another session shared the test database; clean runs passed. Focused and full runs use `--basetemp` in a session scratchpad because the default pytest temp directory was access-denied.
-- Checkpoint 5: User Guide drafting and feedback failure messages; full verification. The first full run found one stale expectation in `src/relay/tests/test_access_matrix.py`: its unmocked drafting POST, with live calls off, now shows RND-8.10's not-set-up message. Correcting it is a separate test-only repair from the docs. Next: coordinator review and delivery.
+- Checkpoint 5: User Guide drafting and feedback failure messages; full verification. The first full run found one stale expectation in `src/relay/tests/test_access_matrix.py`: its unmocked drafting POST, with live calls off, now shows RND-8.10's not-set-up message. Correcting it is a separate test-only repair from the docs. Committed as `8c04035` (test repair), `f0f1d81` (docs) and `548247f` (plan).
+
+## Repair round 1
+
+Independent verifier and security-reviewer findings on `548247f`, checked by the builder:
+
+- **A (security Low; human decision 2026-11-13, "check quotas first"):** with the old order, a user at their own quota could poll free `busy` against `user-quota` refusals to watch deployment-wide in-flight state. New order: user slot in flight (`busy`), slot rows (`slots-missing`), user quota, deployment quota, free deployment slot (`busy`). Every refusal rolls back the whole reservation transaction. This also fixes verifier finding 3: `busy` and `slots-missing` left a newly created user slot row, so "records nothing" was not exactly true. A user under both quotas can still see free deployment-slot `busy` refusals, as any allowed caller can.
+- **B (verifier 2, security info 1):** an unexpected gateway exception logs two fixed WARNINGs in each feature. The code is kept; both contracts now state the exception path exactly, and tests will pin those records.
+- **C (verifier 4):** `not-configured` is detected after reservation, so it counts toward quota and yields to busy or allowance refusals, while `live-off` precedes every limit. One sentence added to RND-8.10 and RES-4.10; no behaviour change, no new IDs.
+- **D (nit):** rename `failures.NOT_SET_UP` (a set of codes) to `NOT_SET_UP_CODES`.
+- **E (info):** SECURITY-SPEC's #22 residual gap (a shared allowance used up makes drafting unavailable to everyone) stays true after the reorder; no change.
+
+Planned commits:
+
+1. `spec: Check AI quotas before deployment slots (#180)`: `llm-gateway.md`, `test-drafting.md`, `observation-feedback.md`, `rounds.md`, `results.md`, plus this plan note, or a separate `plan:` commit.
+2. `fix: Check quotas before free slots and roll back every refusal (#180)`: `src/ai/gateway.py`, `src/ai/tests/test_gateway.py`. Red first with the new order: at quota while slots are busy gives `user-quota`; deployment quota used while slots are busy gives `deployment-quota`; a first call's refusal leaves no user slot row.
+3. `test: Pin AI exception-path log records (#180)` and `refactor: Rename not-set-up code set (#180)`, or one coherent commit: `src/ai/failures.py`, `src/ai/tests/test_views.py`, `src/ai/tests/test_feedback_views.py`. The User Guide changes only if a statement becomes inaccurate. Then full verification.
