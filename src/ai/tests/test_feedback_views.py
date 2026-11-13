@@ -323,7 +323,11 @@ def test_an_unexpected_gateway_exception_logs_two_fixed_warnings(
     ):
         response = signed_in(tester).post(url(target))
     assert response.status_code == 200 and UNAVAILABLE in response.content.decode()
-    records = [record for record in caplog.records if record.name.startswith("ai")]
+    records = [
+        record
+        for record in caplog.records
+        if record.name == "ai" or record.name.startswith("ai.")
+    ]
     assert [(record.levelno, record.getMessage()) for record in records] == [
         (logging.WARNING, "Feedback gateway failed"),
         (logging.WARNING, "Feedback gateway Failed: provider-error"),

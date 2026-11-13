@@ -831,7 +831,11 @@ def test_an_unexpected_gateway_exception_logs_two_fixed_warnings(
             reverse("ai:draft", args=[round_.pk]), {"criteria": [criteria[0].pk]}
         )
     assert "Drafting is unavailable right now." in response.content.decode()
-    records = [record for record in caplog.records if record.name.startswith("ai")]
+    records = [
+        record
+        for record in caplog.records
+        if record.name == "ai" or record.name.startswith("ai.")
+    ]
     assert [(record.levelno, record.getMessage()) for record in records] == [
         (logging.WARNING, "Drafting gateway raised"),
         (logging.WARNING, "Drafting gateway Failed: provider-error"),

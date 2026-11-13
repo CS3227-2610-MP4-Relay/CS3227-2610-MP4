@@ -1263,6 +1263,10 @@ def test_three_racing_users_share_two_deployment_slots(
     gate_quota(monkeypatch, 3)
     results = run_together([user, tester, third], SlowProvider())
     assert outcomes(results) == ["Refused", "Success", "Success"]
+    # The refusal comes after both quota inserts and is rolled back on commit.
+    assert [r for r in results if isinstance(r, Refused)] == [Refused("busy")]
+    for scope in (gateway.USER_CALLS_SCOPE, gateway.DEPLOYMENT_CALLS_SCOPE):
+        assert CallRecord.objects.filter(scope=scope).count() == 2
 
 
 @pytest.mark.django_db(transaction=True)
