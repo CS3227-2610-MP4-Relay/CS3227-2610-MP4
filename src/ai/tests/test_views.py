@@ -819,6 +819,26 @@ def test_the_view_logs_only_fixed_codes(coord_client, round_, criteria, caplog):
     assert "Secret" not in caplog.text
 
 
+@pytest.mark.ac("RND-8.4")
+def test_an_unexpected_gateway_exception_logs_two_fixed_warnings(
+    coord_client, round_, criteria, caplog
+):
+    caplog.set_level(logging.DEBUG, logger="ai")
+    with mock.patch(
+        "ai.views.gateway.complete", side_effect=RuntimeError("Secret error text")
+    ):
+        response = coord_client.post(
+            reverse("ai:draft", args=[round_.pk]), {"criteria": [criteria[0].pk]}
+        )
+    assert "Drafting is unavailable right now." in response.content.decode()
+    records = [record for record in caplog.records if record.name.startswith("ai")]
+    assert [(record.levelno, record.getMessage()) for record in records] == [
+        (logging.WARNING, "Drafting gateway raised"),
+        (logging.WARNING, "Drafting gateway Failed: provider-error"),
+    ]
+    assert "Secret" not in caplog.text
+
+
 @pytest.mark.django_db(transaction=True)
 def test_the_drafting_view_holds_no_connection_during_the_call(
     coord_client, round_, criteria

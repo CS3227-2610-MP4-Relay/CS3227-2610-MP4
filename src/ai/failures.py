@@ -11,7 +11,7 @@ CAUSES = {
     "deployment-quota": SHARED_QUOTA,
     "quota": SHARED_QUOTA,
 }
-NOT_SET_UP = frozenset({"live-off", "not-configured"})
+NOT_SET_UP_CODES = frozenset({"live-off", "not-configured"})
 
 
 def message(result, *, unavailable, not_set_up, manual):
@@ -22,7 +22,7 @@ def message(result, *, unavailable, not_set_up, manual):
     feature's `not_set_up` message; everything else gets `unavailable`.
     """
     if type(result) is gateway.Refused:
-        if result.code in NOT_SET_UP:
+        if result.code in NOT_SET_UP_CODES:
             return not_set_up
         if result.code in CAUSES:
             return f"{CAUSES[result.code]} {manual}"

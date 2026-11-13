@@ -312,6 +312,26 @@ def test_gateway_refusal_or_failure_logs_one_fixed_warning(
     assert target[3].observation not in caplog.text
 
 
+@pytest.mark.ac("RES-4.4")
+def test_an_unexpected_gateway_exception_logs_two_fixed_warnings(
+    tester, target, caplog
+):
+    caplog.set_level(logging.DEBUG, logger="ai")
+    with mock.patch(
+        "ai.feedback_views.gateway.complete",
+        side_effect=RuntimeError("Synthetic private error"),
+    ):
+        response = signed_in(tester).post(url(target))
+    assert response.status_code == 200 and UNAVAILABLE in response.content.decode()
+    records = [record for record in caplog.records if record.name.startswith("ai")]
+    assert [(record.levelno, record.getMessage()) for record in records] == [
+        (logging.WARNING, "Feedback gateway failed"),
+        (logging.WARNING, "Feedback gateway Failed: provider-error"),
+    ]
+    assert "Synthetic private error" not in caplog.text
+    assert target[3].observation not in caplog.text
+
+
 @pytest.mark.ac("RES-4.10")
 def test_live_calls_off_show_not_set_up_through_the_gateway(tester, target, settings):
     settings.SOC_LLM_LIVE = False
