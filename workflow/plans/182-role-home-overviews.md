@@ -31,6 +31,30 @@ Coordinator decisions (checkpoint 1 revision):
 
 Run pytest with `-p no:cacheprovider --basetemp=tmp/slice182-harness/<name>`.
 
+## Checkpoint evidence
+
+Every pytest run below used `--ds=slice182_settings` (harness-only module in ignored `tmp/slice182-harness/settings182/`, `PYTHONPATH` set to it): it imports `relay.settings.test` and changes only the test database to `test_relay_test_slice182`, because a concurrent runner held `test_relay_test` (coordinator-accepted). All runs used `-p no:cacheprovider --basetemp=tmp/slice182-harness/<name>`. Times are local, 2026-11-13.
+
+Checkpoint 2 (RND-1, committed 8c1923f):
+
+- Red 08:03:42–08:04:13, `src/rounds/tests/test_coordinator_overview.py`: 14 failed (no summary or overview paragraph; `listed_results` and `current_build_coverage` missing), 7 passed. The 7 are already-true guards: draft-changes-nothing, query parameters, four 405/no-store cases and the query count.
+- Green 08:05:16–08:05:27, same file: 21 passed. First focused run 08:05:36–08:10:17: 1 failed, 1118 passed. The failure was `Count` dropping `Meta.ordering`, fixed by restating the ordering. Focused 08:12:39–08:15:29 (`test_views`, `test_review`, `test_results`, `test_coordinator_overview`, `test_rendering`, `test_sample_round`, `relay/tests/test_access_matrix`, `test_pending_drafts`): 1119 passed.
+- e2e 08:15:37–08:16:50 (`test_rounds`, `test_accounts`, `test_round_lifecycle`): 17 passed. Ruff check and format clean; `check_scope.py builder --base 6385960`: within scope.
+- Changed expectations, which asserted `(State)</li>` and now see RND-1.8's overview line: `test_rendering.py` (4, via `ZERO_CASES`), `test_views.py` (2), `test_sample_round.py` (`HOME_ITEM`), `e2e/test_accounts.py` and `e2e/test_round_lifecycle.py` (item text plus case count).
+
+Checkpoint 3 (RES-1):
+
+- Red 08:21:56–08:22:04, `src/rounds/tests/test_tester_progress.py`: 15 failed (no headings or count line, flat order, no status, home 200 instead of 503 when results reads fail), 13 passed. The 13 are already-true guards: Closed rounds without counts or status, empty and Draft-only headings, eight GET-only/no-store cases, detail 503 and the home query count.
+- Green 08:22:49–08:23:05 (`test_tester_progress`, `test_tester`): 88 passed. Focused 08:24:18–08:28:51 (`test_tester`, `test_history`, `test_results`, `test_rendering`, `test_sample_round`, `relay/tests/test_access_matrix`, `test_tester_progress`): 1058 passed.
+- e2e: first `test_tester.py` run at 08:29 had 1 failure, a test bug (the collapsed second case hid "Continue draft"); the test now expands it. Final 08:29:31–08:32:17 (`test_tester`, `test_results`, `test_navigation`): 15 passed.
+- Ruff check and format clean (153 files); `check_scope.py builder --base 8c1923f`: within scope.
+- Changed expectation: `test_tester.py::test_publish_and_close_change_next_request` also strips the Open-only "Your result: Not recorded" span before comparing the Open and Closed pages, and asserts the span is present on Open and absent on Closed. RES-1.9/1.10 add it to Open pages only.
+- `src/` shortstat, excluding tests, migrations, e2e and conftest: against 8c1923f, 4 files changed, 63 insertions(+), 17 deletions(-); cumulative against a93430a, 9 files changed, 135 insertions(+), 23 deletions(-), about 158 of the 150–250 budget. New file: `src/rounds/tests/test_tester_progress.py`.
+- Assumptions:
+  - The home's `rounds` context is the Open group followed by the Closed group.
+  - An Open case without a current build would count as "to record" with no status or link; RES-1.3 says none exists.
+- Open: the stray idle REPL (PID 1054) from checkpoint 2 is with the human.
+
 ## Open issues
 
 None.
