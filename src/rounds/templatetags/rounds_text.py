@@ -68,6 +68,14 @@ def coverage_line(covered, total):
 
 
 @register.filter
+def progress_line(counts):
+    """A tester's Open round counts on Tester home (RES-1.9)."""
+    to_record, drafts, submitted = counts
+    noun = "draft" if drafts == 1 else "drafts"
+    return f"{to_record} to record · {drafts} {noun} · {submitted} submitted"
+
+
+@register.filter
 def status_message(message):
     """Show a message escaped, isolating a retest message's label by line.
 

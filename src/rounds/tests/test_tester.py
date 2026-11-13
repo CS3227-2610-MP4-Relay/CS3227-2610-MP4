@@ -495,7 +495,10 @@ def test_publish_and_close_change_next_request(tester, coordinator, make_round):
         f'{round_.builds.get().pk}/result/">Record result</a></p>'
     )
     assert entry_link in page(original) and "Record result" not in page(closed_detail)
-    assert page(original).replace(entry_link, "").replace(
+    # RES-1.10: only the Open page shows the case's own result status.
+    status = '<span class="record-meta">Your result: Not recorded</span>'
+    assert status in page(original) and "Your result" not in page(closed_detail)
+    assert page(original).replace(entry_link, "").replace(status, "").replace(
         "State: Open", "State: Closed"
     ) == page(closed_detail)
     assert domain_rows() == before
