@@ -10,12 +10,12 @@ from rounds import results
 from rounds.tester import tester_view
 from rounds.views import conflict_page
 
-from . import feedback, gateway
+from . import failures, feedback, gateway
 
 logger = logging.getLogger(__name__)
-UNAVAILABLE = (
-    "Feedback is unavailable right now. You can still edit your result yourself."
-)
+MANUAL = "You can still edit your result yourself."
+UNAVAILABLE = f"Feedback is unavailable right now. {MANUAL}"
+NOT_SET_UP = f"AI feedback is not set up on this deployment. {MANUAL}"
 EMPTY = "No missing details were suggested. You can still edit your result yourself."
 TOO_LONG = (
     "This observation and test case are too long for feedback. "
@@ -61,12 +61,21 @@ def feedback_page(request, round_id, case_id, build_id):
                 except Exception:  # noqa: BLE001 - fixed failure, no exception text
                     logger.warning("Feedback gateway failed")
                     result = gateway.Failed("provider-error")
+                if not isinstance(result, gateway.Success):
+                    logger.warning(
+                        "Feedback gateway %s: %s", type(result).__name__, result.code
+                    )
                 entry, criteria, current = _load(
                     request.user, round_id, case_id, build_id
                 )
                 if current != source:
                     raise results.Conflict(CHANGED)
-                message = UNAVAILABLE
+                message = failures.message(
+                    result,
+                    unavailable=UNAVAILABLE,
+                    not_set_up=NOT_SET_UP,
+                    manual=MANUAL,
+                )
                 if isinstance(result, gateway.Success):
                     try:
                         questions = feedback.parse(result.text)

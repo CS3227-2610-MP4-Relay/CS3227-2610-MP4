@@ -8,7 +8,7 @@ from django.db import transaction
 from playwright.sync_api import expect
 
 from accounts.models import User
-from ai.gateway import Failed, Success
+from ai.gateway import Failed, Refused, Success
 from e2e.pending import assert_pending_submit
 from e2e.presentation import assert_layout
 from e2e.sessions import separate_context, sign_in
@@ -498,25 +498,39 @@ def test_feedback_preserves_saved_fields_until_manual_edit_and_is_private(
     accounts["expected"] = ("fail", EDITED, False)
 
 
-@pytest.mark.ac("RES-4.2", "RES-4.3", "RES-4.4")
+@pytest.mark.ac("RES-4.2", "RES-4.3", "RES-4.4", "RES-4.10")
+@pytest.mark.parametrize(
+    ("result", "message"),
+    [
+        (
+            Failed("timeout"),
+            (
+                "Feedback is unavailable right now. "
+                "You can still edit your result yourself."
+            ),
+        ),
+        (
+            Refused("user-quota"),
+            (
+                "You have used your AI allowance for this hour. Try again later. "
+                "You can still edit your result yourself."
+            ),
+        ),
+    ],
+    ids=["timeout", "own-allowance"],
+)
 def test_unavailable_feedback_keeps_manual_result_submission_usable(
-    page, browser_accounts
+    page, browser_accounts, result, message
 ):
     accounts = browser_accounts
     save_draft(page, accounts, "pass", "")
     page.get_by_role("button", name="Observation feedback", exact=True).click()
     expect(page.get_by_text("No observation.", exact=True)).to_be_visible()
     with mock.patch(
-        "ai.feedback_views.gateway.complete", return_value=Failed("timeout")
+        "ai.feedback_views.gateway.complete", return_value=result
     ) as complete:
         page.get_by_role("button", name="Suggest missing details", exact=True).click()
-        expect(
-            page.get_by_text(
-                "Feedback is unavailable right now. "
-                "You can still edit your result yourself.",
-                exact=True,
-            )
-        ).to_be_visible()
+        expect(page.get_by_text(message, exact=True)).to_be_visible()
         complete.assert_called_once()
     expect(
         page.get_by_role("button", name="Suggest missing details", exact=True)
