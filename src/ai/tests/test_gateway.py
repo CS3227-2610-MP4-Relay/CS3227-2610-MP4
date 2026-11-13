@@ -1094,9 +1094,18 @@ def hold(**filters):
     ("setup", "code"),
     [
         pytest.param(["user-quota", "deployment-quota"], "user-quota", id="quotas"),
-        pytest.param(["deployment-busy", "user-quota"], "busy", id="free-slot"),
-        pytest.param(["slots-missing", "deployment-busy"], "slots-missing", id="rows"),
+        pytest.param(
+            ["deployment-busy", "user-quota"], "user-quota", id="user-quota-first"
+        ),
+        pytest.param(
+            ["deployment-busy", "deployment-quota"],
+            "deployment-quota",
+            id="deployment-quota-first",
+        ),
+        pytest.param(["deployment-busy"], "busy", id="free-slot-last"),
+        pytest.param(["slots-missing", "user-quota"], "slots-missing", id="rows"),
         pytest.param(["user-busy", "slots-missing"], "busy", id="user-slot"),
+        pytest.param(["user-busy", "user-quota"], "busy", id="user-slot-first"),
     ],
 )
 def test_reservation_refusals_follow_check_order(user, setup, code):
@@ -1138,6 +1147,42 @@ def test_wrong_number_of_deployment_slots_is_a_fixed_refusal(user, change):
     assert complete(user, "", "{}", provider=fake) == Refused("slots-missing")
     assert fake.calls == []
     assert not CallRecord.objects.exists()
+
+
+@pytest.mark.ac("RND-8.10", "RES-4.10")
+@pytest.mark.parametrize(
+    ("setup", "code"),
+    [
+        (["deployment-busy"], "busy"),
+        (["slots-missing"], "slots-missing"),
+        (["user-quota"], "user-quota"),
+        (["deployment-quota"], "deployment-quota"),
+    ],
+    ids=["busy", "slots-missing", "user-quota", "deployment-quota"],
+)
+def test_a_first_call_refusal_rolls_back_everything(user, setup, code):
+    stale = CallRecord.objects.create(
+        scope=gateway.USER_CALLS_SCOPE,
+        key=str(user.pk),
+        created_at=gateway.timezone.now() - gateway.timedelta(hours=2),
+    )
+    if "user-quota" in setup:
+        user_records(user, gateway.USER_CALLS)
+    if "deployment-quota" in setup:
+        deployment_records(gateway.DEPLOYMENT_CALLS)
+    if "deployment-busy" in setup:
+        hold(scope=gateway.DEPLOYMENT_SCOPE)
+    if "slots-missing" in setup:
+        CallSlot.objects.filter(scope=gateway.DEPLOYMENT_SCOPE, key="1").delete()
+    records_before = list(CallRecord.objects.order_by("pk").values())
+    slots_before = list(CallSlot.objects.order_by("pk").values())
+    fake = FakeProvider(Success("{}"))
+    assert complete(user, "", "{}", provider=fake) == Refused(code)
+    assert fake.calls == []
+    assert not CallSlot.objects.filter(scope=gateway.USER_SCOPE).exists()
+    assert list(CallSlot.objects.order_by("pk").values()) == slots_before
+    assert list(CallRecord.objects.order_by("pk").values()) == records_before
+    assert CallRecord.objects.filter(pk=stale.pk).exists()
 
 
 class SlowProvider:
