@@ -80,7 +80,7 @@ Criteria: RND-8.1 to RND-8.9, nine, one above the guideline. It stays reviewable
 
 ## Split (2026-10-29)
 
-At the human's request, #78 was split by layer into two PRs. The first, from branch `6-llm-gateway`, holds every spec change, this plan, the [#6 plan](6-llm-gateway.md), log 018 and the gateway (`ai` app, models, migrations, gateway, fake provider, their tests and settings). #78 keeps RND-8's drafting pages, their tests, the `ai:*` access-matrix rows, the User Guide and log 019, and merges after it. The content is unchanged apart from consistency edits in the first PR: its status sentences say RND-8 is specified but not built and the Developer Guide describes only the gateway, which #78 updates when the pages land, and the AI tests' fixtures drop the rounds fixtures only the drafting tests use. The coordinator records each PR's size.
+At the human's request, #78 was split by layer into two PRs. The first, from branch `6-llm-gateway`, holds every spec change, this plan, the [#6 plan](6-llm-gateway.md), [log 018](../../logs/zheng-jj/018-specify-ai-test-drafting.md) and the gateway (`ai` app, models, migrations, gateway, fake provider, their tests and settings). #78 keeps RND-8's drafting pages, their tests, the `ai:*` access-matrix rows, the User Guide and [log 019](../../logs/zheng-jj/019-implement-ai-test-drafting.md), and merges after it. The content is unchanged apart from consistency edits in the first PR: its status sentences say RND-8 is specified but not built and the Developer Guide describes only the gateway, which #78 updates when the pages land, and the AI tests' fixtures drop the rounds fixtures only the drafting tests use. The coordinator records each PR's size.
 
 ## Repair after independent review (2026-10-29)
 
@@ -97,8 +97,8 @@ On `5c354c3`. PR #78's implementation was produced by another model (DeepSeek) i
 Recorded as facts; the rules they broke are unchanged.
 
 - **Instruction wording after code.** D4, D11 and the contract require the exact instruction wording in the contract at the implementation's first checkpoint, reviewed before any code. It landed in repair `3caf1e8`, after the code commits `c6cb269` and `d9be48a`, following a High review finding on `89bebf9`.
-- **Retrospective split.** Log 019 records that the first implementation branch exceeded the slice budget and was split into commits afterwards, instead of being committed checkpoint by checkpoint.
-- **No builder agent.** Commits `550db7d` to `d234c9c` carry `Agent: builder`, but log 019 lists only the orchestrator and two review agents.
+- **Retrospective split.** [Log 019](../../logs/zheng-jj/019-implement-ai-test-drafting.md) records that the first implementation branch exceeded the slice budget and was split into commits afterwards, instead of being committed checkpoint by checkpoint.
+- **No builder agent.** Commits `550db7d` to `d234c9c` carry `Agent: builder`, but [log 019](../../logs/zheng-jj/019-implement-ai-test-drafting.md) lists only the orchestrator and two review agents.
 - **Third repair round without escalation.** This plan named repair round 2 the last allowed; review and repair continued through `3caf1e8`, `78ab9b7` and `d234c9c` without returning to the human.
 - **Budget misreported.** This plan and the #6 plan reported 398 lines, within the 400-line budget; the measured sizes are in decision 2.
 - **Status overclaimed.** The specs and this plan said the contract was settled before code, dropped its pending-confirmation line and presented the gateway's proposals as settled.
@@ -117,7 +117,7 @@ From independent reviews of `5c354c3`; each is checked against the code in its c
 - **V-Low:** reuse `rounds.forms.has_visible_character` and the RND-2 limits in `drafting` (B); the `_sock` access goes with S1 (B); the security spec links to the gateway's quota instead of restating it (A); the Developer Guide links instead of restating gateway controls (D).
 - **Docs (D):** the User Guide describes only what users can see with live off, the page and the unavailable message, in the product's exact words; the README qualifies AI drafting as switched off until the provider is confirmed.
 
-Out of scope here: the `ai:*` access-matrix rows (added in [repair round 2](#repair-round-2-2026-10-29)) and correcting log 019 (coordinator).
+Out of scope here: the `ai:*` access-matrix rows (added in [repair round 2](#repair-round-2-2026-10-29)) and correcting [log 019](../../logs/zheng-jj/019-implement-ai-test-drafting.md) (coordinator).
 
 ### Repair checkpoints
 

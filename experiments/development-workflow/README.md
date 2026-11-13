@@ -41,7 +41,7 @@ These are whole-session totals from `workflow/scripts/resource_usage.py snapshot
 | #78: verifier | `verifier` | 10,145,252 | 8,819,840 | 275,622 | 258,406 | 10,420,874 |
 | #78: security-reviewer | `security-reviewer` | 7,813,852 | 6,895,232 | 248,920 | 237,473 | 8,062,772 |
 
-The weaker model's two sessions totalled 126,698,197 tokens: 40,443,378 for #79 and 86,254,819 for #78, including the approval reviewers. For comparison, the five Opus-run slices of 2026-10-27 ([logs 014](../../logs/zheng-jj/014-close-the-open-review-gaps.md) to 018) used 7 to 46 million tokens each. That excludes orchestrator rows already shared with another log. Token counts are not comparable as cost across providers, and the tasks differ.
+The weaker model's two sessions totalled 126,698,197 tokens: 40,443,378 for #79 and 86,254,819 for #78, including the approval reviewers. For comparison, the five Opus-run slices of 2026-10-27 ([logs 014](../../logs/zheng-jj/014-close-the-open-review-gaps.md) to [018](../../logs/zheng-jj/018-specify-ai-test-drafting.md)) used 7 to 46 million tokens each. That excludes orchestrator rows already shared with another log. Token counts are not comparable as cost across providers, and the tasks differ.
 
 ### Quality outcome
 
@@ -74,7 +74,7 @@ The human decided on 2026-10-29:
 - accept its larger size;
 - show an off-for-now notice on the drafting page;
 - repair #79 and keep it;
-- correct log 019 from evidence.
+- correct [log 019](../../logs/zheng-jj/019-implement-ai-test-drafting.md) from evidence.
 
 Opus builders then ran two repair rounds on each PR, with independent re-reviews after each round. Details are in the [#22 plan](../../workflow/plans/22-test-drafting-spec.md) and the [#26 plan](../../workflow/plans/26-test-coordinator-e2e.md), both arriving with their PRs.
 

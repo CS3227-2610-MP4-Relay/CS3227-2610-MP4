@@ -43,7 +43,7 @@ Goal: Audit all saved session logs and correct evidenced mechanical documentatio
 | `046-document-shared-ai-allowance.md` | 056 |
 | `046-prepare-round-action-notification-fix.md` | 057 |
 
-- Update incoming Markdown references to those eight names, preserving historical filename mentions that describe their original context. Validate exact payload parity and all affected targets after renaming. The current session's next log is 058.
+- Update incoming Markdown references to those eight names, preserving historical filename mentions that describe their original context. Validate exact payload parity and all affected targets after renaming. The current session's next log is [058](../../logs/Whimsyturtle/058-check-saved-session-logs.md).
 - Repair 18 archived-experiment Markdown targets in Whimsyturtle 047 (lines 25, 39, 54), 048 (42, 80–81, 89, 120–121, 136, 181), 049 (36, 56, 69) and 050 (34, 136, 144, 172). The [archive README](../../experiments/app-context/README.md) explicitly preserves original paths in the ZIP; this is relocation, not lost evidence. Use immutable blob links at pre-archive commit `661a5f7b0cfbc28aa7787c87bc59df817b76c2b8`, retaining original paths in the permalink targets. Verify each Git object/anchor; no archive extraction is needed.
 - Whimsyturtle `027-fix-live-drafting-reply-schema.md:50` links obsolete `#transport-contract-proposed`; the current gateway heading is `Transport contract` (line 29). Change only that anchor to `#transport-contract`.
 

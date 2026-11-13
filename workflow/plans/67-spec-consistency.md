@@ -11,7 +11,7 @@ Tier: High (the release gate and the wording of development security controls). 
 3. **Function time limit.** `vercel.json` sets `maxDuration` 60; the gateway's bound is 30 s plus a 5 s release margin. The release gate requires a verified function time limit of at least 60 seconds, above both the limit timeouts plus a password hash and the AI bound plus margin. `test-drafting.md` need 2's open note closes.
 4. **Case label order.** RND-3/RND-4 prose and RES-1.3 put "Current build" in the case summary, before the expanded "Linked acceptance criteria", as PLT-4.9 and the templates do. RND-3's round-page sentence (`rounds.md`, "after its linked criteria") has the same disagreement and is fixed with it; RND-3.1's test already pins the built order.
 5. **`.env.example`.** TECHNICAL-SPEC describes it as non-secret local defaults and empty placeholders.
-6. **Criterion marking.** CTX-1.6 and DWF-1.6 get `[manual]` with a reason, as PLT-1.14 does; CTX-1.6 points to the experiment report. SECURITY-SPEC states that the automated DWF-1 checks are `unittest` tests in `workflow/scripts/test_check_scope.py` naming the criterion in their docstrings. PLT-2.6 stays untagged, keeping log 009's choice that hosted checks can be automated; its open coverage gap is recorded only under Open items.
+6. **Criterion marking.** CTX-1.6 and DWF-1.6 get `[manual]` with a reason, as PLT-1.14 does; CTX-1.6 points to the experiment report. SECURITY-SPEC states that the automated DWF-1 checks are `unittest` tests in `workflow/scripts/test_check_scope.py` naming the criterion in their docstrings. PLT-2.6 stays untagged, keeping [log 009](../../logs/Whimsyturtle/009-prepare-checked-product-site-publication.md)'s choice that hosted checks can be automated; its open coverage gap is recorded only under Open items.
 
 ## Commit checkpoints
 
@@ -21,7 +21,7 @@ Tier: High (the release gate and the wording of development security controls). 
 
 ## Open items
 
-- PLT-2.6 has no automated test: its hosted evidence is in log 009, and automating the hosted check remains an open coverage gap (orchestrator decision: do not tag it `[manual]`).
+- PLT-2.6 has no automated test: its hosted evidence is in [log 009](../../logs/Whimsyturtle/009-prepare-checked-product-site-publication.md), and automating the hosted check remains an open coverage gap (orchestrator decision: do not tag it `[manual]`).
 - `test-drafting.md`'s opening says its own contract "awaits confirmation by the human and the gateway owner". That is the drafting contract, not the gateway's, so it is out of this slice.
 
 ## Progress
