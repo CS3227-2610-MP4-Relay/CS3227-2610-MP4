@@ -66,3 +66,11 @@ Builder re-grepped the worktree at `a93430a` outside `logs/` for `log(s)`, `sess
   - added the coordinator's notes to Ownership, and recorded the narrowing to bare numbers for author-named references;
   - corrected the plan-checkpoint claim that Whimsyturtle 019 is a token-accounting log; it verifies tester-fix retests (linked under Confirmations).
 - Checks run: resolved every link in this plan, and all 15 file targets exist. The two anchors (`#how-scope-is-enforced`, `#applied-corrections-and-delivery`) match headings. The only unresolved match is the code-formatted `[logs 014](…)` quotation. `python workflow/scripts/check_scope.py builder --base 279f620` reported "All changes are within the builder scope." (exit 0).
+
+## Verification and delivery
+
+- The verifier re-reviewed `279f620..07aeb6e` and found nothing above Info. The `--unchanged` checks passed on both review candidates, and the plan's own links resolve.
+- The final reviewed candidate `07aeb6e` passed ruff and the format check. The workflow-script tests (120 OK, 5 skipped) ran on `279f620`, which has the same code. A closing search found no bare log references outside `logs/`.
+- A local full pytest run with the shared test database ended in 3,233 errors. Its first error was not captured, and other sessions were using that database at the time. A rerun with a private test database name passed everything except PLT-1.6's database-name assertion, which the override itself causes. That test then passed alone with the repository settings. The exact results are in the [session log](../../logs/Whimsyturtle/062-make-session-log-references-unambiguous.md#problems).
+- [Draft PR #188](https://github.com/CS3227-2610-MP4-Relay/CS3227-2610-MP4/pull/188): on `07aeb6e`, hosted `verify` and `site` passed, and `deploy` and `production` were skipped. With the session log added, `check_logs.py` reports only the expected 059–061 gap.
+- Next: human review of the PR and the log. Optional follow-ups for the human are listed in the PR.
