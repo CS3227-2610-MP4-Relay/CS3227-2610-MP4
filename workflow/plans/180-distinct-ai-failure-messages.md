@@ -8,7 +8,7 @@ Goal: Tell users when AI drafting or feedback is busy, over their own or the sha
 - Criteria: changed RND-8.4 and RES-4.4 (narrowed to the remaining generic-unavailable causes; RES-4.4 also links the feedback logging rule); added RND-8.10 and RES-4.10 (busy, own allowance, shared allowance, not set up). Four criteria in total.
 - Gateway [limits](../specs/ai/llm-gateway.md#limits-and-accounting): `busy-or-quota` splits into `busy` (user slot in flight, or no free deployment slot), `slots-missing` (deployment slot rows not exactly `DEPLOYMENT_IN_FLIGHT`, a misconfiguration, generic message), `user-quota` and `deployment-quota`; provider 429 stays `quota`. Check order unchanged, so both quotas used gives `user-quota` (superseded by repair round 1: quotas are now checked before free deployment slots). Quota refusals still roll back and count nothing. The fake-provider allowed-code rule inherits the new set. PLT-3.4's "busy/quota refusals" wording still covers all reservation refusals; unchanged.
 - Code-to-message mapping lives in one shared helper used by both features (each supplies its own sentence ending and not-set-up wording); no duplicated mapping. Feedback logs `logger.warning("Feedback gateway %s: %s", type, code)` on Refused/Failed, like drafting; never text, prompts, request fields or exception text.
-- Spec homes updated: `workflow/specs/ai/llm-gateway.md`, `workflow/specs/ai/test-drafting.md`, `workflow/specs/ai/observation-feedback.md`, `workflow/specs/product/rounds.md`, `workflow/specs/product/results.md`. TECHNICAL-SPEC and SECURITY-SPEC do not restate the codes; frozen plans unchanged.
+- Spec homes updated: `workflow/specs/ai/llm-gateway.md`, `workflow/specs/ai/test-drafting.md`, `workflow/specs/ai/observation-feedback.md`, `workflow/specs/product/rounds.md`, `workflow/specs/product/results.md`. TECHNICAL-SPEC and SECURITY-SPEC do not restate the codes; frozen plans unchanged (superseded by repair round 2, which changes the TECHNICAL-SPEC call-slot wording and adds a SECURITY-SPEC residual naming `busy`).
 
 ## Commit checkpoints and checks
 
@@ -63,7 +63,7 @@ Re-reviews of `8a1b734` found no blocking defects. This is the last allowed roun
 - **Decision 2 (human, 2026-11-13):** in the TECHNICAL-SPEC call-slot model, user slot rows are created at the first *reserved* call, matching the rollback rule.
 - **Finding 3:** RND-8.10 and RES-4.10 now say live-off is detected before any *gateway* limit, without "always". The features' own earlier checks still come first.
 - **Finding 5:** the two exception-path log tests filter `ai` and `ai.*` loggers only, so `aiohttp` records are excluded.
-- **Finding 6:** `test_three_racing_users_share_two_deployment_slots` also asserts the refusal is `Refused("busy")` and that each quota scope keeps exactly 2 records. This proves a committed-transaction rollback after the quota inserts.
+- **Finding 6:** `test_three_racing_users_share_two_deployment_slots` also asserts the refusal is `Refused("busy")` and that each quota scope keeps exactly 2 records. This proves that a real `busy` refusal leaves no committed records; the check order itself is pinned by `test_reservation_refusals_follow_check_order` and `test_a_first_call_refusal_rolls_back_everything`. The test's comment ("The refusal comes after both quota inserts") overstates this in the same way and is left unchanged.
 
 Evidence as reported:
 
@@ -71,4 +71,4 @@ Evidence as reported:
 - The coordinator found ruff clean at `8a1b734`.
 - The coordinator ran `pytest src/ai/tests/test_gateway.py -k "check_order or rolls_back_everything or racing"` at `8a1b734`: 13 passed, 300 deselected.
 - CI succeeded on `548247f` and `8e8efb2`. On `ef1ce09` it failed only on the access-matrix expectation, later fixed in `8c04035`.
-- Committed as `ec4a246` (specs) and `7d88b27` (tests). Final full verification, run by the coordinator at `7d88b27` (2026-11-13 02:48–03:05 UTC): `ruff check . && ruff format --check . && pytest --basetemp=<scratchpad>` gave "All checks passed!", "152 files already formatted" and "3279 passed, 5 skipped, 254 subtests passed". Next: reviewers inspect `8a1b734` to the final head, then hosted CI.
+- Committed as `ec4a246` (specs) and `7d88b27` (tests). Final full verification, run by the coordinator at `7d88b27` (2026-11-13 02:48–03:05 UTC): `ruff check . && ruff format --check . && pytest -q -p no:cacheprovider --basetemp=<scratchpad>` gave "All checks passed!", "152 files already formatted" and "3279 passed, 5 skipped, 254 subtests passed". Next: reviewers inspect `8a1b734` to the final head, then hosted CI.
