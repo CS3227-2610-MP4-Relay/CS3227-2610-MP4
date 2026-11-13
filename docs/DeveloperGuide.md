@@ -115,7 +115,19 @@ The [product-site architecture](../workflow/specs/TECHNICAL-SPEC.md#product-webs
 
 ## Acknowledgements
 
-Relay's development workflow, tooling, repository conventions and SoC chat-completions wire mapping were adapted from the [MP3 Deskmate baseline](https://github.com/CS3227-2610-MP3-Deskmate/CS3227-2610-MP3/tree/97ad99155307825a4b53925906e42f663647a70b), then streamlined for MP4; the gateway retains MP4's networking and quota controls.
+Relay began with the [MP3 Deskmate baseline](https://github.com/CS3227-2610-MP3-Deskmate/CS3227-2610-MP3/tree/97ad99155307825a4b53925906e42f663647a70b). The inventory below distinguishes retained file content from adapted ideas and components developed for Relay; it is not an exhaustive claim of originality.
+
+| Material | Relay files/components | Relationship to earlier work |
+| --- | --- | --- |
+| Repository instructions and tooling configuration | [`CLAUDE.md`](../CLAUDE.md), [`.gitignore`](../.gitignore), [`pyproject.toml`](../pyproject.toml), [`AGENTS.md`](../AGENTS.md) | Retained literal MP3 content: the one-line Claude instruction is identical, MP3's ignore entries remain, and Ruff configuration and agent rules contain retained text alongside MP4 changes. |
+| Workflow skills and contribution templates | [`workflow/skills/`](../workflow/skills/), [slice issue template](../.github/ISSUE_TEMPLATE/slice.md), [PR template](../.github/pull_request_template.md) | Adapted MP3's slice, logging, documentation and PR workflow, retaining text in these files while revising the process for MP4. |
+| Scope and log validation | [`check_scope.py`](../workflow/scripts/check_scope.py), [`check_logs.py`](../workflow/scripts/check_logs.py) and their adjacent tests | Adapted MP3 implementations with retained code fragments and subsequent MP4 changes; these are not wholly new scripts. |
+| Development roles | [`workflow/agents/`](../workflow/agents/) | Carried forward specification-first work and independent correctness/security review, while consolidating implementation into the MP4 builder role. This is process adaptation, not a claim that each role file was copied unchanged. |
+| SoC chat-completions mapping | [`src/ai/gateway.py`](../src/ai/gateway.py) | Adapted the request/response format from MP3's `src/deskmate/llm.py` and `llm_gateway.py`. Relay implements its own bounded transport and quota handling; the whole gateway is not attributed as copied MP3 code. |
+| Relay application | [`src/relay/`](../src/relay/), [`src/accounts/`](../src/accounts/), [`src/rounds/`](../src/rounds/), AI [drafting](../src/ai/drafting.py) and [observation feedback](../src/ai/feedback.py) | Developed for Relay's beta-testing domain after the initial scaffold, using the frameworks credited below rather than carrying over Deskmate's helpdesk application. |
+| Development usage collection | [`resource_usage.py`](../workflow/scripts/resource_usage.py) and [its tests](../workflow/scripts/test_resource_usage.py) | Added for MP4; this collector is absent from the cited MP3 baseline. Its external format references and limitations are credited below. |
+
+The **one home per fact** documentation approach also carries forward MP2's context-organisation idea, as acknowledged in the [team reflection](../reflections/Whimsyturtle.md#organising-context-so-instructions-remain-findable); this credits an idea, not copied MP2 application code. Relay's maintained ownership rules are in [AGENTS.md](../AGENTS.md#one-home-per-fact).
 
 The product-site scaffold uses GitHub's [Cayman theme](https://github.com/pages-themes/cayman). Relay uses [Django](https://www.djangoproject.com/) and [PostgreSQL](https://www.postgresql.org/) and calls [SoC LLM](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/start) through its [shared gateway](../workflow/specs/ai/llm-gateway.md). The LLM gateway sends its requests with the [aiohttp](https://github.com/aio-libs/aiohttp) client library. Local/CI container examples use the [official PostgreSQL image](https://hub.docker.com/_/postgres). Record any further reused external ideas, code or documentation here as they are adopted.
 
