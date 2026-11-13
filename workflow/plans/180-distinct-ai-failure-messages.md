@@ -44,3 +44,12 @@ Planned commits:
 1. `spec: Check AI quotas before deployment slots (#180)`: `llm-gateway.md`, `test-drafting.md`, `observation-feedback.md`, `rounds.md`, `results.md`, plus this plan note, or a separate `plan:` commit.
 2. `fix: Check quotas before free slots and roll back every refusal (#180)`: `src/ai/gateway.py`, `src/ai/tests/test_gateway.py`. Red first with the new order: at quota while slots are busy gives `user-quota`; deployment quota used while slots are busy gives `deployment-quota`; a first call's refusal leaves no user slot row.
 3. `test: Pin AI exception-path log records (#180)` and `refactor: Rename not-set-up code set (#180)`, or one coherent commit: `src/ai/failures.py`, `src/ai/tests/test_views.py`, `src/ai/tests/test_feedback_views.py`. The User Guide changes only if a statement becomes inaccurate. Then full verification.
+
+Results:
+
+- Specs committed as `ed2cfaf` and this note as `8e8efb2`.
+- Gateway red, run against the old order: `pytest src/ai/tests/test_gateway.py -k "check_order or rolls_back_everything"` gave 4 failed, 7 passed. The failures were `[user-quota-first]`, `[deployment-quota-first]`, and first-call `[busy]` and `[slots-missing]`, which left a user slot row.
+- Gateway green: `_reserve` now wraps `_try_reserve` in one transaction and rolls back on any refusal; `src/ai/tests/test_gateway.py` gave 313 passed.
+- The new exception-path log tests (`test_an_unexpected_gateway_exception_logs_two_fixed_warnings` in both view test files) passed before any code change. They pin existing, intentionally kept behaviour, so no red run was possible. They fail if either fixed line changes, is dropped or is duplicated.
+- The rename is behaviour-neutral. `test_views.py` and `test_feedback_views.py` gave 156 passed.
+- The User Guide is unchanged: its busy and allowance meanings stay accurate under the new order.
