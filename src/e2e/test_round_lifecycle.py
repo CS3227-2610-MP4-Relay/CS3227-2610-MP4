@@ -5,6 +5,8 @@ starts from a Draft round created before Playwright and checks the stored
 round after Playwright stops.
 """
 
+from urllib.parse import urlsplit
+
 import pytest
 from playwright.sync_api import expect
 
@@ -86,19 +88,33 @@ def browser_accounts(browser_accounts):
         ]
 
 
-def refused(tab, state, button=None):
-    """A stale tab's `button` POST, if given, gets 409 and the conflict page."""
+def refused(tab, round_url, state, button=None):
+    """A stale tab's `button` POST, if given, gets 409 and the conflict page.
+
+    PLT-4.15: the page links once to Coordinator home and to the round, above
+    its message.
+    """
     if button is not None:
         with tab.expect_response(lambda r: r.request.method == "POST") as response:
             tab.get_by_role("button", name=button, exact=True).click()
         assert response.value.status == 409
+    heading = tab.get_by_role(
+        "heading",
+        name=f"This action is not available while the round is {state}.",
+        exact=True,
+    )
+    expect(heading).to_be_visible()
+    navigation = tab.get_by_role("navigation", name="Page navigation", exact=True)
+    for label in ("Coordinator home", "Back to round"):
+        expect(tab.get_by_role("link", name=label, exact=True)).to_have_count(1)
+        expect(navigation.get_by_role("link", name=label, exact=True)).to_be_visible()
     expect(
-        tab.get_by_role(
-            "heading",
-            name=f"This action is not available while the round is {state}.",
-            exact=True,
-        )
-    ).to_be_visible()
+        navigation.get_by_role("link", name="Back to round", exact=True)
+    ).to_have_attribute("href", urlsplit(round_url).path)
+    assert navigation.evaluate(
+        "(el, h) => el.getBoundingClientRect().bottom <= h.getBoundingClientRect().top",
+        heading.element_handle(),
+    )
 
 
 def stale_tab(page, heading, link=None):
@@ -149,7 +165,9 @@ def expect_builds(page, *current):
         expect(case.locator(own)).to_have_text(label)
 
 
-@pytest.mark.ac("RND-1.2", "RND-5.1", "RND-5.5", "RND-6.1", "RND-6.2", "RND-6.3")
+@pytest.mark.ac(
+    "RND-1.2", "RND-5.1", "RND-5.5", "RND-6.1", "RND-6.2", "RND-6.3", "PLT-4.15"
+)
 def test_coordinator_edits_retests_twice_and_closes_round(page, browser_accounts):
     sign_in(page, browser_accounts, "coordinator")
     page.get_by_role("link", name=TITLE, exact=True).click()
@@ -190,7 +208,11 @@ def test_coordinator_edits_retests_twice_and_closes_round(page, browser_accounts
     expect(page.get_by_role("status")).to_have_text("Round published.")
     expect(page.get_by_text("State: Open", exact=True)).to_be_visible()
     draft_tab.get_by_label("Build label", exact=True).fill(IGNORED)
-    refused(draft_tab, "Open", "Publish round")
+    refused(draft_tab, round_url, "Open", "Publish round")
+    draft_tab.get_by_role("link", name="Coordinator home", exact=True).click()
+    expect(
+        draft_tab.get_by_role("heading", name="Coordinator home", exact=True)
+    ).to_be_visible()
 
     # RND-5.1 and RND-5.5: retest one case twice; the other keeps its build.
     request_retest(page, BUILDS[1])
@@ -218,15 +240,16 @@ def test_coordinator_edits_retests_twice_and_closes_round(page, browser_accounts
 
     # RND-6.3: closing again is refused, as are retests and retitling (part of
     # RND-1.7, not marked), and the round stays Closed.
-    refused(open_tab, "Closed", "Close round")
+    refused(open_tab, round_url, "Closed", "Close round")
     retest_tab.get_by_role("checkbox", name=FIRST_CASE, exact=True).check()
     retest_tab.get_by_label("Build label", exact=True).fill(IGNORED)
-    refused(retest_tab, "Closed", "Request retest")
+    refused(retest_tab, round_url, "Closed", "Request retest")
     edit_tab.get_by_label("Title", exact=True).fill(IGNORED)
-    refused(edit_tab, "Closed", "Save")
+    refused(edit_tab, round_url, "Closed", "Save")
     assert page.goto(edit_tab.url).status == 409
-    refused(page, "Closed")
-    page.goto(round_url)
+    refused(page, round_url, "Closed")
+    page.get_by_role("link", name="Back to round", exact=True).click()
+    expect(page).to_have_url(round_url)
     expect(page.get_by_text("State: Closed", exact=True)).to_be_visible()
     expect(page.get_by_role("heading", name=REVISED_TITLE, exact=True)).to_be_visible()
     expect(page.get_by_text(IGNORED)).to_have_count(0)

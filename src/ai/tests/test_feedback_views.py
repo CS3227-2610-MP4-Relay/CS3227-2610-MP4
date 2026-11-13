@@ -19,6 +19,8 @@ from ai.models import CallRecord
 from rounds import services
 from rounds.models import Case, CaseCriterion, Criterion, Result, Round
 from rounds.tests.conftest import (
+    NOT_FOUND,
+    assert_conflict_links,
     csrf_token,
     domain_rows,
     no_store,
@@ -333,7 +335,7 @@ def test_empty_saved_observation_can_request_feedback(tester, target):
     assert json.loads(complete.call_args.args[2])["observation"] == ""
 
 
-@pytest.mark.ac("RES-4.5")
+@pytest.mark.ac("RES-4.5", "PLT-4.16")
 @pytest.mark.parametrize("method", ["get", "post"])
 @pytest.mark.parametrize(
     "state,message",
@@ -367,6 +369,41 @@ def test_eligibility_refusals_make_no_call(tester, target, state, message, metho
     assert response.status_code == 409 and message in response.content.decode()
     complete.assert_not_called()
     no_store(response)
+    assert_round_navigation(response, target)
+    assert domain_rows() == before
+
+
+def assert_round_navigation(response, target):
+    """PLT-4.16: feedback conflicts link to Tester home and the tester round."""
+    assert "<title>Action not available</title>" in response.content.decode()
+    assert_conflict_links(
+        response,
+        ("Tester home", reverse("accounts:tester")),
+        ("Back to round", reverse("accounts:tester-round", args=[target[0].pk])),
+    )
+
+
+@pytest.mark.ac("RES-4.5", "PLT-4.16")
+@pytest.mark.parametrize("method", ["get", "post"])
+def test_foreign_workspace_feedback_stays_404_without_navigation(
+    tester, target, other_workspace, method
+):
+    Round.objects.filter(pk=target[0].pk).update(state="closed")
+    outsider = User.objects.create_user(
+        "feedback-outsider",
+        "Synthetic16Chars",
+        workspace=other_workspace,
+        role="tester",
+    )
+    before = domain_rows()
+    with mock.patch("ai.feedback_views.gateway.complete") as complete:
+        response = getattr(signed_in(outsider), method)(url(target))
+    assert response.status_code == 404
+    body = response.content.decode()
+    assert NOT_FOUND in body
+    assert "Tester home" not in body and "Back to round" not in body
+    assert f"/tester/rounds/{target[0].pk}/" not in body
+    complete.assert_not_called()
     assert domain_rows() == before
 
 
@@ -398,7 +435,7 @@ def test_roles_peer_ownership_methods_and_csrf(tester, coordinator, target):
     complete.assert_not_called()
 
 
-@pytest.mark.ac("RES-4.6")
+@pytest.mark.ac("RES-4.6", "PLT-4.16")
 @pytest.mark.parametrize(
     "change", ["draft", "outcome", "case", "criterion", "submit", "close", "retest"]
 )
@@ -444,6 +481,8 @@ def test_changes_during_call_discard_success_and_failure(
     complete.assert_called_once()
     body = response.content.decode()
     assert "Synthetic stale question?" not in body and UNAVAILABLE not in body
+    no_store(response)
+    assert_round_navigation(response, target)
     if change in ("draft", "outcome", "case", "criterion"):
         assert (
             "Your saved draft or test case changed. Reload before requesting feedback."

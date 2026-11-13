@@ -38,22 +38,22 @@ Each network address can create up to 10 workspaces an hour, and Relay up to 200
 
 1. Sign in as the workspace's Test Coordinator and choose **Add Beta Tester** on **Coordinator home**.
 2. The **Beta Tester added** page shows the workspace and the new account's **Role**, **Username** and **Password**. Save the credentials when it says "Save this password now. It will not be shown again." Share them with the tester outside Relay.
-3. Choose **Coordinator home** to return. You stay signed in as coordinator; the new account signs in to **Tester home** in your workspace.
+3. Choose **Coordinator home** above the heading to return. You stay signed in as coordinator; the new account signs in to **Tester home** in your workspace.
 
-![The Beta Tester added page showing the workspace, the new tester's Role, Username and Password, the save-password reminder and Coordinator home link](images/beta-tester-added.png)
+![The Beta Tester added page showing the Coordinator home link above the heading, then the workspace, the new tester's Role, Username and Password, and the save-password reminder](images/beta-tester-added.png)
 
-A workspace can have 10 Beta Testers, including its initial two. Once full, another creation attempt shows "This workspace already has 10 Beta Testers." Use **Beta Tester passwords** to find tester usernames and reset their passwords; account editing, removal and retrieval of earlier passwords are unavailable.
+A workspace can have 10 Beta Testers, including its initial two. Once full, another creation attempt shows "This workspace already has 10 Beta Testers." with **Coordinator home** above it. Use **Beta Tester passwords** to find tester usernames and reset their passwords; account editing, removal and retrieval of earlier passwords are unavailable.
 
 Resubmitting the creation request can create another tester until the limit is reached. Returning home does not show the password again, although your browser's back button may redisplay an earlier response. If an error interrupts creation, check **Beta Tester passwords** for the account before trying again.
 
 ## Reset a Beta Tester's password
 
 1. Sign in as the workspace's Test Coordinator and choose **Beta Tester passwords** on **Coordinator home**.
-2. The **Beta Tester passwords** page lists your workspace's tester usernames. It explains: "Resetting a password stops the old password and existing tester sessions from working. Save the new password and share it with the tester outside Relay." Choose **Reset password** beside the intended tester.
+2. The **Beta Tester passwords** page has **Coordinator home** above its heading and lists your workspace's tester usernames. It explains: "Resetting a password stops the old password and existing tester sessions from working. Save the new password and share it with the tester outside Relay." Choose **Reset password** beside the intended tester.
 3. The **Beta Tester password reset** page shows the workspace and the tester's **Role**, **Username** and new **Password**. Save it when the page says "Save this password now. It will not be shown again." Share the credentials with the tester outside Relay.
-4. Choose **Beta Tester passwords** to return to the list, or **Coordinator home**. You remain signed in as coordinator.
+4. Above the heading, choose **Coordinator home**, or **Beta Tester passwords** to return to the list. You remain signed in as coordinator.
 
-![The Beta Tester passwords page listing three tester usernames with Reset password buttons and a warning that resetting stops the old password and existing tester sessions from working](images/beta-tester-passwords.png)
+![The Beta Tester passwords page with the Coordinator home link above the heading, listing three tester usernames with Reset password buttons and a warning that resetting stops the old password and existing tester sessions from working](images/beta-tester-passwords.png)
 
 The username, workspace and testing history stay the same. The old password stops working, and existing tester sessions lose access on their next request. The tester signs in with the replacement password.
 
@@ -100,9 +100,9 @@ Under its entry, a Draft round shows its number of test cases, such as "4 test c
 
 ![Coordinator home showing the username, workspace, Sign out, Add Beta Tester, Beta Tester passwords, and the Rounds section with New round, the summary Draft: 1 · Open: 0 · Closed: 0 · Beta Testers: 2, and Sample round (Draft) with 4 test cases](images/coordinator-home.png)
 
-If a round action shows an error, return to the round page and check its current details before trying again.
+If a round action is refused on a page titled **Action not available**, the page has **Coordinator home** and **Back to round** above its message. Choose **Back to round** and check the round's current details before trying again.
 
-For a failed publish or retest, no new build or success notification is saved. Use your browser's Back button to return to the round page or retest form and try again later. If your session has ended, [sign in](#sign-in) again and open the round from **Coordinator home**.
+For a failed publish or retest, no new build or success notification is saved, and the page says "Relay is temporarily unavailable. Try again later." Choose **Back to home** above the message; while you are signed in, it opens **Coordinator home**, where you can open the round and try again later. If your session has ended, [sign in](#sign-in) again and open the round from **Coordinator home**.
 
 ### Create a round
 
@@ -298,7 +298,7 @@ With JavaScript enabled, the request disables **Suggest missing details** and sh
 
 An empty reply says "No missing details were suggested. You can still edit your result yourself." If the source is too long, the page says "This observation and test case are too long for feedback. You can still edit your result yourself." You may see "Feedback is unavailable right now. You can still edit your result yourself." when the AI service is not configured, the [AI quota](#draft-test-cases-with-ai) is used up or another AI-service problem occurs. Choose **Back to result** to return to your result; editing follows the [same round, build and submission rules](#save-and-submit-a-result).
 
-Questions are not saved. Opening the feedback page again clears them; resubmitting its request asks for new feedback. If Relay detects a change to the saved source during a request, the page says "Your saved draft or test case changed. Reload before requesting feedback." Opening the feedback address directly without a saved draft says "Save a draft before requesting feedback." Submission, a newer build or a closed round prevents feedback with the same messages described under [Save and submit a result](#save-and-submit-a-result).
+Questions are not saved. Opening the feedback page again clears them; resubmitting its request asks for new feedback. If Relay detects a change to the saved source during a request, the page says "Your saved draft or test case changed. Reload before requesting feedback." Opening the feedback address directly without a saved draft says "Save a draft before requesting feedback." Submission, a newer build or a closed round prevents feedback with the same messages described under [Save and submit a result](#save-and-submit-a-result). Each of these feedback refusals, including the changed-source and missing-draft messages, has **Tester home** and **Back to round** above its message; **Back to round** opens the round's current details.
 
 ## Review my results
 
@@ -312,7 +312,7 @@ Only your own results appear. This page is read-only, including drafts. Reload t
 
 ## Error pages
 
-Common error pages include the messages below. Result-entry refusals also include the navigation described under [Save and submit a result](#save-and-submit-a-result).
+Common error pages include the messages below. The access, not-found, too-many and unavailable pages have a **Back to home** link above their message; it opens the start page, or your home page when you are signed in. Refusals on a page titled **Action not available** have your home link and **Back to round** above their message, as described under [Test rounds](#test-rounds), [Save and submit a result](#save-and-submit-a-result) and [Observation feedback](#observation-feedback).
 
 | Message | When |
 | --- | --- |

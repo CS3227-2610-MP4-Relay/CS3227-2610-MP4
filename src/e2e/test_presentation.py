@@ -498,24 +498,36 @@ def test_tester_result_and_feedback_long_content(page, browser_accounts, width):
     assert_layout(page, width)
 
 
-@pytest.mark.ac("PLT-4.1", "PLT-4.3", "PLT-4.4", "PLT-4.5")
+@pytest.mark.ac("PLT-4.1", "PLT-4.3", "PLT-4.4", "PLT-4.5", "PLT-4.17")
 @pytest.mark.parametrize("width", [320, 1440])
 def test_existing_error_pages_share_the_error_treatment(page, browser_accounts, width):
     """Exercise existing 404, 429, 503, 403 and conflict responses in-browser."""
     page.set_viewport_size({"width": width, "height": 900})
 
-    def check_error():
+    def check_error(home=None):
+        """Check the error treatment; follow PLT-4.17's link to the `home` heading."""
         assert_layout(page, width)
         error = page.locator(".error")
         expect(error).to_be_visible()
-        expect(error.get_by_role("heading", level=1)).to_be_visible()
+        heading = error.get_by_role("heading", level=1)
+        expect(heading).to_be_visible()
         assert (
             error.evaluate("el => parseFloat(getComputedStyle(el).borderLeftWidth)")
             >= 3
         )
+        if home is None:
+            return
+        navigation = page.get_by_role("navigation", name="Page navigation", exact=True)
+        back = navigation.get_by_role("link", name="Back to home", exact=True)
+        expect(page.get_by_role("link")).to_have_count(1)
+        expect(back).to_have_attribute("href", "/")
+        assert_action_link_states(page, back)
+        assert back.bounding_box()["y"] < heading.bounding_box()["y"]
+        back.click()
+        expect(page.get_by_role("heading", name=home, exact=True)).to_be_visible()
 
     assert page.goto("/missing-presentation-page/").status == 404
-    check_error()
+    check_error("Relay")
     page.goto("/")
     with mock.patch("accounts.views._any_reached", return_value=True):
         with page.expect_response(
@@ -525,7 +537,7 @@ def test_existing_error_pages_share_the_error_treatment(page, browser_accounts, 
                 "button", name="Create a demo workspace", exact=True
             ).click()
         assert response.value.status == 429
-    check_error()
+    check_error("Relay")
     page.goto("/")
     with mock.patch(
         "accounts.demo.generate_passwords",
@@ -538,9 +550,9 @@ def test_existing_error_pages_share_the_error_treatment(page, browser_accounts, 
                 "button", name="Create a demo workspace", exact=True
             ).click()
         assert response.value.status == 503
-    check_error()
+    check_error("Relay")
     sign_in(page, browser_accounts, "coordinator")
     assert page.goto("/tester/").status == 403
-    check_error()
+    check_error("Coordinator home")
     assert page.goto(browser_accounts["draft"] + "results/").status == 409
     check_error()
