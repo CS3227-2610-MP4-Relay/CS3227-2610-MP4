@@ -6,7 +6,7 @@ Tier: Standard plus security-reviewer (new workspace- and tester-scoped queries)
 
 ## Human decisions (this session)
 
-- One slice for the whole issue. The one-requirement budget is raised for this slice only to cover RND-1 and RES-1. Estimate 6–8 added/changed criteria and about 150–250 lines under `src/` outside tests and migrations; hard limit 400. Exceeding either returns as needs-decision.
+- One slice for the whole issue. The one-requirement budget is raised for this slice only to cover RND-1 and RES-1. Estimate 6–8 added/changed criteria and about 150–250 lines under `src/` outside tests and migrations; hard limit 400. Exceeding either returns as needs-decision. After review, the human confirmed 9 criteria (8 added plus the RES-1.1 ordering amendment) and chose plan fixes only for the Low findings.
 - Coordinator home follows the approved preview: summary line of round counts by state and Beta Tester count, always shown; Draft rounds show their case count; Open rounds show current-build submitted coverage plus "Review results"; Closed entries unchanged. Eligible results are exactly RND-4's "Results for this build". No "reviewed" state.
 - Tester home keeps "Available tests" and "No tests available.", grouping rounds under "Open tests" and "Closed tests", each only when non-empty, same order within each. Open rounds show the tester's own "to record · draft(s) · submitted" counts using one shared helper with the RES-1.5 links. The Open tester round page shows "Your result: …" in each case summary; the link stays in the body.
 - No new routes, models, migrations, dependencies, JS or permissions.
@@ -25,8 +25,8 @@ Coordinator decisions (checkpoint 1 revision):
 ## Checkpoints
 
 1. `spec:`/`plan:` — `workflow/specs/product/rounds.md`, `workflow/specs/product/results.md`, `workflow/specs/TECHNICAL-SPEC.md`, `workflow/specs/SECURITY-SPEC.md`, this plan. Check: read-back only.
-2. `feat:` RND-1 overview — `src/accounts/views.py` (`coordinator_home`), `src/rounds/templates/rounds/coordinator_home.html`, one eligible-results helper in `src/rounds/results.py` used by both `results_page` (`src/rounds/views.py`, behaviour unchanged) and the overview; tests in `src/rounds/tests/test_views.py` (existing RND-4 tests must keep passing) and `src/e2e/test_rounds.py`. Focused: `pytest src/rounds/tests/test_views.py -k "coordinator_home"` red before, green after; then the e2e file.
-3. `feat:` RES-1 progress — `src/rounds/tester.py` (one classification helper used by `detail` and `home`), `tester_home.html`, `tester_round.html`; tests in `src/rounds/tests/test_tester.py` and `src/e2e/test_tester.py`. Focused: `pytest src/rounds/tests/test_tester.py` red before, green after; then the e2e file.
+2. `feat:` RND-1 overview — `src/accounts/views.py` (`coordinator_home`), `src/rounds/templates/rounds/coordinator_home.html`, one eligible-results helper in `src/rounds/results.py` used by both `results_page` (`src/rounds/views.py`, behaviour unchanged) and the overview; tests in the new `src/rounds/tests/test_coordinator_overview.py` (existing RND-4 tests must keep passing) and `src/e2e/test_rounds.py`. Focused: that file red before, green after; then the e2e file.
+3. `feat:` RES-1 progress — `src/rounds/tester.py` (one classification helper used by `detail` and `home`), `tester_home.html`, `tester_round.html`; tests in the new `src/rounds/tests/test_tester_progress.py` and `src/e2e/test_tester.py`. Focused: that file red before, green after; then the e2e file.
 4. `docs:` `docs/UserGuide.md` in the product's exact words. Then full verification (`ruff check . && ruff format --check . && pytest`).
 
 Run pytest with `-p no:cacheprovider --basetemp=tmp/slice182-harness/<name>`.
@@ -53,12 +53,22 @@ Checkpoint 3 (RES-1):
 - Assumptions:
   - The home's `rounds` context is the Open group followed by the Closed group.
   - An Open case without a current build would count as "to record" with no status or link; RES-1.3 says none exists.
-- Open: the stray idle REPL (PID 1054) from checkpoint 2 is with the human.
 
 Checkpoint 4 (User Guide):
 
 - `docs/UserGuide.md` (Coordinator home overview; "View available tests" groups, counts and "Your result" statuses; three alt texts) was read back. `pytest --ds=slice182_settings --basetemp=tmp/slice182-harness/cp4-shots src/e2e/screenshots.py` (08:39:24–08:40:00, 2 passed) is the only selection that produces `tester-home`/`tester-round`. It rewrote all 16 PNGs; `coordinator-home`, `tester-home` and `tester-round` were inspected and are correct. The other 13 differ only in system-font rendering (the committed set used a different font; `start-page` compared by eye) and random demo identities. Originals are in `tmp/slice182-harness/images-before/`; keeping only the three targets mixes fonts in the guide. Ruff clean; `check_scope.py builder --base 0b1b389` within scope; DeveloperGuide unchanged.
 - Coordinator decision: commit only the three content-changed PNGs, as #143 did. The other 13 were restored byte-identical to HEAD (hash-checked) to avoid unreviewable churn; the font mix is cosmetic.
+
+## Review and verification
+
+Fixed candidate `c074696` (base `a93430a`, clean tree), unchanged after review (`check_scope.py --unchanged`).
+
+- Full verification, 08:48–09:15: `manage.py check` clean, ruff clean (153 files), pytest 3277 passed, 5 skipped, 1 failed. The failure, `relay/tests/test_database.py::test_postgresql_synthetic_roundtrip`, asserts the fixed test database name, which the harness renames. With the standard test settings it passed (1 passed, 09:15). Hosted CI runs the whole suite on standard settings.
+- Verifier: no correctness, isolation or data-integrity defects. M1 (9 criteria against the 6–8 estimate) was resolved by the human's confirmation. Accepted Low findings:
+  - Query count grows per Open round (also raised by the security-reviewer). The 20-round cap bounds it and no spec sets a budget.
+  - Test gaps with behaviour correct as read: no pin for "0 of 1"; the storage-failure test simulates only the coverage read, though every read precedes rendering; the RND-1.10 forged-build rows are also excluded by the current-build subquery; one optional-paragraph regex. Dedicated tests cover these paths.
+  - Stale plan text, fixed here.
+- Security-reviewer: no Critical, High or Medium findings. The coordinator confirmed the requested diff: the RND-4 filter is byte-identical to base, and no routes, migrations, models, dependencies, CI, JS or settings changed.
 
 ## Open issues
 
@@ -66,4 +76,4 @@ None.
 
 ## Next
 
-Freeze the candidate, run full verification, then the verifier and security-reviewer.
+Push, then confirm hosted CI on the final head.
