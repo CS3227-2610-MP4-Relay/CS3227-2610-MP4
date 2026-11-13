@@ -16,7 +16,6 @@ from accounts.models import User
 from rounds import results, services
 from rounds import tester as tester_views
 from rounds.models import BuildCase, Result, Round
-from rounds.views import conflict_page
 
 from .conftest import (
     DENIED,
@@ -25,6 +24,7 @@ from .conftest import (
     NOT_FOUND,
     SCRIPT_TAG,
     UNAVAILABLE,
+    assert_conflict_links,
     csrf_token,
     domain_rows,
     no_store,
@@ -401,37 +401,21 @@ def test_conflicts_precede_invalid_form_and_preserve_rows(
     response = client.post(url(target), {} if action is None else {"action": action})
     assert response.status_code == 409 and message in page(response)
     no_store(response)
-    assert_conflict_navigation(response, round_)
+    assert_conflict_links(response, *entry_links(round_))
     if conflict != "submitted":
         response = client.get(url(target))
         assert response.status_code == 409 and message in page(response)
         no_store(response)
-        assert_conflict_navigation(response, round_)
+        assert_conflict_links(response, *entry_links(round_))
     assert domain_rows() == before
 
 
-def assert_conflict_navigation(response, round_):
-    """Entry conflicts offer each authorized destination once before the error."""
-    body = page(response)
-    for label, destination in (
+def entry_links(round_):
+    """PLT-4.14's (label, URL) destinations for an authorized round."""
+    return (
         ("Tester home", reverse("accounts:tester")),
         ("Back to round", reverse("accounts:tester-round", args=[round_.pk])),
-    ):
-        link = f'<a class="action secondary" href="{destination}">{label}</a>'
-        assert body.count(link) == 1
-        assert body.index(link) < body.index('<div class="error">')
-    assert "<form" not in body
-
-
-@pytest.mark.ac("PLT-4.14")
-def test_shared_conflict_without_entry_context_keeps_existing_actions(tester):
-    request = RequestFactory().get("/tester/")
-    request.user = tester
-    response = conflict_page(request, results.STALE)
-    assert response.status_code == 409
-    assert results.STALE in page(response)
-    assert "Tester home" not in page(response)
-    assert "Back to round" not in page(response)
+    )
 
 
 @pytest.mark.ac("RES-2.7", "RES-2.6")

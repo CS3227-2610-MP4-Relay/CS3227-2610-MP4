@@ -1,12 +1,15 @@
 """Browser journeys through the coordinator's round preparation forms."""
 
 import pytest
+from django.db import transaction
+from django.utils import timezone
 from playwright.sync_api import expect
 
-from accounts.models import Workspace
+from accounts.models import User, Workspace
 from e2e.presentation import assert_layout
 from e2e.sessions import sign_in
-from rounds.models import Case, Criterion, Round
+from rounds import services
+from rounds.models import Case, Criterion, Result, Round
 
 
 @pytest.fixture
@@ -298,4 +301,65 @@ def test_drafting_page_keeps_manual_workflow_when_unavailable(page, browser_acco
     page.get_by_role("link", name="Add test case", exact=True).click()
     expect(
         page.get_by_role("heading", name="New test case", exact=True)
+    ).to_be_visible()
+
+
+@pytest.fixture
+def overview_rounds(browser_accounts):
+    """Commit one round per state, with one submitted result, before Chromium."""
+    workspace = Workspace.objects.get(name=browser_accounts["workspace"])
+    tester = User.objects.get(username=browser_accounts["tester"])
+    Round.objects.create(
+        workspace=workspace, title="Synthetic closed round", state=Round.State.CLOSED
+    )
+    open_ = Round.objects.create(workspace=workspace, title="Synthetic open round")
+    criterion = Criterion.objects.create(round=open_, text="Synthetic criterion")
+    for index in (1, 2):
+        Case.objects.create(
+            round=open_,
+            title=f"Synthetic open case {index}",
+            steps="Synthetic steps",
+            expected_result="Synthetic expected",
+        ).criteria.add(criterion)
+    with transaction.atomic():
+        locked = Round.objects.select_for_update().get(pk=open_.pk)
+        build = services.publish(locked, "Synthetic 1.0")
+    Result.objects.create(
+        tester=tester,
+        case=open_.cases.first(),
+        build=build,
+        outcome="pass",
+        submitted_at=timezone.now(),
+    )
+    draft = Round.objects.create(workspace=workspace, title="Synthetic draft round")
+    Case.objects.create(
+        round=draft,
+        title="Synthetic draft case",
+        steps="Synthetic steps",
+        expected_result="Synthetic expected",
+    )
+    return browser_accounts
+
+
+@pytest.mark.ac("RND-1.8")
+def test_coordinator_home_overview_leads_to_review(overview_rounds, request):
+    page = request.getfixturevalue("page")
+    sign_in(page, overview_rounds, "coordinator")
+    expect(
+        page.get_by_text("Draft: 1 · Open: 1 · Closed: 1 · Beta Testers: 1", exact=True)
+    ).to_be_visible()
+    expect(page.get_by_role("listitem")).to_have_text(
+        [
+            "Synthetic draft round (Draft) 1 test case",
+            (
+                "Synthetic open round (Open) 1 of 2 test cases has a submitted "
+                "result for its current build. Review results"
+            ),
+            "Synthetic closed round (Closed)",
+        ],
+        use_inner_text=True,
+    )
+    page.get_by_role("link", name="Review results", exact=True).click()
+    expect(
+        page.get_by_role("heading", name="Results: Synthetic open round", exact=True)
     ).to_be_visible()

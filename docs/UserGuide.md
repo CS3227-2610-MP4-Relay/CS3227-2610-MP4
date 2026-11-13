@@ -38,22 +38,22 @@ Each network address can create up to 10 workspaces an hour, and Relay up to 200
 
 1. Sign in as the workspace's Test Coordinator and choose **Add Beta Tester** on **Coordinator home**.
 2. The **Beta Tester added** page shows the workspace and the new account's **Role**, **Username** and **Password**. Save the credentials when it says "Save this password now. It will not be shown again." Share them with the tester outside Relay.
-3. Choose **Coordinator home** to return. You stay signed in as coordinator; the new account signs in to **Tester home** in your workspace.
+3. Choose **Coordinator home** above the heading to return. You stay signed in as coordinator; the new account signs in to **Tester home** in your workspace.
 
-![The Beta Tester added page showing the workspace, the new tester's Role, Username and Password, the save-password reminder and Coordinator home link](images/beta-tester-added.png)
+![The Beta Tester added page showing the Coordinator home link above the heading, then the workspace, the new tester's Role, Username and Password, and the save-password reminder](images/beta-tester-added.png)
 
-A workspace can have 10 Beta Testers, including its initial two. Once full, another creation attempt shows "This workspace already has 10 Beta Testers." Use **Beta Tester passwords** to find tester usernames and reset their passwords; account editing, removal and retrieval of earlier passwords are unavailable.
+A workspace can have 10 Beta Testers, including its initial two. Once full, another creation attempt shows "This workspace already has 10 Beta Testers." with **Coordinator home** above it. Use **Beta Tester passwords** to find tester usernames and reset their passwords; account editing, removal and retrieval of earlier passwords are unavailable.
 
 Resubmitting the creation request can create another tester until the limit is reached. Returning home does not show the password again, although your browser's back button may redisplay an earlier response. If an error interrupts creation, check **Beta Tester passwords** for the account before trying again.
 
 ## Reset a Beta Tester's password
 
 1. Sign in as the workspace's Test Coordinator and choose **Beta Tester passwords** on **Coordinator home**.
-2. The **Beta Tester passwords** page lists your workspace's tester usernames. It explains: "Resetting a password stops the old password and existing tester sessions from working. Save the new password and share it with the tester outside Relay." Choose **Reset password** beside the intended tester.
+2. The **Beta Tester passwords** page has **Coordinator home** above its heading and lists your workspace's tester usernames. It explains: "Resetting a password stops the old password and existing tester sessions from working. Save the new password and share it with the tester outside Relay." Choose **Reset password** beside the intended tester.
 3. The **Beta Tester password reset** page shows the workspace and the tester's **Role**, **Username** and new **Password**. Save it when the page says "Save this password now. It will not be shown again." Share the credentials with the tester outside Relay.
-4. Choose **Beta Tester passwords** to return to the list, or **Coordinator home**. You remain signed in as coordinator.
+4. Above the heading, choose **Coordinator home**, or **Beta Tester passwords** to return to the list. You remain signed in as coordinator.
 
-![The Beta Tester passwords page listing three tester usernames with Reset password buttons and a warning that resetting stops the old password and existing tester sessions from working](images/beta-tester-passwords.png)
+![The Beta Tester passwords page with the Coordinator home link above the heading, listing three tester usernames with Reset password buttons and a warning that resetting stops the old password and existing tester sessions from working](images/beta-tester-passwords.png)
 
 The username, workspace and testing history stay the same. The old password stops working, and existing tester sessions lose access on their next request. The tester signs in with the replacement password.
 
@@ -94,13 +94,15 @@ Choose a case title to expand or collapse its details. In **My results**, choose
 
 Only a Test Coordinator can prepare, publish, review, retest and close test rounds. A new round is in the **Draft** state; [publishing](#publish-a-round) it makes it **Open**, and [closing](#close-a-round) it makes it **Closed**. Beta Testers [view available tests](#view-available-tests) from their own home page.
 
-**Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". A new demo workspace starts with its [sample round](#create-a-demo-workspace), so its list is not empty; "No rounds yet." appears only for a workspace with no rounds.
+**Coordinator home** has a **Rounds** heading with a **New round** link. Under the link, a summary line counts your workspace's rounds in each state and its Beta Testers, for example "Draft: 1 · Open: 1 · Closed: 2 · Beta Testers: 2". Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". A new demo workspace starts with its [sample round](#create-a-demo-workspace), so its list is not empty; "No rounds yet." appears only for a workspace with no rounds.
 
-![Coordinator home showing the username, workspace, Sign out, Add Beta Tester, Beta Tester passwords, and the Rounds section with New round and Sample round (Draft)](images/coordinator-home.png)
+Under its entry, a Draft round shows its number of test cases, such as "4 test cases" or "1 test case". An Open round shows how many of its cases have at least one submitted result for their current build, such as "3 of 5 test cases have a submitted result for their current build.", followed by a **Review results** link to its [results page](#review-results). Saved drafts are not counted. After a [retest](#request-a-retest), a retested case counts again only once a result is submitted for its new build. A Closed round shows only its title and "(Closed)".
 
-If a round action shows an error, return to the round page and check its current details before trying again.
+![Coordinator home showing the username, workspace, Sign out, Add Beta Tester, Beta Tester passwords, and the Rounds section with New round, the summary Draft: 1 · Open: 0 · Closed: 0 · Beta Testers: 2, and Sample round (Draft) with 4 test cases](images/coordinator-home.png)
 
-For a failed publish or retest, no new build or success notification is saved. Use your browser's Back button to return to the round page or retest form and try again later. If your session has ended, [sign in](#sign-in) again and open the round from **Coordinator home**.
+If a round action is refused on a page titled **Action not available**, the page has **Coordinator home** and **Back to round** above its message. Choose **Back to round** and check the round's current details before trying again.
+
+For a failed publish or retest, no new build or success notification is saved, and the page says "Relay is temporarily unavailable. Try again later." Choose **Back to home** above the message; while you are signed in, it opens **Coordinator home**, where you can open the round and try again later. If your session has ended, [sign in](#sign-in) again and open the round from **Coordinator home**.
 
 ### Create a round
 
@@ -256,16 +258,16 @@ A Closed round's page still shows its criteria, its cases with their linked crit
 
 ## View available tests
 
-1. Sign in as a **Beta Tester**. On **Tester home**, **Available tests** lists your workspace's Open and Closed rounds, newest first. Each title is a link followed by "(Open)" or "(Closed)". If there are none, it says "No tests available."
-2. Choose a round title. The page shows "State: Open" or "State: Closed" and **Test cases**. Each case's summary shows its title and **Current build**; expand it for **Steps**, **Expected result** and **Linked acceptance criteria**.
+1. Sign in as a **Beta Tester**. On **Tester home**, **Available tests** lists your workspace's Open rounds under **Open tests**, then its Closed rounds under **Closed tests**, each newest first; a group with no rounds has no heading. Each title is a link followed by "(Open)" or "(Closed)". Under each Open round, a line counts its test cases by your own result for each case's current build, such as "2 to record · 1 draft · 2 submitted". If there are no rounds, it says "No tests available."
+2. Choose a round title. The page shows "State: Open" or "State: Closed" and **Test cases**. Each case's summary shows its title and **Current build**; in an Open round it also shows "Your result: Not recorded", "Your result: Draft" or "Your result: Submitted". Expand it for **Steps**, **Expected result** and **Linked acceptance criteria**.
 3. Test the software outside Relay using those instructions and the named build. If the coordinator requests a retest, reload the page: only the selected cases change to the new **Current build**; other cases keep their previous build.
 4. Choose **Tester home** to return to the list, or return there to **Sign out**.
 
-![Tester home showing the username, workspace, Sign out and Sample round (Open) under Available tests](images/tester-home.png)
+![Tester home showing the username, workspace, Sign out and, under Available tests and Open tests, Sample round (Open) with 4 to record · 0 drafts · 0 submitted](images/tester-home.png)
 
-![The tester's Sample round page showing State: Open, My results, and the first test case expanded with its steps, expected result, linked criterion and Record result](images/tester-round.png)
+![The tester's Sample round page showing State: Open, My results, and four test cases each with Current build 1.4.0-beta and Your result: Not recorded, the first expanded with its steps, expected result, linked criterion and Record result](images/tester-round.png)
 
-Beta Testers in the same workspace see the same rounds. Draft rounds stay hidden. Each expanded case in an Open round shows **Record result** if you have no result for its current build, **Continue draft** for your saved draft, or **View result** for your submitted result. These actions reflect your own results. A Closed round remains available as read-only reference; after the coordinator closes it, reload to see "State: Closed" and "(Closed)" in the list, with the result-entry links removed.
+Beta Testers in the same workspace see the same rounds. Draft rounds stay hidden. Each expanded case in an Open round shows **Record result** if you have no result for its current build, **Continue draft** for your saved draft, or **View result** for your submitted result; these match "Not recorded", "Draft" and "Submitted" in the case summary and the counts on **Tester home**. These actions, statuses and counts reflect only your own results. After a retest, a retested case shows "Your result: Not recorded" until you record a result for its new build. A Closed round remains available as read-only reference; after the coordinator closes it, reload to see "State: Closed" and "(Closed)" under **Closed tests**, with the counts, the "Your result" statuses and the result-entry links removed.
 
 If the tests cannot load, try again later; see [Error pages](#error-pages). Opening a Draft, missing or another workspace's round shows "Page not found."
 
@@ -306,7 +308,7 @@ With JavaScript enabled, the request disables **Suggest missing details** and sh
 
 An empty reply says "No missing details were suggested. You can still edit your result yourself." If the source is too long, the page says "This observation and test case are too long for feedback. You can still edit your result yourself." When feedback cannot run, the page says why, with the same meanings as the [drafting messages](#draft-test-cases-with-ai): "The AI service is busy. Try again in a minute. You can still edit your result yourself.", "You have used your AI allowance for this hour. Try again later. You can still edit your result yourself.", "The shared AI allowance is used up for now. Try again later. You can still edit your result yourself." or "AI feedback is not set up on this deployment. You can still edit your result yourself." Any other AI-service problem, or a reply that cannot be used, gives "Feedback is unavailable right now. You can still edit your result yourself." Choose **Back to result** to return to your result; editing follows the [same round, build and submission rules](#save-and-submit-a-result).
 
-Questions are not saved. Opening the feedback page again clears them; resubmitting its request asks for new feedback. If Relay detects a change to the saved source during a request, the page says "Your saved draft or test case changed. Reload before requesting feedback." Opening the feedback address directly without a saved draft says "Save a draft before requesting feedback." Submission, a newer build or a closed round prevents feedback with the same messages described under [Save and submit a result](#save-and-submit-a-result).
+Questions are not saved. Opening the feedback page again clears them; resubmitting its request asks for new feedback. If Relay detects a change to the saved source during a request, the page says "Your saved draft or test case changed. Reload before requesting feedback." Opening the feedback address directly without a saved draft says "Save a draft before requesting feedback." Submission, a newer build or a closed round prevents feedback with the same messages described under [Save and submit a result](#save-and-submit-a-result). Each of these feedback refusals, including the changed-source and missing-draft messages, has **Tester home** and **Back to round** above its message; **Back to round** opens the round's current details.
 
 ## Review my results
 
@@ -320,7 +322,7 @@ Only your own results appear. This page is read-only, including drafts. Reload t
 
 ## Error pages
 
-Common error pages include the messages below. Result-entry refusals also include the navigation described under [Save and submit a result](#save-and-submit-a-result).
+Common error pages include the messages below. The access, not-found, too-many and unavailable pages have a **Back to home** link above their message; it opens the start page, or your home page when you are signed in. Refusals on a page titled **Action not available** have your home link and **Back to round** above their message, as described under [Test rounds](#test-rounds), [Save and submit a result](#save-and-submit-a-result) and [Observation feedback](#observation-feedback).
 
 | Message | When |
 | --- | --- |

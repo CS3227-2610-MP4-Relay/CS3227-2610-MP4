@@ -10,6 +10,7 @@ from django.db import DatabaseError, transaction
 from django.db.models import Prefetch
 from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 
@@ -59,12 +60,13 @@ def own_round(request, round_id, *, lock=False):
 
 
 def state_conflict(request, round_):
-    """Refuse an action the round's state does not allow."""
-    return conflict_page(request, results.state_message(round_))
+    """Refuse an action the authorized round's state does not allow (PLT-4.15)."""
+    back = reverse("rounds:detail", args=[round_.pk])
+    return conflict_page(request, results.state_message(round_), back=back)
 
 
-def conflict_page(request, message, *, back=None):
-    """Render a fixed-text 409, optionally linking back to an authorized page."""
+def conflict_page(request, message, *, back):
+    """Render a fixed-text 409 with home and back links to an authorized page."""
     return render(
         request, "rounds/conflict.html", {"message": message, "back": back}, status=409
     )
@@ -328,8 +330,7 @@ def results_page(request, round_id):
         return state_conflict(request, round_)
     cases = results.cases_with_current_build(round_)
     submitted = (
-        results.covered_results(round_)
-        .filter(submitted_at__isnull=False, tester__workspace=round_.workspace_id)
+        results.listed_results(round_)
         .select_related("tester", "build")
         .order_by("-build_id", "-submitted_at", "-id")
     )

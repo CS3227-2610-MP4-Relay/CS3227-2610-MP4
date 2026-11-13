@@ -18,7 +18,7 @@ Everything else is in [`agent-setups.zip`](agent-setups.zip), kept compressed so
 - per-run results and planted-bug specs;
 - the setup packages v1 to v8.
 
-The experiment paths in logs 022 and 023 (`harness/`, `results/`, `ideal/`) are inside the archive's `agent-setups/` folder.
+The experiment paths in logs [022](../../logs/zheng-jj/022-compare-agent-setups-and-tune-an-ideal-one.md) and [023](../../logs/zheng-jj/023-extend-the-agent-setups-experiment-to-four-tasks.md) (`harness/`, `results/`, `ideal/`) are inside the archive's `agent-setups/` folder.
 
 Unzip it outside the repository:
 

@@ -10,7 +10,7 @@
 <section id="test-cases"><h2>Test cases</h2>
 {% for case in cases %}
 <details class="record"{% if forloop.first %} open{% endif %}><summary><h3>{{ case.title|isolated_lines }}</h3>
-{% if case.current_build %}<span class="record-meta"><span>Current build</span> {{ case.current_build.label|isolated_lines }}</span>{% endif %}</summary>
+{% if case.current_build %}<span class="record-meta"><span>Current build</span> {{ case.current_build.label|isolated_lines }}</span>{% endif %}{% if round.state == "open" and case.current_build %}<span class="record-meta">Your result: {{ case.result_status }}</span>{% endif %}</summary>
 <div class="record-body" id="case-{{ case.pk }}">
 <h4>Steps</h4>
 <p>{{ case.steps|isolated_lines }}</p>

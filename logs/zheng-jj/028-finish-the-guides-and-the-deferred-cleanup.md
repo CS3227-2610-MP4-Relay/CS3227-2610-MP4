@@ -102,7 +102,7 @@ The cutoff is 05:16 UTC, so this log, the last PR updates and CI waits are not c
   - **Refusals:** 429 refusals filtered out, to keep the #59 decision.
   - **Release gate:** 60 s.
   - **Label order:** the specs follow the templates.
-  - **PLT-2.6:** left untagged, honouring log 009.
+  - **PLT-2.6:** left untagged, honouring [Whimsyturtle log 009](../Whimsyturtle/009-prepare-checked-product-site-publication.md).
   - **Workflow controls:** the Windows Codex command fails closed too.
 - **Correction (the orchestrator's error).** The orchestrator's brief called the gateway design "implemented and confirmed". The verifier found no record of confirmation, so the spec now states that it is still pending. The sweep plan, frozen since #125 merged, repeats the error at item 4.
 - **#67 closure.** #67 was closed on its own rule while three follow-up PRs were still open. The orchestrator offered to reopen it; the user said "whatever, keep working".

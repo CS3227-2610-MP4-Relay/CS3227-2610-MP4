@@ -1,6 +1,7 @@
 """Saved-observation feedback followed by explicit manual editing (RES-4)."""
 
 import json
+import re
 from unittest import mock
 
 import pytest
@@ -608,7 +609,7 @@ def test_empty_or_invalid_feedback_keeps_saved_source_and_manual_editing(
     accounts["expected"] = ("fail", EDITED, False)
 
 
-@pytest.mark.ac("RES-2.1", "RES-2.5", "RES-4.5")
+@pytest.mark.ac("RES-2.1", "RES-2.5", "RES-4.5", "PLT-4.16")
 def test_stale_feedback_tab_after_submission_refuses_without_gateway_call(
     page, browser_accounts
 ):
@@ -646,6 +647,22 @@ def test_stale_feedback_tab_after_submission_refuses_without_gateway_call(
             ).to_be_visible()
             expect(feedback.get_by_text(QUESTION, exact=True)).to_have_count(0)
             complete.assert_not_called()
+        round_path = accounts["entry"].split("cases/")[0]
+        navigation = feedback.get_by_role(
+            "navigation", name="Page navigation", exact=True
+        )
+        for label in ("Tester home", "Back to round"):
+            expect(feedback.get_by_role("link", name=label, exact=True)).to_have_count(
+                1
+            )
+            expect(
+                navigation.get_by_role("link", name=label, exact=True)
+            ).to_be_visible()
+        feedback.get_by_role("link", name="Back to round", exact=True).click()
+        expect(feedback).to_have_url(re.compile(re.escape(round_path) + "$"))
+        expect(
+            feedback.get_by_role("heading", name="Synthetic feedback round", exact=True)
+        ).to_be_visible()
         page.reload()
         expect(page.get_by_text("Status: Submitted", exact=True)).to_be_visible()
         expect(page.get_by_text(ORIGINAL, exact=True)).to_be_visible()

@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.db.models import Count
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
@@ -17,6 +18,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from rounds import results
 from rounds.models import Round
 
 from . import demo, limits, testers
@@ -99,14 +101,33 @@ def sign_out(request):
 @never_cache
 @require_GET
 def coordinator_home(request):
-    """Show the coordinator's rounds; others are redirected or refused."""
+    """Show the coordinator's rounds and workspace overview (RND-1).
+
+    Others are redirected or refused. Every count is read before rendering.
+    """
     if not request.user.is_authenticated:
         return redirect("accounts:sign-in")
     if request.user.role != User.Role.COORDINATOR:
         raise PermissionDenied
+    # Meta.ordering does not apply to an aggregate query, so it is restated.
+    rounds = list(
+        workspace_records(request.user, Round)
+        .annotate(case_count=Count("cases"))
+        .order_by(*Round._meta.ordering)
+    )
+    for round_ in rounds:
+        if round_.state == Round.State.OPEN:
+            round_.covered = results.current_build_coverage(round_)
     context = {
         "title": "Coordinator home",
-        "rounds": workspace_records(request.user, Round),
+        "rounds": rounds,
+        "states": {
+            state: sum(round_.state == state for round_ in rounds)
+            for state in Round.State.values
+        },
+        "tester_count": workspace_records(request.user, User)
+        .filter(role=User.Role.TESTER)
+        .count(),
     }
     return render(request, "rounds/coordinator_home.html", context)
 

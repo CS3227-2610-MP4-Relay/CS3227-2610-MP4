@@ -51,6 +51,31 @@ def retest_message(count, label):
 
 
 @register.filter
+def case_count(count):
+    """A Draft round's overview line on the Coordinator home (RND-1)."""
+    return "1 test case" if count == 1 else f"{count} test cases"
+
+
+@register.simple_tag
+def coverage_line(covered, total):
+    """An Open round's current-build coverage on the Coordinator home (RND-1)."""
+    noun = "test case" if total == 1 else "test cases"
+    verb, owner = ("has", "its") if covered == 1 else ("have", "their")
+    return (
+        f"{covered} of {total} {noun} {verb} a submitted result for {owner} "
+        "current build."
+    )
+
+
+@register.filter
+def progress_line(counts):
+    """A tester's Open round counts on Tester home (RES-1.9)."""
+    to_record, drafts, submitted = counts
+    noun = "draft" if drafts == 1 else "drafts"
+    return f"{to_record} to record · {drafts} {noun} · {submitted} submitted"
+
+
+@register.filter
 def status_message(message):
     """Show a message escaped, isolating a retest message's label by line.
 

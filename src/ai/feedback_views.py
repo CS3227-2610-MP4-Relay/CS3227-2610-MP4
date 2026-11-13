@@ -4,6 +4,7 @@ import logging
 
 from django.db import DatabaseError, connection
 from django.shortcuts import render
+from django.urls import reverse
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 
 from rounds import results
@@ -94,4 +95,5 @@ def feedback_page(request, round_id, case_id, build_id):
             },
         )
     except results.Conflict as conflict:
-        return conflict_page(request, str(conflict))
+        back = reverse("accounts:tester-round", args=[round_id])
+        return conflict_page(request, str(conflict), back=back)
