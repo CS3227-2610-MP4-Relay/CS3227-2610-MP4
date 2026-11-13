@@ -26,7 +26,7 @@ Each code checkpoint runs focused server and browser tests red then green; check
 
 - Deferred: persistent navigation bar across pages (human decision, #183).
 - TECHNICAL-SPEC rounds routes say rounds' "403 and 404 pages show fixed text only"; a static link keeps them fixed content, so no change is planned.
-- Checkpoint 1 committed as bd8e323. Next: coordinator commits checkpoint 2, then assigns checkpoint 3.
+- Checkpoints 1–4 committed as bd8e323, 639acf0, 274f19c and 207e6a8. Next: the coordinator commits checkpoint 5, runs full verification (`ruff check . && ruff format --check . && pytest`), then the verifier reviews the fixed candidate.
 
 ## Implementation evidence
 
@@ -48,3 +48,6 @@ Each code checkpoint runs focused server and browser tests red then green; check
   - `pytest -q src/accounts src/relay/tests/test_access_matrix.py` → 1052 passed in 251.76s.
   - No existing link-position expectation existed; the existing link assertions hold unchanged.
   - Screenshots `docs/images/beta-tester-added.png` and `beta-tester-passwords.png` (from `src/e2e/screenshots.py::account_management`) show these pages with the old bottom link; recapture them in the docs checkpoint.
+- Checkpoint 5 (docs, via maintain-docs):
+  - `docs/UserGuide.md`: the browser-Back advice is replaced by the 503 page's **Back to home**. The guide now describes the round 409's **Coordinator home**/**Back to round**, the feedback refusals' **Tester home**/**Back to round**, and **Back to home** on the 403/404/429/503 pages in the Error pages intro. The tester-account steps and two alt texts now place the links above the heading. Each statement was checked against the templates and views; anchors `#test-rounds`, `#save-and-submit-a-result`, `#observation-feedback` and `#sign-in` exist.
+  - Screenshots: `docs/images/coordinator-home.png` was copied aside, then `pytest src/e2e/screenshots.py::test_account_management_screenshots` (private database) → 1 passed in 12.56s, and the copy was restored with a plain file copy. Its hash matches the original. `beta-tester-added.png` and `beta-tester-passwords.png` were recaptured at 1280×800, the same size as before, and both show Coordinator home above the heading. No other `docs/images` file changed. The Developer Guide is unchanged; no setup or design statement changed.
