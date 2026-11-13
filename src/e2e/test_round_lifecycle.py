@@ -178,7 +178,7 @@ def test_coordinator_edits_retests_twice_and_closes_round(page, browser_accounts
         page.get_by_role("listitem").filter(
             has=page.get_by_role("link", name=REVISED_TITLE, exact=True)
         )
-    ).to_have_text(f"{REVISED_TITLE} (Draft)")
+    ).to_have_text(f"{REVISED_TITLE} (Draft) 2 test cases", use_inner_text=True)
     expect(page.get_by_role("link", name=TITLE, exact=True)).to_have_count(0)
     page.get_by_role("link", name=REVISED_TITLE, exact=True).click()
 

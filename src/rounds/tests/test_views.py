@@ -103,7 +103,8 @@ def test_creating_a_round_opens_its_draft_round_page(coord_client, coordinator):
     home = page(coord_client.get("/coordinator/"))
     assert (
         f'<li><a href="{detail(made.pk)}"><span dir="auto">'
-        "Synthetic checkout round</span></a> (Draft)</li>"
+        "Synthetic checkout round</span></a> (Draft)"
+        '<p class="round-overview">0 test cases</p></li>'
     ) in home
 
 
@@ -118,7 +119,10 @@ def test_coordinator_home_lists_own_rounds_newest_first_with_state(
     html = page(coord_client.get("/coordinator/"))
     assert "<h2>Rounds</h2>" in html
     assert '<a class="action" href="/coordinator/rounds/new/">New round</a>' in html
-    item = r'<li><a href="([^"]+)"><span dir="auto">([^<]+)</span></a> \((\w+)\)</li>'
+    item = (
+        r'<li><a href="([^"]+)"><span dir="auto">([^<]+)</span></a> \((\w+)\)'
+        r'(?:<p class="round-overview">.*?</p>)?</li>'
+    )
     items = re.findall(item, html)
     assert items == [
         (detail(newest.pk), "Synthetic newest", "Draft"),

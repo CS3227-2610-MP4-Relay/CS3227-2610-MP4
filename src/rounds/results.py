@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import F, Prefetch, Q
+from django.db.models import F, OuterRef, Prefetch, Q, Subquery
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
@@ -56,6 +56,33 @@ def covered_results(round_):
     """Return results whose case and build are in the round, the build covering it."""
     return Result.objects.filter(
         case__round=round_, build__round=round_, build__cases=F("case_id")
+    )
+
+
+def listed_results(round_):
+    """Return the submitted results RND-4 lists: covered, by its workspace's users."""
+    return covered_results(round_).filter(
+        submitted_at__isnull=False, tester__workspace=round_.workspace_id
+    )
+
+
+def current_build_coverage(round_):
+    """Count the round's cases with a listed result for their current build (RND-1).
+
+    A case's current build is its newest covering build in the round, as in
+    `cases_with_current_build`; one query, whatever the case or result count.
+    """
+    newest = (
+        Build.objects.filter(round=round_, cases=OuterRef("case_id"))
+        .order_by("-id")
+        .values("id")[:1]
+    )
+    return (
+        listed_results(round_)
+        .filter(build_id=Subquery(newest))
+        .values("case_id")
+        .distinct()
+        .count()
     )
 
 
