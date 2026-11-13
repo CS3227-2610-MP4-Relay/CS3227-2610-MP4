@@ -67,4 +67,3 @@ Seven delegated runs: one builder session, resumed for each checkpoint, and thre
 - The coordinator sent the repair round 1 step 2 resume in the same tool batch as the spec commit. The snapshot taken after that commit shows HEAD `8e8efb2`, so the builder's edits were checked against it.
 - During the slice, the parent checkout was switched to another branch by a concurrent session. All work stayed in the worktree.
 - No hosted AI call was made, so production AI behaviour remains unconfirmed.
-- On this branch, `python workflow/scripts/check_logs.py` reports one finding: no Whimsyturtle logs 059 and 060. The human assigned number 061 for this log; this log does not say where 059 and 060 are.
