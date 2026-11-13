@@ -50,9 +50,9 @@ INSTRUCTIONS = (
     "text around the JSON object."
 )
 
-UNAVAILABLE = (
-    "Drafting is unavailable right now. You can still add test cases yourself."
-)
+MANUAL = "You can still add test cases yourself."
+UNAVAILABLE = f"Drafting is unavailable right now. {MANUAL}"
+NOT_SET_UP = f"AI drafting is not set up on this deployment. {MANUAL}"
 NO_DRAFTS = (
     "No test cases were suggested for these criteria. You can still add test "
     "cases yourself."

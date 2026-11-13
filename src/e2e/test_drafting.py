@@ -7,7 +7,7 @@ import pytest
 from playwright.sync_api import expect
 
 from accounts.models import Workspace
-from ai.gateway import Success
+from ai.gateway import Refused, Success
 from e2e.pending import assert_pending_submit
 from e2e.sessions import sign_in
 from rounds.models import Case, Criterion, Round
@@ -258,8 +258,30 @@ def test_adopting_a_draft_and_submitting_unchanged_saves_it(page, browser_accoun
     accounts["submitted"] = True
 
 
-@pytest.mark.ac("RND-8.1", "RND-8.4", "RND-8.5")
-@pytest.mark.parametrize("kind", ["empty", "invalid-mixed"])
+OUTCOMES = {
+    "empty": (
+        Success(json.dumps({"drafts": []})),
+        (
+            "No test cases were suggested for these criteria. "
+            "You can still add test cases yourself."
+        ),
+    ),
+    "invalid-mixed": (
+        Success(json.dumps({"drafts": [DRAFT, {"title": "Synthetic invalid draft"}]})),
+        "Drafting is unavailable right now. You can still add test cases yourself.",
+    ),
+    "busy": (
+        Refused("busy"),
+        (
+            "The AI service is busy. Try again in a minute. "
+            "You can still add test cases yourself."
+        ),
+    ),
+}
+
+
+@pytest.mark.ac("RND-8.1", "RND-8.4", "RND-8.5", "RND-8.10")
+@pytest.mark.parametrize("kind", list(OUTCOMES))
 def test_drafting_reply_without_usable_suggestions_keeps_manual_flow(
     page, browser_accounts, kind
 ):
@@ -268,17 +290,8 @@ def test_drafting_reply_without_usable_suggestions_keeps_manual_flow(
     page.goto(accounts["round_url"])
     source = page.locator("#acceptance-criteria").text_content()
     open_drafting(page, accounts)
-    drafts = [] if kind == "empty" else [DRAFT, {"title": "Synthetic invalid draft"}]
-    message = (
-        "No test cases were suggested for these criteria. "
-        "You can still add test cases yourself."
-        if kind == "empty"
-        else "Drafting is unavailable right now. You can still add test cases yourself."
-    )
-    with mock.patch(
-        "ai.views.gateway.complete",
-        return_value=Success(json.dumps({"drafts": drafts})),
-    ) as gateway:
+    result, message = OUTCOMES[kind]
+    with mock.patch("ai.views.gateway.complete", return_value=result) as gateway:
         with page.expect_response(
             lambda response: response.request.method == "POST"
         ) as response:
