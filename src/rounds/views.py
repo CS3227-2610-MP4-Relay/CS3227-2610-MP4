@@ -10,6 +10,7 @@ from django.db import DatabaseError, transaction
 from django.db.models import Prefetch
 from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 
@@ -59,8 +60,9 @@ def own_round(request, round_id, *, lock=False):
 
 
 def state_conflict(request, round_):
-    """Refuse an action the round's state does not allow."""
-    return conflict_page(request, results.state_message(round_))
+    """Refuse an action the authorized round's state does not allow (PLT-4.15)."""
+    back = reverse("rounds:detail", args=[round_.pk])
+    return conflict_page(request, results.state_message(round_), back=back)
 
 
 def conflict_page(request, message, *, back=None):

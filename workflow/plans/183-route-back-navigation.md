@@ -26,4 +26,14 @@ Each code checkpoint runs focused server and browser tests red then green; check
 
 - Deferred: persistent navigation bar across pages (human decision, #183).
 - TECHNICAL-SPEC rounds routes say rounds' "403 and 404 pages show fixed text only"; a static link keeps them fixed content, so no change is planned.
-- Next: coordinator commits checkpoint 1, then assigns checkpoint 2.
+- Checkpoint 1 committed as bd8e323. Next: coordinator commits checkpoint 2, then assigns checkpoint 3.
+
+## Implementation evidence
+
+- Checkpoint 2 (Git Bash, root `.venv`, `--basetemp` in the session scratchpad because the default pytest temp directory was access-denied):
+  - Red before production edits: `pytest -q src/rounds/tests/test_conflict_navigation.py src/ai/tests/test_feedback_views.py -k "conflict or eligibility or foreign or changes_during"` → 55 failed, 7 passed. Every failure was the missing "Coordinator home" (33) or "Tester home" (22) link; status, title, message and no-store assertions before it passed. The 7 passes are the foreign-workspace 404 cases, which already held.
+  - Browser red: `test_round_lifecycle.py::test_coordinator_edits_retests_twice_and_closes_round` and `test_feedback.py::test_stale_feedback_tab_after_submission_refuses_without_gateway_call` → 2 failed on zero home links.
+  - Green: the same server selection → 62 passed; `pytest -q src/rounds/tests src/ai/tests` → 1711 passed in 151.76s.
+  - Browser green: `src/e2e/test_round_lifecycle.py` → 2 passed in 20.32s, run alone. The four tests `test_coordinator_edits_retests_twice_and_closes_round`, `test_native_validation_and_observation_limits_preserve_saved_draft`, `test_tester_result_and_feedback_long_content` and `test_stale_feedback_tab_after_submission_refuses_without_gateway_call` → 5 passed, 1 failed; the failure was the lifecycle test timing out on a navigation before any conflict, and that file then passed alone. Two wider runs of six browser files (78 passed/3 failed and 64 passed/14 failed/5 errors) overlapped other sessions' pytest runs on the shared `test_relay_test` database, which logged "database does not exist" and "accessed by other users". Rerun with exclusive database use before relying on them.
+  - Coordinator rerun, 00:32–00:42 UTC, on a private test database (scratchpad settings module importing `relay.settings.test` and renaming only `TEST.NAME` to `test_relay_183`, `--ds=slice183_settings`): `pytest -q src/e2e/test_round_lifecycle.py src/e2e/test_feedback.py src/e2e/test_results.py src/e2e/test_presentation.py src/e2e/test_navigation.py src/e2e/test_drafting.py` → 81 passed in 590.06s. The contended failures above were database collisions.
+- `test_shared_conflict_without_entry_context_keeps_existing_actions` is unchanged and still passes: it covers the renderer's default without `back`, which no production caller now uses.

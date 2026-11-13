@@ -138,6 +138,17 @@ def page(response):
     return response.content.decode()
 
 
+def assert_conflict_links(response, *links):
+    """A conflict page offers each (label, URL) link once, before its error."""
+    body = page(response)
+    error = body.index('<div class="error">')
+    for label, destination in links:
+        link = f'<a class="action secondary" href="{destination}">{label}</a>'
+        assert body.count(link) == 1 and body.count(f">{label}</a>") == 1
+        assert body.index(link) < error
+    assert "<form" not in body
+
+
 def signed_in(user, **kwargs):
     """A test client signed in as `user`."""
     client = Client(**kwargs)
