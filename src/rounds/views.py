@@ -65,8 +65,8 @@ def state_conflict(request, round_):
     return conflict_page(request, results.state_message(round_), back=back)
 
 
-def conflict_page(request, message, *, back=None):
-    """Render a fixed-text 409, optionally linking back to an authorized page."""
+def conflict_page(request, message, *, back):
+    """Render a fixed-text 409 with home and back links to an authorized page."""
     return render(
         request, "rounds/conflict.html", {"message": message, "back": back}, status=409
     )

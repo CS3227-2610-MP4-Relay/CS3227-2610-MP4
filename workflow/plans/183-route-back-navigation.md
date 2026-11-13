@@ -26,7 +26,7 @@ Each code checkpoint runs focused server and browser tests red then green; check
 
 - Deferred: persistent navigation bar across pages (human decision, #183).
 - TECHNICAL-SPEC rounds routes say rounds' "403 and 404 pages show fixed text only"; a static link keeps them fixed content, so no change is planned.
-- Checkpoints 1–4 committed as bd8e323, 639acf0, 274f19c and 207e6a8. Next: the coordinator commits checkpoint 5, runs full verification (`ruff check . && ruff format --check . && pytest`), then the verifier reviews the fixed candidate.
+- Checkpoints 1–5 committed as bd8e323, 639acf0, 274f19c, 207e6a8 and 69bab71. Next: the coordinator commits repair round 1 (a `spec:` commit for platform.md/accounts.md and a `refactor:` commit for code/tests), runs full verification on the frozen repaired candidate, then completes the review.
 
 ## Implementation evidence
 
@@ -51,3 +51,17 @@ Each code checkpoint runs focused server and browser tests red then green; check
 - Checkpoint 5 (docs, via maintain-docs):
   - `docs/UserGuide.md`: the browser-Back advice is replaced by the 503 page's **Back to home**. The guide now describes the round 409's **Coordinator home**/**Back to round**, the feedback refusals' **Tester home**/**Back to round**, and **Back to home** on the 403/404/429/503 pages in the Error pages intro. The tester-account steps and two alt texts now place the links above the heading. Each statement was checked against the templates and views; anchors `#test-rounds`, `#save-and-submit-a-result`, `#observation-feedback` and `#sign-in` exist.
   - Screenshots: `docs/images/coordinator-home.png` was copied aside, then `pytest src/e2e/screenshots.py::test_account_management_screenshots` (private database) → 1 passed in 12.56s, and the copy was restored with a plain file copy. Its hash matches the original. `beta-tester-added.png` and `beta-tester-passwords.png` were recaptured at 1280×800, the same size as before, and both show Coordinator home above the heading. No other `docs/images` file changed. The Developer Guide is unchanged; no setup or design statement changed.
+
+## Review and repair
+
+- Full verification on 69bab71 (coordinator, private test database): ruff passed; pytest 3287 passed, 5 skipped, 1 failed. The failure is `test_database.py::test_postgresql_synthetic_roundtrip`, which asserts the default test database name. Hosted CI on 69bab71 succeeded.
+- The independent verifier ran on candidate 69bab71 and reported findings 1–10, all Low or Info, with no Critical, High or Medium defects.
+- Repair round 1 takes findings 1, 2, 6, 3 and 4:
+  - Spec: ACC-5's passwords and reset prose now say their links precede the heading and link to PLT-4.18, without restating the order.
+  - Spec: PLT-4.7's exception range now reads PLT-4.14–PLT-4.18.
+  - Spec: PLT-4.16 now states that "Tester home" opens the tester home page.
+  - Code: `conflict_page` now requires `back`, and `conflict.html` always includes the navigation; the no-`back` path had become unreachable.
+  - Tests: the PLT-4.14 entry tests use the shared `assert_conflict_links`. That helper keeps the old checks (each link once, before the error, no form) and adds label counts and a single navigation. The duplicate `assert_conflict_navigation` is deleted.
+- Removed test: `src/rounds/tests/test_results.py::test_shared_conflict_without_entry_context_keeps_existing_actions`. It asserted that a conflict page without `back` shows no navigation. That default was removed by the changed PLT-4.14 clause and by PLT-4.15/4.16, so this is a changed criterion, not a weakened test.
+- Not taken: finding 5, an optional CSRF query-count test, because the direct zero-query render test already proves the property. Findings 8–10 are informational.
+- Repair round 1 checks (private test database): `pytest -q src/rounds/tests src/ai/tests src/relay/tests/test_error_pages.py` → 1724 passed in 110.29s. `pytest -q src/e2e/test_round_lifecycle.py src/e2e/test_feedback.py src/e2e/test_results.py src/e2e/test_presentation.py` → 64 passed in 364.47s. `ruff check . && ruff format --check .` → passed, 154 files formatted. An earlier run collected the first helper name, `tester_round_links`, as a test because of its `test` prefix; it was renamed to `entry_links`. Another early run overlapped a builder rerun on the same private database, so both were superseded by the results above.
