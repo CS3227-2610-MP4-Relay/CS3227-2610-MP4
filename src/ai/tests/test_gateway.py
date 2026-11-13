@@ -44,6 +44,7 @@ def test_input_over_limit_is_refused_before_a_call(user):
     assert fake.calls == []
 
 
+@pytest.mark.ac("RND-8.10", "RES-4.10")
 def test_second_call_in_flight_is_refused_for_the_same_user(user):
     holder = CallSlot.objects.create(
         scope=gateway.USER_SCOPE,
@@ -51,7 +52,7 @@ def test_second_call_in_flight_is_refused_for_the_same_user(user):
         expires_at=gateway.timezone.now() + gateway.timedelta(minutes=1),
     )
     fake = FakeProvider(Success("{}"))
-    assert complete(user, "", "{}", provider=fake) == Refused("busy-or-quota")
+    assert complete(user, "", "{}", provider=fake) == Refused("busy")
     assert fake.calls == []
     holder.delete()
 
@@ -65,7 +66,7 @@ def test_expired_slot_does_not_block(user):
     assert complete(user, "", "{}", provider=FakeProvider(Success("{}"))).text == "{}"
 
 
-@pytest.mark.ac("RND-8.4")
+@pytest.mark.ac("RND-8.10", "RES-4.10")
 def test_user_quota_counts_failures(user):
     CallRecord.objects.bulk_create(
         CallRecord(
@@ -79,7 +80,7 @@ def test_user_quota_counts_failures(user):
     assert complete(user, "", "{}", provider=failing) == Failed("transport")
     assert len(failing.calls) == 1
     fake = FakeProvider(Success("{}"))
-    assert complete(user, "", "{}", provider=fake) == Refused("busy-or-quota")
+    assert complete(user, "", "{}", provider=fake) == Refused("user-quota")
     assert fake.calls == []
 
 
@@ -102,7 +103,7 @@ def test_rolling_quota_expires_individual_calls(user):
     assert CallRecord.objects.filter(scope=gateway.USER_CALLS_SCOPE).count() == 1
 
 
-@pytest.mark.ac("RND-8.4")
+@pytest.mark.ac("RND-8.4", "RND-8.10", "RES-4.10")
 @pytest.mark.parametrize(
     "scope", [gateway.USER_CALLS_SCOPE, gateway.DEPLOYMENT_CALLS_SCOPE]
 )
@@ -124,7 +125,8 @@ def test_rolling_quota_cutoff_for_each_scope(user, monkeypatch, scope, offset):
     )
     fake = FakeProvider(Success("{}"))
     allowed = offset <= 0
-    expected = Success("{}") if allowed else Refused("busy-or-quota")
+    refusal = Refused("user-quota" if is_user else "deployment-quota")
+    expected = Success("{}") if allowed else refusal
     assert complete(user, "", "{}", provider=fake) == expected
     assert len(fake.calls) == int(allowed)
     assert CallRecord.objects.filter(pk=boundary.pk).exists() is not allowed
@@ -136,7 +138,7 @@ def test_rolling_quota_cutoff_for_each_scope(user, monkeypatch, scope, offset):
     assert not CallSlot.objects.filter(expires_at__gt=now).exists()
 
 
-@pytest.mark.ac("RND-8.4")
+@pytest.mark.ac("RND-8.10", "RES-4.10")
 @pytest.mark.parametrize(
     "scope", [gateway.USER_CALLS_SCOPE, gateway.DEPLOYMENT_CALLS_SCOPE]
 )
@@ -166,7 +168,8 @@ def test_quota_refusal_rolls_back_accounting_and_slots(user, monkeypatch, scope)
     records_before = list(CallRecord.objects.order_by("pk").values())
     slots_before = list(CallSlot.objects.order_by("pk").values())
     fake = FakeProvider(Success("{}"))
-    assert complete(user, "", "{}", provider=fake) == Refused("busy-or-quota")
+    expected = Refused("user-quota" if is_user else "deployment-quota")
+    assert complete(user, "", "{}", provider=fake) == expected
     assert fake.calls == []
     assert list(CallRecord.objects.order_by("pk").values()) == records_before
     assert list(CallSlot.objects.order_by("pk").values()) == slots_before
@@ -250,7 +253,10 @@ def test_invalid_provider_code_never_reaches_result_or_logs(
     [
         Refused("live-off"),
         Refused("input-too-large"),
-        Refused("busy-or-quota"),
+        Refused("busy"),
+        Refused("slots-missing"),
+        Refused("user-quota"),
+        Refused("deployment-quota"),
         Refused("not-configured"),
         Refused("provider-refused"),
         Refused("quota"),
@@ -906,7 +912,7 @@ def test_provider_exception_metrics(user, error):
 
 
 @pytest.mark.ac("PLT-3.4")
-@pytest.mark.parametrize("reason", ["live-off", "input-too-large", "busy-or-quota"])
+@pytest.mark.parametrize("reason", ["live-off", "input-too-large", "busy"])
 def test_early_refusals_create_no_metrics(user, reason, settings, monkeypatch):
     fake = FakeProvider(Success("ok"))
     provider, instructions = fake, ""
@@ -1033,13 +1039,13 @@ def deployment_records(count):
     )
 
 
-@pytest.mark.ac("RND-8.4")
+@pytest.mark.ac("RND-8.10", "RES-4.10")
 def test_a_third_call_in_flight_is_refused_deployment_wide(user):
     CallSlot.objects.filter(scope=gateway.DEPLOYMENT_SCOPE).update(
         expires_at=gateway.timezone.now() + gateway.timedelta(minutes=1)
     )
     fake = FakeProvider(Success("{}"))
-    assert complete(user, "", "{}", provider=fake) == Refused("busy-or-quota")
+    assert complete(user, "", "{}", provider=fake) == Refused("busy")
     assert fake.calls == []
 
 
@@ -1052,18 +1058,86 @@ def test_one_free_deployment_slot_is_enough(user):
     )
 
 
-@pytest.mark.ac("RND-8.4")
+@pytest.mark.ac("RND-8.4", "RND-8.10", "RES-4.10")
 @pytest.mark.parametrize(
     ("existing", "expected"),
     [
         (gateway.DEPLOYMENT_CALLS - 1, Success("{}")),
-        (gateway.DEPLOYMENT_CALLS, Refused("busy-or-quota")),
+        (gateway.DEPLOYMENT_CALLS, Refused("deployment-quota")),
     ],
     ids=["just-below", "at-limit"],
 )
 def test_deployment_quota_boundary(user, existing, expected):
     deployment_records(existing)
     assert complete(user, "", "{}", provider=FakeProvider(Success("{}"))) == expected
+
+
+def user_records(user, count):
+    CallRecord.objects.bulk_create(
+        CallRecord(
+            scope=gateway.USER_CALLS_SCOPE,
+            key=str(user.pk),
+            created_at=gateway.timezone.now(),
+        )
+        for _ in range(count)
+    )
+
+
+def hold(**filters):
+    CallSlot.objects.filter(**filters).update(
+        expires_at=gateway.timezone.now() + gateway.timedelta(minutes=1)
+    )
+
+
+@pytest.mark.ac("RND-8.10", "RES-4.10")
+@pytest.mark.parametrize(
+    ("setup", "code"),
+    [
+        pytest.param(["user-quota", "deployment-quota"], "user-quota", id="quotas"),
+        pytest.param(["deployment-busy", "user-quota"], "busy", id="free-slot"),
+        pytest.param(["slots-missing", "deployment-busy"], "slots-missing", id="rows"),
+        pytest.param(["user-busy", "slots-missing"], "busy", id="user-slot"),
+    ],
+)
+def test_reservation_refusals_follow_check_order(user, setup, code):
+    CallSlot.objects.get_or_create(
+        scope=gateway.USER_SCOPE,
+        key=str(user.pk),
+        defaults={"expires_at": gateway.timezone.now()},
+    )
+    if "user-quota" in setup:
+        user_records(user, gateway.USER_CALLS)
+    if "deployment-quota" in setup:
+        deployment_records(gateway.DEPLOYMENT_CALLS)
+    if "deployment-busy" in setup:
+        hold(scope=gateway.DEPLOYMENT_SCOPE)
+    if "slots-missing" in setup:
+        CallSlot.objects.filter(scope=gateway.DEPLOYMENT_SCOPE, key="1").delete()
+    if "user-busy" in setup:
+        hold(scope=gateway.USER_SCOPE, key=str(user.pk))
+    records_before = list(CallRecord.objects.order_by("pk").values())
+    slots_before = list(CallSlot.objects.order_by("pk").values())
+    fake = FakeProvider(Success("{}"))
+    assert complete(user, "", "{}", provider=fake) == Refused(code)
+    assert fake.calls == []
+    assert list(CallRecord.objects.order_by("pk").values()) == records_before
+    assert list(CallSlot.objects.order_by("pk").values()) == slots_before
+
+
+@pytest.mark.parametrize("change", ["missing", "extra"])
+def test_wrong_number_of_deployment_slots_is_a_fixed_refusal(user, change):
+    if change == "missing":
+        CallSlot.objects.filter(scope=gateway.DEPLOYMENT_SCOPE, key="1").delete()
+    else:
+        CallSlot.objects.create(
+            scope=gateway.DEPLOYMENT_SCOPE,
+            key="2",
+            expires_at=gateway.timezone.now(),
+        )
+    fake = FakeProvider(Success("{}"))
+    assert complete(user, "", "{}", provider=fake) == Refused("slots-missing")
+    assert fake.calls == []
+    assert not CallRecord.objects.exists()
 
 
 class SlowProvider:
