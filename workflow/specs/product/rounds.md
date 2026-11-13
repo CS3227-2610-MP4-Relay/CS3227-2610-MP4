@@ -150,6 +150,6 @@ While Draft, the round page has a "Draft test cases with AI" link directly after
   - this coordinator's own hourly AI allowance is used (including when the shared one is also used): "You have used your AI allowance for this hour. Try again later. You can still add test cases yourself."
   - the deployment's shared hourly AI allowance is used, or the AI service reports its quota is exceeded: "The shared AI allowance is used up for now. Try again later. You can still add test cases yourself."
   - live AI calls are switched off or the AI service is not configured: "AI drafting is not set up on this deployment. You can still add test cases yourself."
-  No retry time is shown and the limits are unchanged.
+  No retry time is shown and the limits are unchanged. Live calls switched off are detected before any limit, so they always show the not-set-up message; a missing configuration is detected only after a call is reserved, so it counts toward the quotas and any reservation refusal, such as a busy or allowance message, takes priority over it.
 
 Retired: RND-7.5 (covered by ACC-2.5).
