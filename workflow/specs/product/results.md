@@ -66,7 +66,7 @@ A Beta Tester explicitly requests transient AI questions about their own saved d
   - this tester's own hourly AI allowance is used (including when the shared one is also used): "You have used your AI allowance for this hour. Try again later. You can still edit your result yourself."
   - the deployment's shared hourly AI allowance is used, or the AI service reports its quota is exceeded: "The shared AI allowance is used up for now. Try again later. You can still edit your result yourself."
   - live AI calls are switched off or the AI service is not configured: "AI feedback is not set up on this deployment. You can still edit your result yourself."
-  No retry time is shown and the limits are unchanged. Live calls switched off are detected before any limit, so they always show the not-set-up message; a missing configuration is detected only after a call is reserved, so it counts toward the quotas and any reservation refusal, such as a busy or allowance message, takes priority over it. RES-4.3's too-long message and RES-4.6's conflicts keep their priority.
+  No retry time is shown and the limits are unchanged. Live calls switched off are detected before any gateway limit, so the not-set-up message takes priority over busy and allowance messages; a missing configuration is detected only after a call is reserved, so it counts toward the quotas and any reservation refusal, such as a busy or allowance message, takes priority over it. RES-4.3's too-long message and RES-4.6's conflicts keep their priority.
 
 ## Coordinator review
 
