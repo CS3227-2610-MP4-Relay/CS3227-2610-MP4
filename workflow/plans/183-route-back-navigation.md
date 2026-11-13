@@ -42,3 +42,9 @@ Each code checkpoint runs focused server and browser tests red then green; check
   - Green: the same server file → 14 passed in 3.50s. `pytest -q src/accounts src/relay/tests/test_access_matrix.py src/relay/tests/test_pages.py src/relay/tests/test_release.py` → 1215 passed in 447.55s. `test_presentation.py -k "error_pages or sign_in_returns"` → 4 passed in 28.58s.
   - Another run, `pytest -q src/rounds/tests/test_views.py src/ai/tests/test_views.py src/relay/tests/{test_error_pages,test_site,test_readiness,test_database}.py`, gave 1 failed and 215 passed. The failure is `test_database.py::test_postgresql_synthetic_roundtrip`, which asserts the default name `test_relay_test` and therefore fails only under the private-database settings.
   - The existing reference-equality and "only its message" assertions still hold; no expectation changed.
+- Checkpoint 4 (private test database):
+  - Red before template edits: `pytest -q src/accounts/tests/test_tester_account_navigation.py` → 6 failed in 10.83s, each on the missing top navigation after its status and no-store checks passed. The two `src/e2e/test_accounts.py` journeys → 2 failed in 23.82s: the page navigation had no links.
+  - Green: `pytest -q src/accounts/tests/test_tester_account_navigation.py src/accounts/tests/test_add_tester.py src/accounts/tests/test_reset_tester_password.py` → 55 passed in 12.41s. `src/e2e/test_accounts.py` → 8 passed in 59.18s, including the 10-tester passwords page at 320×568 with Coordinator home inside the first viewport.
+  - `pytest -q src/accounts src/relay/tests/test_access_matrix.py` → 1052 passed in 251.76s.
+  - No existing link-position expectation existed; the existing link assertions hold unchanged.
+  - Screenshots `docs/images/beta-tester-added.png` and `beta-tester-passwords.png` (from `src/e2e/screenshots.py::account_management`) show these pages with the old bottom link; recapture them in the docs checkpoint.

@@ -8,6 +8,16 @@ from playwright.sync_api import expect
 from e2e.sessions import separate_context
 
 
+def assert_top_links(page, *labels):
+    """PLT-4.18: exactly these links, once each, in a navigation above the heading."""
+    navigation = page.get_by_role("navigation", name="Page navigation", exact=True)
+    expect(navigation.get_by_role("link")).to_have_text(list(labels))
+    expect(page.locator("main a")).to_have_count(len(labels))
+    heading = page.get_by_role("heading", level=1)
+    box = navigation.bounding_box()
+    assert box["y"] + box["height"] <= heading.bounding_box()["y"]
+
+
 def submit_sign_in(page, username, password):
     """Submit credentials through the visible sign-in form."""
     page.get_by_label("Username", exact=True).fill(username)
@@ -15,7 +25,7 @@ def submit_sign_in(page, username, password):
     page.get_by_role("button", name="Sign in", exact=True).click()
 
 
-@pytest.mark.ac("ACC-5.1", "ACC-5.2", "ACC-5.5")
+@pytest.mark.ac("ACC-5.1", "ACC-5.2", "ACC-5.5", "PLT-4.18")
 def test_coordinator_resets_tester_password_and_ends_existing_tester_session(
     page, browser_accounts, live_server
 ):
@@ -37,8 +47,10 @@ def test_coordinator_resets_tester_password_and_ends_existing_tester_session(
         ).to_be_visible()
         expect(page.get_by_text(browser_accounts["tester"], exact=True)).to_be_visible()
         expect(page.get_by_text("Resetting a password", exact=False)).to_be_visible()
+        assert_top_links(page, "Coordinator home")
         page.get_by_role("button", name="Reset password", exact=True).click()
         expect(page).to_have_title("Beta Tester password reset")
+        assert_top_links(page, "Coordinator home", "Beta Tester passwords")
         expect(page.get_by_role("columnheader")).to_have_text(
             ["Role", "Username", "Password"]
         )
@@ -218,7 +230,7 @@ def test_demo_workspace_credentials_sign_in_to_coordinator_home(page, live_serve
     expect(page.get_by_role("listitem")).to_have_text(["Sample round (Draft)"])
 
 
-@pytest.mark.ac("ACC-4.1", "ACC-4.2", "ACC-4.6", "ACC-4.8")
+@pytest.mark.ac("ACC-4.1", "ACC-4.2", "ACC-4.6", "ACC-4.8", "PLT-4.18")
 def test_coordinator_adds_tester_then_hits_capacity_and_new_tester_signs_in(
     page, browser_accounts, live_server
 ):
@@ -242,6 +254,7 @@ def test_coordinator_adds_tester_then_hits_capacity_and_new_tester_signs_in(
             "Save this password now. It will not be shown again.", exact=True
         )
     ).to_be_visible()
+    assert_top_links(page, "Coordinator home")
     page.get_by_role("link", name="Coordinator home", exact=True).click()
     expect(page.locator("body")).not_to_contain_text(password)
     expect(
@@ -263,7 +276,23 @@ def test_coordinator_adds_tester_then_hits_capacity_and_new_tester_signs_in(
             "heading", name="This workspace already has 10 Beta Testers.", exact=True
         )
     ).to_be_visible()
+    assert_top_links(page, "Coordinator home")
     page.get_by_role("link", name="Coordinator home", exact=True).click()
+    # With 10 testers, Coordinator home stays in the first phone-sized viewport.
+    page.set_viewport_size({"width": 320, "height": 568})
+    page.get_by_role("link", name="Beta Tester passwords", exact=True).click()
+    expect(page.get_by_role("button", name="Reset password", exact=True)).to_have_count(
+        10
+    )
+    assert_top_links(page, "Coordinator home")
+    home = page.get_by_role("link", name="Coordinator home", exact=True)
+    assert page.evaluate("window.scrollY") == 0
+    box = home.bounding_box()
+    assert box["y"] >= 0 and box["y"] + box["height"] <= 568
+    home.click()
+    expect(
+        page.get_by_role("heading", name="Coordinator home", exact=True)
+    ).to_be_visible()
     page.get_by_role("button", name="Sign out", exact=True).click()
     submit_sign_in(page, username, password)
     expect(page).to_have_url(f"{live_server.url}/tester/")
