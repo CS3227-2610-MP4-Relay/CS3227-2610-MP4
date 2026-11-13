@@ -55,10 +55,15 @@ Checkpoint 3 (RES-1):
   - An Open case without a current build would count as "to record" with no status or link; RES-1.3 says none exists.
 - Open: the stray idle REPL (PID 1054) from checkpoint 2 is with the human.
 
+Checkpoint 4 (User Guide):
+
+- `docs/UserGuide.md` (Coordinator home overview; "View available tests" groups, counts and "Your result" statuses; three alt texts) was read back. `pytest --ds=slice182_settings --basetemp=tmp/slice182-harness/cp4-shots src/e2e/screenshots.py` (08:39:24–08:40:00, 2 passed) is the only selection that produces `tester-home`/`tester-round`. It rewrote all 16 PNGs; `coordinator-home`, `tester-home` and `tester-round` were inspected and are correct. The other 13 differ only in system-font rendering (the committed set used a different font; `start-page` compared by eye) and random demo identities. Originals are in `tmp/slice182-harness/images-before/`; keeping only the three targets mixes fonts in the guide. Ruff clean; `check_scope.py builder --base 0b1b389` within scope; DeveloperGuide unchanged.
+- Coordinator decision: commit only the three content-changed PNGs, as #143 did. The other 13 were restored byte-identical to HEAD (hash-checked) to avoid unreviewable churn; the font mix is cosmetic.
+
 ## Open issues
 
 None.
 
 ## Next
 
-Coordinator commits checkpoint 1, then the builder starts checkpoint 2.
+Freeze the candidate, run full verification, then the verifier and security-reviewer.
