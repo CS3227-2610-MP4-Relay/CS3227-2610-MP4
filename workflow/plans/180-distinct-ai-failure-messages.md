@@ -24,4 +24,7 @@ Goal: Tell users when AI drafting or feedback is busy, over their own or the sha
 
 ## Checkpoint and next step
 
-- Checkpoint 1 written by builder from HEAD `a93430a`; no `src/` changes. Next: coordinator commits checkpoint 1, then builder starts checkpoint 2.
+- Committed: specs `e9ba5d8`, plan `2c79077`, gateway split `16d2256`, drafting messages `37ef0dc`, feedback messages and logging `ef1ce09`.
+- The shared mapping is `src/ai/failures.py`, used by both features. Checkpoints 3 and 4 were implemented as one assigned batch with disjoint files and separate red/green runs: drafting red with `views.py` temporarily at HEAD (10 failed), then one run with drafting green and feedback red (11 failed), then feedback green.
+- An unchanged race test failed intermittently while another session shared the test database; clean runs passed. Focused and full runs use `--basetemp` in a session scratchpad because the default pytest temp directory was access-denied.
+- Checkpoint 5: User Guide drafting and feedback failure messages; full verification. The first full run found one stale expectation in `src/relay/tests/test_access_matrix.py`: its unmocked drafting POST, with live calls off, now shows RND-8.10's not-set-up message. Correcting it is a separate test-only repair from the docs. Next: coordinator review and delivery.
