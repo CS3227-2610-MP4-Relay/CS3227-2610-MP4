@@ -20,7 +20,7 @@ Builder re-grepped the worktree at `a93430a` outside `logs/` for `log(s)`, `sess
 | Location | Bare text | Target |
 | --- | --- | --- |
 | `experiments/agent-setups/README.md:21` | logs 022 and 023 | `logs/zheng-jj/022-compare-agent-setups-and-tune-an-ideal-one.md`, `logs/zheng-jj/023-extend-the-agent-setups-experiment-to-four-tasks.md` |
-| `experiments/development-workflow/README.md:44` | [logs 014](…) to 018 | `logs/zheng-jj/018-specify-ai-test-drafting.md` |
+| `experiments/development-workflow/README.md:44` | `[logs 014](…) to 018` | `logs/zheng-jj/018-specify-ai-test-drafting.md` |
 | `experiments/development-workflow/README.md:77` | correct log 019 | `logs/zheng-jj/019-implement-ai-test-drafting.md` |
 | `workflow/plans/22-test-drafting-spec.md:83` | log 018; log 019 | `logs/zheng-jj/018-specify-ai-test-drafting.md`; `logs/zheng-jj/019-implement-ai-test-drafting.md` |
 | `workflow/plans/22-test-drafting-spec.md:100`, `:101`, `:120` | log 019 | `logs/zheng-jj/019-implement-ai-test-drafting.md` |
@@ -51,3 +51,8 @@ Builder re-grepped the worktree at `a93430a` outside `logs/` for `log(s)`, `sess
 - From snapshot `d9ae8662ba83c81d93c3a2080640d5cfeff9f848`, builder wrapped the bare text in links at plan 22 lines 83 (018, 019), 100, 101 and 120; plan 36 line 46; plan 67-spec-consistency lines 14 and 24; and plan 67-unit-test-helpers line 13. Diff: 8 lines changed across four files, wording unchanged.
 - Checks run: `git diff --word-diff=plain` showed only link markup added; `test -f` on all six resolved targets (Whimsyturtle 009, 036, 037, 058; zheng-jj 018, 019) passed; `python workflow/scripts/check_scope.py builder --base d9ae866` reported "All changes are within the builder scope." (exit 0).
 - Next: coordinator commits checkpoint 3, then checkpoint 4.
+
+## Checkpoint 4: experiments and cross-folder log
+
+- Coordinator committed checkpoint 3 as `ae7652d` and checkpoint 4 as `183e6cc`. Checkpoint 4 links `experiments/agent-setups/README.md:21`, `experiments/development-workflow/README.md:44` and `:77`, and `logs/zheng-jj/028-…:105`. Only the zheng-jj 028 link text gains the author ("Whimsyturtle log 009"), because that reference crosses folders.
+- Checks run: word diff showed link markup only, apart from that qualifier. A temporary link validator, run on every changed file, resolved all new targets. It also found two broken anchors that predate this slice and are outside its scope (`experiments/development-workflow/README.md:3` `../README.md#planned-comparisons`; `67-spec-consistency.md:9` `#limits-and-accounting-proposed`). It also flagged this plan's table text `[logs 014](…)`, which the coordinator wrapped in code formatting.
