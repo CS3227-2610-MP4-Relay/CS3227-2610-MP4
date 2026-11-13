@@ -94,9 +94,11 @@ Choose a case title to expand or collapse its details. In **My results**, choose
 
 Only a Test Coordinator can prepare, publish, review, retest and close test rounds. A new round is in the **Draft** state; [publishing](#publish-a-round) it makes it **Open**, and [closing](#close-a-round) it makes it **Closed**. Beta Testers [view available tests](#view-available-tests) from their own home page.
 
-**Coordinator home** has a **Rounds** heading with a **New round** link. Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". A new demo workspace starts with its [sample round](#create-a-demo-workspace), so its list is not empty; "No rounds yet." appears only for a workspace with no rounds.
+**Coordinator home** has a **Rounds** heading with a **New round** link. Under the link, a summary line counts your workspace's rounds in each state and its Beta Testers, for example "Draft: 1 · Open: 1 · Closed: 2 · Beta Testers: 2". Below it, each round in your workspace is listed, newest first, as a link to its round page followed by its state, such as "(Draft)". A new demo workspace starts with its [sample round](#create-a-demo-workspace), so its list is not empty; "No rounds yet." appears only for a workspace with no rounds.
 
-![Coordinator home showing the username, workspace, Sign out, Add Beta Tester, Beta Tester passwords, and the Rounds section with New round and Sample round (Draft)](images/coordinator-home.png)
+Under its entry, a Draft round shows its number of test cases, such as "4 test cases" or "1 test case". An Open round shows how many of its cases have at least one submitted result for their current build, such as "3 of 5 test cases have a submitted result for their current build.", followed by a **Review results** link to its [results page](#review-results). Saved drafts are not counted. After a [retest](#request-a-retest), a retested case counts again only once a result is submitted for its new build. A Closed round shows only its title and "(Closed)".
+
+![Coordinator home showing the username, workspace, Sign out, Add Beta Tester, Beta Tester passwords, and the Rounds section with New round, the summary Draft: 1 · Open: 0 · Closed: 0 · Beta Testers: 2, and Sample round (Draft) with 4 test cases](images/coordinator-home.png)
 
 If a round action shows an error, return to the round page and check its current details before trying again.
 
@@ -246,16 +248,16 @@ A Closed round's page still shows its criteria, its cases with their linked crit
 
 ## View available tests
 
-1. Sign in as a **Beta Tester**. On **Tester home**, **Available tests** lists your workspace's Open and Closed rounds, newest first. Each title is a link followed by "(Open)" or "(Closed)". If there are none, it says "No tests available."
-2. Choose a round title. The page shows "State: Open" or "State: Closed" and **Test cases**. Each case's summary shows its title and **Current build**; expand it for **Steps**, **Expected result** and **Linked acceptance criteria**.
+1. Sign in as a **Beta Tester**. On **Tester home**, **Available tests** lists your workspace's Open rounds under **Open tests**, then its Closed rounds under **Closed tests**, each newest first; a group with no rounds has no heading. Each title is a link followed by "(Open)" or "(Closed)". Under each Open round, a line counts its test cases by your own result for each case's current build, such as "2 to record · 1 draft · 2 submitted". If there are no rounds, it says "No tests available."
+2. Choose a round title. The page shows "State: Open" or "State: Closed" and **Test cases**. Each case's summary shows its title and **Current build**; in an Open round it also shows "Your result: Not recorded", "Your result: Draft" or "Your result: Submitted". Expand it for **Steps**, **Expected result** and **Linked acceptance criteria**.
 3. Test the software outside Relay using those instructions and the named build. If the coordinator requests a retest, reload the page: only the selected cases change to the new **Current build**; other cases keep their previous build.
 4. Choose **Tester home** to return to the list, or return there to **Sign out**.
 
-![Tester home showing the username, workspace, Sign out and Sample round (Open) under Available tests](images/tester-home.png)
+![Tester home showing the username, workspace, Sign out and, under Available tests and Open tests, Sample round (Open) with 4 to record · 0 drafts · 0 submitted](images/tester-home.png)
 
-![The tester's Sample round page showing State: Open, My results, and the first test case expanded with its steps, expected result, linked criterion and Record result](images/tester-round.png)
+![The tester's Sample round page showing State: Open, My results, and four test cases each with Current build 1.4.0-beta and Your result: Not recorded, the first expanded with its steps, expected result, linked criterion and Record result](images/tester-round.png)
 
-Beta Testers in the same workspace see the same rounds. Draft rounds stay hidden. Each expanded case in an Open round shows **Record result** if you have no result for its current build, **Continue draft** for your saved draft, or **View result** for your submitted result. These actions reflect your own results. A Closed round remains available as read-only reference; after the coordinator closes it, reload to see "State: Closed" and "(Closed)" in the list, with the result-entry links removed.
+Beta Testers in the same workspace see the same rounds. Draft rounds stay hidden. Each expanded case in an Open round shows **Record result** if you have no result for its current build, **Continue draft** for your saved draft, or **View result** for your submitted result; these match "Not recorded", "Draft" and "Submitted" in the case summary and the counts on **Tester home**. These actions, statuses and counts reflect only your own results. After a retest, a retested case shows "Your result: Not recorded" until you record a result for its new build. A Closed round remains available as read-only reference; after the coordinator closes it, reload to see "State: Closed" and "(Closed)" under **Closed tests**, with the counts, the "Your result" statuses and the result-entry links removed.
 
 If the tests cannot load, try again later; see [Error pages](#error-pages). Opening a Draft, missing or another workspace's round shows "Page not found."
 
