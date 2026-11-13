@@ -172,7 +172,17 @@ The suggestions page says "Opens in a new tab. Keep this suggestions tab open to
 
 Return to the original suggestions tab to review another draft from the same response. Each draft needs its own review and **Add test case** action; choosing another suggestion does not request new AI output. Keep the suggestions tab open until you finish reviewing the response.
 
-The drafting page may show "Drafting is unavailable right now. You can still add test cases yourself." if the service is unavailable or its reply cannot be used. If it returns no drafts, or every ticked criterion is blank once hidden characters are removed, it says "No test cases were suggested for these criteria. You can still add test cases yourself."
+When drafting cannot run, the page says why:
+
+| Message | Meaning |
+| --- | --- |
+| "The AI service is busy. Try again in a minute. You can still add test cases yourself." | Another AI request of yours is still running, or Relay is already running as many AI requests as it allows at once. |
+| "You have used your AI allowance for this hour. Try again later. You can still add test cases yourself." | Your account has reached its hourly AI quota. |
+| "The shared AI allowance is used up for now. Try again later. You can still add test cases yourself." | Relay's hourly AI quota, shared by everyone on this deployment, or the AI service's own limit is reached. |
+| "AI drafting is not set up on this deployment. You can still add test cases yourself." | AI calls are switched off or the SoC AI service is not configured. |
+| "Drafting is unavailable right now. You can still add test cases yourself." | Another AI-service problem, or the reply could not be used. |
+
+If the service returns no drafts, or every ticked criterion is blank once hidden characters are removed, it says "No test cases were suggested for these criteria. You can still add test cases yourself."
 
 With no criterion ticked, or more than five, the page says "Select 1 to 5 acceptance criteria." A ticked criterion that is no longer in the round, for example because it was deleted meanwhile, gets "Choose criteria from this round." A round with 30 test cases says "This round has reached its limit of 30 test cases." These requests do not add test cases. **Add test case** is subject to the same round and case limits.
 
@@ -294,7 +304,7 @@ Result-entry refusals for a newer saved draft, a newer build, a Closed round or 
 
 With JavaScript enabled, the request disables **Suggest missing details** and shows "Suggesting missing details…" while you wait.
 
-An empty reply says "No missing details were suggested. You can still edit your result yourself." If the source is too long, the page says "This observation and test case are too long for feedback. You can still edit your result yourself." You may see "Feedback is unavailable right now. You can still edit your result yourself." when the AI service is not configured, the [AI quota](#draft-test-cases-with-ai) is used up or another AI-service problem occurs. Choose **Back to result** to return to your result; editing follows the [same round, build and submission rules](#save-and-submit-a-result).
+An empty reply says "No missing details were suggested. You can still edit your result yourself." If the source is too long, the page says "This observation and test case are too long for feedback. You can still edit your result yourself." When feedback cannot run, the page says why, with the same meanings as the [drafting messages](#draft-test-cases-with-ai): "The AI service is busy. Try again in a minute. You can still edit your result yourself.", "You have used your AI allowance for this hour. Try again later. You can still edit your result yourself.", "The shared AI allowance is used up for now. Try again later. You can still edit your result yourself." or "AI feedback is not set up on this deployment. You can still edit your result yourself." Any other AI-service problem, or a reply that cannot be used, gives "Feedback is unavailable right now. You can still edit your result yourself." Choose **Back to result** to return to your result; editing follows the [same round, build and submission rules](#save-and-submit-a-result).
 
 Questions are not saved. Opening the feedback page again clears them; resubmitting its request asks for new feedback. If Relay detects a change to the saved source during a request, the page says "Your saved draft or test case changed. Reload before requesting feedback." Opening the feedback address directly without a saved draft says "Save a draft before requesting feedback." Submission, a newer build or a closed round prevents feedback with the same messages described under [Save and submit a result](#save-and-submit-a-result).
 
