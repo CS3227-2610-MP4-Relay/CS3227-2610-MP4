@@ -8,9 +8,10 @@
 <p><a class="action secondary" href="{% url 'accounts:tester-passwords' %}">Beta Tester passwords</a></p>
 <h2>Rounds</h2>
 <p><a class="action" href="{% url 'rounds:new' %}">New round</a></p>
+<p>Draft: {{ states.draft }} · Open: {{ states.open }} · Closed: {{ states.closed }} · Beta Testers: {{ tester_count }}</p>
 {% if rounds %}
 <ul>
-  {% for round in rounds %}<li><a href="{{ round.get_absolute_url }}">{{ round.title|isolated_lines }}</a> ({{ round.get_state_display }})</li>
+  {% for round in rounds %}<li><a href="{{ round.get_absolute_url }}">{{ round.title|isolated_lines }}</a> ({{ round.get_state_display }}){% if round.state == "draft" %}<p class="round-overview">{{ round.case_count|case_count }}</p>{% elif round.state == "open" %}<p class="round-overview">{% coverage_line round.covered round.case_count %} <a class="action secondary" href="{% url 'rounds:results' round.pk %}">Review results</a></p>{% endif %}</li>
   {% endfor %}
 </ul>
 {% else %}

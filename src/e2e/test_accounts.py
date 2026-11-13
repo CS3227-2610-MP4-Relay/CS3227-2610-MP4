@@ -215,7 +215,9 @@ def test_demo_workspace_credentials_sign_in_to_coordinator_home(page, live_serve
     expect(page.get_by_text(workspace, exact=True)).to_be_visible()
     expect(page.get_by_text(f"Username: {username}", exact=True)).to_be_visible()
     # The sample round is observed only; RND-7 has its own tests.
-    expect(page.get_by_role("listitem")).to_have_text(["Sample round (Draft)"])
+    expect(page.get_by_role("listitem")).to_have_text(
+        ["Sample round (Draft) 4 test cases"], use_inner_text=True
+    )
 
 
 @pytest.mark.ac("ACC-4.1", "ACC-4.2", "ACC-4.6", "ACC-4.8")

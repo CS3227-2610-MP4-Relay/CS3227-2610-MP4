@@ -328,8 +328,7 @@ def results_page(request, round_id):
         return state_conflict(request, round_)
     cases = results.cases_with_current_build(round_)
     submitted = (
-        results.covered_results(round_)
-        .filter(submitted_at__isnull=False, tester__workspace=round_.workspace_id)
+        results.listed_results(round_)
         .select_related("tester", "build")
         .order_by("-build_id", "-submitted_at", "-id")
     )

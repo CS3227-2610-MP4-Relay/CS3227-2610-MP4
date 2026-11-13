@@ -2,8 +2,13 @@
 {% load rounds_text %}
 {% block sections %}
 <h2>Available tests</h2>
-{% if rounds %}<ul>
-{% for round in rounds %}<li><a href="{% url 'accounts:tester-round' round.pk %}">{{ round.title|isolated_lines }}</a> ({{ round.get_state_display }})</li>
-{% endfor %}</ul>
+{% if rounds %}{% if open_rounds %}<h3>Open tests</h3>
+<ul>
+{% for round in open_rounds %}<li><a href="{% url 'accounts:tester-round' round.pk %}">{{ round.title|isolated_lines }}</a> ({{ round.get_state_display }})<p class="round-overview">{{ round.progress|progress_line }}</p></li>
+{% endfor %}</ul>{% endif %}{% if closed_rounds %}
+<h3>Closed tests</h3>
+<ul>
+{% for round in closed_rounds %}<li><a href="{% url 'accounts:tester-round' round.pk %}">{{ round.title|isolated_lines }}</a> ({{ round.get_state_display }})</li>
+{% endfor %}</ul>{% endif %}
 {% else %}<p>No tests available.</p>{% endif %}
 {% endblock %}

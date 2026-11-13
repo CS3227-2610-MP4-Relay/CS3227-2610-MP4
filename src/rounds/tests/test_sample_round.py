@@ -19,7 +19,10 @@ pytestmark = pytest.mark.django_db
 TITLE = "Sample round"
 PUBLISHED = "Round published."
 CLOSED = "Round closed."
-HOME_ITEM = r'<li><a href="([^"]+)"><span dir="auto">([^<]+)</span></a> \((\w+)\)</li>'
+HOME_ITEM = (
+    r'<li><a href="([^"]+)"><span dir="auto">([^<]+)</span></a> \((\w+)\)'
+    r'(?:<p class="round-overview">.*?</p>)?</li>'
+)
 
 
 def new_workspace():

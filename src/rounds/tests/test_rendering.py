@@ -17,6 +17,8 @@ pytestmark = [pytest.mark.django_db, pytest.mark.ac("RND-1.7")]
 
 FSI, PDI = "\u2068", "\u2069"
 BIDI_AND_INVISIBLE = "abc\u202edef\u200bghi\u2066jkl"
+# A Draft round's home entry ends with its case count (RND-1.8).
+ZERO_CASES = '<p class="round-overview">0 test cases</p></li>'
 
 
 def test_markup_is_escaped_on_round_page_home_and_edit_form(coord_client, make_round):
@@ -25,7 +27,7 @@ def test_markup_is_escaped_on_round_page_home_and_edit_form(coord_client, make_r
     assert f'<h1><span dir="auto">{escape(MARKUP)}</span></h1>' in round_page
     assert title_tag(round_page) == FSI + escape(MARKUP) + PDI
     home = page(coord_client.get("/coordinator/"))
-    assert f'<span dir="auto">{escape(MARKUP)}</span></a> (Draft)</li>' in home
+    assert f'<span dir="auto">{escape(MARKUP)}</span></a> (Draft){ZERO_CASES}' in home
     form = page(coord_client.get(edit(made.pk)))
     assert f'value="{escape(MARKUP)}"' in form
     for html in (round_page, home, form):
@@ -68,7 +70,7 @@ def test_line_breaks_are_kept_inside_the_isolated_element(coord_client, make_rou
     lines = '<span dir="auto">Line one</span><br><span dir="auto">Line two</span>'
     assert f"<h1>{lines}</h1>" in round_page
     home = page(coord_client.get("/coordinator/"))
-    assert f"{lines}</a> (Draft)</li>" in home
+    assert f"{lines}</a> (Draft){ZERO_CASES}" in home
 
 
 def test_bidi_and_zero_width_characters_stay_inside_the_title_element(
@@ -82,7 +84,8 @@ def test_bidi_and_zero_width_characters_stay_inside_the_title_element(
     assert heading in round_page
     assert round_page.count("\u202e") == 1
     home = page(coord_client.get("/coordinator/"))
-    assert f'<span dir="auto">{BIDI_AND_INVISIBLE}</span></a> (Draft)</li>' in home
+    shown = f'<span dir="auto">{BIDI_AND_INVISIBLE}</span></a> (Draft){ZERO_CASES}'
+    assert shown in home
     assert home.count("\u202e") == 1
     form = page(coord_client.get(edit(made.pk)))
     assert f'value="{BIDI_AND_INVISIBLE}" dir="auto"' in form
@@ -113,7 +116,7 @@ def test_each_line_is_isolated_in_its_own_element(coord_client, make_round, sepa
     assert f"<h1>{lines}</h1>" + chr(10) + "<p>State: Draft</p>" in round_page
     assert title_tag(round_page) == FSI + "x abc" + PDI
     home = page(coord_client.get("/coordinator/"))
-    assert f'<li><a href="{detail(made.pk)}">{lines}</a> (Draft)</li>' in home
+    assert f'<li><a href="{detail(made.pk)}">{lines}</a> (Draft){ZERO_CASES}' in home
     for html in (round_page, home):
         for raw in PARAGRAPH_SEPARATORS:
             assert raw not in html

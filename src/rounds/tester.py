@@ -1,6 +1,7 @@
 """Tester availability, private result entry and read-only history (RES)."""
 
 import logging
+from collections import Counter
 from functools import wraps
 
 from django.core.exceptions import PermissionDenied
@@ -49,27 +50,27 @@ def available_rounds(user):
     )
 
 
-@tester_view
-def home(request):
-    """List the rounds this tester can read."""
-    return render(
-        request,
-        "rounds/tester_home.html",
-        {"title": "Tester home", "rounds": available_rounds(request.user)},
-    )
+# Each RES-1.5 action and the RES-1.9 status naming the same classification.
+STATUSES = {
+    "Record result": "Not recorded",
+    "Continue draft": "Draft",
+    "View result": "Submitted",
+}
 
 
-@tester_view
-def detail(request, round_id):
-    """Show cases and latest covering builds in one authorized published round."""
-    round_ = get_object_or_404(available_rounds(request.user), pk=round_id)
+def classified_cases(tester, round_):
+    """Return the round's cases, each with the tester's own current-build action.
+
+    Only an Open round reads results; one query covers every case. A case's
+    `result_action` and `result_status` follow its row for its current build.
+    """
     cases = results.cases_with_current_build(round_)
     saved = (
         {
             (case_id, build_id): submitted_at
             for case_id, build_id, submitted_at in results.covered_results(round_)
             .filter(
-                tester=request.user,
+                tester=tester,
                 case_id__in=[case.pk for case in cases],
                 build_id__in=[
                     case.current_build.pk for case in cases if case.current_build
@@ -88,6 +89,38 @@ def detail(request, round_id):
             case.result_action = "Continue draft"
         else:
             case.result_action = "View result"
+        case.result_status = STATUSES[case.result_action]
+    return cases
+
+
+@tester_view
+def home(request):
+    """List the rounds this tester can read, Open first, with own Open progress."""
+    rounds = list(available_rounds(request.user))
+    open_rounds = [round_ for round_ in rounds if round_.state == Round.State.OPEN]
+    closed_rounds = [round_ for round_ in rounds if round_.state != Round.State.OPEN]
+    for round_ in open_rounds:
+        actions = Counter(
+            case.result_action for case in classified_cases(request.user, round_)
+        )
+        round_.progress = [actions[action] for action in STATUSES]
+    return render(
+        request,
+        "rounds/tester_home.html",
+        {
+            "title": "Tester home",
+            "rounds": open_rounds + closed_rounds,
+            "open_rounds": open_rounds,
+            "closed_rounds": closed_rounds,
+        },
+    )
+
+
+@tester_view
+def detail(request, round_id):
+    """Show cases and latest covering builds in one authorized published round."""
+    round_ = get_object_or_404(available_rounds(request.user), pk=round_id)
+    cases = classified_cases(request.user, round_)
     return render(
         request, "rounds/tester_round.html", {"round": round_, "cases": cases}
     )
